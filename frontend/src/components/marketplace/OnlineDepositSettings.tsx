@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Smartphone } from 'lucide-react';
+import { Smartphone } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Alert, Button, Input, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -87,7 +87,7 @@ export default function OnlineDepositSettings({
             <Smartphone className="w-3.5 h-3.5 text-primary" aria-hidden />
             Acompte en ligne : {active ? 'activé' : 'désactivé'}
           </p>
-          <p className="text-[11px] text-muted mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             {active
               ? `Vos clients peuvent payer l’acompte par Mobile Money ou carte. Vous recevez l’acompte moins la commission sur le ${settings.payoutPhoneMasked}.`
               : settings.enabled && !settings.platformAvailable
@@ -142,7 +142,7 @@ export default function OnlineDepositSettings({
             value={holder}
             onChange={(e) => setHolder(e.target.value)}
           />
-          <p className="text-[11px] text-muted leading-relaxed">
+          <p className="text-xs text-muted leading-relaxed">
             Même activé, vos clients peuvent toujours vous payer directement et vous marquez l’acompte reçu comme avant.
           </p>
           {error ? <Alert variant="error">{error}</Alert> : null}

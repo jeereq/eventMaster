@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { getTemplateBackgroundStyle } from '@/lib/templateBackgroundStyle';
 import { useHeadStylesheet } from '@/lib/headStylesheet';
-import { ImageIcon } from 'lucide-react';
+import { ImageIcon } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { templateImageStyleClass, templateImageStyleExtra } from '@/lib/templateImageStyle';
 
@@ -487,7 +487,7 @@ export default function LandingInvitationPreview({
       {showOnlyBackground ? (
         showCaption ? (
           <div className="relative z-10 flex flex-col items-center justify-end h-full p-3 pointer-events-none">
-            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/20 shadow-sm animate-fade-in">
+            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-black/60 text-white border border-white/20 shadow-sm animate-fade-in">
               Illustration haute définition générée par IA
             </span>
           </div>

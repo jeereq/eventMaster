@@ -14,7 +14,7 @@ import {
   Loader2,
   Phone,
   RefreshCw,
-} from 'lucide-react';
+} from '@/components/icons';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { api } from '@/lib/api';
@@ -316,7 +316,7 @@ export default function GuestDonationForm({
                 <p className="text-xs font-semibold text-foreground">
                   Don anonyme
                 </p>
-                <p className="text-[11px] text-muted truncate">
+                <p className="text-xs text-muted truncate">
                   {isAnonymous ? 'Nom masqué sur la cagnotte' : `Au nom de ${guestName}`}
                 </p>
               </div>
@@ -374,7 +374,7 @@ export default function GuestDonationForm({
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-foreground truncate">Mobile Money</p>
-                <p className="text-[10px] text-muted truncate">M-Pesa, Airtel, Orange</p>
+                <p className="text-xs text-muted truncate">M-Pesa, Airtel, Orange</p>
               </div>
             </button>
 
@@ -399,7 +399,7 @@ export default function GuestDonationForm({
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-foreground truncate">Carte bancaire</p>
-                <p className="text-[10px] text-muted truncate">Visa, Mastercard</p>
+                <p className="text-xs text-muted truncate">Visa, Mastercard</p>
               </div>
             </button>
           </div>
@@ -407,7 +407,7 @@ export default function GuestDonationForm({
           {/* Numéro Mobile Money */}
           {paymentMethod === 'mobile' && (
             <div className="space-y-1 pt-1 animate-fade-in">
-              <label htmlFor="guest-donation-phone" className="block text-[11px] font-semibold text-muted">
+              <label htmlFor="guest-donation-phone" className="block text-xs font-semibold text-muted">
                 Numéro Mobile Money (RDC)
               </label>
               <div className="relative">
@@ -421,7 +421,7 @@ export default function GuestDonationForm({
                   className="pl-9 h-11 text-xs"
                 />
               </div>
-              <p className="text-[10px] text-muted leading-tight">
+              <p className="text-xs text-muted leading-tight">
                 Validation par notification ou code PIN sur votre téléphone.
               </p>
             </div>

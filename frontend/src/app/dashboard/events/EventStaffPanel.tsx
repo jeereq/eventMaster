@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Users, UserPlus, Trash2, Loader2, Shield, Briefcase } from 'lucide-react';
+import { Users, UserPlus, Trash2, Loader2, Shield, Briefcase } from '@/components/icons';
 import {
   ProjectCard,
   StatusPill,
@@ -11,6 +11,7 @@ import {
   listStackClass,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import Illustration from '@/components/illustrations/Illustration';
 
 interface StaffItem {
   id: string;
@@ -128,7 +129,7 @@ export default function EventStaffPanel({ eventId }: { eventId: string }) {
 
       {staff.length === 0 ? (
         <div className="rounded-[var(--radius-card)] border border-border bg-surface px-6 py-12 text-center">
-          <Users className="w-9 h-9 text-muted mx-auto mb-3 opacity-60" />
+          <Illustration name="guests" className="mx-auto mb-2 w-40" />
           <p className="text-sm font-semibold text-foreground">Aucun membre assigné</p>
           <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
             Assignez un membre de l&apos;organisation pour gérer ou accueillir les invités.

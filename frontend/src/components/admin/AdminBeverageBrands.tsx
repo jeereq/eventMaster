@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Beer, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Beer, Loader2, Plus, Trash2 } from '@/components/icons';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
 import { api } from '@/lib/api';
 import { Alert, Badge, Button, EmptyState, Input } from '@/components/ui';
@@ -125,7 +125,7 @@ export default function AdminBeverageBrands() {
       {success ? <Alert variant="success">{success}</Alert> : null}
 
       <form onSubmit={save} className="rounded-2xl border border-border bg-surface p-4 space-y-3">
-        <p className="text-xs font-bold uppercase tracking-wider text-muted">
+        <p className="text-xs font-bold text-muted">
           {editingId ? 'Modifier la marque' : 'Ajouter une marque'}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -231,7 +231,7 @@ export default function AdminBeverageBrands() {
           <span className="sr-only">Chargement des marques</span>
         </div>
       ) : visible.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="media"
           icon={<Beer className="w-5 h-5" />}
           title="Aucune marque"
           description="Ajoutez une bière, une boisson, un vin ou un champagne pour que les prestataires puissent le tarifer."

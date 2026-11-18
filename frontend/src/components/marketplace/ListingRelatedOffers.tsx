@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Building2, KeyRound, Sparkles } from 'lucide-react';
+import { ArrowRight, Building2, KeyRound, Sparkles } from '@/components/icons';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {

@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTheme } from '@/context/ThemeContext';
-import { PartyPopper, Sun, Moon, ArrowLeft } from 'lucide-react';
+import { PartyPopper, Sun, Moon, ArrowLeft } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import PWAInstallCta from '@/components/PWAInstallCta';
 import SiteBrandMark from '@/components/SiteBrandMark';
@@ -74,7 +74,7 @@ export function AuthSplitLayout({
 
         <div className="space-y-8 my-auto relative z-10 max-w-md">
           <div className="space-y-3">
-            <h1 className="text-4xl xl:text-5xl font-display font-bold leading-[1.05]">{messaging.adapt(title)}</h1>
+            <h1 className="text-4xl xl:text-5xl font-display font-bold leading-[1.1]">{messaging.adapt(title)}</h1>
             <p className="text-[#d7f6e9] text-base leading-relaxed">{messaging.adapt(description)}</p>
           </div>
 

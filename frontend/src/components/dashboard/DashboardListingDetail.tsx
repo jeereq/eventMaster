@@ -35,7 +35,7 @@ import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import FavoriteHeart from '@/components/FavoriteHeart';
 import { listingPublicUrl } from '@/lib/share';
 import { useListingFavorites } from '@/lib/listingFavorites';
-import { Building2, KeyRound, Sparkles } from 'lucide-react';
+import { Building2, KeyRound, Sparkles } from '@/components/icons';
 import MarketplaceActivityFeed from '@/components/marketplace/MarketplaceActivityFeed';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
@@ -169,7 +169,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
       title={venue?.headline || service?.title || ''}
       subtitle={[
         venue?.orgName || service?.orgName,
-        isBlockedByAdmin ? 'Bloqué' : !isPublic ? 'Brouillon' : null,
+        isBlockedByAdmin ? 'Suspendue' : !isPublic ? 'Brouillon' : null,
       ].filter(Boolean).join(' · ')}
       photos={venue?.photos || service?.photos || []}
       photoIndex={photoIndex}
@@ -207,7 +207,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
             onItinerary={lat != null && lng != null ? () => startRoute(item.id) : undefined}
           >
             {isBlockedByAdmin ? (
-              <Badge variant="danger">Bloqué — masqué du marketplace public</Badge>
+              <Badge variant="danger">Suspendue — masquée du marketplace public</Badge>
             ) : null}
             {!isPublic && !isBlockedByAdmin ? (
               <Badge variant="default">Brouillon — non visible sur le marketplace public</Badge>

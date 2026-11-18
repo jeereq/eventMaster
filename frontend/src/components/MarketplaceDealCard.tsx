@@ -1,8 +1,11 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/cn';
 import { accentFromId } from '@/components/ui/ProjectCard';
+import Tooltip from '@/components/ui/Tooltip';
+import type { LucideIcon } from '@/components/icons';
 
 export type MarketplaceDealFact = {
   label: string;
@@ -168,14 +171,14 @@ export function MarketplaceDealCard({
             {subtitle ? (
               <p className="text-xs text-muted leading-snug break-words [overflow-wrap:anywhere]">{subtitle}</p>
             ) : null}
-            {timestamp ? <p className="text-[11px] text-muted">{timestamp}</p> : null}
+            {timestamp ? <p className="text-xs text-muted">{timestamp}</p> : null}
           </div>
           {isList && (value != null || valueMeta) ? (
             <div className="hidden sm:flex shrink-0 flex-col items-end text-right">
               {value != null ? (
                 <p className="text-sm font-semibold tabular-nums text-foreground">{value}</p>
               ) : null}
-              {valueMeta ? <p className="mt-0.5 text-[11px] text-muted">{valueMeta}</p> : null}
+              {valueMeta ? <p className="mt-0.5 text-xs text-muted">{valueMeta}</p> : null}
             </div>
           ) : null}
         </header>
@@ -200,30 +203,64 @@ export function MarketplaceDealCard({
   );
 }
 
+/** Action secondaire d’une carte sous forme d’icône (lien), avec le libellé en infobulle. */
+export function DealIconLink({
+  href,
+  label,
+  icon: Icon,
+  external = false,
+  iconClassName,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  external?: boolean;
+  iconClassName?: string;
+}) {
+  const className =
+    'inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface';
+  return (
+    <Tooltip side="top" content={label}>
+      {external ? (
+        <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} className={className}>
+          <Icon className={cn('h-4 w-4', iconClassName)} aria-hidden />
+        </a>
+      ) : (
+        <Link href={href} aria-label={label} className={className}>
+          <Icon className={cn('h-4 w-4', iconClassName)} aria-hidden />
+        </Link>
+      )}
+    </Tooltip>
+  );
+}
+
 export function DealQuoteBlock({
   amountFc,
   depositFc,
   notes,
 }: {
   amountFc: string;
-  depositFc: string;
+  /** Affiché seulement quand l’acompte est l’information utile (ex. paiement). */
+  depositFc?: string;
   notes?: string | null;
 }) {
   return (
     <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 space-y-2">
       <div className="flex flex-col gap-2 min-[380px]:flex-row min-[380px]:items-end min-[380px]:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] text-emerald-900 dark:text-emerald-200">Devis proposé</p>
+          <p className="text-xs text-emerald-900 dark:text-emerald-200">Devis proposé</p>
           <p className="text-base font-semibold tabular-nums text-emerald-950 dark:text-emerald-100 break-words">
             {amountFc}
           </p>
         </div>
-        <div className="min-w-0 min-[380px]:text-right">
-          <p className="text-[11px] text-emerald-900 dark:text-emerald-200">Acompte 30 %</p>
-          <p className="text-sm font-semibold tabular-nums text-emerald-950 dark:text-emerald-100 break-words">
-            {depositFc}
-          </p>
-        </div>
+        {depositFc ? (
+          <div className="min-w-0 min-[380px]:text-right">
+            <p className="text-xs text-emerald-900 dark:text-emerald-200">Acompte 30 %</p>
+            <p className="text-sm font-semibold tabular-nums text-emerald-950 dark:text-emerald-100 break-words">
+              {depositFc}
+            </p>
+          </div>
+        ) : null}
       </div>
       {notes ? (
         <p className="text-xs text-foreground/90 whitespace-pre-line border-t border-emerald-500/15 pt-2 break-words">

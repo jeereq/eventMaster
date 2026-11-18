@@ -4,7 +4,7 @@ import React from 'react';
 import {
   Building2, Users, FileText, Calendar, Eye, History, Loader2,
   Mail, Shield, CheckCircle2, AlertCircle, MapPin, Phone, Heart, Ticket,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Modal, Button, Badge } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
@@ -134,7 +134,7 @@ function DetailSection({
 }) {
   return (
     <section className="space-y-2.5">
-      <h5 className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+      <h5 className="text-xs font-semibold text-muted flex items-center gap-1.5">
         {Icon && <Icon className="w-3.5 h-3.5" />}
         {title}
       </h5>
@@ -185,7 +185,7 @@ function StatTiles({
           key={item.label}
           className="rounded-[var(--radius-card)] border border-border bg-surface-muted px-3 py-3 text-center"
         >
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted">{item.label}</div>
+          <div className="text-xs font-semibold text-muted">{item.label}</div>
           <div className="text-xl font-semibold text-foreground mt-1 tracking-tight">{item.value}</div>
         </div>
       ))}

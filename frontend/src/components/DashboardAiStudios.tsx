@@ -13,7 +13,7 @@ import {
   ArrowRight,
   Layers,
   Coins,
-} from 'lucide-react';
+} from '@/components/icons';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { isProtocolUser } from '@/lib/protocolAccess';
@@ -206,6 +206,7 @@ export default function DashboardAiStudios({
                 id={aiStudioTabId(DASHBOARD_STUDIO_PREFIX, studio.id)}
                 type="button"
                 role="tab"
+                data-tab-card
                 aria-selected={isSelected}
                 aria-controls={aiStudioPanelId(DASHBOARD_STUDIO_PREFIX, studio.id)}
                 tabIndex={isSelected ? 0 : -1}
@@ -214,7 +215,7 @@ export default function DashboardAiStudios({
                   'group relative text-left rounded-xl p-4 transition-all duration-150 flex flex-col justify-between gap-3 border cursor-pointer',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
                   isSelected
-                    ? 'bg-surface border-primary ring-2 ring-primary/20 shadow-md translate-y-[-1px]'
+                    ? 'bg-surface border-border/80'
                     : 'bg-surface/80 hover:bg-surface border-border/80 hover:border-primary/40 hover:shadow-xs',
                 )}
               >
@@ -224,17 +225,6 @@ export default function DashboardAiStudios({
                     <Icon className="w-5 h-5" />
                   </div>
 
-                  {isSelected ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-2xs">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
-                      Studio actif
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted/15 text-muted border border-border/60">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/70" />
-                      Prêt
-                    </span>
-                  )}
                 </div>
 
                 {/* Corps : Titre et description */}
@@ -244,7 +234,7 @@ export default function DashboardAiStudios({
                       {studio.title}
                     </h3>
                   </div>
-                  <p className="text-[11px] font-medium text-foreground/80">
+                  <p className="text-xs font-medium text-foreground/80">
                     {studio.subtitle}
                   </p>
                   <p className="text-xs text-muted leading-relaxed line-clamp-2 pt-0.5">
@@ -258,7 +248,7 @@ export default function DashboardAiStudios({
                     {studio.features.slice(0, 2).map((feat, idx) => (
                       <span
                         key={idx}
-                        className="text-[10px] font-medium text-muted bg-surface-muted px-1.5 py-0.5 rounded-md"
+                        className="text-xs font-medium text-muted bg-surface-muted px-1.5 py-0.5 rounded-md"
                       >
                         {feat}
                       </span>

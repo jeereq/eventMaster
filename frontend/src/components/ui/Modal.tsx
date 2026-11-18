@@ -3,7 +3,7 @@
 import React, { useEffect, useCallback, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
-import { X } from 'lucide-react';
+import { X } from '@/components/icons';
 
 export interface ModalProps {
   open: boolean;
@@ -20,6 +20,11 @@ export interface ModalProps {
   dismissible?: boolean;
   /** Masquer le header (titre/fermer) pour un contenu custom */
   hideHeader?: boolean;
+  /**
+   * `right` : panneau latéral pleine hauteur qui glisse depuis la droite (édition rapide d'un
+   * élément d'une liste, la liste reste visible). `center` (défaut) : fenêtre centrée.
+   */
+  placement?: 'center' | 'right';
 }
 
 const sizeMap = {
@@ -60,7 +65,7 @@ export const modalBackdropClass =
   'absolute inset-0 bg-black/40 animate-fade-in motion-reduce:animate-none';
 
 export const modalPanelClass =
-  'relative w-full bg-surface border border-border shadow-2xl rounded-t-2xl sm:rounded-2xl max-h-[92vh] flex flex-col animate-slide-up sm:animate-fade-in motion-reduce:animate-none';
+  'relative w-full bg-surface border border-border shadow-2xl rounded-t-[26px] sm:rounded-[26px] max-h-[92vh] flex flex-col animate-slide-up sm:animate-fade-in motion-reduce:animate-none';
 
 export default function Modal({
   open,
@@ -75,6 +80,7 @@ export default function Modal({
   contentClassName,
   dismissible = true,
   hideHeader = false,
+  placement = 'center',
 }: ModalProps) {
   const titleId = useId();
   const descId = useId();
@@ -208,7 +214,12 @@ export default function Modal({
       ) : (
         <div className={cn(modalBackdropClass, 'z-0', stackDepth > 1 && 'bg-black/15')} aria-hidden />
       )}
-      <div className="absolute inset-0 z-10 flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
+      <div
+        className={cn(
+          'absolute inset-0 z-10 flex pointer-events-none',
+          placement === 'right' ? 'items-stretch justify-end' : 'items-end sm:items-center justify-center p-0 sm:p-4',
+        )}
+      >
         <div
           ref={panelRef}
           role="dialog"
@@ -219,8 +230,15 @@ export default function Modal({
           onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
-          className={cn(modalPanelClass, 'pointer-events-auto outline-none', sizeMap[size], className)}
-          style={viewportMaxHeight ? { maxHeight: viewportMaxHeight } : undefined}
+          className={cn(
+            modalPanelClass,
+            'pointer-events-auto outline-none',
+            placement === 'right'
+              ? 'h-full max-h-none max-w-[28rem] rounded-none sm:rounded-none border-y-0 border-r-0 animate-slide-in-right sm:animate-slide-in-right'
+              : sizeMap[size],
+            className,
+          )}
+          style={viewportMaxHeight && placement !== 'right' ? { maxHeight: viewportMaxHeight } : undefined}
         >
           {showHeader && (
             <div className="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-border shrink-0">

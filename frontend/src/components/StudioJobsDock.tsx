@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, Coins, Loader2, RefreshCw, Sparkles, X, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Coins, Loader2, RefreshCw, Sparkles, X, XCircle } from '@/components/icons';
 import { useStudioJobs, type TrackedJob } from '@/context/StudioJobsContext';
 import { isAiTokenShortageMessage, notifyAiTokensInsufficient } from '@/lib/aiTokenEvents';
 import { cn } from '@/lib/cn';
@@ -98,7 +98,7 @@ function StudioJobCard({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={cn(
-        'relative overflow-hidden rounded-2xl border backdrop-blur-md px-4 py-3.5 transition-all duration-300 ease-out shadow-2xl',
+        'relative overflow-hidden rounded-2xl border px-4 py-3.5 transition-all duration-300 ease-out shadow-2xl',
         running && 'border-primary/40 bg-surface/95 dark:bg-surface/90 ring-1 ring-primary/20',
         isDone && 'border-emerald-500/50 bg-emerald-50/95 dark:bg-emerald-950/80 text-foreground ring-2 ring-emerald-500/20 shadow-emerald-500/10',
         isError && 'border-rose-500/60 bg-rose-50/95 dark:bg-rose-950/85 text-foreground ring-2 ring-rose-500/25 shadow-rose-500/10',
@@ -126,15 +126,15 @@ function StudioJobCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             {running ? (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-primary/15 text-primary uppercase tracking-wide">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-extrabold bg-primary/15 text-primary ">
                 En cours
               </span>
             ) : isDone ? (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 ">
                 <Sparkles className="w-2.5 h-2.5" /> Succès Studio
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-500/20 text-rose-700 dark:text-rose-300 uppercase tracking-wide">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-extrabold bg-rose-500/20 text-rose-700 dark:text-rose-300 ">
                 Échec Studio
               </span>
             )}
@@ -227,7 +227,7 @@ export default function StudioJobsDock() {
         <StudioJobCard key={job.id} job={job} onDismiss={dismissJob} />
       ))}
       {activeCount > 3 ? (
-        <p className="text-[10px] text-muted text-right pr-1">{activeCount} tâches en cours</p>
+        <p className="text-xs text-muted text-right pr-1">{activeCount} tâches en cours</p>
       ) : null}
     </div>
   );

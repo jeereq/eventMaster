@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, LayoutDashboard, Sparkles } from 'lucide-react';
+import { ArrowRight, LayoutDashboard, Sparkles } from '@/components/icons';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 
@@ -40,7 +40,7 @@ export default function LandingMobileStickyBar({
   return (
     <aside
       aria-label="Accès rapide inscription ou tableau de bord"
-      className="fixed bottom-0 inset-x-0 z-40 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden bg-surface/95 backdrop-blur-md border-t border-border shadow-[0_-4px_24px_rgba(0,0,0,0.1)] animate-slide-up"
+      className="fixed bottom-0 inset-x-0 z-40 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden bg-surface/95 border-t border-border shadow-[0_-4px_24px_rgba(0,0,0,0.1)] animate-slide-up"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">

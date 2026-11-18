@@ -19,7 +19,7 @@ import {
 import { cn } from '@/lib/cn';
 import {
   Mail, Phone, MapPin, Send, MessageSquare, MessageCircle, CheckCircle2, Clock, ArrowRight,
-} from 'lucide-react';
+} from '@/components/icons';
 
 export default function ContactPage() {
   const messaging = useMessagingChannels();
@@ -170,7 +170,7 @@ export default function ContactPage() {
                         <Mail className="w-4 h-4" />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                        <p className="text-xs font-semibold text-muted">
                           E-mail
                         </p>
                         <a
@@ -186,7 +186,7 @@ export default function ContactPage() {
                         <Phone className="w-4 h-4" />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                        <p className="text-xs font-semibold text-muted">
                           Téléphone
                         </p>
                         <a
@@ -195,7 +195,7 @@ export default function ContactPage() {
                         >
                           {site.supportPhone}
                         </a>
-                        <p className="text-[11px] text-muted mt-0.5">{site.whatsappNote}</p>
+                        <p className="text-xs text-muted mt-0.5">{site.whatsappNote}</p>
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
@@ -203,7 +203,7 @@ export default function ContactPage() {
                         <MapPin className="w-4 h-4" />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                        <p className="text-xs font-semibold text-muted">
                           Adresse
                         </p>
                         <p className="text-sm font-medium text-foreground">
@@ -218,7 +218,7 @@ export default function ContactPage() {
                         <Clock className="w-4 h-4" />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                        <p className="text-xs font-semibold text-muted">
                           Horaires
                         </p>
                         <p className="text-sm font-medium text-foreground">

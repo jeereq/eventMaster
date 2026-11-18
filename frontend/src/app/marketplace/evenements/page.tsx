@@ -24,7 +24,7 @@ import MarketplaceCatalogueSkeleton from '@/components/MarketplaceCatalogueSkele
 import { usePageSize } from '@/components/ui';
 import EventTicketCard from '@/components/marketplace/EventTicketCard';
 import { cn } from '@/lib/cn';
-import { CreditCard } from 'lucide-react';
+import { CreditCard } from '@/components/icons';
 import type { CatalogueItem } from '@/lib/marketplace';
 import CatalogueFilterBar, {
   CatalogueEntityFilterFields,

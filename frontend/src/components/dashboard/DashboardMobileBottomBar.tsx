@@ -20,7 +20,7 @@ import {
   X,
   Sparkles,
   Images,
-} from 'lucide-react';
+} from '@/components/icons';
 import type { OrgAccess } from '@/context/AuthContext';
 import type { TenantAccountKind } from '@/lib/marketplace';
 import type { WorkspaceModules } from '@/lib/planAccess';
@@ -386,7 +386,7 @@ export default function DashboardMobileBottomBar({
       className="em-dash-bottom-nav em-tabbar md:hidden pointer-events-none"
     >
       <div
-        className="pointer-events-auto bg-surface/92 dark:bg-stage-elevated/95 backdrop-blur-2xl backdrop-saturate-150 border-t border-border/70 dark:border-border-subtle/30 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.18)] px-1.5 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] grid gap-0.5 items-end relative"
+        className="pointer-events-auto bg-surface/92 dark:bg-stage-elevated/95 backdrop-saturate-150 border-t border-border/70 dark:border-border-subtle/30 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.18)] px-1.5 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] grid gap-0.5 items-end relative"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map((item, index) => {
@@ -405,13 +405,13 @@ export default function DashboardMobileBottomBar({
                 <span className="em-tab-pill relative">
                   <Icon className="relative w-[20px] h-[20px]" aria-hidden />
                   {item.badge ? (
-                    <span className="absolute -top-1 -right-1.5 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-festive-accent text-white text-[10px] font-bold tabular-nums ring-2 ring-surface">
+                    <span className="absolute -top-1 -right-1.5 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-festive-accent text-white text-xs font-bold tabular-nums ring-2 ring-surface">
                       {item.badge > 99 ? '99+' : item.badge}
                     </span>
                   ) : null}
                 </span>
               )}
-              <span className="text-[10.5px] min-[400px]:text-[11px] leading-tight truncate max-w-full">
+              <span className="text-xs min-[400px]:text-xs leading-tight truncate max-w-full">
                 {isMenu && mobileMenuOpen ? 'Fermer' : item.name}
               </span>
             </>

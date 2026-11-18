@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { KeyRound, Mail, MessageSquare } from 'lucide-react';
+import { KeyRound, Mail, MessageSquare } from '@/components/icons';
 import { AuthSplitLayout } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card, IdentifierInput, identifierValue } from '@/components/ui';
 import type { IdentifierMode } from '@/components/ui';

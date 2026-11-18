@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 export type BreadcrumbItem = {

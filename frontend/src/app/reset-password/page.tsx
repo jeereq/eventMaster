@@ -5,8 +5,12 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import {
- Calendar, Lock, Loader2, MessageSquare, Table, Sparkles,
-} from 'lucide-react';
+ Calendar,
+ Loader2,
+ MessageSquare,
+ Table,
+ Sparkles,
+} from '@/components/icons';
 import { AuthSplitLayout } from '@/components/AuthSplitLayout';
 import { Button, Alert, PasswordInput, Card } from '@/components/ui';
 
@@ -97,7 +101,6 @@ function ResetPasswordForm() {
  value={password}
  onChange={(e) => setPassword(e.target.value)}
  placeholder="••••••••"
- leftIcon={<Lock className="w-4 h-4" />}
  hint="Au moins 8 caractères."
  />
  <PasswordInput
@@ -109,7 +112,6 @@ function ResetPasswordForm() {
  value={confirmPassword}
  onChange={(e) => setConfirmPassword(e.target.value)}
  placeholder="••••••••"
- leftIcon={<Lock className="w-4 h-4" />}
  />
  <Button type="submit" fullWidth size="lg" loading={loading}>
  Réinitialiser le mot de passe

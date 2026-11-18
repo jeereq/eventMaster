@@ -7,6 +7,7 @@ import {
   Alert,
   Button,
   EmptyState,
+  IconButton,
   Input,
   Modal,
   Pagination,
@@ -24,12 +25,11 @@ import CatalogueFilterBar, {
 } from '@/components/CatalogueFilterBar';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
-import { DealDeclineBlock, MarketplaceDealCard, type MarketplaceDealFact } from '@/components/MarketplaceDealCard';
+import { DealDeclineBlock, DealIconLink, MarketplaceDealCard, type MarketplaceDealFact } from '@/components/MarketplaceDealCard';
 import {
   BOOKING_PIPELINE_STEPS,
   BOOKING_STATUS_LABELS,
   bookingDateKeys,
-  bookingNextStep,
   bookingOverlapsDay,
   bookingPipelineIndex,
   eachDateKey,
@@ -49,7 +49,7 @@ import {
 } from '@/lib/marketplace';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
-import { Ban, Building2, CalendarCheck, CalendarDays, CheckCircle2, ChevronDown, Coins, CreditCard, KeyRound, MessageCircle, MessageSquareQuote, Phone, Sparkles, Star, XCircle } from 'lucide-react';
+import { Ban, Building2, Calendar, CalendarCheck, CalendarDays, CheckCircle2, ChevronDown, Coins, CreditCard, KeyRound, MessageCircle, MessageSquareQuote, Phone, Sparkles, Star, Store, XCircle } from '@/components/icons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { useAuth } from '@/context/AuthContext';
 import { ReviewStars, ReviewStarsInput } from '@/components/marketplace/ReviewStars';
@@ -151,14 +151,14 @@ function BookingUnavailability({
   return (
     <div className="rounded-xl border border-festive-accent/25 bg-festive-accent/8 p-2.5 space-y-1.5">
       {confirmed ? (
-        <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+        <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
           <CalendarCheck className="w-3.5 h-3.5 shrink-0" />
           Dates confirmées et bloquées au calendrier du prestataire
         </p>
       ) : null}
       {extras.length ? (
         <div className="space-y-1">
-          <p className="text-[11px] font-semibold text-festive-accent flex items-center gap-1.5">
+          <p className="text-xs font-semibold text-festive-accent flex items-center gap-1.5">
             <Ban className="w-3.5 h-3.5 shrink-0" />
             Autres indisponibilités du prestataire
           </p>
@@ -168,13 +168,13 @@ function BookingUnavailability({
                 key={day}
                 type="button"
                 onClick={() => onFocusDate?.(day)}
-                className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-festive-accent/10 text-festive-accent border border-festive-accent/20 hover:bg-festive-accent/20"
+                className="px-1.5 py-0.5 rounded-md text-xs font-semibold bg-festive-accent/10 text-festive-accent border border-festive-accent/20 hover:bg-festive-accent/20"
               >
                 {formatDateKeyFr(day)}
               </button>
             ))}
             {extras.length > MAX_UNAVAILABLE_PREVIEW ? (
-              <span className="text-[10px] text-muted self-center">
+              <span className="text-xs text-muted self-center">
                 +{extras.length - MAX_UNAVAILABLE_PREVIEW}
               </span>
             ) : null}
@@ -186,23 +186,10 @@ function BookingUnavailability({
 }
 
 function BookingStepper({ item }: { item: MarketplaceBookingItem }) {
-  if (item.status === 'CANCELLED') {
-    return (
-      <p className="text-xs font-semibold text-rose-600 dark:text-rose-400">Réservation annulée</p>
-    );
-  }
+  if (item.status === 'CANCELLED') return null;
   const idx = bookingPipelineIndex(item);
-  const current = BOOKING_PIPELINE_STEPS[idx];
   return (
     <div className="space-y-2">
-      {current ? (
-        <p className="text-xs font-semibold text-foreground sm:hidden">
-          {current.label}
-          <span className="font-normal text-muted">
-            {' '}· étape {idx + 1} sur {BOOKING_PIPELINE_STEPS.length}
-          </span>
-        </p>
-      ) : null}
       <ol className="flex gap-1.5" aria-label="Étapes de la réservation">
         {BOOKING_PIPELINE_STEPS.map((step, i) => {
           const isCurrent = i === idx;
@@ -218,7 +205,7 @@ function BookingStepper({ item }: { item: MarketplaceBookingItem }) {
               />
               <span
                 className={cn(
-                  'mt-1 hidden text-[11px] font-medium leading-tight sm:block',
+                  'mt-1 hidden text-xs font-medium leading-tight sm:block',
                   isCurrent ? 'text-foreground' : isPassed ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted',
                 )}
               >
@@ -533,7 +520,7 @@ export default function MarketplaceBookingsPanel({
         <div className="h-full flex flex-wrap items-center justify-between gap-3 border border-border rounded-[var(--radius-card)] bg-surface px-4 py-3">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-foreground">Commission marketplace à régler</p>
-            <p className="text-[11px] text-muted mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               {commissionPct} % des réservations confirmées, hors commissions déjà payées ou retenues sur un acompte en ligne
             </p>
           </div>
@@ -595,7 +582,7 @@ export default function MarketplaceBookingsPanel({
               allowBookedSelection
             />
             {!hasAgendaDates ? (
-              <p className="text-[11px] text-muted px-1">
+              <p className="text-xs text-muted px-1">
                 Aucune date confirmée ni indisponibilité pour le moment. Les jours bloqués par le prestataire apparaîtront ici.
               </p>
             ) : null}
@@ -603,7 +590,7 @@ export default function MarketplaceBookingsPanel({
               <div className="rounded-2xl border border-border bg-surface p-3 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Jour sélectionné</p>
+                    <p className="text-xs font-semibold text-muted">Jour sélectionné</p>
                     <p className="text-xs font-semibold text-foreground capitalize">
                       {fromDate === (toDate || fromDate)
                         ? formatDayLong(fromDate)
@@ -616,7 +603,7 @@ export default function MarketplaceBookingsPanel({
                       setFromDate('');
                       setToDate('');
                     }}
-                    className="text-[11px] font-semibold text-muted hover:text-foreground underline-offset-2 hover:underline"
+                    className="text-xs font-semibold text-muted hover:text-foreground underline-offset-2 hover:underline"
                   >
                     Effacer
                   </button>
@@ -636,7 +623,7 @@ export default function MarketplaceBookingsPanel({
                   <p className="text-xs text-muted">Aucune réservation sur cette période.</p>
                 )}
                 {selectedRangeHasBlocked ? (
-                  <p className="text-[11px] font-semibold text-festive-accent flex items-center gap-1.5">
+                  <p className="text-xs font-semibold text-festive-accent flex items-center gap-1.5">
                     <Ban className="w-3.5 h-3.5 shrink-0" />
                     Le prestataire est aussi indisponible sur un ou plusieurs de ces jours.
                   </p>
@@ -653,7 +640,7 @@ export default function MarketplaceBookingsPanel({
             type="button"
             onClick={() => setStatus('')}
             className={cn(
-              'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
+              'px-2.5 py-1 rounded-full text-xs font-semibold border transition',
               !status || status === 'all'
                 ? 'bg-foreground text-background border-foreground'
                 : 'border-border bg-surface text-muted hover:text-foreground',
@@ -670,7 +657,7 @@ export default function MarketplaceBookingsPanel({
                 type="button"
                 onClick={() => setStatus(status === id ? '' : id)}
                 className={cn(
-                  'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
+                  'px-2.5 py-1 rounded-full text-xs font-semibold border transition',
                   status === id
                     ? 'bg-primary/10 text-primary border-primary/30'
                     : 'border-border bg-surface text-muted hover:text-foreground',
@@ -718,7 +705,6 @@ export default function MarketplaceBookingsPanel({
           setFromDate('');
           setToDate('');
         }}
-        resultLabel={`${visible.length} réservation${visible.length > 1 ? 's' : ''}`}
         modalTitle="Filtrer les réservations"
         filters={
           <>
@@ -735,19 +721,6 @@ export default function MarketplaceBookingsPanel({
                 />
               </CatalogueFilterField>
             ) : null}
-            <CatalogueFilterField label="Statut">
-              <CatalogueChoicePills
-                options={[
-                  { id: 'all', label: 'Tous' },
-                  ...(Object.keys(BOOKING_STATUS_LABELS) as MarketplaceBookingStatus[]).map((id) => ({
-                    id,
-                    label: BOOKING_STATUS_LABELS[id],
-                  })),
-                ]}
-                value={status || 'all'}
-                onChange={setStatus}
-              />
-            </CatalogueFilterField>
             <CatalogueFilterField label="Type">
               <CatalogueChoicePills
                 options={[...KIND_OPTIONS]}
@@ -768,7 +741,7 @@ export default function MarketplaceBookingsPanel({
       />
 
       {visible.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="events"
           icon={<CalendarCheck className="w-5 h-5" />}
           title={bookings.length ? 'Aucune réservation trouvée' : 'Aucune réservation'}
           description={bookings.length
@@ -785,7 +758,6 @@ export default function MarketplaceBookingsPanel({
               const canAct = !isVendor || canHandleAsVendor;
               const busy = busyId === item.id;
               const amountDraft = acceptAmount[item.id] ?? String(item.amountFc);
-              const next = bookingNextStep(item, depositPct);
               const listingHref = item.listingSlug
                 ? dashboardVenueHref(item.listingSlug)
                 : item.offeringSlug
@@ -882,8 +854,6 @@ export default function MarketplaceBookingsPanel({
                   icon={kindIcon(item)}
                   status={<StatusPill tone={toneFor(item.status)}>{BOOKING_STATUS_LABELS[item.status]}</StatusPill>}
                   facts={facts}
-                  value={formatFc(item.amountFc)}
-                  valueMeta={`Acompte ${formatFc(item.depositFc)}`}
                   highlight={Boolean(highlightBookingId && item.id === highlightBookingId)}
                   layout={mode}
                   primaryActions={payOnlineButton ? (
@@ -910,68 +880,54 @@ export default function MarketplaceBookingsPanel({
                   secondaryActions={(
                     <>
                       {waUrl && !isVendor ? (
-                        <a href={waUrl} target="_blank" rel="noopener noreferrer" title="Échanger directement par WhatsApp">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            leftIcon={<MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
-                          >
-                            WhatsApp
-                          </Button>
-                        </a>
-                      ) : null}
-                      {listingHref ? (
-                        <Button size="sm" variant="secondary" href={listingHref}>
-                          Fiche
-                        </Button>
+                        <DealIconLink
+                          href={waUrl}
+                          external
+                          label="WhatsApp"
+                          icon={MessageCircle}
+                          iconClassName="text-emerald-600 dark:text-emerald-400"
+                        />
                       ) : null}
                       {item.vendorPhone && !isVendor ? (
-                        <a href={`tel:${item.vendorPhone}`} title="Appeler le prestataire">
-                          <Button size="sm" variant="ghost" leftIcon={<Phone className="w-3.5 h-3.5" />}>
-                            Appeler
-                          </Button>
-                        </a>
+                        <DealIconLink href={`tel:${item.vendorPhone}`} external label="Appeler le prestataire" icon={Phone} />
                       ) : null}
+                      {listingHref ? <DealIconLink href={listingHref} label="Voir la fiche" icon={Store} /> : null}
                       {organizerView && item.event?.id ? (
-                        <Button size="sm" variant="secondary" href={eventDashboardHref(item.event.id, { tab: 'prep' })}>
-                          Événement
-                        </Button>
+                        <DealIconLink
+                          href={eventDashboardHref(item.event.id, { tab: 'prep' })}
+                          label="Ouvrir l’événement"
+                          icon={Calendar}
+                        />
                       ) : null}
                       {canAct && isVendor && item.status === 'REQUESTED' ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        <IconButton
+                          label="Refuser"
+                          icon={XCircle}
+                          tone="danger"
                           onClick={() => {
                             setCancelModal({ item, action: 'decline' });
                             setCancelReasonChoice(DECLINE_BOOKING_REASONS[0]);
                             setCancelCustomReason('');
                             setCancelNotes('');
                           }}
-                          leftIcon={<XCircle className="w-3.5 h-3.5 text-rose-500" />}
-                          className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                        >
-                          Refuser
-                        </Button>
+                        />
                       ) : null}
                       {canAct && (item.status === 'ACCEPTED' || (item.status === 'REQUESTED' && !isVendor)) ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        <IconButton
+                          label="Annuler la réservation"
+                          icon={XCircle}
+                          tone="danger"
                           onClick={() => {
                             setCancelModal({ item, action: 'cancel' });
                             setCancelReasonChoice(DECLINE_BOOKING_REASONS[0]);
                             setCancelCustomReason('');
                             setCancelNotes('');
                           }}
-                          className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                        >
-                          Annuler
-                        </Button>
+                        />
                       ) : null}
                     </>
                   )}
                 >
-                  <p className="text-xs text-foreground/80 leading-relaxed">{next.detail}</p>
                   <BookingStepper item={item} />
                   {!canAct && (item.status === 'REQUESTED' || item.status === 'ACCEPTED') ? (
                     <p className="text-xs text-muted">
@@ -1279,7 +1235,7 @@ export default function MarketplaceBookingsPanel({
                 <span className="font-semibold text-foreground">Acompte à payer maintenant :</span>
                 <span className="text-sm font-bold text-primary">{formatFc(payModal.depositFc)}</span>
               </div>
-              <div className="flex items-center justify-between text-[11px] text-muted">
+              <div className="flex items-center justify-between text-xs text-muted">
                 <span>Reste à régler avec le prestataire :</span>
                 <span className="font-medium text-foreground">{formatFc(payModal.amountFc - payModal.depositFc)}</span>
               </div>
@@ -1301,9 +1257,9 @@ export default function MarketplaceBookingsPanel({
                 onChange={(e) => setPayPhone(e.target.value)}
               />
             ) : (
-              <p className="text-[11px] text-muted">Vous serez redirigé vers la page de paiement sécurisée (Visa, Mastercard).</p>
+              <p className="text-xs text-muted">Vous serez redirigé vers la page de paiement sécurisée (Visa, Mastercard).</p>
             )}
-            <p className="text-[11px] text-muted leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               Le paiement passe par EventMaster, qui le reverse au prestataire. Vous pouvez aussi le payer directement et cliquer sur « Déjà versé ».
             </p>
             {payError ? <Alert variant="error">{payError}</Alert> : null}
@@ -1373,7 +1329,7 @@ export default function MarketplaceBookingsPanel({
                 </span>
                 <span className="text-sm font-bold text-primary">{formatFc(depositModal.depositFc)}</span>
               </div>
-              <div className="flex items-center justify-between text-[11px] text-muted pt-1">
+              <div className="flex items-center justify-between text-xs text-muted pt-1">
                 <span>Reste à payer lors du jour J :</span>
                 <span className="font-medium text-foreground">{formatFc(depositModal.amountFc - depositModal.depositFc)}</span>
               </div>
@@ -1386,11 +1342,11 @@ export default function MarketplaceBookingsPanel({
                   <CreditCard className="w-3.5 h-3.5 text-muted" aria-hidden />
                   Règlement hors plateforme
                 </p>
-                <p className="text-[11px] leading-relaxed text-muted">
+                <p className="text-xs leading-relaxed text-muted">
                   Effectuez le paiement directement auprès de <strong className="text-foreground">{depositModal.vendorName}</strong> (Mobile Money M-Pesa, Orange Money, Airtel Money, ou virement).
                 </p>
                 {depositModal.vendorPhone ? (
-                  <p className="text-[11px] font-medium pt-1 border-t border-border text-muted">
+                  <p className="text-xs font-medium pt-1 border-t border-border text-muted">
                     Contact du prestataire : <a href={`tel:${depositModal.vendorPhone}`} className="underline font-semibold text-foreground">{depositModal.vendorPhone}</a>
                   </p>
                 ) : null}
@@ -1407,7 +1363,7 @@ export default function MarketplaceBookingsPanel({
                 value={depositNote}
                 onChange={(e) => setDepositNote(e.target.value)}
               />
-              <p className="text-[11px] text-muted">
+              <p className="text-xs text-muted">
                 {depositModal.viewerRole === 'vendor'
                   ? "Indiquez une référence de reçu ou note interne pour votre comptabilité."
                   : "Facilite l'identification immédiate de votre versement par le prestataire."}

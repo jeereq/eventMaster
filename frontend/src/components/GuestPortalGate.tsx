@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from '@/components/icons';
 import LegalAcceptanceModal from '@/components/LegalAcceptanceModal';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import GuestBrandSync from '@/components/GuestBrandSync';

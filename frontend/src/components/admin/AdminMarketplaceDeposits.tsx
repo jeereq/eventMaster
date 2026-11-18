@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Coins, Loader2, RefreshCw } from 'lucide-react';
+import { Coins, Loader2, RefreshCw } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Alert, Badge, Button, EmptyState, Input, Pagination } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -127,7 +127,7 @@ export default function AdminMarketplaceDeposits() {
             { label: 'Dû aux prestataires', value: formatFc(summary.payoutFc) },
           ].map((tile) => (
             <div key={tile.label} className="rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
-              <p className="text-[11px] text-muted">{tile.label}</p>
+              <p className="text-xs text-muted">{tile.label}</p>
               <p className="text-lg font-semibold tabular-nums text-foreground">{tile.value}</p>
             </div>
           ))}
@@ -171,7 +171,7 @@ export default function AdminMarketplaceDeposits() {
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : data.items.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="payments"
           icon={<Coins className="w-5 h-5" />}
           title={filter === 'attention' ? 'Rien à suivre' : 'Aucun acompte'}
           description={filter === 'attention' ? 'Tous les acomptes payés en ligne ont été reversés.' : 'Les acomptes payés en ligne apparaîtront ici.'}
@@ -200,7 +200,7 @@ export default function AdminMarketplaceDeposits() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold tabular-nums">{formatFc(row.amountFc)}</p>
-                    <p className="text-[11px] text-muted tabular-nums">
+                    <p className="text-xs text-muted tabular-nums">
                       commission {formatFc(row.commissionFc)} · reversé {formatFc(row.payoutAmountFc)}
                     </p>
                   </div>

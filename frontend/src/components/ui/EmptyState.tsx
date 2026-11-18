@@ -1,15 +1,18 @@
 import React from 'react';
 import { cn } from '@/lib/cn';
+import Illustration, { type IllustrationName } from '@/components/illustrations/Illustration';
 
 export interface EmptyStateProps {
   icon?: React.ReactNode;
+  /** Illustration maison ; prioritaire sur `icon`. */
+  illustration?: IllustrationName;
   title: string;
   description?: string;
   action?: React.ReactNode;
   className?: string;
 }
 
-export default function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
+export default function EmptyState({ icon, illustration, title, description, action, className }: EmptyStateProps) {
   return (
     <div
       className={cn(
@@ -18,7 +21,9 @@ export default function EmptyState({ icon, title, description, action, className
         className,
       )}
     >
-      {icon && (
+      {illustration ? (
+        <Illustration name={illustration} className="mb-3 w-40 sm:w-44" />
+      ) : icon && (
         <div className="mb-4 inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/10 text-primary">
           {icon}
         </div>

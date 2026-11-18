@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { Building2, History, Minus } from 'lucide-react';
+import { Building2, History, Minus } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import type { InvitationContextSource } from '@/lib/invitationContextSource';
 

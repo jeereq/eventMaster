@@ -81,10 +81,10 @@ export default function EventTicketCard({
 
         <div className="relative flex items-start justify-between gap-2">
           {parts ? (
-            <span className="rounded-[10px] bg-white text-[#1e1f21] px-2 sm:px-2.5 pt-1.5 pb-1 text-center leading-[1.05] min-w-[46px] shadow-sm">
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-amber-700">{parts.dow}</span>
+            <span className="rounded-[10px] bg-white text-[#1e1f21] px-2 sm:px-2.5 pt-1.5 pb-1 text-center leading-[1.1] min-w-[46px] shadow-sm">
+              <span className="block text-xs font-semibold uppercase tracking-[0.06em] text-amber-700">{parts.dow}</span>
               <span className="block font-display text-xl sm:text-2xl font-bold">{parts.day}</span>
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.06em]">{parts.mon}</span>
+              <span className="block text-xs font-semibold uppercase tracking-[0.06em]">{parts.mon}</span>
             </span>
           ) : <span />}
           {stock?.tone === 'full' ? (
@@ -92,7 +92,7 @@ export default function EventTicketCard({
           ) : null}
         </div>
         {city ? (
-          <span className="relative font-display text-[11px] sm:text-[13px] uppercase tracking-[0.14em] opacity-85">{city}</span>
+          <span className="relative font-display text-xs sm:text-sm uppercase tracking-[0.14em] opacity-85">{city}</span>
         ) : null}
 
         {/* Encoches de la souche du billet */}
@@ -101,22 +101,22 @@ export default function EventTicketCard({
       </div>
 
       <div className="border-t-2 border-dashed border-border px-3 sm:px-4 pt-3 sm:pt-3.5 pb-3.5 sm:pb-4 flex flex-col gap-1 sm:gap-1.5 flex-1 min-w-0">
-        {parts ? <span className="text-xs sm:text-[13px] font-semibold text-primary-solid first-letter:uppercase">{parts.when}</span> : null}
-        <h3 className="font-display text-[15px] sm:text-lg font-semibold leading-snug line-clamp-2">{item.title}</h3>
+        {parts ? <span className="text-xs sm:text-sm font-semibold text-primary-solid first-letter:uppercase">{parts.when}</span> : null}
+        <h3 className="font-display text-base sm:text-lg font-semibold leading-snug line-clamp-2">{item.title}</h3>
         <span className="text-xs sm:text-sm text-muted line-clamp-1">{place}</span>
         <div className="mt-auto pt-2.5 sm:pt-3 border-t border-border/70 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
           <span className="text-sm sm:text-base font-semibold tabular-nums">{priceText}</span>
           {stock && stock.tone !== 'full' ? (
             <span
               className={cn(
-                'text-xs sm:text-[13px] font-semibold',
+                'text-xs sm:text-sm font-semibold',
                 stock.tone === 'hot' ? 'text-amber-700 dark:text-amber-300' : 'text-muted',
               )}
             >
               {stock.text}
             </span>
           ) : stock?.tone === 'full' ? (
-            <span className="text-xs sm:text-[13px] font-semibold text-muted">Complet</span>
+            <span className="text-xs sm:text-sm font-semibold text-muted">Complet</span>
           ) : null}
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList } from '@/components/icons';
 import { api } from '@/lib/api';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import { taskDueLabel, taskDueState, type EventTaskItem } from '@/lib/eventTasks';
@@ -35,7 +35,7 @@ export default function EventTaskInbox({ protocol }: { protocol?: boolean }) {
       <p className="text-sm font-semibold inline-flex items-center gap-2">
         <ClipboardList className="w-4 h-4 text-primary" />
         Mes tâches ouvertes
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted tabular-nums">{tasks.length}</span>
+        <span className="text-xs font-semibold text-muted tabular-nums">{tasks.length}</span>
         {overdue > 0 ? (
           <StatusPill tone="rose">{overdue} en retard</StatusPill>
         ) : null}

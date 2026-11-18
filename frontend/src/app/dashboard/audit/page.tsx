@@ -2,10 +2,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, ScrollText } from 'lucide-react';
+import { Loader2, ScrollText } from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Input, usePageSize } from '@/components/ui';
+import { Alert, EmptyState, Pagination, Input, usePageSize } from '@/components/ui';
 
 const ACTION_LABELS: Record<string, string> = {
   TENANT_CREATE: 'Organisation créée',
@@ -151,13 +151,6 @@ export default function AuditPage() {
 
   return (
     <div className="space-y-6 w-full">
-      <PageHeader
-        title="Journal d’audit"
-        description="Actions sensibles : forfaits, suppressions, réglages."
-        breadcrumbs={
-          <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard?tab=overview' }, { label: 'Journal d’audit' }]} />
-        }
-      />
 
       {error && <Alert variant="error">{error}</Alert>}
 
@@ -229,7 +222,7 @@ export default function AuditPage() {
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : !data?.logs.length ? (
-        <EmptyState
+        <EmptyState illustration="tasks"
           icon={<ScrollText className="w-5 h-5" />}
           title="Aucune entrée"
           description="Impersonation, forfaits, suppressions."
@@ -239,12 +232,12 @@ export default function AuditPage() {
           {data.logs.map((log) => (
             <li key={log.id} className="px-4 py-4">
               <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                <span className="text-xs font-semibold text-muted">
                   {actionLabel(log.action)}
                 </span>
-                <span className="text-[10px] text-muted">{formatWhen(log.createdAt)}</span>
+                <span className="text-xs text-muted">{formatWhen(log.createdAt)}</span>
                 {log.tenantName && (
-                  <span className="text-[10px] text-muted truncate">{log.tenantName}</span>
+                  <span className="text-xs text-muted truncate">{log.tenantName}</span>
                 )}
               </div>
               <p className="text-sm font-medium text-foreground leading-snug">{log.summary}</p>

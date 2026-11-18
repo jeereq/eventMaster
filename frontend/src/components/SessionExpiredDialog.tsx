@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { LogOut, ShieldAlert } from 'lucide-react';
+import { LogOut, ShieldAlert } from '@/components/icons';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui';
 
@@ -92,7 +92,7 @@ export default function SessionExpiredDialog() {
 
   return (
     <div
-      className="fixed inset-0 z-[10070] flex items-end sm:items-center justify-center p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-stage/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[10070] flex items-end sm:items-center justify-center p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-stage/70"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="session-expired-title"

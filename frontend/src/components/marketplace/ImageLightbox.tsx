@@ -2,7 +2,7 @@
 
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight } from '@/components/icons';
 import { sizedMediaUrl } from '@/lib/marketplace';
 import { cn } from '@/lib/cn';
 
@@ -129,7 +129,7 @@ export default function ImageLightbox({
 
   const content = (
     <div
-      className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 select-none animate-fade-in touch-pan-y"
+      className="fixed inset-0 z-[120] bg-black/95 flex flex-col items-center justify-center p-3 sm:p-6 select-none animate-fade-in touch-pan-y"
       style={{
         paddingTop: 'max(0.75rem, env(safe-area-inset-top))',
         paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
@@ -155,7 +155,7 @@ export default function ImageLightbox({
                   ? 'bg-white shadow-xs'
                   : idx < currentIndex
                     ? 'bg-white/80'
-                    : 'bg-white/25 backdrop-blur-xs',
+                    : 'bg-white/25',
               )}
             />
           ))}
@@ -166,7 +166,7 @@ export default function ImageLightbox({
       <div className="absolute top-0 inset-x-0 p-3 sm:p-6 pt-[max(1.25rem,env(safe-area-inset-top))] flex items-center justify-between z-20 pointer-events-none">
         {/* Compteur & Légende Story */}
         <div
-          className="text-white text-xs font-semibold px-3 py-1.5 rounded-full bg-black/40 border border-white/15 backdrop-blur-md pointer-events-auto flex items-center gap-2 shadow-sm tabular-nums"
+          className="text-white text-xs font-semibold px-3 py-1.5 rounded-full bg-black/40 border border-white/15 pointer-events-auto flex items-center gap-2 shadow-sm tabular-nums"
           aria-live="polite"
         >
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
@@ -246,7 +246,7 @@ export default function ImageLightbox({
 
       {/* Indicateur d'aide gestuelle Story sur mobile */}
       {total > 1 && (
-        <div className="sm:hidden absolute bottom-2 inset-x-0 text-center text-[11px] text-white/60 pointer-events-none pb-[env(safe-area-inset-bottom)] font-medium">
+        <div className="sm:hidden absolute bottom-2 inset-x-0 text-center text-xs text-white/60 pointer-events-none pb-[env(safe-area-inset-bottom)] font-medium">
           Touchez les bords ou glissez pour naviguer
         </div>
       )}

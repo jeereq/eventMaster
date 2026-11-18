@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Breadcrumbs, Alert } from '@/components/ui';
+import { Alert } from '@/components/ui';
 import TeamManagement from '../TeamManagement';
 
 export default function DashboardTeamPage() {
@@ -29,18 +29,6 @@ export default function DashboardTeamPage() {
 
   return (
     <div className="space-y-6 w-full">
-      <PageHeader
-        title="Équipe"
-        description="Managers, protocole et commerciaux de l’organisation."
-        breadcrumbs={
-          <Breadcrumbs
-            items={[
-              { label: 'Accueil', href: '/dashboard' },
-              { label: 'Équipe' },
-            ]}
-          />
-        }
-      />
       <TeamManagement />
     </div>
   );

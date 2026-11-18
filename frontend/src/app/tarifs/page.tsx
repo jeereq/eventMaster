@@ -10,7 +10,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { enabledPublicCities, formatCityList } from '@/lib/platformCities';
-import { Sparkles, MessageSquare, Wallet, Zap, ShieldCheck, MapPin } from 'lucide-react';
+import { Sparkles, MessageSquare, Wallet, Zap, ShieldCheck, MapPin } from '@/components/icons';
 
 export default function TarifsPage() {
   const { user } = useAuth();

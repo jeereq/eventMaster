@@ -12,33 +12,24 @@ import {
   CalendarCheck,
   CheckCircle2,
   Clock,
-  CreditCard,
   Eye,
   EyeOff,
   ImageOff,
   Inbox,
   PlusCircle,
   RefreshCw,
-  Rss,
-  Sparkles,
-  Store,
-  UserCheck,
-  Users,
   Wallet,
-} from 'lucide-react';
+} from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   BOOKING_STATUS_LABELS,
   publicServiceHref,
   type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
 } from '@/lib/marketplace';
-import { LANDING_PLANS, formatFc } from '@/config/landingPricing';
-import { planDisplayName } from '@/lib/planCatalogDb';
+import { formatFc } from '@/config/landingPricing';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
-import UserAvatar from '@/components/UserAvatar';
 import { StatusPill, type StatusPillTone } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -233,8 +224,7 @@ function EmptyRow({ icon: Icon, title, hint }: { icon: React.ComponentType<{ cla
 }
 
 export default function VendorDashboardHome() {
-  const { user, tenant, access, planQuota, planName: activePlanName } = useAuth();
-  const { site } = usePlatformSite();
+  const { user, tenant, access, planQuota } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -245,12 +235,7 @@ export default function VendorDashboardHome() {
   // Salle ou prestataire selon le forfait, quel que soit le rôle du membre connecté.
   const isVenue = (limits?.maxRooms ?? 0) > 0;
   const hasServices = (limits?.maxServices ?? 0) > 0 || (usage?.services ?? 0) > 0;
-  const hasEvents = (limits?.maxEvents ?? 0) > 0;
   const isOwner = Boolean(access?.isOwner) || (Boolean(user?.id) && user?.id === tenant?.managerId);
-  const canManageTeam = isOwner || Boolean(access?.canManageTeam);
-  const canViewBilling = isOwner || Boolean(access?.canViewBilling);
-  const visibility = site?.studioVisibility ?? { budget: true, invite: true, room: true };
-  const showSimulator = visibility.budget || visibility.invite || visibility.room;
 
   // Anciens liens `/dashboard?tab=…` (favoris, notifications, guide) → page dédiée.
   const legacyTab = searchParams.get('tab');
@@ -376,22 +361,13 @@ export default function VendorDashboardHome() {
   const showcaseIssues = showcase.filter((row) => !row.isPublic || row.photoCount === 0 || row.blocked);
   const publishedCount = showcase.filter((row) => row.isPublic && !row.blocked).length;
 
-  const actionCount = quotesToAnswer.length + bookingsToHandle.length + showcaseIssues.length;
-
   // ── Abonnement ───────────────────────────────────────────────────────────
-  const planMeta = LANDING_PLANS.find((p) => p.id === tenant?.plan);
-  const planName = activePlanName || planDisplayName(tenant?.plan, null, planMeta?.ms365Name) || 'Forfait';
   const licenseExpiresAt = tenant?.licenseExpiresAt;
   const daysUntilExpiry = useMemo(() => {
     const expires = licenseExpiresAt ? new Date(licenseExpiresAt).getTime() : NaN;
     return Number.isNaN(expires) ? null : Math.ceil((expires - startOfToday()) / 86_400_000);
   }, [licenseExpiresAt]);
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
-  const firstName = user?.name?.split(' ')[0];
-
-  const title = isVenue && services.length > 0 ? 'Mes salles & prestations' : isVenue ? 'Mes salles' : 'Mes prestations';
   const listingNoun = isVenue ? 'salle' : 'offre';
   const primaryCta = isVenue
     ? { href: '/dashboard/rooms', label: 'Ajouter une salle', icon: Building2 }
@@ -441,17 +417,6 @@ export default function VendorDashboardHome() {
 
   const visibleKpis = kpis.filter((kpi) => !('hidden' in kpi && kpi.hidden));
 
-  const quickLinks = [
-    isVenue && canManageListings ? { href: '/dashboard/rooms', label: 'Mes salles', hint: 'Fiches, plans 2D/3D, staff', icon: Building2 } : null,
-    canManageListings && (hasServices || !isVenue) ? { href: '/dashboard/marketplace', label: 'Mes offres', hint: 'Prestations et locations', icon: Briefcase } : null,
-    { href: '/dashboard/publications', label: 'Réalisations', hint: 'Photos de vos derniers événements', icon: Rss },
-    hasEvents ? { href: '/dashboard/events', label: 'Événements', hint: 'Vos propres réceptions', icon: Calendar } : null,
-    { href: '/dashboard/catalogue', label: 'Explorer', hint: 'Salles et confrères du réseau', icon: Store },
-    showSimulator ? { href: '/dashboard/catalogue?tab=plan&planView=ai', label: 'Simulateur IA', hint: 'Packs et budgets clients', icon: Sparkles } : null,
-    canManageTeam ? { href: '/dashboard/team', label: 'Équipe', hint: 'Membres et accès', icon: Users } : null,
-    canViewBilling ? { href: '/dashboard/billing', label: 'Abonnement', hint: `Forfait ${planName}`, icon: CreditCard } : null,
-  ].filter((x): x is NonNullable<typeof x> => x !== null);
-
   return (
     <div className="space-y-6 pb-16 animate-fade-in em-dashboard-home">
       {/* Échéance de licence */}
@@ -467,14 +432,11 @@ export default function VendorDashboardHome() {
         >
           <div className="flex items-center gap-3">
             {daysUntilExpiry <= 0 ? <AlertTriangle className="w-5 h-5 shrink-0" /> : <Clock className="w-5 h-5 shrink-0" />}
-            <div>
-              <p className="font-semibold">
-                {daysUntilExpiry <= 0
-                  ? 'Abonnement expiré : votre vitrine n’est plus visible'
-                  : `Votre abonnement expire dans ${daysUntilExpiry} jour${daysUntilExpiry > 1 ? 's' : ''}`}
-              </p>
-              <p className="text-xs opacity-90">Renouvelez pour continuer à recevoir des demandes de devis.</p>
-            </div>
+            <p className="font-semibold">
+              {daysUntilExpiry <= 0
+                ? 'Abonnement expiré : votre vitrine n’est plus visible'
+                : `Votre abonnement expire dans ${daysUntilExpiry} jour${daysUntilExpiry > 1 ? 's' : ''}`}
+            </p>
           </div>
           <Link
             href="/dashboard/billing"
@@ -486,103 +448,28 @@ export default function VendorDashboardHome() {
         </div>
       )}
 
-      {/* En-tête : qui, quoi, action principale */}
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-3">
-          <UserAvatar name={user?.name} src={user?.avatarUrl} size="lg" className="w-12 h-12 text-base" />
-          <div className="min-w-0">
-            <p className="truncate text-sm text-muted">
-              {greeting}
-              {firstName ? `, ${firstName}` : ''}
-              {tenant?.name ? ` · ${tenant.name}` : ''}
-            </p>
-            <h1 className="truncate text-2xl font-semibold leading-tight text-foreground sm:text-[1.75rem]">{title}</h1>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+      {canManageListings ? (
+        <div className="flex justify-end">
           <Link
-            href="/dashboard/quotes"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground hover:border-primary/40 transition"
+            href={primaryCta.href}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-solid px-4 text-sm font-semibold text-primary-foreground hover:bg-primary-solid-hover transition"
           >
-            <Inbox className="w-4 h-4 text-primary" />
-            <span className="truncate sm:hidden">Devis reçus</span>
-            <span className="hidden truncate sm:inline">Répondre aux devis</span>
-            {quotesToAnswer.length > 0 && (
-              <span className="rounded-full bg-festive-accent px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-primary-foreground">
-                {quotesToAnswer.length}
-              </span>
-            )}
+            <primaryCta.icon className="w-4 h-4" />
+            {primaryCta.label}
           </Link>
-          {canManageListings ? (
-            <Link
-              href={primaryCta.href}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-solid px-4 text-sm font-semibold text-primary-foreground hover:bg-primary-solid-hover transition"
-            >
-              <primaryCta.icon className="w-4 h-4" />
-              {primaryCta.label}
-            </Link>
-          ) : null}
         </div>
-      </header>
+      ) : null}
 
-      {/* Bandeau d’état : ce qui attend une action */}
-      <div
-        className={cn(
-          'flex flex-col gap-2 rounded-2xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between',
-          loading
-            ? 'border-border bg-surface'
-            : actionCount > 0
-              ? 'border-festive-accent/30 bg-festive-accent-soft'
-              : 'border-primary/25 bg-primary/5',
-        )}
-        aria-live="polite"
-      >
-        <div className="flex items-center gap-3">
-          {loading ? (
-            <RefreshCw className="w-5 h-5 shrink-0 animate-spin text-muted" />
-          ) : actionCount > 0 ? (
-            <AlertTriangle className="w-5 h-5 shrink-0 text-festive-accent" />
-          ) : (
-            <CheckCircle2 className="w-5 h-5 shrink-0 text-primary" />
-          )}
-          <p className="text-sm text-foreground">
-            {loading ? (
-              'Chargement de votre activité…'
-            ) : actionCount > 0 ? (
-              <>
-                <span className="font-semibold">
-                  {actionCount} action{actionCount > 1 ? 's' : ''} en attente
-                </span>
-                <span className="text-muted">
-                  {' · '}
-                  {[
-                    quotesToAnswer.length ? `${quotesToAnswer.length} devis` : null,
-                    bookingsToHandle.length ? `${bookingsToHandle.length} réservation${bookingsToHandle.length > 1 ? 's' : ''}` : null,
-                    showcaseIssues.length ? `${showcaseIssues.length} fiche${showcaseIssues.length > 1 ? 's' : ''} à compléter` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(', ')}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="font-semibold">Tout est à jour.</span>
-                <span className="text-muted"> Aucune demande n’attend de réponse.</span>
-              </>
-            )}
-          </p>
-        </div>
-        {loadError && !loading ? (
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-lg px-2 text-xs font-semibold text-danger hover:bg-danger/10 sm:self-auto"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Données incomplètes, réessayer
-          </button>
-        ) : null}
-      </div>
+      {loadError && !loading ? (
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-danger hover:bg-danger/10"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          Données incomplètes, réessayer
+        </button>
+      ) : null}
 
       {/* Indicateurs cliquables */}
       <div className={cn("grid grid-cols-2 gap-3", visibleKpis.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4")}>
@@ -698,7 +585,7 @@ export default function VendorDashboardHome() {
                       className="flex items-center gap-3 px-4 py-3 hover:bg-surface-muted/60 transition sm:px-5"
                     >
                       <div className="flex w-11 shrink-0 flex-col items-center rounded-xl border border-border bg-background py-1">
-                        <span className="text-[10px] font-semibold uppercase text-muted">
+                        <span className="text-xs font-semibold uppercase text-muted">
                           {d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}
                         </span>
                         <span className="text-base font-semibold leading-none tabular-nums text-foreground">{d.getDate()}</span>
@@ -831,37 +718,6 @@ export default function VendorDashboardHome() {
         />
       )}
 
-      {/* Accès rapides */}
-      <section aria-labelledby="vendor-quick-links">
-        <h2 id="vendor-quick-links" className="mb-2 text-sm font-semibold text-foreground">
-          Accès rapides
-        </h2>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-          {quickLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="flex min-h-14 items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 hover:border-primary/40 transition"
-            >
-              <span className="rounded-lg bg-primary/10 p-2 text-primary">
-                <link.icon className="w-4 h-4" />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-medium text-foreground">{link.label}</span>
-                <span className="block truncate text-xs text-muted">{link.hint}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {tenant?.plan && (
-        <p className="flex flex-wrap items-center gap-2 text-xs text-muted">
-          <UserCheck className="w-3.5 h-3.5" />
-          Forfait {planName}
-          {daysUntilExpiry != null && daysUntilExpiry > 0 ? ` · licence valable encore ${daysUntilExpiry} j` : ''}
-        </p>
-      )}
     </div>
   );
 }

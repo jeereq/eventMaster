@@ -3,7 +3,7 @@
 import React, { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Building2, Calendar, KeyRound, Loader2, MapPin, Navigation, Search, Sparkles, Users, Volume2, VolumeX, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Building2, Calendar, KeyRound, Loader2, MapPin, Navigation, Search, Sparkles, Users, Volume2, VolumeX, X } from '@/components/icons';
 import { loadLeaflet, leafletBasemap, documentMapTheme, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/leafletLoader';
 import {
   fetchDrivingRoute,
@@ -240,14 +240,14 @@ function MarkerPreviewCard({
 
   return (
     <div
-      className="absolute z-[1200] left-3 right-3 bottom-3 sm:left-auto sm:right-4 sm:w-[23rem] rounded-2xl border border-border bg-surface/98 backdrop-blur-xl shadow-2xl overflow-hidden max-h-[calc(100%-5rem)] sm:max-h-[500px] flex flex-col pointer-events-auto transition-all animate-fade-in"
+      className="absolute z-[1200] left-3 right-3 bottom-3 sm:left-auto sm:right-4 sm:w-[23rem] rounded-2xl border border-border bg-surface/98 shadow-2xl overflow-hidden max-h-[calc(100%-5rem)] sm:max-h-[500px] flex flex-col pointer-events-auto transition-all animate-fade-in"
       onMouseEnter={onKeep}
       onMouseLeave={onHide}
     >
       <button
         type="button"
         onClick={onClose}
-        className="absolute z-10 top-2.5 right-2.5 p-1.5 rounded-full bg-surface/90 backdrop-blur-md text-muted hover:text-foreground border border-border shadow-md transition"
+        className="absolute z-10 top-2.5 right-2.5 p-1.5 rounded-full bg-surface/90 text-muted hover:text-foreground border border-border shadow-md transition"
         aria-label="Fermer les détails"
       >
         <X className="w-4 h-4" />
@@ -275,7 +275,7 @@ function MarkerPreviewCard({
       <div className="p-3.5 space-y-2.5 overflow-y-auto flex-1 min-h-0">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className={cn(
-            'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border',
+            'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold border',
             isEvent
               ? 'text-emerald-700 border-emerald-200 bg-emerald-50'
               : isRental
@@ -288,16 +288,16 @@ function MarkerPreviewCard({
             {kindLabel}
           </span>
           {catalogueKindHint(kind) ? (
-            <span className="text-[10px] font-medium text-muted">{catalogueKindHint(kind)}</span>
+            <span className="text-xs font-medium text-muted">{catalogueKindHint(kind)}</span>
           ) : null}
           {marker.categoryLabel && marker.categoryLabel !== kindLabel ? (
-            <span className="text-[10px] font-medium text-muted">{marker.categoryLabel}</span>
+            <span className="text-xs font-medium text-muted">{marker.categoryLabel}</span>
           ) : null}
           {distance ? (
-            <span className="text-[10px] font-semibold text-primary">{distance}</span>
+            <span className="text-xs font-semibold text-primary">{distance}</span>
           ) : null}
           {pinned ? (
-            <span className="text-[10px] text-muted">Épinglé</span>
+            <span className="text-xs text-muted">Épinglé</span>
           ) : null}
         </div>
 
@@ -313,7 +313,7 @@ function MarkerPreviewCard({
           </p>
         ) : null}
 
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
           {marker.capacity ? (
             <span className="inline-flex items-center gap-1">
               <Users className="w-3 h-3" /> {marker.capacity} places
@@ -335,7 +335,7 @@ function MarkerPreviewCard({
           <div className="pt-0.5">
             <p className="text-sm font-bold text-foreground">
               {marker.priceLabel}
-              {marker.priceUnitLabel ? <span className="ml-1 text-[11px] font-normal text-muted">({marker.priceUnitLabel})</span> : null}
+              {marker.priceUnitLabel ? <span className="ml-1 text-xs font-normal text-muted">({marker.priceUnitLabel})</span> : null}
             </p>
           </div>
         ) : null}
@@ -1083,7 +1083,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
             listingMatchGroups.map((group) => (
               <li key={group.kind} className="border-t border-border first:border-t-0">
                 {listingMatchGroups.length > 1 ? (
-                  <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
+                  <p className="px-3 pt-2 pb-1 text-xs font-semibold text-muted">
                     {catalogueKindFilterLabel(group.kind)}
                   </p>
                 ) : null}
@@ -1163,8 +1163,8 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
             'absolute z-[1100] pointer-events-none',
             fillViewport ? 'bottom-3 left-3' : 'top-3 right-3',
           )}>
-            <div className="rounded-xl border border-border bg-surface/95 shadow-[var(--shadow-soft)] px-2.5 py-2 space-y-1 text-[11px] text-foreground pointer-events-auto max-w-[13.5rem]">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Calques</p>
+            <div className="rounded-xl border border-border bg-surface/95 shadow-[var(--shadow-soft)] px-2.5 py-2 space-y-1 text-xs text-foreground pointer-events-auto max-w-[13.5rem]">
+              <p className="text-xs font-semibold text-muted">Calques</p>
               {(presentKinds.length ? presentKinds : MAP_KIND_ORDER).map((kind) => {
                 const hidden = hiddenKinds.has(kind);
                 const hint = catalogueKindHint(kind);
@@ -1252,7 +1252,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
           )}>
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Itinéraire</p>
+                <p className="text-xs font-semibold text-primary">Itinéraire</p>
                 <p className="text-sm font-semibold text-foreground leading-snug">{routeTitle}</p>
                 {route ? (
                   <p className="text-xs text-muted">
@@ -1312,14 +1312,14 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
         )}
       </div>
       {listingSearch && variant !== 'focus' && !immersive && (
-        <p className="text-[11px] text-muted">
+        <p className="text-xs text-muted">
           Survolez les pins même pendant un itinéraire. Annulez la navigation depuis le panneau ou la fiche.
           {searchCenter && radiusKm > 0 ? ` Filtre : dans un rayon de ${radiusKm} km.` : ''}
           {markers.length ? ` · ${markers.length} fiche${markers.length > 1 ? 's' : ''} avec GPS` : ''}.
         </p>
       )}
       {searchable && !listingSearch && !immersive && (
-        <p className="text-[11px] text-muted">
+        <p className="text-xs text-muted">
           Tapez un lieu ou cliquez sur la carte pour filtrer autour de ce point.
         </p>
       )}

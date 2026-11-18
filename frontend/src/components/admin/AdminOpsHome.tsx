@@ -3,9 +3,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  AlertCircle, BarChart3, Building2, Check, CheckCircle2, ChevronRight, Clock, CreditCard, FileText, Heart, Key, Loader2,
-  LogIn, ScrollText, ShieldAlert, Store, Ticket, Users, Wallet, X,
-} from 'lucide-react';
+  AlertCircle, Building2, Check, CheckCircle2, ChevronRight, Clock, CreditCard, FileText, Heart, Loader2,
+  LogIn, ScrollText, ShieldAlert, Ticket, Users, Wallet, X,
+} from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, ConfirmDialog, Modal, StatusPill } from '@/components/ui';
@@ -13,6 +13,7 @@ import { notifyAdminCountsChanged } from '@/components/admin/useAdminPendingCoun
 import { ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
+import { confirmSupportSession } from '@/lib/confirmSupportSession';
 
 interface TenantRow {
   id: string;
@@ -186,7 +187,7 @@ function QueueSection({
           <span className="truncate">{title}</span>
           <span
             className={cn(
-              'min-w-[22px] h-[22px] px-1.5 inline-flex items-center justify-center rounded-full text-[11px] font-bold tabular-nums',
+              'min-w-[22px] h-[22px] px-1.5 inline-flex items-center justify-center rounded-full text-xs font-bold tabular-nums',
               needsAction ? 'bg-festive-accent text-white' : 'bg-surface-muted text-muted',
             )}
           >
@@ -334,6 +335,7 @@ export default function AdminOpsHome() {
   };
 
   const openWorkspace = async (tenantId: string) => {
+    if (!confirmSupportSession()) return;
     try {
       setBusyId(`impersonate:${tenantId}`);
       const payload = await api.post(`/admin/tenants/${tenantId}/impersonate`);
@@ -690,16 +692,6 @@ export default function AdminOpsHome() {
   // Les files qui attendent une action remontent en premier.
   const orderedQueues = [...queues].sort((a, b) => Number(b.count > 0) - Number(a.count > 0));
 
-  const shortcuts = [
-    { label: 'Organisations', href: '/dashboard?tab=tenants', icon: Building2 },
-    { label: 'Utilisateurs', href: '/dashboard?tab=users', icon: Users },
-    { label: 'Paiements', href: '/dashboard/admin/payments', icon: CreditCard },
-    { label: 'Catalogue', href: '/dashboard/admin/catalogue', icon: Store },
-    { label: 'Analyses', href: '/dashboard?tab=analytics&section=overview', icon: BarChart3 },
-    { label: 'Modèles', href: '/dashboard?tab=templates', icon: FileText },
-    { label: 'Réglages', href: '/dashboard?tab=settings', icon: Key },
-    { label: 'Journal', href: '/dashboard/audit', icon: ScrollText },
-  ];
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -743,11 +735,6 @@ export default function AdminOpsHome() {
               ? `${todoTotal} action${todoTotal > 1 ? 's' : ''} en attente`
               : 'Tout est à jour'}
           </p>
-          <p className="text-xs text-muted">
-            {todoTotal > 0
-              ? 'Demandes, licences, factures et versements sont listés ci-dessous, les plus urgents en premier.'
-              : 'Aucune demande, licence, facture ni versement à traiter pour le moment.'}
-          </p>
         </div>
       </div>
 
@@ -780,7 +767,7 @@ export default function AdminOpsHome() {
               )}
             >
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold sm:uppercase sm:tracking-wider text-muted truncate">{stat.label}</p>
+                <p className="text-xs font-semibold text-muted truncate">{stat.label}</p>
                 <span
                   className={cn(
                     'hidden sm:flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
@@ -798,7 +785,7 @@ export default function AdminOpsHome() {
               >
                 {stat.value.toLocaleString('fr-FR')}
               </p>
-              <p className="hidden sm:block text-[11px] text-muted mt-0.5 line-clamp-1">{stat.hint}</p>
+              <p className="hidden sm:block text-xs text-muted mt-0.5 line-clamp-1">{stat.hint}</p>
             </Link>
           );
         })}
@@ -828,26 +815,6 @@ export default function AdminOpsHome() {
           ))}
         </QueueSection>
 
-        <section className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-foreground tracking-tight mb-3">Accès rapide</h3>
-          <div className="grid grid-cols-4 gap-2">
-            {shortcuts.map((sc) => {
-              const ScIcon = sc.icon;
-              return (
-                <Link
-                  key={sc.label}
-                  href={sc.href}
-                  className="flex flex-col items-center justify-center gap-1.5 min-h-[72px] rounded-xl border border-border bg-surface px-1 py-2 text-center hover:border-primary/30 hover:bg-primary/5 transition touch-manipulation"
-                >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <ScIcon className="w-4 h-4" />
-                  </span>
-                  <span className="text-[11px] font-medium text-foreground leading-tight truncate max-w-full">{sc.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
       </div>
 
       <Modal
@@ -915,7 +882,7 @@ export default function AdminOpsHome() {
                 <div key={item.label} className="border border-border px-3 py-2.5 text-center rounded-[var(--radius-card)]">
                   <item.icon className="w-3.5 h-3.5 text-muted mx-auto mb-1" />
                   <div className="text-base sm:text-lg font-semibold text-foreground truncate">{item.value}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted truncate">{item.label}</div>
+                  <div className="text-xs text-muted truncate">{item.label}</div>
                 </div>
               ))}
             </div>
@@ -933,7 +900,7 @@ export default function AdminOpsHome() {
             )}
 
             <div>
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Gérant</h4>
+              <h4 className="text-xs font-semibold text-muted mb-2">Gérant</h4>
               <p className="text-sm text-foreground">
                 {fiche.tenant.manager?.name || fiche.tenant.managerName} · {fiche.tenant.manager?.email || fiche.tenant.managerEmail}
               </p>
@@ -944,7 +911,7 @@ export default function AdminOpsHome() {
 
             {fiche.pendingRequests.length > 0 && (
               <div className="space-y-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted">Demandes en attente</h4>
+                <h4 className="text-xs font-semibold text-muted">Demandes en attente</h4>
                 {fiche.pendingRequests.map((r) => (
                   <div
                     key={r.id}
@@ -979,7 +946,7 @@ export default function AdminOpsHome() {
 
             {fiche.invoices.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Dernières factures</h4>
+                <h4 className="text-xs font-semibold text-muted mb-2">Dernières factures</h4>
                 <ul className="text-sm space-y-2">
                   {fiche.invoices.map((inv) => {
                     const unpaid = inv.status === 'SENT' || inv.status === 'PENDING';
@@ -1012,7 +979,7 @@ export default function AdminOpsHome() {
 
             {fiche.audit.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Audit</h4>
+                <h4 className="text-xs font-semibold text-muted mb-2">Audit</h4>
                 <ul className="space-y-2">
                   {fiche.audit.map((log) => (
                     <li key={log.id} className="text-xs text-muted">

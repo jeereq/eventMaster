@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Mail, MessageSquare, Smartphone } from 'lucide-react';
+import { Mail, MessageSquare, Smartphone } from '@/components/icons';
 import Input from './Input';
 import PhoneInput from './PhoneInput';
 import { composeE164, DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
@@ -44,6 +44,7 @@ export default function IdentifierInput({
   showPhoneMethodSelector = false,
   customPhoneLabel,
   customPhoneHint,
+  showPhoneRecorded = true,
   channelModes = false,
 }: {
   mode: IdentifierMode;
@@ -62,6 +63,7 @@ export default function IdentifierInput({
   showPhoneMethodSelector?: boolean;
   customPhoneLabel?: string;
   customPhoneHint?: string;
+  showPhoneRecorded?: boolean;
   /**
    * Un choix par canal ouvert sur la plateforme (E-mail, WhatsApp, SMS) au lieu de « E-mail / Téléphone ».
    * Choisir WhatsApp ou SMS passe en mode téléphone et règle `selectedPhoneMethod`.
@@ -77,7 +79,7 @@ export default function IdentifierInput({
     phoneFieldLabel(authChannels, selectedPhoneMethod);
 
   const resolvedPhoneHint =
-    customPhoneHint ||
+    customPhoneHint ??
     phoneFieldHint(authChannels, selectedPhoneMethod);
 
   const phoneModeLabel =
@@ -190,7 +192,6 @@ export default function IdentifierInput({
           value={email}
           onChange={(e) => onEmailChange(e.target.value)}
           placeholder="nom@exemple.com"
-          leftIcon={<Mail className="w-4 h-4" />}
         />
       ) : (
         <div className="space-y-3">
@@ -239,6 +240,7 @@ export default function IdentifierInput({
             onNationalChange={onNationalChange}
             required={required}
             hint={resolvedPhoneHint}
+            showRecorded={showPhoneRecorded}
           />
         </div>
       )}

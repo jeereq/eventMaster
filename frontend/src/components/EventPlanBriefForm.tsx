@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, Loader2, Save, Sparkles } from 'lucide-react';
+import { ChevronDown, Loader2, Save, Sparkles } from '@/components/icons';
 import { Alert, Button, Input } from '@/components/ui';
 import BudgetSimulationScopePicker from '@/components/BudgetSimulationScopePicker';
 import BudgetSimulationCriteria from '@/components/BudgetSimulationCriteria';
@@ -499,7 +499,7 @@ export default function EventPlanBriefForm({
                 </p>
                 <button
                   type="button"
-                  className="text-[11px] font-semibold text-primary"
+                  className="text-xs font-semibold text-primary"
                   onClick={() => patch({ shares: defaultShares(brief.eventType, brief.includeVenue, brief.slots) })}
                 >
                   Preset {eventTypeLabel(brief.eventType)}

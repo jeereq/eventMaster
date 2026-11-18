@@ -5,8 +5,8 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
  Building2, Loader2, PlusCircle, TrendingUp, Users, Wallet, Mail, MessageSquare, Smartphone, RefreshCw, AlertCircle, CheckCircle2,
-} from 'lucide-react';
-import { Button, PageHeader, SkeletonCommercialView, Pagination, usePaginateItems, PhoneInput, usePageSize } from '@/components/ui';
+} from '@/components/icons';
+import { Button, SkeletonCommercialView, Pagination, usePaginateItems, PhoneInput, usePageSize } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -157,10 +157,6 @@ export default function CommercialDashboardPage() {
 
  return (
  <div className="space-y-6">
- <PageHeader
- title="Parrainage & commissions"
- description="Parrainages et commissions."
- />
 
  <div className="grid sm:grid-cols-3 gap-4">
  <div className="bg-white dark:bg-background border rounded-2xl p-5">
@@ -177,7 +173,7 @@ export default function CommercialDashboardPage() {
  {data.stats.monthlyCommission.toLocaleString('fr-FR')} FC
  </div>
  {(data.stats.monthlyDue ?? 0) > 0 && (
- <p className="text-[11px] text-amber-700 mt-1">Dont {data.stats.monthlyDue!.toLocaleString('fr-FR')} FC à verser</p>
+ <p className="text-xs text-amber-700 mt-1">Dont {data.stats.monthlyDue!.toLocaleString('fr-FR')} FC à verser</p>
  )}
  </div>
  <div className="bg-white dark:bg-background border rounded-2xl p-5">
@@ -193,7 +189,7 @@ export default function CommercialDashboardPage() {
  <div>
  <p className="text-primary-foreground/80 text-sm font-semibold">Votre code parrainage</p>
  <p className="text-2xl font-black tracking-wider">{data.referralCode}</p>
- <p className="text-primary-foreground/80 text-xs mt-1">{Math.round(data.commissionRate * 100)} % au premier paiement, puis {Math.round((data.renewalCommissionRate ?? 0.2) * 100)} % sur les factures suivantes. Versement hors plateforme par EventMaster, notifié au Super Admin en début de mois.</p>
+ <p className="text-primary-foreground/80 text-xs mt-1">{Math.round(data.commissionRate * 100)} % au premier paiement, puis {Math.round((data.renewalCommissionRate ?? 0.2) * 100)} % sur les factures suivantes. Versé par EventMaster, en Mobile Money ou par virement.</p>
  </div>
  <ReferralShareButtons referralCode={data.referralCode} />
  </div>
@@ -302,7 +298,7 @@ export default function CommercialDashboardPage() {
  <div className="flex flex-wrap items-center gap-2 text-xs">
  {o.managerIsEmailVerified === false ? (
  <>
- <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+ <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
  En attente OTP
  </span>
  {o.managerId && (
@@ -310,7 +306,7 @@ export default function CommercialDashboardPage() {
  type="button"
  onClick={() => handleResendManagerOtp(o.managerId!)}
  disabled={resendingManagerId === o.managerId}
- className="text-[10px] font-bold text-amber-700 hover:underline inline-flex items-center gap-1"
+ className="text-xs font-bold text-amber-700 hover:underline inline-flex items-center gap-1"
  >
  {resendingManagerId === o.managerId ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
  Renvoyer OTP
@@ -318,7 +314,7 @@ export default function CommercialDashboardPage() {
  )}
  </>
  ) : (
- <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+ <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
  Validé
  </span>
  )}
@@ -350,7 +346,7 @@ export default function CommercialDashboardPage() {
  <td>
  {o.managerIsEmailVerified === false ? (
  <div className="flex flex-col gap-1">
- <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 w-fit">
+ <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 w-fit">
  En attente OTP
  </span>
  {o.managerId && (
@@ -358,7 +354,7 @@ export default function CommercialDashboardPage() {
  type="button"
  onClick={() => handleResendManagerOtp(o.managerId!)}
  disabled={resendingManagerId === o.managerId}
- className="text-[10px] font-bold text-amber-700 hover:underline inline-flex items-center gap-1 w-fit"
+ className="text-xs font-bold text-amber-700 hover:underline inline-flex items-center gap-1 w-fit"
  >
  {resendingManagerId === o.managerId ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
  Renvoyer OTP
@@ -366,7 +362,7 @@ export default function CommercialDashboardPage() {
  )}
  </div>
  ) : (
- <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+ <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
  Validé
  </span>
  )}

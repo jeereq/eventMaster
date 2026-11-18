@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { CreditCard } from 'lucide-react';
+import { CreditCard } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Alert, Button, Input, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';

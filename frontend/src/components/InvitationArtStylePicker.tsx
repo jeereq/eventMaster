@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Aperture, Clapperboard, Droplets, Paintbrush, Box, Sparkles, Crown, Scroll, Feather, Zap, PenTool } from 'lucide-react';
+import { Aperture, Clapperboard, Droplets, Paintbrush, Box, Sparkles, Crown, Scroll, Feather, Zap, PenTool } from '@/components/icons';
 import {
   INVITATION_ART_STYLES,
   type InvitationArtStyleId,
@@ -35,7 +35,7 @@ export default function InvitationArtStylePicker({
 }) {
   return (
     <div className="space-y-1.5">
-      <p id={`${id}-label`} className="text-xs font-bold text-muted uppercase tracking-wider">
+      <p id={`${id}-label`} className="text-xs font-bold text-muted ">
         Style de la carte
       </p>
       <div
@@ -67,7 +67,7 @@ export default function InvitationArtStylePicker({
                 <Icon className={cn('w-3.5 h-3.5 shrink-0', selected ? 'text-primary' : 'text-muted')} aria-hidden />
                 <span className="text-xs font-bold text-foreground">{style.label}</span>
               </span>
-              <span className="hidden sm:block text-[11px] text-muted mt-0.5 leading-snug">{style.summary}</span>
+              <span className="hidden sm:block text-xs text-muted mt-0.5 leading-snug">{style.summary}</span>
             </button>
           );
         })}

@@ -2,11 +2,11 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   PageHeader,
-  Breadcrumbs,
   Alert,
   Button,
   EmptyState,
@@ -24,7 +24,7 @@ import { SkeletonListRow } from '@/components/ui/Skeleton';
 import { formatFc } from '@/config/landingPricing';
 import { CLIENT_AGENDA_HREF, dashboardEventHref } from '@/lib/marketplace';
 import { rememberCatalogueReturn } from '@/lib/catalogueQuery';
-import { Calendar, MapPin, QrCode, Ticket, LayoutDashboard, ScanLine } from 'lucide-react';
+import { Calendar, MapPin, QrCode, Ticket, LayoutDashboard, ScanLine } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import OrgTicketingView from '@/components/OrgTicketingView';
 
@@ -60,7 +60,17 @@ export default function TicketsPage() {
   const isClient = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
   const isOrgRole = !isClient && (access?.isOwner || access?.level === 'owner' || access?.level === 'manager' || access?.level === 'protocol' || access?.level === 'staff' || tenant?.accountKind === 'ORGANIZER');
 
-  const [activeTab, setActiveTab] = useState<'org' | 'my'>(isClient ? 'my' : 'org');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'org' | 'my'>(
+    isClient || searchParams.get('tab') === 'my' ? 'my' : 'org',
+  );
+  /** L’onglet est aussi dans l’URL pour que le titre de la barre du haut suive. */
+  const selectTab = (tab: 'org' | 'my') => {
+    setActiveTab(tab);
+    router.replace(tab === 'my' ? `${pathname}?tab=my` : pathname, { scroll: false });
+  };
   const [tickets, setTickets] = useState<MyTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -195,20 +205,6 @@ export default function TicketsPage() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title={isOrgRole && activeTab === 'org' ? 'Billetterie de l’organisation' : 'Mes billets & pass'}
-        description={
-          isOrgRole && activeTab === 'org'
-            ? 'Ventes et pass QR.'
-            : 'Présentez votre pass QR à l’entrée. Vos prochains événements s’affichent en premier.'
-        }
-        breadcrumbs={
-          <Breadcrumbs
-            items={[
-              { label: 'Accueil', href: '/dashboard' },
-              { label: isOrgRole && activeTab === 'org' ? 'Billetterie' : 'Mes billets' },
-            ]}
-          />
-        }
         action={
           <Link href={agendaHref} className="inline-flex">
             <Button size="sm" variant="secondary" leftIcon={<Calendar className="w-4 h-4" />}>
@@ -223,7 +219,7 @@ export default function TicketsPage() {
         <div className="flex gap-1.5 p-1 rounded-2xl bg-surface border border-border shadow-2xs w-fit" role="group" aria-label="Billetterie ou achats personnels">
           <button
             type="button"
-            onClick={() => setActiveTab('org')}
+            onClick={() => selectTab('org')}
             aria-pressed={activeTab === 'org'}
             className={cn(
               'inline-flex min-h-11 items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition touch-manipulation',
@@ -239,7 +235,7 @@ export default function TicketsPage() {
 
           <button
             type="button"
-            onClick={() => setActiveTab('my')}
+            onClick={() => selectTab('my')}
             aria-pressed={activeTab === 'my'}
             className={cn(
               'inline-flex min-h-11 items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition touch-manipulation',
@@ -279,7 +275,7 @@ export default function TicketsPage() {
               </div>
             </div>
           ) : tickets.length === 0 ? (
-            <EmptyState
+            <EmptyState illustration="tickets"
               icon={<Ticket className="w-5 h-5" />}
               title="Aucun billet pour le moment"
               description="Les billets du catalogue apparaîtront ici."
@@ -342,7 +338,7 @@ export default function TicketsPage() {
                 </div>
               </div>
 
-              <span className="text-[11px] font-medium text-muted shrink-0 whitespace-nowrap pl-2">
+              <span className="text-xs font-medium text-muted shrink-0 whitespace-nowrap pl-2">
                 {filtered.length} billet{filtered.length > 1 ? 's' : ''}
                 {filtered.length !== tickets.length ? ` / ${tickets.length}` : ''}
               </span>
@@ -356,7 +352,6 @@ export default function TicketsPage() {
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Titre, lieu, acheteur…"
                   aria-label="Rechercher un billet"
-                  leftIcon={<Ticket className="w-4 h-4" />}
                 />
               </div>
 
@@ -387,7 +382,7 @@ export default function TicketsPage() {
           </div>
 
           {filtered.length === 0 ? (
-            <EmptyState
+            <EmptyState illustration="search"
               icon={<Ticket className="w-5 h-5" />}
               title="Aucun billet pour ces filtres"
               description="Élargissez la recherche."

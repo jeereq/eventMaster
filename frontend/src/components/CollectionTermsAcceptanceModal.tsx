@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Scale } from 'lucide-react';
+import { Scale } from '@/components/icons';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import {

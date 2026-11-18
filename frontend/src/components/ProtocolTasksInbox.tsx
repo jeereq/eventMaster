@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Check, ClipboardList, Loader2 } from 'lucide-react';
+import { Check, ClipboardList, Loader2 } from '@/components/icons';
 import { api } from '@/lib/api';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import {
@@ -68,7 +68,7 @@ export default function ProtocolTasksInbox({ protocol = true }: { protocol?: boo
         <p className="text-sm font-semibold inline-flex items-center gap-2">
           <ClipboardList className="w-4 h-4 text-primary" />
           Mes tâches
-          <span className="text-xs font-bold uppercase tracking-wider text-muted tabular-nums">{open.length}</span>
+          <span className="text-xs font-bold text-muted tabular-nums">{open.length}</span>
           {overdue > 0 ? <StatusPill tone="rose">{overdue} en retard</StatusPill> : null}
         </p>
         <p className="text-xs text-muted">
@@ -84,7 +84,7 @@ export default function ProtocolTasksInbox({ protocol = true }: { protocol?: boo
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
           </div>
         ) : open.length === 0 ? (
-          <EmptyState
+          <EmptyState illustration="tasks"
             icon={<ClipboardList className="w-7 h-7" />}
             title="Aucune tâche ouverte"
             description="Quand l’organisateur vous assigne une tâche (briefing, poste d’accueil…), elle apparaît ici. Ouvrez un événement pour la checklist jour J."

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Building2, Calendar, KeyRound, Sparkles, Store, Wine } from 'lucide-react';
+import { Building2, Calendar, KeyRound, Sparkles, Store, Wine } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { folderTab } from '@/components/ui/segmented';
 

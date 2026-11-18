@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Building2, CreditCard, Clock, FileText, UserCheck } from 'lucide-react';
+import { Building2, CreditCard, Clock, FileText, UserCheck } from '@/components/icons';
 import { Modal, Button, Badge } from '@/components/ui';
 import { formatFc, invoiceCatalogLabel, isAnnualDurationDays } from '@/config/landingPricing';
 
@@ -168,7 +168,7 @@ export default function SubscriptionRequestDetailModal({
           </div>
 
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted mb-1 flex items-center gap-1.5">
+            <p className="text-xs font-bold text-muted mb-1 flex items-center gap-1.5">
               <CreditCard className="w-3.5 h-3.5" /> Forfait
             </p>
             <Row label="Forfait demandé">{request.requestedPlan}</Row>
@@ -182,7 +182,7 @@ export default function SubscriptionRequestDetailModal({
           </div>
 
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted mb-1 flex items-center gap-1.5">
+            <p className="text-xs font-bold text-muted mb-1 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5" /> Suivi
             </p>
             <Row label="Soumise le">{formatDate(request.createdAt)}</Row>
@@ -214,7 +214,7 @@ export default function SubscriptionRequestDetailModal({
 
           {(request.requestKind === 'discount' || request.discountRequestNote) && (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted mb-1">Demande de rabais</p>
+              <p className="text-xs font-bold text-muted mb-1">Demande de rabais</p>
               {request.requestedDiscountPercent != null && (
                 <Row label="Rabais demandé">{request.requestedDiscountPercent} %</Row>
               )}
@@ -234,7 +234,7 @@ export default function SubscriptionRequestDetailModal({
 
           {request.proofOfPayment && (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted mb-1">Preuve de paiement</p>
+              <p className="text-xs font-bold text-muted mb-1">Preuve de paiement</p>
               <p className="text-sm text-foreground whitespace-pre-wrap break-words rounded-xl border border-border bg-surface-muted px-3 py-2">
                 {request.proofOfPayment}
               </p>
@@ -243,7 +243,7 @@ export default function SubscriptionRequestDetailModal({
 
           {request.platformInvoice && (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted mb-1 flex items-center gap-1.5">
+              <p className="text-xs font-bold text-muted mb-1 flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5" /> Facture
               </p>
               <Row label="Numéro">{request.platformInvoice.invoiceNumber}</Row>
@@ -254,7 +254,7 @@ export default function SubscriptionRequestDetailModal({
 
           {commercials.length > 0 && (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted mb-1 flex items-center gap-1.5">
+              <p className="text-xs font-bold text-muted mb-1 flex items-center gap-1.5">
                 <UserCheck className="w-3.5 h-3.5" /> Commerciaux
               </p>
               {commercials.map((c) => (

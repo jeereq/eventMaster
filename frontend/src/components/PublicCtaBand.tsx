@@ -2,8 +2,8 @@
 import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React from 'react';
-import type { LucideIcon } from 'lucide-react';
-import { ArrowRight } from 'lucide-react';
+import type { LucideIcon } from '@/components/icons';
+import { ArrowRight } from '@/components/icons';
 import { Button } from '@/components/ui';
 
 export type PublicCtaHighlight = {
@@ -23,8 +23,9 @@ export default function PublicCtaBand({
   highlights,
   actions,
 }: {
-  title: string;
-  description: string;
+  /** Facultatifs : sans titre ni texte, la bande ne garde que les boutons. */
+  title?: string;
+  description?: string;
   primaryHref?: string;
   primaryLabel?: string;
   secondaryHref?: string;
@@ -33,21 +34,24 @@ export default function PublicCtaBand({
   actions?: React.ReactNode;
 }) {
   const messaging = useMessagingChannels();
+  const hasText = Boolean(title || description || highlights?.length);
   return (
-    <section className="em-landing-defer relative overflow-hidden bg-[#1f4a33] text-white py-14 sm:py-24">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-24 -bottom-40 w-[26rem] h-[26rem] rounded-full border-[64px] border-brand-accent opacity-15"
-      />
+    // Bloc vert arrondi posé sur la page, aux couleurs d'origine du bandeau.
+    <section className="em-landing-defer relative bg-background py-10 sm:py-16">
       <div className="page-container relative z-10">
-        <div className="flex flex-col items-center text-center gap-6 sm:gap-8">
+        <div className={`flex flex-col items-center text-center gap-6 sm:gap-8 rounded-[2rem] bg-[#1f4a33] text-white px-6 ${hasText ? 'py-14 sm:py-20' : 'py-10 sm:py-14'}`}>
+          {hasText ? (
             <div className="max-w-2xl space-y-3 sm:space-y-4">
-              <h2 className="em-landing-heading text-3xl sm:text-5xl text-white">
-                {messaging.adapt(title)}
-              </h2>
-              <p className="text-base sm:text-lg text-[#d7f6e9] leading-relaxed">
-                {messaging.adapt(description)}
-              </p>
+              {title ? (
+                <h2 className="em-landing-heading text-3xl sm:text-5xl text-white">
+                  {messaging.adapt(title)}
+                </h2>
+              ) : null}
+              {description ? (
+                <p className="text-base sm:text-lg text-[#d7f6e9] leading-relaxed">
+                  {messaging.adapt(description)}
+                </p>
+              ) : null}
               {highlights?.length ? (
                 <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 pt-1 text-sm text-[#d7f6e9] font-medium">
                   {highlights.map((item) => {
@@ -62,6 +66,7 @@ export default function PublicCtaBand({
                 </div>
               ) : null}
             </div>
+          ) : null}
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto [&>*]:justify-center [&_.bg-primary-solid]:bg-white [&_.bg-primary-solid]:text-[#1f4a33] [&_.bg-primary-solid:hover]:bg-[#effbf6]">
               {actions || (

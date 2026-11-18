@@ -3,7 +3,7 @@ import { ChannelText } from '@/components/ChannelText';
 
 import React, { useEffect } from 'react';
 import { useTour } from '@/context/TourContext';
-import { ChevronLeft, ChevronRight, X, Loader2, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Loader2, MapPin } from '@/components/icons';
 
 export default function ProductTourOverlay() {
   const {
@@ -58,7 +58,7 @@ export default function ProductTourOverlay() {
     <>
       <div className="fixed inset-0 z-[10000] pointer-events-none" aria-hidden>
         {!targetRect && (
-          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-[2px] pointer-events-auto" />
+          <div className="absolute inset-0 bg-foreground/60 pointer-events-auto" />
         )}
       </div>
 
@@ -84,7 +84,7 @@ export default function ProductTourOverlay() {
       >
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-primary">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-primary">
               <MapPin className="w-3.5 h-3.5 shrink-0" />
               {currentStep.target ? (
                 <span>Onglet du menu · {stepIndex + 1}/{steps.length}</span>
@@ -118,7 +118,7 @@ export default function ProductTourOverlay() {
         </div>
 
         {waitingForTarget && (
-          <p className="text-[10px] text-muted flex items-center gap-1.5">
+          <p className="text-xs text-muted flex items-center gap-1.5">
             <Loader2 className="w-3 h-3 animate-spin" />
             Chargement de l&apos;élément…
           </p>

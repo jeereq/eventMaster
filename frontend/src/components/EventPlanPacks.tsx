@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Eye, Pin, RefreshCw, Store } from 'lucide-react';
+import { Eye, Pin, RefreshCw, Store } from '@/components/icons';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import FavoriteHeart from '@/components/FavoriteHeart';

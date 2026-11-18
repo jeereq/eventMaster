@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Building2, ChevronLeft, Store } from 'lucide-react';
+import { Building2, ChevronLeft, Store } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import type { VendorRegisterTrack } from '@/lib/registerVendorIntent';
 

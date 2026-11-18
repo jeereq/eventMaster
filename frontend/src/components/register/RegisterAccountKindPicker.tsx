@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Calendar, Compass, Store } from 'lucide-react';
+import { Calendar, Compass, Store } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import type { TenantAccountKind } from '@/lib/marketplace';
 import {

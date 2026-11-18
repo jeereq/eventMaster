@@ -2,12 +2,18 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Coins, Download, Eye, Layers, Loader2, ShieldAlert, Sparkles, X, Zap } from 'lucide-react';
+import { Coins, Download, Eye, Layers, Loader2, ShieldAlert, Sparkles, X, Zap } from '@/components/icons';
 import AdminFinanceDetailsModal, { type AdminTokenDetail } from '@/components/admin/AdminFinanceDetailsModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Badge, Button, usePageSize,
+  PageHeader,
+  Alert,
+  EmptyState,
+  Pagination,
+  Badge,
+  Button,
+  usePageSize,
 } from '@/components/ui';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
@@ -309,11 +315,6 @@ export default function AdminAiTokensPage() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title="Jetons IA"
-        description="Jetons payants et jetons offerts."
-        breadcrumbs={
-          <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard?tab=overview' }, { label: 'Jetons IA' }]} />
-        }
         action={
           <Button
             variant="secondary"
@@ -412,7 +413,7 @@ export default function AdminAiTokensPage() {
       </section>
 
       <div>
-        <p className="text-xs uppercase tracking-wider text-muted mb-2">Argent encaissé (FlexPay)</p>
+        <p className="text-xs text-muted mb-2">Argent encaissé (FlexPay)</p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden mb-6">
           {[
             { label: 'FC encaissés', value: Math.round(data?.money?.paidAmountFc ?? 0).toLocaleString('fr-FR') },
@@ -422,11 +423,11 @@ export default function AdminAiTokensPage() {
           ].map((card) => (
             <div key={card.label} className="bg-surface px-4 py-3">
               <div className="text-lg font-semibold text-foreground tabular-nums">{card.value}</div>
-              <div className="text-xs uppercase tracking-wider text-muted">{card.label}</div>
+              <div className="text-xs text-muted">{card.label}</div>
             </div>
           ))}
         </div>
-        <p className="text-xs uppercase tracking-wider text-muted mb-2">Jetons sans revenu</p>
+        <p className="text-xs text-muted mb-2">Jetons sans revenu</p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden mb-6">
           {[
             { label: 'Essais gratuits consommés', value: data?.nonRevenue?.freeConsumed ?? 0 },
@@ -436,14 +437,14 @@ export default function AdminAiTokensPage() {
           ].map((card) => (
             <div key={card.label} className="bg-surface px-4 py-3">
               <div className="text-lg font-semibold text-foreground tabular-nums">{card.value}</div>
-              <div className="text-xs uppercase tracking-wider text-muted">{card.label}</div>
+              <div className="text-xs text-muted">{card.label}</div>
             </div>
           ))}
         </div>
       </div>
 
       <div>
-        <p className="text-xs uppercase tracking-wider text-muted mb-2">Période filtrée</p>
+        <p className="text-xs text-muted mb-2">Période filtrée</p>
         <div className="grid grid-cols-3 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
           {[
             { label: 'Consommés', value: totals?.consumed ?? 0 },
@@ -452,34 +453,34 @@ export default function AdminAiTokensPage() {
           ].map((card) => (
             <div key={card.label} className="bg-surface px-4 py-3">
               <div className="text-lg font-semibold text-foreground tabular-nums">{card.value}</div>
-              <div className="text-xs uppercase tracking-wider text-muted">{card.label}</div>
+              <div className="text-xs text-muted">{card.label}</div>
             </div>
           ))}
         </div>
       </div>
 
       <div>
-        <p className="text-xs uppercase tracking-wider text-muted mb-2">Stock plateforme (tous wallets)</p>
+        <p className="text-xs text-muted mb-2">Stock plateforme (tous wallets)</p>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
           <div className="bg-surface px-4 py-3">
             <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.remaining ?? 0}</div>
-            <div className="text-xs uppercase tracking-wider text-muted">Restants</div>
+            <div className="text-xs text-muted">Restants</div>
           </div>
           <div className="bg-surface px-4 py-3">
             <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.remainingFree ?? 0}</div>
-            <div className="text-xs uppercase tracking-wider text-muted">Essais gratuits</div>
+            <div className="text-xs text-muted">Essais gratuits</div>
           </div>
           <div className="bg-surface px-4 py-3">
             <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.remainingBonus ?? 0}</div>
-            <div className="text-xs uppercase tracking-wider text-muted">Payés restants</div>
+            <div className="text-xs text-muted">Payés restants</div>
           </div>
           <div className="bg-surface px-4 py-3">
             <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.remainingGranted ?? 0}</div>
-            <div className="text-xs uppercase tracking-wider text-muted">Offerts restants</div>
+            <div className="text-xs text-muted">Offerts restants</div>
           </div>
           <div className="bg-surface px-4 py-3">
             <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.wallets ?? 0}</div>
-            <div className="text-xs uppercase tracking-wider text-muted">Wallets</div>
+            <div className="text-xs text-muted">Wallets</div>
           </div>
         </div>
       </div>
@@ -514,7 +515,6 @@ export default function AdminAiTokensPage() {
                   <Zap className="w-3.5 h-3.5 text-amber-500" />
                   Mode Rapide
                 </span>
-                <Badge variant="success">89% marge</Badge>
               </div>
               <div className="text-xl font-bold text-foreground tabular-nums">
                 {data.generationReport.fastGenerations}
@@ -533,7 +533,6 @@ export default function AdminAiTokensPage() {
                   <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
                   Mode Qualité
                 </span>
-                <Badge variant="default">78% marge</Badge>
               </div>
               <div className="text-xl font-bold text-foreground tabular-nums">
                 {data.generationReport.qualityGenerations}
@@ -606,7 +605,7 @@ export default function AdminAiTokensPage() {
           Par type d’action
         </h2>
         {!data?.byAction.length ? (
-          <EmptyState
+          <EmptyState illustration="payments"
             icon={<Coins className="w-5 h-5" />}
             title="Aucun mouvement"
             description="Les consommations et recharges apparaîtront ici."
@@ -615,7 +614,7 @@ export default function AdminAiTokensPage() {
           <div className="overflow-x-auto border border-border rounded-[var(--radius-card)] bg-surface">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted">
+                <tr className="border-b border-border text-left text-xs text-muted">
                   <th className="px-3 py-2.5 font-semibold">Action</th>
                   <th className="px-3 py-2.5 font-semibold text-right">Mouvements</th>
                   <th className="px-3 py-2.5 font-semibold text-right">Consommés</th>
@@ -643,7 +642,7 @@ export default function AdminAiTokensPage() {
           <div className="overflow-x-auto border border-border rounded-[var(--radius-card)] bg-surface">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted">
+                <tr className="border-b border-border text-left text-xs text-muted">
                   <th className="px-3 py-2.5 font-semibold">Jour</th>
                   <th className="px-3 py-2.5 font-semibold text-right">Consommés</th>
                   <th className="px-3 py-2.5 font-semibold text-right">Rechargés</th>
@@ -723,7 +722,7 @@ export default function AdminAiTokensPage() {
           <Loader2 className="w-6 h-6 animate-spin text-muted" />
         </div>
       ) : !data?.items.length ? (
-        <EmptyState
+        <EmptyState illustration="payments"
           icon={<Coins className="w-5 h-5" />}
           title="Aucun mouvement"
           description="Générez une invitation ou une simulation, ou rechargez des jetons."
@@ -732,7 +731,7 @@ export default function AdminAiTokensPage() {
         <div className={cn('overflow-x-auto border border-border rounded-[var(--radius-card)] bg-surface', loading && 'opacity-70')}>
           <table className="w-full text-sm" aria-label="Historique des mouvements de jetons IA">
             <thead>
-              <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted">
+              <tr className="border-b border-border text-left text-xs text-muted">
                 <th className="px-3 py-2.5 font-semibold">Quand</th>
                 <th className="px-3 py-2.5 font-semibold">Action</th>
                 <th className="px-3 py-2.5 font-semibold text-right">Jetons</th>

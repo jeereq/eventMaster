@@ -8,7 +8,7 @@ import { api } from '@/lib/api';
 import {
   Calendar, AlertCircle, CheckCircle2, XCircle,
   Clock, ArrowRight, ChevronRight,
-} from 'lucide-react';
+} from '@/components/icons';
 import GuestPortalShell, { GuestPortalCard, GuestEventHero } from '@/components/GuestPortalShell';
 import { guestDateBlock, guestShortDate } from '@/lib/guestDates';
 import ShareButton from '@/components/ShareButton';
@@ -89,7 +89,7 @@ function InvitationRow({ item }: { item: GuestInvitationItem }) {
         <span className="em-guest-date__day">{block.day}</span>
       </span>
       <span className="min-w-0 flex-1 space-y-0.5">
-        <span className="block font-semibold text-[15px] text-foreground leading-snug truncate">{item.event.title}</span>
+        <span className="block font-semibold text-base text-foreground leading-snug truncate">{item.event.title}</span>
         <span className="block text-xs text-muted truncate">
           {guestShortDate(item.event.date)}
           {item.event.location ? ` · ${item.event.location}` : ''}

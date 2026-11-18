@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import {
   Bell, Check, Globe, Loader2, Mail, MapPin, MessageCircle, MessageSquare, Percent, ShieldAlert, Volume2, Wallet, X, Heart, Sparkles, Wand2, Building2, Eye, EyeOff, Smartphone,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
@@ -138,7 +138,7 @@ const SECTIONS: Array<{ id: SettingsSectionId; label: string; icon: React.Compon
 
 const fieldClass =
   'w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition';
-const labelClass = 'text-xs font-bold text-muted uppercase tracking-wider';
+const labelClass = 'text-xs font-bold text-muted  ';
 const sectionCardClass = 'bg-surface-muted border border-border rounded-[var(--radius-card)] p-3.5 sm:p-5 space-y-4';
 
 function SectionTitle({
@@ -361,7 +361,7 @@ export default function AdminPlatformSettings({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <label className={labelClass}>Authentification OTP autorisée</label>
-                      <p className="text-[11px] text-muted">
+                      <p className="text-xs text-muted">
                         Cochez/décochez les canaux disponibles : vous pouvez en choisir 1 seul, n’importe quel duo ou les 3 ensemble.
                       </p>
                     </div>
@@ -403,10 +403,10 @@ export default function AdminPlatformSettings({
                                 )}
                               />
                             </div>
-                            <span className="block text-[11px] text-muted mt-0.5">{ch.desc}</span>
+                            <span className="block text-xs text-muted mt-0.5">{ch.desc}</span>
                             <span
                               className={cn(
-                                'inline-block text-[10px] font-semibold mt-1 px-1.5 py-0.5 rounded',
+                                'inline-block text-xs font-semibold mt-1 px-1.5 py-0.5 rounded',
                                 active ? 'bg-primary/20 text-primary' : 'bg-surface-muted text-muted',
                               )}
                             >
@@ -419,7 +419,7 @@ export default function AdminPlatformSettings({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="text-[11px] text-muted mr-1">Raccourcis :</span>
+                    <span className="text-xs text-muted mr-1">Raccourcis :</span>
                     {[
                       { label: 'Tous (3 sur 3)', val: 'ALL' as const },
                       { label: 'E-mail seul', val: 'EMAIL' as const },
@@ -437,7 +437,7 @@ export default function AdminPlatformSettings({
                           type="button"
                           onClick={() => patch({ authOtpChannels: btn.val })}
                           className={cn(
-                            'text-[10px] font-semibold px-2 py-1 rounded-md border transition',
+                            'text-xs font-semibold px-2 py-1 rounded-md border transition',
                             isCurrent
                               ? 'bg-primary text-white border-primary'
                               : 'bg-surface border-border text-muted hover:text-foreground',
@@ -668,11 +668,11 @@ export default function AdminPlatformSettings({
                 {/* Modèle Invitation */}
                 <div className="p-4 rounded-xl border border-border bg-surface-muted/40 space-y-3">
                   <div className="flex items-center justify-between gap-2">
-                    <label htmlFor="ai-invitation-model" className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <label htmlFor="ai-invitation-model"className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       <Mail className="w-3.5 h-3.5 text-pink-500" />
                       Génération d&apos;Invitations (Image 9:16)
                     </label>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                       {value.aiStudioModels?.invitationModel?.includes('gpt') || value.aiStudioModels?.invitationModel?.includes('luna')
                         ? 'OpenAI'
                         : value.aiStudioModels?.invitationModel?.includes('flash')
@@ -723,7 +723,7 @@ export default function AdminPlatformSettings({
                     </optgroup>
                   </select>
 
-                  <p className="text-[11px] text-muted leading-relaxed">
+                  <p className="text-xs text-muted leading-relaxed">
                     Le modèle choisi est appelé en premier. Gemini et OpenAI se relaient automatiquement si le moteur principal est indisponible.
                   </p>
                 </div>
@@ -731,11 +731,11 @@ export default function AdminPlatformSettings({
                 {/* Modèle Salles 2D/3D */}
                 <div className="p-4 rounded-xl border border-border bg-surface-muted/40 space-y-3">
                   <div className="flex items-center justify-between gap-2">
-                    <label htmlFor="ai-room-plan-model" className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <label htmlFor="ai-room-plan-model"className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       <Building2 className="w-3.5 h-3.5 text-sky-500" />
                       Plans &amp; Salles 2D / 3D (Raisonnement)
                     </label>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-300">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-300">
                       {value.aiStudioModels?.roomPlanModel?.includes('gpt') || value.aiStudioModels?.roomPlanModel?.includes('luna')
                         ? 'OpenAI'
                         : value.aiStudioModels?.roomPlanModel?.includes('flash')
@@ -786,7 +786,7 @@ export default function AdminPlatformSettings({
                     </optgroup>
                   </select>
 
-                  <p className="text-[11px] text-muted leading-relaxed">
+                  <p className="text-xs text-muted leading-relaxed">
                     Modèle d&apos;analyse textuelle et topologique pour convertir les briefs et photos en blueprints de salle avec distances de circulation.
                   </p>
                 </div>
@@ -921,7 +921,7 @@ export default function AdminPlatformSettings({
             <div className="space-y-1.5 pb-2 border-b border-border">
               <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <span>Taux de change Dollar vers Franc Congolais (1 $ en FC)</span>
-                <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-semibold">
+                <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs font-semibold">
                   Simulateur & Devis
                 </span>
               </label>
@@ -961,7 +961,7 @@ export default function AdminPlatformSettings({
                   onChange={(e) => patch({ marketplaceCommissionRate: (Number(e.target.value) || 0) / 100 })}
                   className={cn(fieldClass, 'font-medium')}
                 />
-                <p className="text-[11px] text-muted">Due par le vendeur. Défaut 8 %.</p>
+                <p className="text-xs text-muted">Due par le vendeur. Défaut 8 %.</p>
               </div>
               <div className="space-y-1.5">
                 <label className={labelClass}>Acompte hors plateforme (%)</label>
@@ -974,7 +974,7 @@ export default function AdminPlatformSettings({
                   onChange={(e) => patch({ marketplaceDepositRate: (Number(e.target.value) || 0) / 100 })}
                   className={cn(fieldClass, 'font-medium')}
                 />
-                <p className="text-[11px] text-muted">Versé au professionnel. Défaut 30 %.</p>
+                <p className="text-xs text-muted">Versé au professionnel. Défaut 30 %.</p>
               </div>
               <div className="space-y-1.5">
                 <label className={labelClass}>Commission commerciale — 1er paiement (%)</label>
@@ -1014,7 +1014,7 @@ export default function AdminPlatformSettings({
             <div className="space-y-3">
               <div>
                 <p className="text-xs font-semibold text-foreground">Mentionnées sur le site</p>
-                <p className="text-[11px] text-muted mt-0.5">
+                <p className="text-xs text-muted mt-0.5">
                   Villes cochées affichées sur l’accueil, le footer et les pages publiques.
                 </p>
               </div>
@@ -1043,7 +1043,7 @@ export default function AdminPlatformSettings({
                       {hasGps ? (
                         <span
                           className={cn(
-                            'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md',
+                            'text-[9px] font-bold px-1.5 py-0.5 rounded-md',
                             selected ? 'bg-white/20' : 'bg-surface-muted border border-border',
                           )}
                         >
@@ -1056,7 +1056,7 @@ export default function AdminPlatformSettings({
               </div>
               <div className="rounded-xl border border-border bg-surface p-3 space-y-1">
                 <p className="text-xs font-semibold text-foreground">Catalogue & carte (données GPS)</p>
-                <p className="text-[11px] text-muted leading-relaxed">
+                <p className="text-xs text-muted leading-relaxed">
                   Seules {MARKETPLACE_GPS_CITIES.join(' et ')} ont des communes et bornes géo. Si elles sont
                   cochées ci-dessus, elles ouvrent le marketplace, la carte et le simulateur budget IA. Les autres
                   villes restent des mentions publiques uniquement.
@@ -1241,10 +1241,10 @@ export default function AdminPlatformSettings({
                                 )}
                               />
                             </div>
-                            <span className="block text-[11px] text-muted mt-0.5">{ch.desc}</span>
+                            <span className="block text-xs text-muted mt-0.5">{ch.desc}</span>
                             <span
                               className={cn(
-                                'inline-block text-[10px] font-semibold mt-1 px-1.5 py-0.5 rounded',
+                                'inline-block text-xs font-semibold mt-1 px-1.5 py-0.5 rounded',
                                 active ? 'bg-primary/20 text-primary' : 'bg-surface-muted text-muted',
                               )}
                             >
@@ -1257,7 +1257,7 @@ export default function AdminPlatformSettings({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="text-[11px] text-muted mr-1">Raccourcis :</span>
+                    <span className="text-xs text-muted mr-1">Raccourcis :</span>
                     {[
                       { label: 'Tous (4 sur 4)', channels: ['EMAIL', 'WHATSAPP', 'SMS', 'PUSH'] as const },
                       { label: 'E-mail + WhatsApp + SMS (3 sur 4)', channels: ['EMAIL', 'WHATSAPP', 'SMS'] as const },
@@ -1272,7 +1272,7 @@ export default function AdminPlatformSettings({
                         key={idx}
                         type="button"
                         onClick={() => patch({ notificationChannels: [...shortcut.channels] })}
-                        className="text-[10px] font-semibold px-2 py-1 rounded-md border border-border bg-surface text-muted hover:text-foreground transition"
+                        className="text-xs font-semibold px-2 py-1 rounded-md border border-border bg-surface text-muted hover:text-foreground transition"
                       >
                         {shortcut.label}
                       </button>
@@ -1336,7 +1336,7 @@ export default function AdminPlatformSettings({
                     className={fieldClass}
                     placeholder="no-reply@votredomaine.com"
                   />
-                  <p className="text-[11px] text-muted">Doit être un domaine vérifié dans SendGrid.</p>
+                  <p className="text-xs text-muted">Doit être un domaine vérifié dans SendGrid.</p>
                 </div>
               </div>
             </div>
@@ -1376,7 +1376,7 @@ export default function AdminPlatformSettings({
                         )}
                       >
                         <span className="block text-xs font-bold text-foreground">{p.label}</span>
-                        <span className="block text-[11px] text-muted mt-0.5">{p.desc}</span>
+                        <span className="block text-xs text-muted mt-0.5">{p.desc}</span>
                       </button>
                     );
                   })}
@@ -1388,7 +1388,7 @@ export default function AdminPlatformSettings({
                 <div className="pt-2 border-t border-border/70 space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-foreground">Paramètres Dream Digital (aSMSC)</span>
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary">GET /api/SendSms</span>
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary">GET /api/SendSms</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5 md:col-span-2">
@@ -1400,7 +1400,7 @@ export default function AdminPlatformSettings({
                         className={cn(fieldClass, 'font-mono')}
                         placeholder="https://hote-fourni-par-dream-digital.example"
                       />
-                      <p className="text-[11px] text-muted">Hôte HTTPS fourni par Dream Digital et défini par le Super Admin.</p>
+                      <p className="text-xs text-muted">Hôte HTTPS fourni par Dream Digital et défini par le Super Admin.</p>
                     </div>
                     <div className="space-y-1.5">
                       <label className={labelClass}>API ID</label>
@@ -1432,7 +1432,7 @@ export default function AdminPlatformSettings({
                         className={cn(fieldClass, 'font-mono')}
                         placeholder="Sender ID fourni par Dream Digital"
                       />
-                      <p className="text-[11px] text-muted">Nom d’expéditeur enregistré dans votre panneau Dream Digital aSMSC.</p>
+                      <p className="text-xs text-muted">Nom d’expéditeur enregistré dans votre panneau Dream Digital aSMSC.</p>
                     </div>
                   </div>
                 </div>
@@ -1637,7 +1637,7 @@ export default function AdminPlatformSettings({
           );
         })()}
 
-        <div className="flex justify-end gap-3 sticky bottom-[calc(var(--em-site-bottom-nav,4rem)+0.75rem)] md:bottom-4 z-20 bg-surface/85 md:bg-transparent backdrop-blur-md md:backdrop-blur-none p-2 md:p-0 rounded-2xl border md:border-0 border-border/60 shadow-lg md:shadow-none">
+        <div className="flex justify-end gap-3 sticky bottom-[calc(var(--em-site-bottom-nav,4rem)+0.75rem)] md:bottom-4 z-20 bg-surface/85 md:bg-transparent p-2 md:p-0 rounded-2xl border md:border-0 border-border/60 shadow-lg md:shadow-none">
           <Button
             type="submit"
             disabled={saving}
@@ -1719,7 +1719,7 @@ function WelcomeAiGrantsEditor({
                 <tr key={key} className="border-t border-border">
                   <td className="px-3 py-2">
                     <p className="font-semibold text-foreground">{WELCOME_GRANT_LABELS[key]}</p>
-                    <p className="text-[11px] text-muted">
+                    <p className="text-xs text-muted">
                       {rule.unit === 'fc' && rule.amount > 0
                         ? `≈ ${tokensApprox} jeton${tokensApprox > 1 ? 's' : ''} au tarif actuel`
                         : WELCOME_MOMENT_LABELS[rule.moment]}
@@ -2206,7 +2206,7 @@ function DonationsAccessEditor({
                 onChange={(e) => patch({ minAmountFc: Math.max(100, Number(e.target.value) || 1000) })}
                 className={fieldClass}
               />
-              <p className="text-[11px] text-muted">Seuil plancher appliqué par défaut aux collectes.</p>
+              <p className="text-xs text-muted">Seuil plancher appliqué par défaut aux collectes.</p>
             </div>
 
             <div className="space-y-1.5">
@@ -2220,7 +2220,7 @@ function DonationsAccessEditor({
               />
               <div className="flex flex-wrap gap-1 pt-1">
                 {access.defaultSuggestedAmountsFc.map((amt) => (
-                  <span key={amt} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-muted text-foreground border border-border">
+                  <span key={amt} className="text-xs font-bold px-2 py-0.5 rounded-md bg-surface-muted text-foreground border border-border">
                     {amt.toLocaleString('fr-FR')} FC
                   </span>
                 ))}

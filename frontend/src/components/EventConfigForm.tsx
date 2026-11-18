@@ -37,7 +37,7 @@ import {
   Briefcase,
   Users,
   AlertTriangle,
-} from 'lucide-react';
+} from '@/components/icons';
 import { api } from '@/lib/api';
 import { Button, ConfirmDialog, Input, Modal, PhoneInput, parseStoredPhone } from '@/components/ui';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
@@ -121,10 +121,10 @@ const PublicEventZoneStudio3D = dynamic(() => import('@/components/PublicEventZo
 });
 
 const SELECT_CLASS =
-  'w-full px-3.5 py-2.5 bg-surface-muted/50 backdrop-blur-sm dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all';
+  'w-full px-3.5 py-2.5 bg-surface dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all';
 
 const TEXTAREA_CLASS =
-  'w-full px-3.5 py-2.5 bg-surface-muted/50 backdrop-blur-sm dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition-all';
+  'w-full px-3.5 py-2.5 bg-surface dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition-all';
 
 const SIMPLE_DRESS_PRESETS: Array<Exclude<DressCodePresetId, 'custom' | 'white_tie' | 'theme_color'>> = [
   'cocktail',
@@ -1342,15 +1342,15 @@ export default function EventConfigForm({
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
-              <span className="font-semibold text-[11px] text-muted whitespace-nowrap">
+              <span className="font-semibold text-xs text-muted whitespace-nowrap">
                 {progressPercentage}%
               </span>
               {tabStatus.allRequiredDone ? (
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                   <CheckCircle2 className="w-3 h-3" /> Prêt
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
                   Champs requis
                 </span>
               )}
@@ -1407,7 +1407,7 @@ export default function EventConfigForm({
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Champ requis" />
                       )}
                     </div>
-                    <p className="text-[10px] text-muted truncate leading-tight">
+                    <p className="text-xs text-muted truncate leading-tight">
                       {details.subtitle}
                     </p>
                   </div>
@@ -1533,25 +1533,25 @@ export default function EventConfigForm({
                       required
                     />
                     <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                      <span className="text-[10px] text-muted font-medium">Raccourcis :</span>
+                      <span className="text-xs text-muted font-medium">Raccourcis :</span>
                       <button
                         type="button"
                         onClick={() => setDatePreset('this_saturday')}
-                        className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                        className="px-2 py-0.5 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
                       >
                         Ce samedi (18h)
                       </button>
                       <button
                         type="button"
                         onClick={() => setDatePreset('next_saturday')}
-                        className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                        className="px-2 py-0.5 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
                       >
                         Samedi prochain
                       </button>
                       <button
                         type="button"
                         onClick={() => setDatePreset('in_month')}
-                        className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                        className="px-2 py-0.5 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
                       >
                         Dans 1 mois
                       </button>
@@ -1568,25 +1568,25 @@ export default function EventConfigForm({
                       />
                       {date && (
                         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                          <span className="text-[10px] text-muted font-medium">Durée :</span>
+                          <span className="text-xs text-muted font-medium">Durée :</span>
                           <button
                             type="button"
                             onClick={() => setEndsAtPreset(2)}
-                            className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                            className="px-2 py-0.5 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
                           >
                             +2h
                           </button>
                           <button
                             type="button"
                             onClick={() => setEndsAtPreset(4)}
-                            className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                            className="px-2 py-0.5 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
                           >
                             +4h
                           </button>
                           <button
                             type="button"
                             onClick={() => setEndsAtPreset(6, true)}
-                            className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                            className="px-2 py-0.5 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
                           >
                             Soirée (minuit)
                           </button>
@@ -1632,7 +1632,6 @@ export default function EventConfigForm({
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       placeholder="ex. Hôtel Fleuve Congo"
-                      leftIcon={<MapPin className="w-4 h-4" />}
                     />
                     <CityLocationFields
                       city={city}
@@ -1696,7 +1695,7 @@ export default function EventConfigForm({
                         setDescription(`Bienvenue à "${title}". ${hints[Math.floor(Math.random() * hints.length)]}`);
                       }}
                       disabled={!title.trim()}
-                      className="text-[11px] font-semibold text-primary hover:text-primary-hover disabled:opacity-40 transition-colors inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 touch-manipulation"
+                      className="text-xs font-semibold text-primary hover:text-primary-hover disabled:opacity-40 transition-colors inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 touch-manipulation"
                       title="Suggérer un texte d'accueil chaleureux basé sur le titre"
                     >
                       <Sparkles className="w-3 h-3" /> Suggérer un texte
@@ -1712,7 +1711,7 @@ export default function EventConfigForm({
                 </label>
 
                 <div className="space-y-2 pt-1 border-t border-border">
-                  <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                  <h4 className="text-xs font-semibold text-muted">
                     Visibilité &amp; Accès
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1736,7 +1735,7 @@ export default function EventConfigForm({
                         </div>
                         {!isPublic && <Check className="w-4 h-4 text-primary" />}
                       </div>
-                      <p className="text-[11px] text-muted leading-relaxed">
+                      <p className="text-xs text-muted leading-relaxed">
                         Sur invitation nominative. Lien de réponse unique par convive, placement sur plan de table privé.
                       </p>
                     </button>
@@ -1768,7 +1767,7 @@ export default function EventConfigForm({
                         </div>
                         {isPublic && <Check className="w-4 h-4 text-primary" />}
                       </div>
-                      <p className="text-[11px] text-muted leading-relaxed">
+                      <p className="text-xs text-muted leading-relaxed">
                         {canPublishEvents
                           ? 'Fiche marketplace ouverte, billetterie multi-zones 3D, paiements Mobile Money & Carte.'
                           : 'Réservé aux forfaits organisation. Les forfaits Particulier restent sur invitation.'}
@@ -1847,7 +1846,7 @@ export default function EventConfigForm({
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-foreground truncate">{selectedRoom.name}</p>
-                        <p className="text-[11px] text-muted truncate">
+                        <p className="text-xs text-muted truncate">
                           {selectedRoom.capacity ? `${selectedRoom.capacity} places assises · ` : ''}
                           {selectedRoom.floor ? `Étage : ${selectedRoom.floor} · ` : ''}
                           {selectedRoomBlueprint ? '✓ Plan 3D rattaché' : 'Lieu sans plan'}
@@ -1884,7 +1883,7 @@ export default function EventConfigForm({
                       </option>
                     ))}
                   </select>
-                  <p className="text-[11px] text-muted">
+                  <p className="text-xs text-muted">
                     {rooms.length === 0 ? (
                       <>
                         Créez des salles dans{' '}
@@ -1912,7 +1911,7 @@ export default function EventConfigForm({
                       <div className="space-y-0.5 min-w-0">
                         <h4 className="text-xs font-semibold text-foreground">Aperçu de la salle</h4>
                         {selectedRoomBlueprint ? (
-                          <p className="text-[11px] text-muted leading-relaxed">
+                          <p className="text-xs text-muted leading-relaxed">
                             Ambiance{' '}
                             <span className="font-semibold text-foreground">
                               {lightingPresetLabels[roomPreviewLighting]}
@@ -1922,7 +1921,7 @@ export default function EventConfigForm({
                               : ' · définissez un créneau dans Accès pour ajuster l’éclairage'}
                           </p>
                         ) : (
-                          <p className="text-[11px] text-muted leading-relaxed">
+                          <p className="text-xs text-muted leading-relaxed">
                             Cette salle n’a pas encore de modèle. Créez-en un dans{' '}
                             <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
                               Salles
@@ -1942,7 +1941,7 @@ export default function EventConfigForm({
                               type="button"
                               onClick={() => setRoomPreviewQuality(opt.id)}
                               className={cn(
-                                'px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
+                                'px-2.5 py-1 rounded-full text-xs font-semibold transition',
                                 roomPreviewQuality === opt.id
                                   ? 'bg-foreground text-background'
                                   : 'text-muted hover:text-foreground',
@@ -1964,7 +1963,7 @@ export default function EventConfigForm({
                           showMeta
                           className="[&_.em-floor-canvas]:rounded-xl"
                         />
-                        <p className="text-[11px] text-muted leading-relaxed">
+                        <p className="text-xs text-muted leading-relaxed">
                           Orbitez pour inspecter la salle. Le plan de table sera importé automatiquement à la création.{' '}
                           <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
                             Modifier le modèle
@@ -2007,7 +2006,6 @@ export default function EventConfigForm({
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="ex. Hôtel Fleuve Congo"
                   required
-                  leftIcon={<MapPin className="w-4 h-4" />}
                 />
                 <CityLocationFields
                   city={city}
@@ -2020,7 +2018,7 @@ export default function EventConfigForm({
                 <div className="space-y-3 pt-1 border-t border-border">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Localisation GPS</h4>
+                      <h4 className="text-xs font-semibold text-muted">Localisation GPS</h4>
                       <p className="text-xs text-muted mt-0.5">
                         {latitude && longitude ? (
                           <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
@@ -2068,7 +2066,7 @@ export default function EventConfigForm({
                       Chargement de la carte…
                     </div>
                   </div>
-                  <p className="text-[11px] text-muted">
+                  <p className="text-xs text-muted">
                     Cliquez sur la carte ou faites glisser le marqueur — les coordonnées GPS sont enregistrées automatiquement.
                   </p>
                 </div>
@@ -2172,7 +2170,7 @@ export default function EventConfigForm({
                   <Wallet className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-foreground">Numéro de reversement (obligatoire)</p>
-                    <p className="text-[11px] text-muted leading-relaxed">
+                    <p className="text-xs text-muted leading-relaxed">
                       EventMaster vous reverse sur ce numéro Mobile Money le montant net collecté (billets et dons,
                       après commission), automatiquement à minuit (heure de Kinshasa) dès que le montant peut être reversé.
                       Les responsables de l’organisation sont prévenus à chaque reversement et à chaque changement de numéro.
@@ -2220,7 +2218,7 @@ export default function EventConfigForm({
                             <Ticket className="w-4 h-4 text-primary" />
                             Billetterie en ligne payante
                           </span>
-                          <p className="text-[11px] text-muted mt-0.5">
+                          <p className="text-xs text-muted mt-0.5">
                             Paiement sécurisé par Mobile Money (Orange Money, M-Pesa, Airtel Money) et Carte bancaire.
                             En plus de l&apos;abonnement, EventMaster se réserve le droit de prélever une commission de{' '}
                             {COLLECTION_COMMISSION_MIN_PERCENT} à {COLLECTION_COMMISSION_MAX_PERCENT}&nbsp;% du
@@ -2242,7 +2240,7 @@ export default function EventConfigForm({
                             <CheckCircle2 className="w-4 h-4 shrink-0" />
                             <span>Validation automatique de présence &amp; Billets partagés</span>
                           </div>
-                          <ul className="text-[11px] text-muted space-y-1 pl-4 list-disc leading-relaxed">
+                          <ul className="text-xs text-muted space-y-1 pl-4 list-disc leading-relaxed">
                             <li><strong>Présence validée automatiquement :</strong> Dès qu’un participant paie son billet, son statut passe directement à Présent (réponse validée).</li>
                             <li><strong>Billets partagés personnalisables :</strong> Les bénéficiaires d’un lot de billets peuvent chacun personnaliser leur nom, prénom et téléphone sur leur pass d’accès.</li>
                           </ul>
@@ -2268,7 +2266,7 @@ export default function EventConfigForm({
                                   <span className="font-bold text-xs text-foreground">Tarif Unique</span>
                                   {ticketPricingMode === 'global' && <Check className="w-3.5 h-3.5 text-primary" />}
                                 </div>
-                                <span className="text-[11px] text-muted">Un prix unique pour tous les billets de l’événement.</span>
+                                <span className="text-xs text-muted">Un prix unique pour tous les billets de l’événement.</span>
                               </button>
 
                               <button
@@ -2294,7 +2292,7 @@ export default function EventConfigForm({
                                   </span>
                                   {ticketPricingMode === 'by_zone' && <Check className="w-3.5 h-3.5 text-primary" />}
                                 </div>
-                                <span className="text-[11px] text-muted">Catégories distinctes (VIP, Carré d’Or, Standard) avec modélisation 3D et tarifs distincts.</span>
+                                <span className="text-xs text-muted">Catégories distinctes (VIP, Carré d’Or, Standard) avec modélisation 3D et tarifs distincts.</span>
                               </button>
                             </div>
                           </div>
@@ -2373,7 +2371,7 @@ export default function EventConfigForm({
                           hint="Nombre maximal de billets qu’un même e-mail peut payer. Laissez vide pour autoriser plusieurs achats sans plafond."
                         />
                       )}
-                      <p className="text-[11px] text-muted">
+                      <p className="text-xs text-muted">
                         {ticketing
                           ? 'Paiements par Mobile Money et Carte (FlexPay). Une même personne peut racheter des billets, dans la limite que vous fixez. Chaque commande génère des pass QR distincts.'
                           : 'Inscription gratuite : le visiteur renseigne son nom et téléphone, puis reçoit son pass d’accès.'}
@@ -2409,7 +2407,7 @@ export default function EventConfigForm({
                           <span className="font-bold text-foreground">
                             Activer le choix de place sur le plan 2D / 3D à l’achat
                           </span>
-                          <span className="block text-[11px] text-muted mt-0.5 leading-relaxed">
+                          <span className="block text-xs text-muted mt-0.5 leading-relaxed">
                             Permet aux acheteurs de choisir leur siège ou table directement sur le plan interactif 2D ou 3D. 1 billet = 1 siège garanti.
                           </span>
                         </div>
@@ -2425,11 +2423,11 @@ export default function EventConfigForm({
                             Confidentialité &amp; Partage entre convives (Événement public)
                           </span>
                         </div>
-                        <span className="text-[10px] uppercase font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                        <span className="text-xs uppercase font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
                           RGPD &amp; Vie privée
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted leading-relaxed">
+                      <p className="text-xs text-muted leading-relaxed">
                         Déterminez si les participants peuvent voir les identités des personnes assises à leur table, allée ou zone sur les plans 2D/3D.
                       </p>
 
@@ -2450,7 +2448,7 @@ export default function EventConfigForm({
                             <span className="font-bold text-xs text-foreground">Prénoms seuls</span>
                             {neighborSharingMode === 'first_name' && <Check className="w-3.5 h-3.5 text-primary" />}
                           </div>
-                          <span className="text-[10px] text-muted leading-snug">
+                          <span className="text-xs text-muted leading-snug">
                             Prénom visible (ex. &quot;Sarah M.&quot;). Idéal pour la convivialité et la discrétion. (Recommandé)
                           </span>
                         </button>
@@ -2471,7 +2469,7 @@ export default function EventConfigForm({
                             <span className="font-bold text-xs text-foreground">Anonymat total</span>
                             {neighborSharingMode === 'hidden' && <Check className="w-3.5 h-3.5 text-primary" />}
                           </div>
-                          <span className="text-[10px] text-muted leading-snug">
+                          <span className="text-xs text-muted leading-snug">
                             Aucun nom visible. Les sièges apparaissent simplement &quot;Occupés&quot;.
                           </span>
                         </button>
@@ -2492,7 +2490,7 @@ export default function EventConfigForm({
                             <span className="font-bold text-xs text-foreground">Partage complet</span>
                             {neighborSharingMode === 'full' && <Check className="w-3.5 h-3.5 text-primary" />}
                           </div>
-                          <span className="text-[10px] text-muted leading-snug">
+                          <span className="text-xs text-muted leading-snug">
                             Prénom et nom affichés. Adapté aux conférences ou galas d&apos;affaires.
                           </span>
                         </button>
@@ -2510,7 +2508,7 @@ export default function EventConfigForm({
                             <span className="font-semibold text-foreground">
                               Autoriser le partage des informations entre personnes de la même table
                             </span>
-                            <span className="block text-[10.5px] text-muted mt-0.5">
+                            <span className="block text-xs text-muted mt-0.5">
                               Si décoché, l&apos;invité ne voit aucun détail sur les autres sièges de sa table.
                             </span>
                           </div>
@@ -2527,7 +2525,7 @@ export default function EventConfigForm({
                             <span className="font-semibold text-foreground">
                               Autoriser le partage des informations entre voisins de la même allée ou zone
                             </span>
-                            <span className="block text-[10.5px] text-muted mt-0.5">
+                            <span className="block text-xs text-muted mt-0.5">
                               Permet aux participants d&apos;une même zone tarifaire ou allée de voir la liste des convives présents.
                             </span>
                           </div>
@@ -2582,7 +2580,7 @@ export default function EventConfigForm({
                               <Heart className="w-4 h-4 text-rose-500 fill-rose-500/20" />
                               Collecte de dons à montant libre
                             </span>
-                            <p className="text-[11px] text-muted mt-0.5">
+                            <p className="text-xs text-muted mt-0.5">
                               Permet aux participants et donateurs d’effectuer un don financier solidaire libre en FC ou USD via Mobile Money et Carte bancaire.
                               En plus de l&apos;abonnement, EventMaster se réserve le droit de prélever une commission de{' '}
                               {COLLECTION_COMMISSION_MIN_PERCENT} à {COLLECTION_COMMISSION_MAX_PERCENT}&nbsp;% du
@@ -2593,7 +2591,7 @@ export default function EventConfigForm({
                         </label>
                         <span
                           className={cn(
-                            'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
+                            'text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
                             donationsAllowedByAdmin
                               ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
                               : 'text-amber-700 dark:text-amber-300 bg-amber-500/15',
@@ -2609,7 +2607,7 @@ export default function EventConfigForm({
                             <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden />
                             Option soumise à autorisation de l&apos;administrateur
                           </p>
-                          <p className="text-[11px] leading-relaxed text-muted">
+                          <p className="text-xs leading-relaxed text-muted">
                             La collecte de dons à montant libre est actuellement restreinte par la politique du Super Admin pour votre organisation.
                             Contactez le support EventMaster pour demander l&apos;activation des donations pour vos événements.
                           </p>
@@ -2660,7 +2658,7 @@ export default function EventConfigForm({
                                 .map((s) => Number(s.trim()))
                                 .filter((n) => Number.isFinite(n) && n > 0)
                                 .map((amt) => (
-                                  <span key={amt} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-muted text-foreground border border-border">
+                                  <span key={amt} className="text-xs font-bold px-2 py-0.5 rounded-md bg-surface-muted text-foreground border border-border">
                                     {amt.toLocaleString('fr-FR')} FC
                                   </span>
                                 ))}
@@ -2676,7 +2674,7 @@ export default function EventConfigForm({
                             />
                             <div>
                               <span className="font-semibold">Attribuer un pass invité « Donateur » avec badge QR</span>
-                              <span className="block text-[11px] text-muted">
+                              <span className="block text-xs text-muted">
                                 Si activé, chaque donateur reçoit automatiquement un pass d’accès confirmé et son QR code pour assister à l’événement.
                               </span>
                             </div>
@@ -2713,7 +2711,7 @@ export default function EventConfigForm({
                   <div className="space-y-4">
                     <div className="space-y-2 p-3.5 rounded-2xl border border-border bg-surface">
                       <p className="text-xs font-semibold text-foreground">Programme &amp; ambiance</p>
-                      <p className="text-[11px] text-muted">
+                      <p className="text-xs text-muted">
                         Créneaux Soleil / Crépuscule / Nuit — reflétés dans l’aperçu salle et la vue extérieure.
                       </p>
                       {eventProgram.slots.map((slot) => (
@@ -2794,7 +2792,7 @@ export default function EventConfigForm({
                         <option value="EVERY_5_DAYS">Tous les 5 jours</option>
                         <option value="WEEKLY">Chaque semaine</option>
                       </select>
-                      <p className="text-[11px] text-muted">Envoyés aux invités encore « en attente ».</p>
+                      <p className="text-xs text-muted">Envoyés aux invités encore « en attente ».</p>
                     </label>
 
                     <div className="block space-y-2">
@@ -2802,7 +2800,7 @@ export default function EventConfigForm({
                         <LayoutTemplate className="w-3.5 h-3.5" />
                         Modèle de réponses d’invitation
                       </span>
-                      <p className="text-[11px] text-muted">
+                      <p className="text-xs text-muted">
                         Choisissez le visuel de réponse que vos invités verront. Aperçu en direct.
                       </p>
                       <div className="grid grid-cols-2 gap-2">
@@ -2816,8 +2814,8 @@ export default function EventConfigForm({
                               : 'border-border hover:border-primary/40',
                           )}
                         >
-                          <span className="text-[11px] font-bold text-foreground">Plus tard</span>
-                          <span className="text-[10px] text-muted">Je configurerai le formulaire ensuite.</span>
+                          <span className="text-xs font-bold text-foreground">Plus tard</span>
+                          <span className="text-xs text-muted">Je configurerai le formulaire ensuite.</span>
                         </button>
                         {templates.map((item) => {
                           const selected = formTemplateId === item.id;
@@ -2842,7 +2840,7 @@ export default function EventConfigForm({
                                 <LandingInvitationPreview template={preview} compact className="!rounded-none !border-0 !shadow-none !min-h-[120px] !max-h-[140px]" />
                               </div>
                               <div className="px-2 py-1.5 border-t border-border bg-surface flex items-center justify-between gap-1">
-                                <span className="text-[11px] font-semibold text-foreground truncate">{item.name}</span>
+                                <span className="text-xs font-semibold text-foreground truncate">{item.name}</span>
                                 {selected ? <Check className="w-3.5 h-3.5 text-primary shrink-0" /> : null}
                               </div>
                             </button>
@@ -2850,7 +2848,7 @@ export default function EventConfigForm({
                         })}
                       </div>
                       {templates.length === 0 ? (
-                        <p className="text-[11px] text-muted">
+                        <p className="text-xs text-muted">
                           Aucun modèle pour l’instant. Créez-en un dans{' '}
                           <Link href="/dashboard/templates" className="font-semibold text-primary hover:underline">
                             Modèles
@@ -2858,14 +2856,14 @@ export default function EventConfigForm({
                           .
                         </p>
                       ) : (
-                        <p className="text-[11px] text-muted">
+                        <p className="text-xs text-muted">
                           Une invitation e-mail sera créée (ou mise à jour) avec ce modèle.
                         </p>
                       )}
                     </div>
 
                     <div className="space-y-3 pt-1 border-t border-border">
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-2">Contact jour J</h4>
+                      <h4 className="text-xs font-semibold text-muted pt-2">Contact jour J</h4>
                       <Input
                         label="Nom"
                         value={contactName}
@@ -2916,7 +2914,7 @@ export default function EventConfigForm({
                 {complete && (
                   <div className="space-y-2 p-3.5 rounded-2xl border border-border bg-surface">
                     <p className="text-xs font-semibold text-foreground">Programme &amp; ambiance</p>
-                    <p className="text-[11px] text-muted">
+                    <p className="text-xs text-muted">
                       Créneaux Soleil / Crépuscule / Nuit — reflétés dans l’aperçu salle et la vue extérieure.
                     </p>
                     {eventProgram.slots.map((slot) => (
@@ -2998,7 +2996,7 @@ export default function EventConfigForm({
                     <option value="EVERY_5_DAYS">Tous les 5 jours</option>
                     <option value="WEEKLY">Chaque semaine</option>
                   </select>
-                  <p className="text-[11px] text-muted">Envoyés aux invités encore « en attente ».</p>
+                  <p className="text-xs text-muted">Envoyés aux invités encore « en attente ».</p>
                 </label>
 
                 <div className="block space-y-2">
@@ -3006,7 +3004,7 @@ export default function EventConfigForm({
                     <LayoutTemplate className="w-3.5 h-3.5" />
                     Modèle de réponses d’invitation
                   </span>
-                  <p className="text-[11px] text-muted">
+                  <p className="text-xs text-muted">
                     Choisissez le visuel de réponse que vos invités verront. Aperçu en direct.
                   </p>
                   <div className="grid grid-cols-2 gap-2">
@@ -3020,8 +3018,8 @@ export default function EventConfigForm({
                           : 'border-border hover:border-primary/40',
                       )}
                     >
-                      <span className="text-[11px] font-bold text-foreground">Plus tard</span>
-                      <span className="text-[10px] text-muted">Je configurerai le formulaire ensuite.</span>
+                      <span className="text-xs font-bold text-foreground">Plus tard</span>
+                      <span className="text-xs text-muted">Je configurerai le formulaire ensuite.</span>
                     </button>
                     {templates.map((item) => {
                       const selected = formTemplateId === item.id;
@@ -3046,7 +3044,7 @@ export default function EventConfigForm({
                             <LandingInvitationPreview template={preview} compact className="!rounded-none !border-0 !shadow-none !min-h-[120px] !max-h-[140px]" />
                           </div>
                           <div className="px-2 py-1.5 border-t border-border bg-surface flex items-center justify-between gap-1">
-                            <span className="text-[11px] font-semibold text-foreground truncate">{item.name}</span>
+                            <span className="text-xs font-semibold text-foreground truncate">{item.name}</span>
                             {selected ? <Check className="w-3.5 h-3.5 text-primary shrink-0" /> : null}
                           </div>
                         </button>
@@ -3054,7 +3052,7 @@ export default function EventConfigForm({
                     })}
                   </div>
                   {templates.length === 0 ? (
-                    <p className="text-[11px] text-muted">
+                    <p className="text-xs text-muted">
                       Aucun modèle pour l’instant. Créez-en un dans{' '}
                       <Link href="/dashboard/templates" className="font-semibold text-primary hover:underline">
                         Modèles
@@ -3062,7 +3060,7 @@ export default function EventConfigForm({
                       .
                     </p>
                   ) : (
-                    <p className="text-[11px] text-muted">
+                    <p className="text-xs text-muted">
                       Une invitation e-mail sera créée (ou mise à jour) avec ce modèle.
                     </p>
                   )}
@@ -3070,7 +3068,7 @@ export default function EventConfigForm({
 
                 {complete && (
                   <div className="space-y-3 pt-1 border-t border-border">
-                    <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-2">Contact jour J</h4>
+                    <h4 className="text-xs font-semibold text-muted pt-2">Contact jour J</h4>
                     <Input
                       label="Nom"
                       value={contactName}
@@ -3096,15 +3094,15 @@ export default function EventConfigForm({
             {complete ? (
               <>
                 <div className="space-y-3">
-                  <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Galerie</h4>
+                  <h4 className="text-xs font-semibold text-muted">Galerie</h4>
                   <MarketplaceMediaField urls={photos} onChange={setPhotos} />
-                  <p className="text-[11px] text-muted leading-relaxed">
+                  <p className="text-xs text-muted leading-relaxed">
                     Photos et vidéos affichées sur la fiche publique, le marketplace et la carte si l’événement est public.
                   </p>
                 </div>
                 <div className="space-y-3 pt-1 border-t border-border">
-                  <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Infos invités</h4>
-                  <p className="text-[11px] text-muted leading-relaxed">
+                  <h4 className="text-xs font-semibold text-muted pt-3">Infos invités</h4>
+                  <p className="text-xs text-muted leading-relaxed">
                     Dress code, avantages et notes pratiques. Ils apparaissent sur le portail invité.
                   </p>
                   <EventGuestGuidelinesEditor value={guestGuidelines} onChange={setGuestGuidelines} compact />
@@ -3112,8 +3110,8 @@ export default function EventConfigForm({
                 <div className="space-y-3 pt-1 border-t border-border">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-2">Thème visuel de l'invitation & portail</h4>
-                      <p className="text-[11px] text-muted">
+                      <h4 className="text-xs font-semibold text-muted pt-2">Thème visuel de l'invitation & portail</h4>
+                      <p className="text-xs text-muted">
                         {activeTheme ? (
                           <>
                             Actif : <strong className="text-foreground">{activeTheme.name}</strong> — {activeTheme.description}
@@ -3127,7 +3125,7 @@ export default function EventConfigForm({
                       <button
                         type="button"
                         onClick={() => setThemeId(null)}
-                        className="text-[11px] font-semibold text-primary hover:underline"
+                        className="text-xs font-semibold text-primary hover:underline"
                       >
                         Réinitialiser
                       </button>
@@ -3177,7 +3175,7 @@ export default function EventConfigForm({
               </>
             ) : (
               <div className="space-y-3">
-                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Pour les invités</h4>
+                <h4 className="text-xs font-semibold text-muted">Pour les invités</h4>
                 <div className="flex flex-wrap gap-1.5">
                   <button
                     type="button"
@@ -3245,7 +3243,7 @@ export default function EventConfigForm({
                     <span className="font-semibold text-foreground">
                       Ouvrir l’atelier 3D complet du plan après création
                     </span>
-                    <span className="block text-[11px] text-muted leading-relaxed">
+                    <span className="block text-xs text-muted leading-relaxed">
                       {isPublic && ticketing && ticketPricingMode === 'by_zone'
                         ? 'Permet d’ajuster les tables, les sièges et la disposition des zones tarifaires dans l’atelier 3D.'
                         : 'Permet de dessiner et peaufiner les tables, les sièges et les convives immédiatement.'}

@@ -2,32 +2,23 @@ import React from 'react';
 import { cn } from '@/lib/cn';
 
 export interface PageHeaderProps {
-  title: string;
-  description?: string;
+  /** Boutons de la page (ex. « Créer un événement »). */
   action?: React.ReactNode;
-  breadcrumbs?: React.ReactNode;
+  /** Information propre à la page, absente ailleurs à l’écran (ex. taux de commission). Jamais une phrase qui décrit l’écran. */
+  note?: React.ReactNode;
   className?: string;
 }
 
-export default function PageHeader({ title, description, action, breadcrumbs, className }: PageHeaderProps) {
+/**
+ * Barre d’actions en tête de page.
+ * Le titre de l’écran est affiché une seule fois, dans la barre du haut (`DashboardTopBar`) : pas de second titre ici.
+ */
+export default function PageHeader({ action, note, className }: PageHeaderProps) {
+  if (!action && !note) return null;
   return (
-    <header className={cn('mb-5 sm:mb-6', className)}>
-      {breadcrumbs && (
-        <div className="mb-2 text-xs text-muted">{breadcrumbs}</div>
-      )}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <h1 className="em-dash-title text-2xl sm:text-[1.75rem] font-semibold text-foreground leading-tight">
-            {title}
-          </h1>
-          {description && (
-            <p className="text-sm text-muted max-w-2xl leading-relaxed">
-              {description}
-            </p>
-          )}
-        </div>
-        {action && <div className="shrink-0 flex flex-wrap gap-2">{action}</div>}
-      </div>
-    </header>
+    <div className={cn('mb-4 flex flex-wrap items-center justify-between gap-3', className)}>
+      {note ? <p className="text-sm text-muted">{note}</p> : <span aria-hidden />}
+      {action ? <div className="flex flex-wrap items-center gap-2">{action}</div> : null}
+    </div>
   );
 }

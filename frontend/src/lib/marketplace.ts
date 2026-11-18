@@ -780,7 +780,7 @@ export function matchPrepListingPipeline(
   if (inquiry) {
     return {
       stage: 'inquiry',
-      label: inquiry.status === 'CONTACTED' ? 'Devis pris en charge' : 'Devis envoyé',
+      label: inquiry.status === 'CONTACTED' ? 'Devis pris en charge' : 'Devis en attente',
       tone: inquiry.status === 'CONTACTED' ? 'sky' : 'amber',
       inquiry,
       booking: null,

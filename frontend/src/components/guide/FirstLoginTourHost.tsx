@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Map, Sparkles } from 'lucide-react';
+import { Map, Sparkles } from '@/components/icons';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import { useTour } from '@/context/TourContext';
@@ -203,7 +203,7 @@ export default function FirstLoginTourHost() {
             </div>
             <p className="text-sm text-muted leading-relaxed">{welcome.body}</p>
           </div>
-          <p className="text-[11px] text-muted mt-4">
+          <p className="text-xs text-muted mt-4">
             Vous pourrez relancer la visite complète depuis{' '}
             <span className="font-medium text-foreground">Guide utilisateur</span>.
           </p>

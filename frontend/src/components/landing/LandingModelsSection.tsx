@@ -3,7 +3,7 @@ import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Eye } from 'lucide-react';
+import { ArrowRight, Eye } from '@/components/icons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button, Pagination, usePaginateItems, Skeleton, usePageSize } from '@/components/ui';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
@@ -101,7 +101,7 @@ export default function LandingModelsSection({
                           fillParent
                           className="absolute inset-0 !rounded-none !shadow-none"
                         />
-                        <span className="absolute top-2 left-2 z-10 text-xs font-bold uppercase tracking-wider text-foreground px-2 py-0.5 rounded-full bg-surface/90 border border-border">
+                        <span className="absolute top-2 left-2 z-10 text-xs font-bold text-foreground px-2 py-0.5 rounded-full bg-surface/90 border border-border">
                           {categoryLabel(template.category)}
                         </span>
                         <div className="absolute inset-0 bg-foreground/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center text-primary-foreground text-xs font-semibold gap-1.5">

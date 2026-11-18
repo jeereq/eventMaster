@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 export type StudioMobilePane = string;

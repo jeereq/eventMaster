@@ -4,9 +4,9 @@ import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import {
-  MessageSquare, Pencil, RotateCcw, Save, Info,
-} from 'lucide-react';
-import { SkeletonList, Button, Modal, Alert } from '@/components/ui';
+  MessageSquare, Pencil, RotateCcw, Save,
+} from '@/components/icons';
+import { SkeletonList, Button, Modal } from '@/components/ui';
 
 interface GuestMessageTemplateItem {
   id: string;
@@ -101,14 +101,10 @@ export default function GuestMessageTemplatesPanel() {
 
   return (
     <div className="p-5 space-y-5">
-      <Alert variant="info" icon={<Info className="w-5 h-5" />}>
-        <p className="font-semibold text-sm mb-1">À quoi servent ces modèles ?</p>
-        <p className="text-xs leading-relaxed">
-          Textes sont les messages système envoyés aux invités (invitation, rappel, confirmation de présence, contact).
-          Variables : {TEMPLATE_VARIABLES.slice(0, 6).join(' · ')}…
-          {messaging.whatsapp ? ' Sur WhatsApp, utilisez *texte* pour le gras.' : ''}
-        </p>
-      </Alert>
+      <p className="text-xs text-muted leading-relaxed">
+        Variables : {TEMPLATE_VARIABLES.slice(0, 6).join(' · ')}…
+        {messaging.whatsapp ? ' Sur WhatsApp, *texte* met en gras.' : ''}
+      </p>
 
       {visibleTemplates.length === 0 && templates.length > 0 && (
         <p className="text-sm text-muted">
@@ -127,10 +123,10 @@ export default function GuestMessageTemplatesPanel() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <MessageSquare className="w-4 h-4 text-primary shrink-0" />
                   <h3 className="font-semibold text-sm text-foreground">{t.name}</h3>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-surface-muted border border-border text-muted">
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-surface-muted border border-border text-muted">
                     {t.channel}
                   </span>
-                  <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-md border ${
                     t.isActive
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900'
                       : 'bg-surface-muted text-muted border-border'

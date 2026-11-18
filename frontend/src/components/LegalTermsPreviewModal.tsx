@@ -16,7 +16,7 @@ import {
   Ticket,
   Wallet,
   Heart,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Modal, Button } from '@/components/ui';
 import {
   collectionCommissionRangeLabel,

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import { Wine } from 'lucide-react';
+import { Wine } from '@/components/icons';
 import { api } from '@/lib/api';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
@@ -192,7 +192,7 @@ function MarketplaceDrinksPageInner() {
       />
 
       <div className="page-container py-3 md:py-10 flex-1 space-y-3 md:space-y-6">
-        <div className="sticky top-[var(--em-site-header)] z-20 -mx-1 px-1 py-0 md:py-1 bg-background/90 backdrop-blur-md">
+        <div className="sticky top-[var(--em-site-header)] z-20 -mx-1 px-1 py-0 md:py-1 bg-background/90">
           <CatalogueFilterBar
             search={q}
             onSearchChange={setQ}

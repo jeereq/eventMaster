@@ -28,5 +28,7 @@ const LISTING_DETAIL =
   /^\/(marketplace\/(salles|prestataires|evenements|locations|boissons)|evenements)\/[^/]+/;
 
 export function isAiFabHiddenRoute(pathname: string): boolean {
+  // Accueil : le formulaire « Estimer mon budget » du haut de page fait déjà office d'entrée.
+  if (pathname === '/') return true;
   return HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix)) || LISTING_DETAIL.test(pathname);
 }

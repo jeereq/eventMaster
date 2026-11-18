@@ -30,7 +30,7 @@ import {
   AlignCenter,
   AlignRight,
   MessageSquare,
-} from 'lucide-react';
+} from '@/components/icons';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { isProtocolUser, PROTOCOL_CREATIVE_DENIED } from '@/lib/protocolAccess';
@@ -1541,7 +1541,7 @@ export default function LandingInvitationAiGenerator({
         /* ─── ATELIER COMPLET DÉROULÉ ─── */
         <div className={cn('animate-fade-in motion-reduce:animate-none', lockExpanded && 'flex flex-col min-h-0')}>
           {!lockExpanded ? (
-          <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-border/80 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_55%)]">
+          <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-border/80">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3.5 min-w-0">
                 <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-[var(--radius-card)] bg-primary-solid text-primary-foreground inline-flex items-center justify-center shadow-sm shrink-0">
@@ -1922,14 +1922,14 @@ export default function LandingInvitationAiGenerator({
                   </div>
                   <div className="min-w-0">
                     <p className="font-bold text-foreground truncate">Invitation composée avec succès par l’IA !</p>
-                    <p className="text-[11px] text-muted-foreground dark:text-muted truncate">
+                    <p className="text-xs text-muted-foreground dark:text-muted truncate">
                       {coupleFaceSwap
                         ? 'Visages du couple intégrés · expressions, décor et mise en page conservés.'
                         : 'Structure éditable prête · vous pouvez personnaliser chaque élément.'}
                     </p>
                   </div>
                 </div>
-                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0">
+                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md text-xs font-extrabold uppercase bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0">
                   Studio IA
                 </span>
               </div>
@@ -2250,7 +2250,7 @@ export default function LandingInvitationAiGenerator({
 
               {lastStageMeta?.variants && lastStageMeta.variants.length > 1 && (
                 <div className="space-y-1.5 pt-1">
-                  <span className="text-xs font-bold text-muted uppercase tracking-wider block">
+                  <span className="text-xs font-bold text-muted block">
                     Fidèle ou ample ({lastStageMeta.variants.length})
                   </span>
                   <div className="grid grid-cols-2 gap-2">

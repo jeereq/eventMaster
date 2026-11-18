@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Clock, Users } from 'lucide-react';
+import { Clock, Users } from '@/components/icons';
 import { formatFc } from '@/config/landingPricing';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { resolveUsdExchangeRateCdf } from '@/lib/platformCities';
@@ -75,12 +75,12 @@ export default function AiSimulationHistoryList({
                     <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2">
                       {simulationTitle(item)}
                     </p>
-                    <p className="text-[11px] text-muted">
+                    <p className="text-xs text-muted">
                       {[item.eventType ? eventTypeLabel(item.eventType) : null, place, relativeTime(item.createdAt)]
                         .filter(Boolean)
                         .join(' · ')}
                     </p>
-                    <p className="text-[11px] text-muted inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <p className="text-xs text-muted inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
                       {item.guestCount ? (
                         <span className="inline-flex items-center gap-0.5">
                           <Users className="w-3 h-3" />
@@ -99,7 +99,7 @@ export default function AiSimulationHistoryList({
                       ) : null}
                     </p>
                   </div>
-                  <span className="text-[11px] font-semibold text-primary shrink-0 pt-0.5">Voir</span>
+                  <span className="text-xs font-semibold text-primary shrink-0 pt-0.5">Voir</span>
                 </div>
               </button>
             </li>

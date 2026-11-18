@@ -3,7 +3,7 @@ import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bell, Loader2, Mail, MessageCircle, MessageSquare, Save, Smartphone } from 'lucide-react';
+import { Bell, Loader2, Mail, MessageCircle, MessageSquare, Save, Smartphone } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Alert, Button, Card, CardHeader } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -117,7 +117,6 @@ export default function NotificationPreferencesCard() {
             Canaux d’alerte
           </span>
         }
-        description={messaging.adapt('L’inbox du tableau de bord reste toujours active. Choisissez, pour chaque famille, si e-mail, WhatsApp, SMS et push vous suivent.')}
         action={
           <Button
             size="sm"
@@ -198,7 +197,7 @@ export default function NotificationPreferencesCard() {
                           {channel.icon}
                           {channel.label}
                           {isPlatformDisabled && (
-                            <span className="text-[10px] text-muted font-normal">(Off)</span>
+                            <span className="text-xs text-muted font-normal">(Off)</span>
                           )}
                           <span className="sr-only">{checked ? 'activé' : 'désactivé'}</span>
                         </button>
@@ -222,8 +221,7 @@ export default function NotificationPreferencesCard() {
           </Button>
 
           <p className="text-xs text-muted leading-relaxed">
-            Les messages envoyés aux invités (invitation, réponse à l’invitation, PDF de table) restent sur le canal choisi pour
-            l’événement — ce panneau ne les concerne pas.
+            Hors messages aux invités : leur canal se règle dans chaque événement.
           </p>
         </div>
       ) : null}

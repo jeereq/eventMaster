@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from '@/components/icons';
 import {
   Building2,
   CalendarCheck,
@@ -13,7 +13,7 @@ import {
   Wallet,
   Briefcase,
   MessageSquare,
-} from 'lucide-react';
+} from '@/components/icons';
 import { motionSafeScrollBehavior } from '@/lib/prefersReducedMotion';
 
 export type LandingProfileId = 'personal' | 'pro' | 'seeker' | 'vendor';

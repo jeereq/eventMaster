@@ -6,7 +6,7 @@ import {
   HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown, Download, PlusCircle, Save, Box,
   Wand2, Paintbrush, Settings2, CheckCircle2, AlertCircle, Coins, Eye, Tag, SlidersHorizontal,
   ZoomIn, ZoomOut, Columns, ShieldCheck, Grid, RotateCcw, Sun, Building2,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Button } from '@/components/ui';
 import Modal from '@/components/ui/Modal';
 import { formatFc } from '@/config/landingPricing';
@@ -845,7 +845,7 @@ export default function TablePlanner({
           {zonePricing && pricingZones.length > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-surface border border-border shadow-2xs shrink-0">
               <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-none touch-pan-x">
-                <span className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1 mr-1 shrink-0">
+                <span className="text-xs font-semibold text-muted flex items-center gap-1 mr-1 shrink-0">
                   <Paintbrush className="w-3.5 h-3.5 text-primary" />
                   Pinceau 3D :
                 </span>
@@ -943,7 +943,7 @@ export default function TablePlanner({
             </Room3DErrorBoundary>
 
             {/* Hint en haut du canvas */}
-            <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-foreground/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-background/20 text-xs font-semibold text-background">
+            <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-foreground/80 px-2.5 py-1 rounded-full border border-background/20 text-xs font-semibold text-background">
               <Box className="w-3 h-3 text-primary" />
               <span>
                 {paintZoneId
@@ -954,7 +954,7 @@ export default function TablePlanner({
 
             {/* Contrôles Lumières & Plein Écran */}
             <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5">
-              <div className="flex items-center gap-1 bg-foreground/80 hover:bg-foreground/90 backdrop-blur-md px-2 py-1 rounded-full border border-background/20 text-background text-xs font-semibold shadow-sm transition">
+              <div className="flex items-center gap-1 bg-foreground/80 hover:bg-foreground/90 px-2 py-1 rounded-full border border-background/20 text-background text-xs font-semibold shadow-sm transition">
                 <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <select
                   value={activeLightingPreset}
@@ -975,7 +975,7 @@ export default function TablePlanner({
               <button
                 type="button"
                 onClick={() => setIs3DFullscreen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-foreground/80 hover:bg-foreground backdrop-blur-md border border-background/20 text-xs font-semibold text-background transition shadow-sm"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-foreground/80 hover:bg-foreground border border-background/20 text-xs font-semibold text-background transition shadow-sm"
                 title="Agrandir en plein écran"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
@@ -989,7 +989,7 @@ export default function TablePlanner({
               const freeSeats = active3DTable.capacity - assignedGuests.length;
               const zone = pricingZones.find((z) => z.id === active3DTable.pricingZoneId);
               return (
-                <div className="absolute bottom-2 left-2 right-2 z-20 rounded-xl bg-background/95 backdrop-blur-md border border-border p-2.5 sm:p-3 shadow-lg flex flex-wrap items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-2">
+                <div className="absolute bottom-2 left-2 right-2 z-20 rounded-xl bg-background/95 border border-border p-2.5 sm:p-3 shadow-lg flex flex-wrap items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-2">
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-xs sm:text-sm text-foreground">{active3DTable.name}</span>
@@ -1074,7 +1074,7 @@ export default function TablePlanner({
 
       {/* Modale Plein Écran 3D Immersive */}
       {is3DFullscreen && (
-        <div className="fixed inset-0 z-[9999] flex flex-col bg-foreground/95 backdrop-blur-md p-3 sm:p-6 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[9999] flex flex-col bg-foreground/95 p-3 sm:p-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between pb-3 border-b border-background/20 gap-3">
             <div className="flex items-center gap-2.5 text-background">
               <div className="bg-primary/20 text-primary p-2 rounded-xl">
@@ -1090,7 +1090,7 @@ export default function TablePlanner({
 
             <div className="flex items-center gap-2">
               {/* Sélecteur de lumière dans la modale plein écran */}
-              <div className="flex items-center gap-1.5 bg-background/20 backdrop-blur-md px-3 py-1.5 rounded-xl border border-background/20 text-background">
+              <div className="flex items-center gap-1.5 bg-background/20 px-3 py-1.5 rounded-xl border border-background/20 text-background">
                 <Sun className="w-4 h-4 text-amber-400 shrink-0" />
                 <span className="text-xs font-semibold hidden sm:inline">Lumière :</span>
                 <select
@@ -1140,7 +1140,7 @@ export default function TablePlanner({
             </Room3DErrorBoundary>
 
             {/* Hint de navigation bas */}
-            <div className="absolute bottom-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-foreground/90 backdrop-blur-md border border-background/20 text-xs text-background">
+            <div className="absolute bottom-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-foreground/90 border border-background/20 text-xs text-background">
               <div className="flex items-center gap-3">
                 <span>🖱️ <strong>Rotation 3D :</strong> Clic gauche &amp; glisser</span>
                 <span>🔍 <strong>Zoom :</strong> Molette / Pincement tactile</span>
@@ -1387,7 +1387,7 @@ export default function TablePlanner({
                   title={`${zone.name} (${zone.priceFc > 0 ? formatFc(zone.priceFc) : 'Gratuit'})`}
                 >
                   <span
-                    className="absolute top-1.5 left-2 text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md shadow-2xs tabular-nums flex items-center gap-1.5"
+                    className="absolute top-1.5 left-2 text-[9px] font-extrabold px-2 py-0.5 rounded-md shadow-2xs tabular-nums flex items-center gap-1.5"
                     style={{
                       backgroundColor: zone.color || DEFAULT_ZONE_COLOR,
                       color: isLightHexColor(zone.color || DEFAULT_ZONE_COLOR) ? '#1c1917' : '#ffffff',
@@ -1561,7 +1561,7 @@ export default function TablePlanner({
  {isActive && (
                         <div
                           className={cn(
-                            'absolute flex items-center gap-1 p-1 bg-surface/95 dark:bg-surface-elevated/95 backdrop-blur-md border border-border rounded-full shadow-lg z-30 transition-all pointer-events-auto',
+                            'absolute flex items-center gap-1 p-1 bg-surface/95 dark:bg-surface-elevated/95 border border-border rounded-full shadow-lg z-30 transition-all pointer-events-auto',
                             table.y < 16 ? 'top-full left-1/2 -translate-x-1/2 mt-2' : '-top-4 left-1/2 -translate-x-1/2',
                           )}
                         >
@@ -1682,7 +1682,7 @@ export default function TablePlanner({
  )}
                           title={
                             guest
-                              ? `${guest.firstName} ${guest.lastName}${guest.category ? ` · ${guest.category}` : ''} · ${guest.rsvp === 'ACCEPTED' ? 'Présence confirmée' : 'Réponse en attente'} (Cliquer pour gérer)`
+                              ? `${guest.firstName} ${guest.lastName}${guest.category ? ` · ${guest.category}` : ''} · ${guest.rsvp === 'ACCEPTED' ? 'Confirmé' : 'En attente'} (Cliquer pour gérer)`
                               : `Siège ${index + 1} (libre) — Cliquer pour placer un invité`
                           }
  >
@@ -1710,7 +1710,7 @@ export default function TablePlanner({
 
             {/* Bannière mode Pinceau 2D */}
             {paintZoneId && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface/95 dark:bg-surface-elevated/95 backdrop-blur-md border border-primary text-xs font-semibold text-foreground shadow-md animate-in fade-in slide-in-from-top-2 pointer-events-auto">
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface/95 dark:bg-surface-elevated/95 border border-primary text-xs font-semibold text-foreground shadow-md animate-in fade-in slide-in-from-top-2 pointer-events-auto">
                 <span
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: pricingZones.find((z) => z.id === paintZoneId)?.color || DEFAULT_ZONE_COLOR }}
@@ -1729,7 +1729,7 @@ export default function TablePlanner({
             )}
 
             {/* Statut synthétique 2D en bas à gauche */}
-            <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface/90 dark:bg-surface-elevated/90 backdrop-blur-md border border-border shadow-xs text-xs pointer-events-none">
+            <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface/90 dark:bg-surface-elevated/90 border border-border shadow-xs text-xs pointer-events-none">
               <div className="flex items-center gap-1.5 font-semibold text-foreground">
                 <Users className="w-3.5 h-3.5 text-primary" />
                 <span className="tabular-nums">
@@ -1756,7 +1756,7 @@ export default function TablePlanner({
               <div className="flex items-center gap-2">
                 <Coins className="w-4 h-4 text-amber-500" />
                 <p className="text-sm font-bold text-foreground">Tarification & Répartition des zones de billetterie</p>
-                <span className="text-xs uppercase font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 tracking-wider">
+                <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 ">
                   Événement payant
                 </span>
  </div>
@@ -1829,7 +1829,7 @@ export default function TablePlanner({
 
           {/* Interactive zone cards with paint brush */}
           <div className="flex flex-wrap items-center gap-2 pt-0.5">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider mr-1">
+            <span className="text-xs font-semibold text-muted mr-1">
               Pinceau rapide :
             </span>
             {ticketingSummary.byZone.map((stat) => {
@@ -1872,7 +1872,7 @@ export default function TablePlanner({
                     </div>
                   </div>
                   {isPaintActive ? (
-                    <span className="ml-1 px-1.5 py-0.5 rounded text-xs uppercase font-black bg-primary-solid text-primary-foreground tracking-wide animate-pulse motion-reduce:animate-none">
+                    <span className="ml-1 px-1.5 py-0.5 rounded text-xs font-black bg-primary-solid text-primary-foreground animate-pulse motion-reduce:animate-none">
                       Actif
                     </span>
                   ) : (
@@ -1931,7 +1931,7 @@ export default function TablePlanner({
        {roomName ? `Salle liée : « ${roomName} »` : 'Plan de salle disponible'}
      </p>
      {roomLayoutBlueprint?.roomType && (
-       <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
          {roomTypeLabels[roomLayoutBlueprint.roomType] || roomLayoutBlueprint.roomType}
        </span>
      )}
@@ -1997,7 +1997,7 @@ export default function TablePlanner({
  <p className="text-muted text-sm mt-0.5">
  {plannerView === '3d'
               ? `3D ${previewQuality === 'showcase' ? 'showcase' : 'standard'} · orbitez pour inspecter la salle`
-   : `${tables.length}/${caps.maxTables} tables · ${caps.label}${caps.canSnapGrid ? ' · grille' : ''}${caps.canRotate ? ' · rotation' : ''}. Placez les invités confirmés sur les sièges.`}
+   : `${tables.length}/${caps.maxTables} tables · ${caps.label}${caps.canSnapGrid ? ' · grille' : ''}${caps.canRotate ? ' · rotation' : ''}`}
  </p>
  </div>
  <div className="flex flex-wrap gap-2">
@@ -2210,7 +2210,7 @@ export default function TablePlanner({
         >
         <div className="flex items-start justify-between">
         <span className="font-semibold text-foreground text-xs leading-tight">{g.firstName} {g.lastName}</span>
-                        <span className="text-xs uppercase tracking-wider font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/25 px-1.5 py-0.5 rounded shrink-0">Confirmé</span>
+                        <span className="text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/25 px-1.5 py-0.5 rounded shrink-0">Confirmé</span>
         </div>
                       <div className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
         <span className="w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
@@ -2258,7 +2258,7 @@ export default function TablePlanner({
 
  {/* Seat Assignment Dropdown Modal/Popover */}
  {selectedSeat && (
- <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+ <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
  <div className="bg-surface rounded-[var(--radius-card)] border border-border max-w-md w-full p-6 space-y-4 animate-scale-up">
  <div className="flex justify-between items-center pb-3 border-b border-border">
  <h3 className="font-semibold text-foreground text-base">
@@ -2298,12 +2298,12 @@ export default function TablePlanner({
 
  <div className="space-y-3">
  <div className="flex items-center justify-between">
-   <label className="text-xs font-medium text-muted uppercase tracking-wider">
-     Invités présents ({unassignedGuests.length})
+   <label className="text-xs font-medium text-muted ">
+     À placer ({unassignedGuests.length})
    </label>
  </div>
  {unassignedGuests.length === 0 ? (
- <p className="text-xs text-muted italic">Tous les invités éligibles ont déjà une place attribuée.</p>
+ <p className="text-xs text-muted italic">Tous les invités ont une place.</p>
  ) : (
  <div className="space-y-2">
   <div className="relative">
@@ -2351,7 +2351,7 @@ export default function TablePlanner({
 
  {/* Add Table Modal */}
  {showAddModal && (
- <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+ <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
  <div className="bg-surface rounded-[var(--radius-card)] border border-border max-w-md w-full p-6 space-y-5 animate-scale-up">
  <div className="flex justify-between items-center pb-3 border-b border-border">
  <h3 className="font-semibold text-foreground text-base flex items-center gap-2">
@@ -2370,7 +2370,7 @@ export default function TablePlanner({
 
  <div className="space-y-4">
  <div>
- <label htmlFor="new-table-name" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nom de la table</label>
+ <label htmlFor="new-table-name"className="block text-xs font-medium text-muted mb-1.5">Nom de la table</label>
  <input
  id="new-table-name"
  type="text"
@@ -2383,7 +2383,7 @@ export default function TablePlanner({
 
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label htmlFor="new-table-shape" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Forme</label>
+ <label htmlFor="new-table-shape"className="block text-xs font-medium text-muted mb-1.5">Forme</label>
  <select
  id="new-table-shape"
  value={newTableShape}
@@ -2398,7 +2398,7 @@ export default function TablePlanner({
  </div>
 
  <div>
- <label htmlFor="new-table-capacity" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nombre de places</label>
+ <label htmlFor="new-table-capacity"className="block text-xs font-medium text-muted mb-1.5">Nombre de places</label>
  <input
  id="new-table-capacity"
  type="number"
@@ -2413,7 +2413,7 @@ export default function TablePlanner({
 
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label htmlFor="new-chair-type" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Type de chaise</label>
+ <label htmlFor="new-chair-type"className="block text-xs font-medium text-muted mb-1.5">Type de chaise</label>
  <select
  id="new-chair-type"
  value={newChairType}
@@ -2426,7 +2426,7 @@ export default function TablePlanner({
  </select>
  </div>
  <div>
- <label htmlFor="new-table-color" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1">
+ <label htmlFor="new-table-color"className="block text-xs font-medium text-muted mb-1.5 flex items-center gap-1">
  <Palette className="w-3 h-3" /> Couleur
  </label>
  <input
@@ -2461,7 +2461,7 @@ export default function TablePlanner({
 
  {/* Edit Table Modal */}
  {editingTable && (
- <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+ <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
  <div className="bg-surface rounded-[var(--radius-card)] border border-border max-w-md w-full p-6 space-y-5 animate-scale-up">
  <div className="flex justify-between items-center pb-3 border-b border-border">
  <h3 className="font-semibold text-foreground text-base">
@@ -2479,7 +2479,7 @@ export default function TablePlanner({
 
  <div className="space-y-4">
  <div>
- <label htmlFor="edit-table-name" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nom de la table</label>
+ <label htmlFor="edit-table-name"className="block text-xs font-medium text-muted mb-1.5">Nom de la table</label>
  <input
  id="edit-table-name"
  type="text"
@@ -2491,7 +2491,7 @@ export default function TablePlanner({
 
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label htmlFor="edit-table-shape" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Forme</label>
+ <label htmlFor="edit-table-shape"className="block text-xs font-medium text-muted mb-1.5">Forme</label>
  <select
  id="edit-table-shape"
  value={editingTable.shape}
@@ -2506,7 +2506,7 @@ export default function TablePlanner({
  </div>
 
  <div>
- <label htmlFor="edit-table-capacity" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nombre de places</label>
+ <label htmlFor="edit-table-capacity"className="block text-xs font-medium text-muted mb-1.5">Nombre de places</label>
  <input
  id="edit-table-capacity"
  type="number"
@@ -2521,7 +2521,7 @@ export default function TablePlanner({
 
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label htmlFor="edit-chair-type" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Type de chaise</label>
+ <label htmlFor="edit-chair-type"className="block text-xs font-medium text-muted mb-1.5">Type de chaise</label>
  <select
  id="edit-chair-type"
  value={editingTable.chairType || 'BANQUET'}
@@ -2534,7 +2534,7 @@ export default function TablePlanner({
  </select>
  </div>
  <div>
- <label htmlFor="edit-table-color" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1">
+ <label htmlFor="edit-table-color"className="block text-xs font-medium text-muted mb-1.5 flex items-center gap-1">
  <Palette className="w-3 h-3" /> Couleur
  </label>
  <input
@@ -2548,7 +2548,7 @@ export default function TablePlanner({
  </div>
  {caps.canRotate ? (
  <div>
- <label htmlFor="edit-table-rotation" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">
+ <label htmlFor="edit-table-rotation"className="block text-xs font-medium text-muted mb-1.5">
  Rotation ({editingTable.rotation || 0}°)
  </label>
  <input
@@ -2576,7 +2576,7 @@ export default function TablePlanner({
  ) : null}
  {zonePricing && pricingZones.length > 0 ? (
  <div>
- <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Zone tarifaire</label>
+ <label className="block text-xs font-medium text-muted mb-1.5">Zone tarifaire</label>
  <select
  value={editingTable.pricingZoneId || ''}
  onChange={(e) => setEditingTable({
@@ -2630,7 +2630,7 @@ export default function TablePlanner({
           <div className="space-y-5">
             {/* Choix de la stratégie */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-muted">
+              <label className="text-xs font-bold text-muted">
                 Stratégie de répartition
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -2646,7 +2646,7 @@ export default function TablePlanner({
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-foreground">Scène & Devant</span>
-                    <span className="text-xs uppercase font-extrabold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 tracking-wider">
+                    <span className="text-xs font-extrabold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 ">
                       Populaire
                     </span>
                   </div>
@@ -2710,7 +2710,7 @@ export default function TablePlanner({
             {distributionPreview && (
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted">Aperçu de la répartition ({tables.length} tables)</span>
+                  <span className="text-xs font-bold text-muted">Aperçu de la répartition ({tables.length} tables)</span>
                   <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                     Recettes estimées : {formatFc(distributionPreview.summary.totalRevenueFc)}
                   </span>
@@ -2791,7 +2791,7 @@ export default function TablePlanner({
           <div className="space-y-5">
             {/* Modèles prédéfinis rapides */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-muted">
+              <label className="text-xs font-bold text-muted">
                 Modèles prédéfinis en 1 clic
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -2833,7 +2833,7 @@ export default function TablePlanner({
             {/* Liste des zones modifiables */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted">
+                <label className="text-xs font-bold text-muted">
                   Zones configurées ({editingZonesList.length})
                 </label>
                 <button

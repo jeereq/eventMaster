@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Loader2, Download, Mail, Send, Building2, Calendar, CreditCard, FileText,
-} from 'lucide-react';
+} from '@/components/icons';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { Modal } from '@/components/ui';
@@ -211,13 +211,13 @@ export default function InvoiceDetailModal({
               </div>
 
               <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
-                <span className="text-xs font-bold text-primary uppercase tracking-wider">Montant TTC</span>
+                <span className="text-xs font-bold text-primary ">Montant TTC</span>
                 <p className="text-2xl font-black text-primary mt-1">{invoice.amountFormatted}</p>
               </div>
 
               {invoice.commissions && invoice.commissions.length > 0 && (
                 <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 rounded-xl p-4 space-y-2">
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 ">
                     Commissions applicables
                   </span>
                   <ul className="space-y-2">
@@ -285,7 +285,7 @@ export default function InvoiceDetailModal({
 
               {allowMarkPaid && invoice.status !== 'PAID' && (
                 <div className="border border-amber-200 dark:border-amber-900/40 bg-amber-50/80 dark:bg-amber-950/20 rounded-xl p-4 space-y-2">
-                  <p className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                  <p className="text-xs font-bold text-amber-800 dark:text-amber-300 ">
                     Déclarer payée
                   </p>
                   <p className="text-xs text-muted">
@@ -324,7 +324,7 @@ export default function InvoiceDetailModal({
               )}
 
               <div className="border-t border-border pt-4 space-y-3">
-                <h4 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-muted flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5" />
                   Partager par e-mail
                 </h4>

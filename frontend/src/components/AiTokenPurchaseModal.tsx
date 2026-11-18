@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   RotateCcw,
   Clock,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Modal, Button, Input, Alert } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { formatChargeAmount, type FlexPayChargeCurrency } from '@/lib/flexPayCurrency';

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Copy, Edit3, Eye, Globe, Trash2, Wand2 } from 'lucide-react';
+import { Copy, Edit3, Eye, Globe, Trash2, Wand2 } from '@/components/icons';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import { getTemplateElementSummary, templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
 import { cn } from '@/lib/cn';
@@ -77,7 +77,6 @@ function TemplatePreviewThumb({
 }) {
   const preview = (
     <>
-      <div className="absolute inset-0 bg-[radial-gradient(var(--border)_1px,transparent_1px)] [background-size:12px_16px] opacity-40 pointer-events-none" />
       <div className={cn('relative z-10 w-full h-full', compact ? 'max-w-[160px]' : 'max-w-none', onViewDetails && 'pointer-events-none')}>
         <LandingInvitationPreview
           template={templateContentToLandingPreview({
@@ -157,7 +156,7 @@ export default function TemplateCardGrid({
         const badges = (
           <>
             {global && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 border border-sky-100 dark:border-sky-900/50">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 border border-sky-100 dark:border-sky-900/50">
                 <Globe className="w-3 h-3" />
                 Bibliothèque EventMaster
               </span>
@@ -166,12 +165,12 @@ export default function TemplateCardGrid({
               <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {global ? (
                   <>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-150 dark:border-emerald-900/50">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-150 dark:border-emerald-900/50">
                       <Globe className="w-3 h-3" />
                       Global (Public)
                     </span>
                     {t.showOnLanding && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
                         Landing
                       </span>
                     )}
@@ -180,7 +179,7 @@ export default function TemplateCardGrid({
                         type="button"
                         onClick={() => onToggleLanding(t.id, Boolean(t.showOnLanding))}
                         className={cn(
-                          'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition',
+                          'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border transition',
                           t.showOnLanding
                             ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100'
                             : 'bg-surface-muted border-border text-muted hover:bg-surface',
@@ -191,7 +190,7 @@ export default function TemplateCardGrid({
                     )}
                   </>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-150 dark:border-amber-900/50">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-150 dark:border-amber-900/50">
                     Privé : {orgLabel}
                   </span>
                 )}
@@ -329,14 +328,14 @@ export default function TemplateCardGrid({
             <TemplatePreviewThumb t={t} onViewDetails={onViewDetails} />
             <div className="p-2.5 space-y-1.5 flex-[1] flex flex-col min-w-0 min-h-0">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+                <span className="text-xs font-semibold text-muted">
                   {global ? 'Bibliothèque' : 'Organisation'}
                 </span>
                 {onViewDetails && (
                   <button
                     type="button"
                     onClick={() => onViewDetails(t)}
-                    className="text-[11px] font-semibold text-primary inline-flex items-center gap-1 hover:underline"
+                    className="text-xs font-semibold text-primary inline-flex items-center gap-1 hover:underline"
                   >
                     Aperçu <Eye className="w-3 h-3" />
                   </button>
@@ -346,7 +345,7 @@ export default function TemplateCardGrid({
               <p className="text-xs text-muted">
                 Créé le {new Date(t.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
-              <p className="text-[11px] text-muted line-clamp-1" title={summary}>
+              <p className="text-xs text-muted line-clamp-1" title={summary}>
                 {summary}
               </p>
               {badges}

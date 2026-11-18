@@ -16,7 +16,7 @@ import {
 } from '@/lib/marketplace';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
-import { Lock } from 'lucide-react';
+import { Lock } from '@/components/icons';
 import { usePathname } from 'next/navigation';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { depositPercent } from '@/lib/platformRates';

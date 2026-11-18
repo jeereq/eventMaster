@@ -17,6 +17,11 @@ export function isPwaInstalled(): boolean {
   );
 }
 
+export function isAndroidDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  return /android/i.test(window.navigator.userAgent);
+}
+
 export function isIosDevice(): boolean {
   if (typeof window === 'undefined') return false;
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent);

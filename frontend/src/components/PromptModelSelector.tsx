@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { Copy, Sparkles, Check, Heart, Building2, PartyPopper, Info, Languages, Crown, Image } from 'lucide-react';
+import { Copy, Sparkles, Check, Heart, Building2, PartyPopper, Info, Languages, Crown, Image } from '@/components/icons';
 import {
   INVITATION_PROMPT_MODELS,
   PROMPT_CATEGORIES,

@@ -7,6 +7,7 @@ import {
   Alert,
   Button,
   EmptyState,
+  IconButton,
   Input,
   Modal,
   Pagination,
@@ -25,7 +26,6 @@ import CatalogueFilterBar, {
 import {
   dashboardServiceHref,
   dashboardVenueHref,
-  inquiryNextStep,
   inquiryChatClosed,
   canDeclineInquiry,
   buildWhatsAppDirectLink,
@@ -37,9 +37,10 @@ import { eventDashboardHref } from '@/lib/eventRoutes';
 import { formatDayDistance, formatEventDay, formatReceivedAt } from '@/lib/relativeDate';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
-import { DealDeclineBlock, DealQuoteBlock, MarketplaceDealCard, type MarketplaceDealFact } from '@/components/MarketplaceDealCard';
+import { DealDeclineBlock, DealIconLink, DealQuoteBlock, MarketplaceDealCard, type MarketplaceDealFact } from '@/components/MarketplaceDealCard';
 import {
   Building2,
+  Calendar,
   CalendarCheck,
   CheckCircle2,
   Coins,
@@ -47,10 +48,11 @@ import {
   KeyRound,
   MessageCircle,
   Sparkles,
+  Store,
   Wine,
   XCircle,
   DoorClosed,
-} from 'lucide-react';
+} from '@/components/icons';
 
 const THREAD_POLL_MS = 4_000;
 
@@ -92,10 +94,10 @@ function listingShortTitle(title: string, vendorName?: string | null) {
 }
 
 function inquiryStatusLabel(item: MarketplaceInquiryItem, organizerView: boolean) {
-  if (item.hasBooking) return 'Réservée';
+  if (item.hasBooking) return 'Réservé';
   if (item.status === 'QUOTED') return 'Devis chiffré';
   if (item.status === 'DECLINED') return 'Décliné';
-  if (organizerView) return item.status === 'NEW' ? 'Envoyée' : 'Prise en charge';
+  if (organizerView) return item.status === 'NEW' ? 'En attente' : 'Pris en charge';
   return item.status === 'NEW' ? 'Nouveau' : 'Contacté';
 }
 
@@ -217,14 +219,14 @@ export default function MarketplaceInquiriesPanel({
           label: 'Statut',
           value:
             status === 'NEW'
-              ? organizerView ? 'Envoyée' : 'Nouveau'
+              ? organizerView ? 'En attente' : 'Nouveau'
               : status === 'QUOTED'
                 ? 'Devis chiffré'
                 : status === 'CONTACTED'
-                  ? organizerView ? 'Prise en charge' : 'Contacté'
+                  ? organizerView ? 'Pris en charge' : 'Contacté'
                   : status === 'DECLINED'
                     ? 'Décliné'
-                    : 'Réservée',
+                    : 'Réservé',
         }]
       : []),
     ...(kind && kind !== 'all'
@@ -585,7 +587,7 @@ export default function MarketplaceInquiriesPanel({
 
   if (inquiries.length === 0) {
     return (
-      <EmptyState
+      <EmptyState illustration="inbox"
         icon={<Inbox className="w-5 h-5" />}
         title={organizerView ? 'Aucune demande de devis' : 'Boîte de réception vide'}
         description={
@@ -623,7 +625,7 @@ export default function MarketplaceInquiriesPanel({
           type="button"
           onClick={() => setStatus('')}
           className={cn(
-            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
+            'px-2.5 py-1.5 rounded-full text-xs font-semibold border transition whitespace-nowrap shrink-0',
             !status || status === 'all'
               ? 'bg-primary-solid text-primary-foreground border-primary-solid'
               : 'border-border text-muted hover:text-foreground',
@@ -635,7 +637,7 @@ export default function MarketplaceInquiriesPanel({
           type="button"
           onClick={() => setStatus('NEW')}
           className={cn(
-            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
+            'px-2.5 py-1.5 rounded-full text-xs font-semibold border transition whitespace-nowrap shrink-0',
             status === 'NEW'
               ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
               : 'border-border text-muted hover:text-foreground',
@@ -647,7 +649,7 @@ export default function MarketplaceInquiriesPanel({
           type="button"
           onClick={() => setStatus('QUOTED')}
           className={cn(
-            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
+            'px-2.5 py-1.5 rounded-full text-xs font-semibold border transition whitespace-nowrap shrink-0',
             status === 'QUOTED'
               ? 'bg-emerald-600 text-white border-emerald-600'
               : 'border-border text-muted hover:text-foreground',
@@ -659,7 +661,7 @@ export default function MarketplaceInquiriesPanel({
           type="button"
           onClick={() => setStatus('CONTACTED')}
           className={cn(
-            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
+            'px-2.5 py-1.5 rounded-full text-xs font-semibold border transition whitespace-nowrap shrink-0',
             status === 'CONTACTED'
               ? 'bg-sky-600 text-white border-sky-600'
               : 'border-border text-muted hover:text-foreground',
@@ -671,7 +673,7 @@ export default function MarketplaceInquiriesPanel({
           type="button"
           onClick={() => setStatus('DECLINED')}
           className={cn(
-            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
+            'px-2.5 py-1.5 rounded-full text-xs font-semibold border transition whitespace-nowrap shrink-0',
             status === 'DECLINED'
               ? 'bg-rose-600 text-white border-rose-600'
               : 'border-border text-muted hover:text-foreground',
@@ -683,7 +685,7 @@ export default function MarketplaceInquiriesPanel({
           type="button"
           onClick={() => setStatus('BOOKED')}
           className={cn(
-            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
+            'px-2.5 py-1.5 rounded-full text-xs font-semibold border transition whitespace-nowrap shrink-0',
             status === 'BOOKED'
               ? 'bg-emerald-700 text-white border-emerald-700'
               : 'border-border text-muted hover:text-foreground',
@@ -722,24 +724,9 @@ export default function MarketplaceInquiriesPanel({
           setKind('');
           setQuery('');
         }}
-        resultLabel={`${visible.length} devis · ${newCount} en attente · ${quotedCount} chiffrés`}
         modalTitle="Filtrer les devis"
         filters={
           <>
-            <CatalogueFilterField label="Statut">
-              <CatalogueChoicePills
-                options={[
-                  { id: 'all', label: 'Tous' },
-                  { id: 'NEW', label: organizerView ? `Envoyés (${newCount})` : `Nouveaux (${newCount})` },
-                  { id: 'QUOTED', label: `Devis chiffrés (${quotedCount})` },
-                  { id: 'CONTACTED', label: organizerView ? 'Pris en charge' : 'Contactés' },
-                  { id: 'DECLINED', label: `Déclinés (${declinedCount})` },
-                  { id: 'BOOKED', label: `Réservés (${bookedCount})` },
-                ]}
-                value={status || 'all'}
-                onChange={setStatus}
-              />
-            </CatalogueFilterField>
             <CatalogueFilterField label="Type">
               <CatalogueChoicePills
                 options={[...KIND_OPTIONS]}
@@ -752,7 +739,7 @@ export default function MarketplaceInquiriesPanel({
       />
 
       {visible.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="search"
           icon={<Inbox className="w-5 h-5" />}
           title="Aucun devis pour ces filtres"
           description="Changez le statut, le type ou le texte pour élargir la recherche."
@@ -761,7 +748,6 @@ export default function MarketplaceInquiriesPanel({
         <>
           <div className={mode === 'grid' ? gridClassName : listStackClass}>
             {pagedVisible.map((item) => {
-              const next = inquiryNextStep({ ...item, viewerRole: organizerView ? 'organizer' : item.viewerRole || 'vendor' });
               const busy = busyId === item.id;
               const listingHref = item.listingSlug
                 ? dashboardVenueHref(item.listingSlug)
@@ -871,25 +857,21 @@ export default function MarketplaceInquiriesPanel({
                   secondaryActions={(
                     <>
                       {waUrl ? (
-                        <a href={waUrl} target="_blank" rel="noopener noreferrer" title="Échanger directement par WhatsApp">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            leftIcon={<MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
-                          >
-                            WhatsApp
-                          </Button>
-                        </a>
+                        <DealIconLink
+                          href={waUrl}
+                          external
+                          label="WhatsApp"
+                          icon={MessageCircle}
+                          iconClassName="text-emerald-600 dark:text-emerald-400"
+                        />
                       ) : null}
-                      {listingHref ? (
-                        <Button size="sm" variant="secondary" href={listingHref}>
-                          Fiche
-                        </Button>
-                      ) : null}
+                      {listingHref ? <DealIconLink href={listingHref} label="Voir la fiche" icon={Store} /> : null}
                       {organizerView && item.event?.id ? (
-                        <Button size="sm" variant="secondary" href={eventDashboardHref(item.event.id, { tab: 'prep' })}>
-                          Événement
-                        </Button>
+                        <DealIconLink
+                          href={eventDashboardHref(item.event.id, { tab: 'prep' })}
+                          label="Ouvrir l’événement"
+                          icon={Calendar}
+                        />
                       ) : null}
                       {!organizerView && !item.hasBooking && item.status !== 'DECLINED' && item.eventDate ? (
                         <Button
@@ -903,35 +885,27 @@ export default function MarketplaceInquiriesPanel({
                         </Button>
                       ) : null}
                       {!organizerView && !item.hasBooking && item.status === 'NEW' && onMarkContacted ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          loading={busy}
+                        <IconButton
+                          label="Marquer comme contacté"
+                          icon={CheckCircle2}
+                          disabled={busy}
                           onClick={() => run(item.id, () => onMarkContacted(item.id))}
-                          leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
-                        >
-                          Contacté
-                        </Button>
+                        />
                       ) : null}
                       {!organizerView && canDeclineInquiry(item) ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        <IconButton
+                          label="Refuser"
+                          icon={XCircle}
+                          tone="danger"
                           onClick={() => openDeclineModal(item)}
-                          leftIcon={<XCircle className="w-3.5 h-3.5 text-rose-500" />}
-                          className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                        >
-                          Refuser
-                        </Button>
+                        />
                       ) : null}
                     </>
                   )}
                 >
-                  <p className="text-xs text-foreground/80 leading-relaxed">{next.detail}</p>
                   {item.status === 'QUOTED' && item.quotedAmountFc != null ? (
                     <DealQuoteBlock
                       amountFc={formatFc(item.quotedAmountFc)}
-                      depositFc={formatFc(Math.round(item.quotedAmountFc * 0.3))}
                       notes={item.responseNotes}
                     />
                   ) : null}
@@ -952,7 +926,7 @@ export default function MarketplaceInquiriesPanel({
                     <p className="text-sm text-muted line-clamp-3 whitespace-pre-line">{item.message}</p>
                   ) : null}
                   {item.lastMessage && item.lastMessage.body.trim() !== (item.message || '').trim() ? (
-                    <p className="text-[11px] text-muted line-clamp-2">
+                    <p className="text-xs text-muted line-clamp-2">
                       Dernier message ({item.lastMessage.authorRole === 'CLIENT' ? 'client' : 'pro'}) : {item.lastMessage.body}
                     </p>
                   ) : null}
@@ -1220,24 +1194,24 @@ export default function MarketplaceInquiriesPanel({
             {panelError ? <Alert variant="error">{panelError}</Alert> : null}
             <ol className="space-y-2 text-sm text-foreground">
               <li className="rounded-xl border border-border bg-surface-muted/60 px-3 py-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">1. Devis</span>
+                <span className="text-xs font-semibold text-muted">Devis</span>
                 <p className="mt-0.5 font-semibold">
                   {acceptTarget.quotedAmountFc != null ? formatFc(acceptTarget.quotedAmountFc) : 'Montant à confirmer'}
                 </p>
               </li>
               <li className="rounded-xl border border-border bg-surface-muted/60 px-3 py-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">2. Votre acceptation</span>
+                <span className="text-xs font-semibold text-muted">Votre acceptation</span>
                 <p className="mt-0.5">
                   Une demande de réservation est envoyée au professionnel. Il doit encore confirmer.
                 </p>
               </li>
               <li className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
-                  3. Acompte après confirmation
+                <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                  Acompte après confirmation
                 </span>
                 <p className="mt-0.5">
                   {acceptTarget.quotedAmountFc != null
-                    ? `Acompte ${Math.round(MARKETPLACE_DEPOSIT_RATE * 100)} % : ${formatFc(Math.round(acceptTarget.quotedAmountFc * MARKETPLACE_DEPOSIT_RATE))} — versé hors plateforme.`
+                    ? `Acompte ${Math.round(MARKETPLACE_DEPOSIT_RATE * 100)} % : ${formatFc(Math.round(acceptTarget.quotedAmountFc * MARKETPLACE_DEPOSIT_RATE))} — en ligne ou directement au professionnel, selon ses options.`
                     : 'L’acompte de 30 % sera indiqué après confirmation.'}
                 </p>
               </li>
@@ -1298,7 +1272,7 @@ export default function MarketplaceInquiriesPanel({
                 </Button>
               </form>
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] text-muted">Les réponses apparaissent ici en direct.</p>
+                <p className="text-xs text-muted">Les réponses apparaissent ici en direct.</p>
                 <Button
                   type="button"
                   size="sm"
@@ -1318,7 +1292,7 @@ export default function MarketplaceInquiriesPanel({
           {panelError && threadTarget ? <Alert variant="error">{panelError}</Alert> : null}
           {threadTarget && !inquiryChatClosed(threadTarget) && !threadTarget.hasBooking ? (
             <div className="rounded-xl border border-border bg-surface-muted/50 px-3 py-2.5 space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              <p className="text-xs font-semibold text-muted">
                 Conclure le devis
               </p>
               {threadTarget.status === 'QUOTED' && threadTarget.quotedAmountFc != null ? (
@@ -1375,7 +1349,7 @@ export default function MarketplaceInquiriesPanel({
           <div className="space-y-2 max-h-[45vh] overflow-y-auto overscroll-contain pr-1">
             {threadTarget?.message ? (
               <div className="rounded-2xl border border-border bg-surface-muted/70 px-3 py-2.5 text-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted mb-1">
+                <p className="text-xs font-semibold text-muted mb-1">
                   Demande initiale · {threadTarget.fromName}
                 </p>
                 <p className="whitespace-pre-line text-foreground">{threadTarget.message}</p>
@@ -1398,7 +1372,7 @@ export default function MarketplaceInquiriesPanel({
                       : 'mr-auto bg-surface-muted border border-border',
                   )}
                 >
-                  <p className="text-[11px] font-semibold text-muted mb-1">
+                  <p className="text-xs font-semibold text-muted mb-1">
                     {message.authorRole === 'CLIENT' ? threadTarget?.fromName || 'Client' : threadTarget?.vendorName || 'Professionnel'}
                     {' · '}
                     {new Date(message.createdAt).toLocaleString('fr-FR')}

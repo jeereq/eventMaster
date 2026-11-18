@@ -73,7 +73,7 @@ export default function SiteBrandMark({
             className={cn(
               'font-display font-semibold block leading-none truncate max-w-[9.5rem] sm:max-w-[14rem]',
               tone === 'onDark' ? 'text-white' : 'text-foreground',
-              size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-lg sm:text-xl' : 'text-base sm:text-[1.3rem]',
+              size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-lg sm:text-xl' : 'text-base sm:text-xl',
             )}
           >
             {label}
@@ -81,7 +81,7 @@ export default function SiteBrandMark({
           {meta ? (
             <span
               className={cn(
-                'block text-[10px] font-medium mt-1',
+                'block text-xs font-medium mt-1',
                 tone === 'onDark' ? 'text-white/65' : 'text-muted',
               )}
             >

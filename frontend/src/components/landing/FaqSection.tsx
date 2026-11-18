@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown, HelpCircle } from 'lucide-react';
+import { ChevronDown, HelpCircle } from '@/components/icons';
 import { FAQ_ITEMS } from '@/config/siteContent';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -20,7 +20,7 @@ export function resolveFaqAnswer(item: (typeof FAQ_ITEMS)[number], site: FaqSite
 
 interface FaqSectionProps {
   id?: string;
-  title?: string;
+  title?: React.ReactNode;
   subtitle?: string;
   showContactLink?: boolean;
   className?: string;
@@ -90,7 +90,7 @@ export default function FaqSection({
   );
 
   return (
-    <section id={id} className={cn('em-landing-defer py-8 sm:py-20 bg-surface/80 dark:bg-background/80 border-t border-border scroll-mt-16 em-landing-section-glow', className)}>
+    <section id={id} className={cn('em-landing-defer relative py-14 sm:py-20 bg-surface scroll-mt-16', className)}>
       <div
         className={cn(
           'page-container relative z-10',
@@ -98,10 +98,7 @@ export default function FaqSection({
         )}
       >
         <div className={cn('max-w-2xl mb-5 sm:mb-8 space-y-2.5', split && 'lg:mb-0 lg:sticky lg:top-28')}>
-          {split ? (
-            <span className="block text-xs sm:text-sm font-bold text-primary tracking-[0.06em] uppercase">FAQ</span>
-          ) : null}
-          <h2 className={cn('em-landing-heading text-foreground', split ? 'text-3xl sm:text-[2.5rem]' : 'text-xl sm:text-3xl')}>
+          <h2 data-reveal className={cn('em-landing-heading text-foreground', split ? 'text-3xl sm:text-5xl' : 'text-xl sm:text-3xl')}>
             {title}
           </h2>
           {subtitle ? (
@@ -110,7 +107,7 @@ export default function FaqSection({
           {split ? <div className="hidden lg:block pt-2">{links}</div> : null}
         </div>
 
-        <div className={cn('space-y-2.5', !split && 'max-w-3xl')}>
+        <div data-reveal style={{ '--i': 1 } as React.CSSProperties} className={cn('space-y-2.5', !split && 'max-w-3xl')}>
           {items.map((item) => {
             const isOpen = openId === item.id;
             return (
@@ -119,7 +116,7 @@ export default function FaqSection({
                 className={cn(
                   'rounded-[var(--radius-card)] transition-all overflow-hidden border',
                   isOpen
-                    ? 'border-primary/50 bg-background shadow-md shadow-primary/5'
+                    ? 'border-transparent bg-sage text-on-pastel'
                     : 'border-border bg-background hover:border-primary/30',
                 )}
               >

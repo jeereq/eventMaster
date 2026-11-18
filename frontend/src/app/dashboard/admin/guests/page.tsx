@@ -2,17 +2,28 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Eye, Loader2, LogIn, Trash2, Users, X } from 'lucide-react';
+import { Download, Eye, Loader2, LogIn, Trash2, Users, X } from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Button, StatusPill,
-  ProjectCard, ListRowAction, SkeletonTabContent, ViewModeToggle, useViewMode,
-  usePageSize, listStackClass,
+  PageHeader,
+  Alert,
+  EmptyState,
+  Pagination,
+  Button,
+  StatusPill,
+  ProjectCard,
+  ListRowAction,
+  SkeletonTabContent,
+  ViewModeToggle,
+  useViewMode,
+  usePageSize,
+  listStackClass,
 } from '@/components/ui';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
 import useIsMobile from '@/hooks/useIsMobile';
+import { confirmSupportSession } from '@/lib/confirmSupportSession';
 
 interface AdminGuestRow {
   id: string;
@@ -150,6 +161,7 @@ export default function AdminGuestsPage() {
   }, [load]);
 
   const openWorkspace = async (tenantId: string) => {
+    if (!confirmSupportSession()) return;
     try {
       setOpeningId(tenantId);
       const payload = await api.post(`/admin/tenants/${tenantId}/impersonate`);
@@ -208,16 +220,7 @@ export default function AdminGuestsPage() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title="Invités (supervision)"
-        description="Réponses, invitations et présence. Export : 100 lignes."
-        breadcrumbs={
-          <Breadcrumbs
-            items={[
-              { label: 'Accueil', href: '/dashboard?tab=overview' },
-              { label: 'Invités' },
-            ]}
-          />
-        }
+        note="Export limité à 100 lignes"
         action={
           <Button type="button" size="sm" variant="secondary" onClick={() => void handleExport()} leftIcon={<Download className="w-4 h-4" />}>
             Exporter CSV
@@ -274,7 +277,7 @@ export default function AdminGuestsPage() {
           >
             <option value="ALL">Toutes les réponses</option>
             <option value="PENDING">En attente</option>
-            <option value="ACCEPTED">Accepté</option>
+            <option value="ACCEPTED">Confirmé</option>
             <option value="DECLINED">Décliné</option>
           </select>
           <select
@@ -284,8 +287,8 @@ export default function AdminGuestsPage() {
             className={filterClass}
           >
             <option value="ALL">Présence</option>
-            <option value="in">Enregistrés</option>
-            <option value="out">Non enregistrés</option>
+            <option value="in">Entrés</option>
+            <option value="out">Pas encore entrés</option>
           </select>
           <select
             value={pdf}
@@ -323,7 +326,7 @@ export default function AdminGuestsPage() {
       {loading ? (
         <SkeletonTabContent mode={viewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
       ) : items.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="guests"
           icon={<Users className="w-5 h-5" />}
           title="Liste vide"
           description="Aucun invité ne correspond à ces critères."
@@ -332,7 +335,7 @@ export default function AdminGuestsPage() {
         <div className={viewMode === 'grid' ? gridClassName : listStackClass}>
           {items.map((g) => {
             const rsvpTone = g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber';
-            const rsvpLabel = g.rsvp === 'ACCEPTED' ? 'Accepté' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
+            const rsvpLabel = g.rsvp === 'ACCEPTED' ? 'Confirmé' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
             const rsvpChip = <StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>;
             const categoryTone = g.category === 'Donateur' ? 'rose' : g.category === 'VIP' ? 'amber' : 'slate';
             const categoryChip = <StatusPill tone={categoryTone}>{g.category || 'Général'}</StatusPill>;
@@ -341,7 +344,7 @@ export default function AdminGuestsPage() {
                 {g.seatingInvitationPdfUrl ? 'PDF livré' : 'PDF manquant'}
               </StatusPill>
             ) : null;
-            const checkinChip = g.checkedInAt ? <StatusPill tone="primary">Présent</StatusPill> : null;
+            const checkinChip = g.checkedInAt ? <StatusPill tone="primary">Entré</StatusPill> : null;
             return (
               <ProjectCard
                 key={g.id}
@@ -372,7 +375,7 @@ export default function AdminGuestsPage() {
                         {checkinChip}
                       </div>
                       <p className="truncate text-xs font-medium">{g.eventTitle}</p>
-                      <p className="truncate text-[11px] text-muted">{g.tenantName}</p>
+                      <p className="truncate text-xs text-muted">{g.tenantName}</p>
                     </div>
                   )
                 }

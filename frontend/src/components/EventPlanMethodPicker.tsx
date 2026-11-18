@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Check, ListChecks, MousePointerClick, Wand2, Clock } from 'lucide-react';
+import { Check, ListChecks, MousePointerClick, Wand2, Clock } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 
@@ -49,7 +49,7 @@ export default function EventPlanMethodPicker({
   return (
     <section className="space-y-4" aria-label="Choix de la méthode de simulation">
       <div className="space-y-2">
-        <h2 className="text-sm font-bold text-foreground">1. Composer le pack budget</h2>
+        <h2 className="text-sm font-bold text-foreground">Composer le pack budget</h2>
         <p className="text-xs text-muted leading-relaxed max-w-2xl">
           Choisissez une méthode pour générer vos packs salle, prestataires et équipements.
         </p>
@@ -128,7 +128,7 @@ export default function EventPlanMethodPicker({
       </div>
 
       <div className="space-y-2">
-        <h2 className="text-sm font-bold text-foreground">2. Retenir le pack budget final</h2>
+        <h2 className="text-sm font-bold text-foreground">Retenir le pack budget final</h2>
         <button
           type="button"
           onClick={() => onChange('final')}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check, ArrowRight, DollarSign, MapPin, Lightbulb } from 'lucide-react';
+import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check, ArrowRight, DollarSign, MapPin, Lightbulb } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -922,7 +922,7 @@ export default function EventPrepAiSimulator({
         >
           {embedded ? (
             <div className="lg:hidden px-4 pt-4 pb-3 space-y-2">
-              <div className="flex justify-between gap-2 text-[13px] text-muted tabular-nums">
+              <div className="flex justify-between gap-2 text-sm text-muted tabular-nums">
                 <span>Question {wizardStep + 1} sur {wizardKeys.length}</span>
                 <span>{allowance.unlimited ? '' : `${AI_SIMULATION_TOKEN_COST} jeton · `}1 $ = {exchangeRate.toLocaleString('fr-FR')} FC</span>
               </div>
@@ -1312,7 +1312,7 @@ export default function EventPrepAiSimulator({
           </BudgetFormGroup>
           ) : null}
           {embedded && recapRows.some((row) => !row.empty) ? (
-            <p className="lg:hidden px-4 py-3 flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-muted">
+            <p className="lg:hidden px-4 py-3 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted">
               {recapRows.filter((row) => !row.empty).map((row) => (
                 <span key={row.label}>
                   {row.label} : <b className="font-semibold text-foreground">{row.value}</b>
@@ -1343,7 +1343,7 @@ export default function EventPrepAiSimulator({
               <div className="rounded-[18px] border border-border bg-surface p-5 flex flex-col gap-3.5">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="font-display text-lg font-semibold text-foreground">Récapitulatif</span>
-                  <span className="text-[13px] text-muted tabular-nums">{briefDone} sur {briefSteps.length}</span>
+                  <span className="text-sm text-muted tabular-nums">{briefDone} sur {briefSteps.length}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden" aria-hidden>
                   <span
@@ -1377,7 +1377,7 @@ export default function EventPrepAiSimulator({
                     onClick={() => setPurchaseModalOpen(true)}
                   />
                 )}
-                <p className="text-[13px] text-muted text-center" aria-live="polite">
+                <p className="text-sm text-muted text-center" aria-live="polite">
                   {allowance.canSimulate || loading
                     ? briefHint
                     : 'Plus de jetons : rechargez pour lancer une nouvelle simulation.'}
@@ -1674,7 +1674,7 @@ export default function EventPrepAiSimulator({
                     ) : null}
                   </span>
                   <span className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-display text-2xl sm:text-[1.75rem] leading-tight font-semibold text-foreground tabular-nums">
+                    <span className="font-display text-2xl sm:text-3xl leading-tight font-semibold text-foreground tabular-nums">
                       {formatFc(pack.estimatedTotalFc)}
                     </span>
                     <span className="text-sm text-muted tabular-nums">
@@ -1781,7 +1781,7 @@ function BudgetFormGroup({
         <p aria-hidden className="flex items-center gap-3">
           <span
             className={cn(
-              'w-7 h-7 rounded-full text-[13px] font-semibold inline-flex items-center justify-center shrink-0 transition-colors',
+              'w-7 h-7 rounded-full text-sm font-semibold inline-flex items-center justify-center shrink-0 transition-colors',
               done ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-muted',
             )}
           >

@@ -14,7 +14,7 @@ import type {
 } from '@/app/rsvp/GuestTablePlanView';
 import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from '@/components/icons';
 
 type GuestApiResponse = {
   id: string;

@@ -5,7 +5,7 @@ import {
   Shirt, Car, Gift, CloudSun, Clock, Baby, Camera, Bus, Accessibility, Info, Wallet, Sparkles,
   X, ChevronLeft, ChevronRight, Maximize2,
   type LucideIcon,
-} from 'lucide-react';
+} from '@/components/icons';
 import {
   type GuestGuidelines,
   type RecommendationType,
@@ -168,7 +168,7 @@ function GuidelineImageGrid({ urls, label }: { urls?: string[]; label: string })
 
       {index !== null && (
         <div
-          className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-xs flex items-center justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
+          className="fixed inset-0 z-[120] bg-black/95 flex items-center justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
           role="dialog"
           aria-modal="true"
           aria-label={`Visionneuse — ${label}, image ${index + 1} sur ${images.length}`}
