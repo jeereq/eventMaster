@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown, HelpCircle, Search, X } from 'lucide-react';
+import { ChevronDown, HelpCircle, Search, X } from '@/components/icons';
 import { FAQ_ITEMS, type FaqItem } from '@/config/siteContent';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -224,7 +224,7 @@ export default function FaqExplorer() {
                         aria-expanded={isOpen}
                         aria-controls={`faq-panel-${item.id}`}
                       >
-                        <span className={cn('min-w-0 text-[15px] font-semibold', isOpen ? 'text-primary' : 'text-foreground')}>
+                        <span className={cn('min-w-0 text-base font-semibold', isOpen ? 'text-primary' : 'text-foreground')}>
                           {item.question}
                         </span>
                         <ChevronDown

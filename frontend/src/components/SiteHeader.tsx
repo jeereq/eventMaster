@@ -8,10 +8,11 @@ import { useTheme } from '@/context/ThemeContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { Sun, Moon, LayoutDashboard, ArrowRight, Menu, X } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, ArrowRight, Menu, X } from '@/components/icons';
 import SiteMobileBottomBar from '@/components/SiteMobileBottomBar';
 import SiteBrandMark from '@/components/SiteBrandMark';
 import PWAInstallCta from '@/components/PWAInstallCta';
+import SiteNavMarketplaceMenu, { MARKETPLACE_SECTIONS } from '@/components/SiteNavMarketplaceMenu';
 import { revealAndScrollToSection } from '@/lib/aiFabPlacement';
 
 export type SiteHeaderLink = {
@@ -28,7 +29,6 @@ interface SiteHeaderProps {
 const PUBLIC_LINKS: SiteHeaderLink[] = [
   { href: '/', label: 'Accueil' },
   { href: '/marketplace', label: 'Marketplace' },
-  { href: '/evenements', label: 'Événements' },
   { href: '/simulateur', label: 'Simulateur' },
   { href: '/modeles', label: 'Modèles' },
   { href: '/tarifs', label: 'Tarifs' },
@@ -93,10 +93,8 @@ export default function SiteHeader({
       return pathname === '/';
     }
     if (href === '/marketplace') {
-      return pathname.startsWith('/marketplace') && !pathname.startsWith('/marketplace/evenements');
-    }
-    if (href === '/evenements') {
-      return pathname.startsWith('/evenements') || pathname.startsWith('/marketplace/evenements');
+      // Les événements publics sont un onglet de la Marketplace.
+      return pathname.startsWith('/marketplace') || pathname.startsWith('/evenements');
     }
     if (href === '/activite') {
       return pathname === '/activite' || pathname.startsWith('/activite/');
@@ -127,7 +125,8 @@ export default function SiteHeader({
     <>
       <header
         className={cn(
-          'fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md bg-surface/95 dark:bg-background/85 border-b border-border transition-colors duration-200',
+          // em-site-header active le thème du site public (crème, Fraunces) dans globals.css.
+          'em-site-header fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top,0px)] bg-background border-b border-border transition-colors duration-200',
           className,
         )}
       >
@@ -139,11 +138,15 @@ export default function SiteHeader({
           {links.map((item) => {
             const active = isLinkActive(item.href);
             const itemClass = cn(
-              'inline-flex items-center min-h-11 text-sm lg:text-[15px] transition rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              'inline-flex items-center min-h-11 text-sm lg:text-base transition rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
               active
                 ? 'text-primary font-bold'
                 : 'text-foreground font-medium hover:text-primary',
             );
+
+            if (item.href === '/marketplace') {
+              return <SiteNavMarketplaceMenu key={item.href} active={active} linkClassName={itemClass} />;
+            }
 
             return item.href.startsWith('/#') ? (
               <a
@@ -214,7 +217,7 @@ export default function SiteHeader({
             <div className="flex items-center gap-1 sm:gap-1.5 ml-1">
               <Link
                 href="/login"
-                className="inline-flex items-center min-h-11 text-sm md:text-[15px] font-semibold text-foreground hover:text-primary px-2 sm:px-4 rounded-md transition"
+                className="inline-flex items-center min-h-11 text-sm md:text-base font-semibold text-foreground hover:text-primary px-2 sm:px-4 rounded-md transition"
               >
                 Connexion
               </Link>
@@ -222,7 +225,7 @@ export default function SiteHeader({
                 <Button
                   href="/register"
                   size="md"
-                  className="inline-flex text-sm md:text-[15px] px-3 sm:px-5 font-semibold"
+                  className="inline-flex text-sm md:text-base px-3 sm:px-5 font-semibold"
                 >
                   <span className="min-[420px]:hidden">S’inscrire</span>
                   <span className="hidden min-[420px]:inline">Créer un compte</span>
@@ -251,13 +254,13 @@ export default function SiteHeader({
                   {[...links, ...TABLET_EXTRA_LINKS].map((item) => {
                     const active = isLinkActive(item.href);
                     return (
+                      <React.Fragment key={item.href}>
                       <Link
-                        key={item.href}
                         href={item.href}
                         aria-current={active ? 'page' : undefined}
                         onClick={() => setTabletMenuOpen(false)}
                         className={cn(
-                          'flex items-center min-h-11 px-3 rounded-lg text-[15px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                          'flex items-center min-h-11 px-3 rounded-lg text-base transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                           active
                             ? 'bg-primary/10 text-primary font-bold'
                             : 'text-foreground font-medium hover:bg-surface-muted',
@@ -265,6 +268,28 @@ export default function SiteHeader({
                       >
                         {item.label}
                       </Link>
+                      {item.href === '/marketplace'
+                        ? MARKETPLACE_SECTIONS.map((section) => {
+                            const Icon = section.icon;
+                            const current = pathname.startsWith(section.href);
+                            return (
+                              <Link
+                                key={section.href}
+                                href={section.href}
+                                aria-current={current ? 'page' : undefined}
+                                onClick={() => setTabletMenuOpen(false)}
+                                className={cn(
+                                  'ml-3 flex items-center gap-2.5 min-h-11 px-3 rounded-lg text-[15px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                                  current ? 'text-primary font-bold' : 'text-muted font-medium hover:bg-surface-muted',
+                                )}
+                              >
+                                <Icon className="w-4 h-4 shrink-0" aria-hidden />
+                                {section.label}
+                              </Link>
+                            );
+                          })
+                        : null}
+                      </React.Fragment>
                     );
                   })}
                 </div>

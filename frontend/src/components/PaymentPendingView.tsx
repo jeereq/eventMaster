@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2, Smartphone, CreditCard, CheckCircle2, RefreshCw, ArrowLeft, XCircle } from 'lucide-react';
+import { Loader2, Smartphone, CreditCard, CheckCircle2, RefreshCw, ArrowLeft, XCircle } from '@/components/icons';
 import { Alert, Button, ConfirmDialog } from '@/components/ui';
 import { FLEXPAY_MOBILE_OPERATORS_LABEL } from '@/lib/flexPayOperators';
 import { CANCEL_PAYMENT_CONFIRM, CLOSE_PAYMENT_CONFIRM } from '@/lib/pendingTicketPayment';

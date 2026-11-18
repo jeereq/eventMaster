@@ -7,8 +7,9 @@ import { useAuth } from '@/context/AuthContext';
 import {
   QrCode, ScanLine, CheckCircle2, XCircle, MessageSquare, Loader2, UserCheck, Armchair,
   Search, Users, ClipboardList,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Button } from '@/components/ui';
+import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { cn } from '@/lib/cn';
 import QrCameraScanner, { QrCameraToggle } from '@/components/QrCameraScanner';
 import { eventDashboardHref } from '@/lib/eventRoutes';
@@ -37,7 +38,7 @@ function rsvpLabel(rsvp: string) {
 }
 
 export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
-  const { planFeatures, tenant } = useAuth();
+  const { planFeatures } = useAuth();
   const [guests, setGuests] = useState<ProtocolGuest[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanInput, setScanInput] = useState('');
@@ -171,19 +172,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
   };
 
   if (planFeatures && !planFeatures.protocolQr) {
-    return (
-      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-6 text-center space-y-3 shadow-2xs">
-        <QrCode className="w-10 h-10 text-muted mx-auto" aria-hidden />
-        <h3 className="font-semibold text-foreground">Protocole QR non inclus</h3>
-        <p className="text-sm text-muted">
-          Le scan QR et la confirmation de présence nécessitent le forfait{' '}
-          <strong className="text-foreground">Business</strong> ou supérieur. Forfait actuel : {tenant?.plan || 'FREE'}.
-        </p>
-        <Link href="/dashboard/billing" className="inline-block text-sm font-semibold text-primary hover:underline">
-          Voir les forfaits →
-        </Link>
-      </div>
-    );
+    return <PlanLimitCallout feature="protocolQr" />;
   }
 
   if (loading) {
@@ -195,7 +184,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
   }
 
   const kioskClasses = isKioskMode 
-    ? "fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md overflow-y-auto p-4 sm:p-8 flex flex-col xl:flex-row gap-6 animate-fade-in items-start" 
+    ? "fixed inset-0 z-[9999] bg-background/95 overflow-y-auto p-4 sm:p-8 flex flex-col xl:flex-row gap-6 animate-fade-in items-start" 
     : "space-y-5";
 
   return (
@@ -211,15 +200,11 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
       )}
 
       <div className={cn("rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5 space-y-1", isKioskMode && "w-full xl:w-80 shrink-0 sticky top-4 xl:top-8")}>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Parcours jour J</p>
-            <h3 className="font-semibold text-foreground text-base">1. Scanner · 2. Confirmer · 3. Invité suivant</h3>
-          </div>
+        <div className="flex items-start justify-end gap-4">
           <div className="flex items-center gap-2 shrink-0">
             <Link
               href={eventDashboardHref(eventId, { tab: 'tasks', protocol: true })}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-surface text-[11px] font-semibold text-muted hover:text-foreground transition"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-surface text-xs font-semibold text-muted hover:text-foreground transition"
               title="Checklist protocole"
             >
               <ClipboardList className="w-3.5 h-3.5" />
@@ -275,9 +260,9 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
           <div className="absolute inset-0 flex items-center" aria-hidden>
             <div className="w-full border-t border-border" />
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-surface px-2 text-muted font-semibold tracking-wider">
-              ou recherche / saisie
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-surface px-2 text-muted font-semibold">
+              ou saisir un nom
             </span>
           </div>
         </div>
@@ -313,7 +298,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
           )}
         >
           {justCheckedIn && (
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+            <p className="text-xs font-semibold text-emerald-700">
               Entrée confirmée — prochain invité dans un instant
             </p>
           )}
@@ -336,17 +321,17 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
               )}
               {selectedGuest.checkedInAt && (
                 <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary-solid text-primary-foreground shadow-2xs">
-                  Authentifié
+                  Entré
                 </span>
               )}
             </div>
             {selectedGuest.rsvp !== 'ACCEPTED' && !selectedGuest.checkedInAt && (
               <p className="text-xs text-muted mt-3 bg-surface-muted border border-border rounded-[var(--radius-button)] px-3 py-2">
                 {selectedGuest.rsvp === 'PENDING'
-                  ? 'Réponse en attente : l’invité doit confirmer sur son lien avant le check-in.'
+                  ? 'Réponse en attente : l’invité doit confirmer sur son lien avant d’entrer.'
                   : selectedGuest.rsvp === 'DECLINED'
-                    ? 'Invitation déclinée — le check-in n’est pas possible.'
-                    : 'Présence non confirmée — check-in impossible.'}
+                    ? 'Invitation déclinée : entrée impossible.'
+                    : 'Présence non confirmée : entrée impossible.'}
               </p>
             )}
             {selectedGuest.assignedSeat && (
@@ -363,10 +348,10 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             >
               <UserCheck className="w-4 h-4" />
               {selectedGuest.checkedInAt
-                ? 'Déjà authentifié'
+                ? 'Déjà entré'
                 : selectedGuest.rsvp !== 'ACCEPTED'
-                  ? 'Check-in bloqué (Réponse à l’invitation)'
-                  : 'Confirmer la présence'}
+                  ? 'Entrée bloquée'
+                  : 'Valider l’entrée'}
             </Button>
             <Button variant="secondary" onClick={() => handleVerifySeat(selectedGuest.id)} disabled={busy}>
               <Armchair className="w-4 h-4" />
@@ -391,7 +376,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
           </div>
           {selectedGuest.protocolNotes && selectedGuest.protocolNotes.length > 0 && (
             <div className="space-y-2 pt-2 border-t border-primary/20">
-              <p className="text-xs font-bold uppercase text-primary">Notes récentes</p>
+              <p className="text-xs font-semibold text-primary">Notes récentes</p>
               {selectedGuest.protocolNotes.map((n) => (
                 <div key={n.id} className="text-sm bg-surface/60 rounded-lg px-3 py-2">
                   <span className="font-semibold text-foreground">{n.user?.name || 'Protocole'}</span>
@@ -437,7 +422,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
                 type="button"
                 onClick={() => setListFilter(opt.id)}
                 className={cn(
-                  'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
+                  'px-2.5 py-1 rounded-full text-xs font-semibold border transition',
                   listFilter === opt.id
                     ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                     : 'border-border text-muted hover:text-foreground',
@@ -472,16 +457,16 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
                   <p className="font-semibold text-sm text-foreground">{g.firstName} {g.lastName}</p>
                   <p className="text-xs text-muted">{g.phone || g.email}</p>
                   {g.assignedSeat && (
-                    <p className="text-[10px] text-primary mt-0.5">
+                    <p className="text-xs text-primary mt-0.5">
                       {g.assignedSeat.tableName} · siège {g.assignedSeat.seatIndex + 1}
                     </p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {g.checkedInAt ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" aria-label="Authentifié" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" aria-label="Entré" />
                   ) : (
-                    <XCircle className="w-4 h-4 text-foreground/80" aria-label="Non authentifié" />
+                    <XCircle className="w-4 h-4 text-foreground/80" aria-label="Pas encore entré" />
                   )}
                   {g.seatVerified && <Armchair className="w-4 h-4 text-primary" aria-label="Siège vérifié" />}
                 </div>

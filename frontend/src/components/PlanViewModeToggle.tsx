@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, LayoutGrid } from 'lucide-react';
+import { Box, LayoutGrid } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 export default function PlanViewModeToggle({

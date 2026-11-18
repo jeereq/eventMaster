@@ -5,7 +5,7 @@ import {
   Undo, Redo, LayoutTemplate, MessageSquare, Tag, Bold, Italic, Strikethrough,
   Eye, Edit3, Mail, Check, Sparkles, ArrowRight, RefreshCw, Shirt, AlertCircle,
   Copy, CheckCircle2, Smartphone,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Button, Modal } from '@/components/ui';
 import InvitationMessagePreview from './InvitationMessagePreview';
 import TemplatePreviewModal from '@/components/templates/TemplatePreviewModal';
@@ -615,8 +615,7 @@ export default function InvitationEditorModal({
           ══════════════════════════════════════════════════════════════════════════ */}
           <div className="p-4 rounded-2xl border border-border bg-surface-muted/30 space-y-3.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-primary-solid text-primary-foreground text-xs font-bold inline-flex items-center justify-center shrink-0">1</span>
+              <span className="text-xs font-bold text-muted flex items-center gap-2">
                 Canal de diffusion & Page de réponse à l’invitation
               </span>
             </div>
@@ -648,7 +647,7 @@ export default function InvitationEditorModal({
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-foreground">Canal E-mail</p>
-                      <p className="text-[11px] text-muted truncate">Lettre officielle SendGrid</p>
+                      <p className="text-xs text-muted truncate">Lettre officielle SendGrid</p>
                     </div>
                   </div>
                   <span className={cn('w-5 h-5 rounded-full flex items-center justify-center shrink-0 border', channelNeedsEmail ? 'bg-primary border-primary text-primary-foreground' : 'border-border bg-surface')}>
@@ -675,7 +674,7 @@ export default function InvitationEditorModal({
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-foreground">Canal WhatsApp</p>
-                      <p className="text-[11px] text-muted truncate">Mobile direct & pass QR</p>
+                      <p className="text-xs text-muted truncate">Mobile direct & pass QR</p>
                     </div>
                   </div>
                   <span className={cn('w-5 h-5 rounded-full flex items-center justify-center shrink-0 border', channelNeedsWhatsApp ? 'bg-primary border-primary text-primary-foreground' : 'border-border bg-surface')}>
@@ -702,7 +701,7 @@ export default function InvitationEditorModal({
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-foreground">Canal SMS</p>
-                      <p className="text-[11px] text-muted truncate">Dream Digital (aSMSC)</p>
+                      <p className="text-xs text-muted truncate">Dream Digital (aSMSC)</p>
                     </div>
                   </div>
                   <span className={cn('w-5 h-5 rounded-full flex items-center justify-center shrink-0 border', channelNeedsSms ? 'bg-primary border-primary text-primary-foreground' : 'border-border bg-surface')}>
@@ -715,7 +714,7 @@ export default function InvitationEditorModal({
               {/* Raccourcis de combinaisons rapides */}
               {visibleChannelPresets.length > 1 && (
               <div className="space-y-1.5 pt-1">
-                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider block">
+                <span className="text-xs font-semibold text-muted block">
                   Combinaisons directes à 1 clic :
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -820,7 +819,7 @@ export default function InvitationEditorModal({
           ══════════════════════════════════════════════════════════════════════════ */}
           <div className="p-4 rounded-2xl border border-primary/25 bg-gradient-to-r from-primary/5 via-surface to-primary/5 space-y-2.5">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+              <span className="text-xs font-bold text-primary flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-primary" />
                 Modèles de message pré-rédigés (cliquez pour appliquer) :
               </span>
@@ -849,8 +848,7 @@ export default function InvitationEditorModal({
           ══════════════════════════════════════════════════════════════════════════ */}
           <div className="p-4 rounded-2xl border border-border bg-surface-muted/20 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-primary-solid text-primary-foreground text-xs font-bold inline-flex items-center justify-center shrink-0">2</span>
+              <span className="text-xs font-bold text-muted flex items-center gap-2">
                 Rédaction du message
               </span>
 
@@ -984,7 +982,7 @@ export default function InvitationEditorModal({
                 className="space-y-3.5 animate-in fade-in-50 duration-150"
               >
                 <div className="space-y-1">
-                  <label htmlFor="invitation-subject-input" className="text-xs font-semibold text-muted uppercase tracking-wider block">
+                  <label htmlFor="invitation-subject-input"className="text-xs font-semibold text-muted block">
                     Objet de l'e-mail
                   </label>
                   <input
@@ -1001,7 +999,7 @@ export default function InvitationEditorModal({
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="invitation-body-input" className="text-xs font-semibold text-muted uppercase tracking-wider">
+                    <label htmlFor="invitation-body-input"className="text-xs font-semibold text-muted ">
                       Corps du message (E-mail)
                     </label>
                     <span className="text-xs text-muted font-mono">
@@ -1046,7 +1044,7 @@ export default function InvitationEditorModal({
               >
                 {!channelNeedsEmail && (
                   <div className="space-y-1">
-                    <label htmlFor="invitation-ref-input" className="text-xs font-semibold text-muted uppercase tracking-wider block">
+                    <label htmlFor="invitation-ref-input"className="text-xs font-semibold text-muted block">
                       Titre / Référence interne de l’invitation
                     </label>
                     <input
@@ -1112,7 +1110,7 @@ export default function InvitationEditorModal({
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="invitation-whatsapp-input" className="text-xs font-semibold text-primary uppercase tracking-wider">
+                    <label htmlFor="invitation-whatsapp-input"className="text-xs font-semibold text-primary ">
                       Corps du message ({shortMessageName})
                     </label>
                     <span className="text-xs text-muted font-mono">
@@ -1223,7 +1221,6 @@ export default function InvitationEditorModal({
           content: selectedGraphicTemplate.content,
           createdAt: '',
         }}
-        isOwnerOrManager={true}
       />
     )}
   </>

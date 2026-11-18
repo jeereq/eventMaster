@@ -18,11 +18,8 @@ import {
   FileText,
   Award,
   PlusCircle,
-  CalendarDays,
   Ticket,
-  Utensils,
   Wallet,
-  Zap,
   MapPin,
   ChevronRight,
   Shield,
@@ -31,12 +28,8 @@ import {
   CheckCircle2,
   Crown,
   Layers,
-  ArrowUpRight,
-  CreditCard,
   Percent,
   Check,
-  Smartphone,
-  Sliders,
   Rss,
   TrendingUp,
   Heart,
@@ -48,10 +41,7 @@ import {
   Inbox,
   Store,
   BarChart3,
-  HelpCircle,
-  Eye,
-  Filter,
-} from 'lucide-react';
+} from '@/components/icons';
 import type { MarketplaceBookingItem, MarketplaceInquiryItem } from '@/lib/marketplace';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -63,19 +53,17 @@ import {
   Pagination,
   usePaginateItems,
   listStackClass,
-  Card,
   type GridColumns,
 } from '@/components/ui';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
-import UserAvatar from '@/components/UserAvatar';
 import NextEventCard, { pickNextEvent } from '@/components/dashboard/NextEventCard';
 import B2bOrganizerHome from '@/components/dashboard/B2bOrganizerHome';
+import OrganizerBoard, { type BoardEvent } from '@/components/dashboard/OrganizerBoard';
 import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
 import type { PlanId } from '@/config/landingPricing';
 import {
   LANDING_PLANS,
-  planPricePeriodSuffix,
   formatFc,
   resolvePlanMonthlyFc,
 } from '@/config/landingPricing';
@@ -293,6 +281,13 @@ export default function OrganizerDashboardHome({
   const [vendorRolePerspective, setVendorRolePerspective] = useState<'vendor' | 'organizer'>(
     isVenueOrVendorOrCatalog ? 'vendor' : 'organizer'
   );
+  // Le forfait (planFeatures) peut arriver après le montage : on réaligne la perspective par défaut
+  // quand le type de compte change, sans écraser ensuite le choix fait via les onglets Devis / Réservations.
+  const [perspectiveAccountKind, setPerspectiveAccountKind] = useState(isVenueOrVendorOrCatalog);
+  if (perspectiveAccountKind !== isVenueOrVendorOrCatalog) {
+    setPerspectiveAccountKind(isVenueOrVendorOrCatalog);
+    setVendorRolePerspective(isVenueOrVendorOrCatalog ? 'vendor' : 'organizer');
+  }
 
   const loadVendorHubData = useCallback(async (perspectiveRole: 'vendor' | 'organizer') => {
     if (!tenant?.id) return;
@@ -446,10 +441,6 @@ export default function OrganizerDashboardHome({
     if (max == null || max < 0 || isUnlimitedQuota(max)) return String(used);
     return `${used} / ${max}`;
   };
-
-  const greetingHour = new Date().getHours();
-  const greetingLabel =
-    greetingHour < 12 ? 'Bonjour' : greetingHour < 18 ? 'Bon après-midi' : 'Bonsoir';
 
   const nextEvent = useMemo(() => pickNextEvent(events), [events]);
 
@@ -751,23 +742,59 @@ export default function OrganizerDashboardHome({
     });
   };
 
+  const gettingStartedChecklist =
+    user?.role === 'USER' ? (
+      <GettingStartedChecklist
+        hasEvents={events.length > 0}
+        hasGuests={(planQuota?.usage.guests ?? 0) > 0}
+        firstEventId={events[0]?.id}
+        variant="organizer"
+        hasRooms={(planQuota?.usage.rooms ?? 0) > 0}
+        hasServices={(planQuota?.usage.services ?? 0) > 0}
+        preferServices={(planQuota?.limits.maxRooms ?? 1) <= 0}
+        canSell={canSell}
+      />
+    ) : null;
+
+  /**
+   * Organisateur d'événements (Essentiel et forfaits B2B payants) : board événements en vue d'ensemble,
+   * avec la file « À traiter », le forfait et la licence repris de B2bOrganizerHome.
+   */
+  const isEventOrganizer =
+    hasOrgEvents && !isVendor && !isB2cPlan && !isServiceProvider && !isVenueProvider && !isCatalogProvider;
+  if (isEventOrganizer && activeTab === 'overview') {
+    return (
+      <OrganizerBoard
+        events={events as BoardEvent[]}
+        canCreateEvents={isOwner || Boolean(access?.canCreateEvents)}
+        org={{
+          planName: currentPlanDisplayName,
+          daysUntilExpiry,
+          isOwner,
+          canManageTeam,
+          canViewBilling: isOwner || Boolean(access?.canViewBilling),
+          pendingQuotesCount,
+          pendingBookingsCount,
+          marketPerspective: vendorRolePerspective,
+          ticketing: ticketingSummary,
+          guestsQuota: { used: usage?.guests, max: limits?.maxGuests },
+          eventsQuota: { used: usage?.events, max: limits?.maxEvents },
+        }}
+        checklist={gettingStartedChecklist}
+      />
+    );
+  }
+
   /** Organisateur B2B payant : accueil dédié (les autres onglets restent accessibles via ?tab=). */
   const isB2bOrganizer = isB2bPaidPlan && !isVendor && hasOrgEvents;
   if (isB2bOrganizer && activeTab === 'overview') {
     return (
       <B2bOrganizerHome
-        userName={user?.name}
-        userAvatarUrl={user?.avatarUrl}
-        tenantName={tenant?.name}
         planName={currentPlanDisplayName}
         daysUntilExpiry={daysUntilExpiry}
         isOwner={isOwner}
-        isManager={isManager}
         canManageTeam={canManageTeam}
         canViewBilling={isOwner || Boolean(access?.canViewBilling)}
-        canSell={canSell}
-        showRooms={Boolean(access?.canManageRooms) && (limits?.maxRooms ?? 0) > 0}
-        showProtocol={planFeatures?.protocolQr !== false && Boolean(isOwner || access?.canProtocolAllEvents)}
         events={events}
         pendingQuotesCount={pendingQuotesCount}
         pendingBookingsCount={pendingBookingsCount}
@@ -776,20 +803,7 @@ export default function OrganizerDashboardHome({
         eventsQuota={{ used: usage?.events, max: limits?.maxEvents }}
         guestsQuota={{ used: usage?.guests, max: limits?.maxGuests }}
         managersQuota={{ used: usage?.orgManagers, max: limits?.maxOrgManagers }}
-        checklist={
-          user?.role === 'USER' ? (
-            <GettingStartedChecklist
-              hasEvents={events.length > 0}
-              hasGuests={(planQuota?.usage.guests ?? 0) > 0}
-              firstEventId={events[0]?.id}
-              variant="organizer"
-              hasRooms={(planQuota?.usage.rooms ?? 0) > 0}
-              hasServices={(planQuota?.usage.services ?? 0) > 0}
-              preferServices={(planQuota?.limits.maxRooms ?? 1) <= 0}
-              canSell={canSell}
-            />
-          ) : null
-        }
+        checklist={gettingStartedChecklist}
       />
     );
   }
@@ -819,18 +833,11 @@ export default function OrganizerDashboardHome({
               >
                 {daysUntilExpiry <= 0 ? <AlertTriangle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
               </div>
-              <div>
-                <p className="font-bold">
-                  {daysUntilExpiry <= 0
-                    ? 'Abonnement expiré'
-                    : `Expiration dans ${daysUntilExpiry} jour${daysUntilExpiry > 1 ? 's' : ''}`}
-                </p>
-                <p className="text-xs opacity-90 mt-0.5">
-                  {daysUntilExpiry <= 0
-                    ? 'Renouvelez votre formule pour réactiver vos services et quotas.'
-                    : messaging.adapt('Renouvelez pour maintenir les invitations WhatsApp et le contrôle d’accès.')}
-                </p>
-              </div>
+              <p className="font-bold">
+                {daysUntilExpiry <= 0
+                  ? 'Abonnement expiré'
+                  : `Expiration dans ${daysUntilExpiry} jour${daysUntilExpiry > 1 ? 's' : ''}`}
+              </p>
             </div>
             <Link
               href="/dashboard/billing"
@@ -841,59 +848,6 @@ export default function OrganizerDashboardHome({
             </Link>
           </div>
         )}
-
-        {/* En-tête : salutation, espace et forfait */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <UserAvatar name={user?.name} src={user?.avatarUrl} size="lg" className="w-12 h-12 text-base" />
-            <div className="min-w-0">
-              <p className="text-sm text-muted truncate">
-                {greetingLabel}{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
-              </p>
-              <h1 className="text-2xl sm:text-[1.75rem] font-semibold text-foreground leading-tight truncate">
-                {isManager
-                  ? 'Espace Manager'
-                  : isServiceProvider
-                  ? 'Mes prestations'
-                  : isOrgWithCatalog
-                  ? 'Organisation & vitrine'
-                  : isVenueProvider
-                  ? 'Mes salles'
-                  : isCatalogProvider
-                  ? 'Ma vitrine'
-                  : isVendor
-                  ? 'Prestations & salles'
-                  : isBoth
-                  ? 'Organisation & vitrine'
-                  : 'Mes événements'}
-              </h1>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {tenant?.name && (
-              <span className="text-xs font-medium text-muted truncate max-w-[14rem]">{tenant.name}</span>
-            )}
-            {tenant?.plan && (
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-primary/15 dark:text-primary">
-                Forfait {currentPlanDisplayName}
-              </span>
-            )}
-            {isOwner && daysUntilExpiry != null && (
-              <span
-                className={cn(
-                  'text-xs font-semibold px-2.5 py-1 rounded-full',
-                  daysUntilExpiry <= 0
-                    ? 'bg-danger/10 text-danger'
-                    : daysUntilExpiry <= 15
-                    ? 'bg-amber-100 text-amber-800 dark:bg-festive-accent-soft dark:text-festive-accent'
-                    : 'bg-surface border border-border text-muted'
-                )}
-              >
-                {daysUntilExpiry <= 0 ? 'Expiré' : `Licence · ${daysUntilExpiry} j restants`}
-              </span>
-            )}
-          </div>
-        </div>
 
         <div className={cn('grid gap-4', nextEvent && 'lg:grid-cols-5')}>
           {nextEvent ? (
@@ -914,7 +868,7 @@ export default function OrganizerDashboardHome({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Événement, invité, salle…"
-                  className="w-full min-h-12 pl-11 pr-32 py-3 rounded-2xl border border-border bg-background text-[15px] text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
+                  className="w-full min-h-12 pl-11 pr-32 py-3 rounded-2xl border border-border bg-background text-base text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
                 />
                 <button
                   type="submit"
@@ -926,185 +880,6 @@ export default function OrganizerDashboardHome({
               </div>
             </form>
 
-            {/* Raccourcis directs en 1 clic */}
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="sr-only">Raccourcis</span>
-              {isServiceProvider ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('spaces')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                  >
-                    <Briefcase className="w-3.5 h-3.5" />
-                    Mes prestations
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('quotes')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-festive-accent/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Inbox className="w-3.5 h-3.5 text-festive-accent" />
-                    Devis reçus
-                    {pendingQuotesCount > 0 && (
-                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-festive-accent text-primary-foreground font-bold">
-                        {pendingQuotesCount}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('reservations')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <CalendarCheck className="w-3.5 h-3.5 text-primary" />
-                    Planning réservations
-                    {bookings.length > 0 && (
-                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-primary text-primary-foreground font-bold">
-                        {bookings.length}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('analytics')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <BarChart3 className="w-3.5 h-3.5 text-primary" />
-                    Analyses & CA
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('explore')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Store className="w-3.5 h-3.5 text-primary" />
-                    Explorer catalogue
-                  </button>
-                  <Link
-                    href="/dashboard/marketplace?new=1"
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface hover:bg-primary/10 hover:text-primary border border-dashed border-border text-xs font-medium text-muted transition inline-flex items-center gap-1"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5 text-primary" />
-                    Nouvelle offre
-                  </Link>
-                </>
-              ) : isVenueOrVendorOrCatalog ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('spaces')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                  >
-                    <Building2 className="w-3.5 h-3.5" />
-                    Mes salles
-                  </button>
-                  {canSell ? (
-                    <Link
-                      href="/dashboard/marketplace"
-                      className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
-                    >
-                      <Briefcase className="w-3.5 h-3.5 text-primary" />
-                      Mes offres
-                    </Link>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('reservations')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <CalendarCheck className="w-3.5 h-3.5 text-primary" />
-                    Réservations
-                    {bookings.length > 0 && (
-                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-primary text-primary-foreground font-bold">
-                        {bookings.length}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('quotes')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-festive-accent/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Inbox className="w-3.5 h-3.5 text-festive-accent" />
-                    Devis reçus
-                    {pendingQuotesCount > 0 && (
-                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-festive-accent text-primary-foreground font-bold">
-                        {pendingQuotesCount}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('explore')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Store className="w-3.5 h-3.5 text-primary" />
-                    Explorer catalogue
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('analytics')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <BarChart3 className="w-3.5 h-3.5 text-primary" />
-                    Analyses
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/dashboard/events"
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    Créer un événement
-                  </Link>
-                  <Link
-                    href="/dashboard/tickets"
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
-                  >
-                    <Ticket className="w-3.5 h-3.5 text-primary" />
-                    Billetterie
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('reservations')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <CalendarCheck className="w-3.5 h-3.5 text-primary" />
-                    Réservations
-                  </button>
-                </>
-              )}
-              {isOwner ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('team')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <UserCheck className="w-3.5 h-3.5 text-primary" />
-                    Équipe
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('billing')}
-                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Award className="w-3.5 h-3.5 text-primary" />
-                    Abonnement
-                  </button>
-                </>
-              ) : null}
-              <Link
-                href="/dashboard/catalogue?tab=plan&planView=ai"
-                className="min-h-11 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Simulateur IA
-              </Link>
-            </div>
           </div>
         </div>
       </section>
@@ -1148,7 +923,7 @@ export default function OrganizerDashboardHome({
                     <span
                       title={tab.badge}
                       className={cn(
-                        'ml-0.5 max-w-[7.5rem] truncate rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums',
+                        'ml-0.5 max-w-[7.5rem] truncate rounded-full px-2 py-0.5 text-xs font-bold tabular-nums',
                         active
                           ? 'bg-background/20 text-background'
                           : 'bg-surface-muted text-muted',
@@ -1200,7 +975,7 @@ export default function OrganizerDashboardHome({
                   className="p-4 rounded-2xl border border-primary/30 bg-primary/5 hover:border-primary hover:bg-primary/10 transition group flex flex-col justify-between h-full text-left cursor-pointer shadow-2xs"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-primary uppercase tracking-wider">Prestations</span>
+                    <span className="text-xs font-bold text-primary ">Prestations</span>
                     <div className="p-2 rounded-xl bg-primary/15 text-primary group-hover:scale-110 transition">
                       <Briefcase className="w-4 h-4" />
                     </div>
@@ -1223,7 +998,7 @@ export default function OrganizerDashboardHome({
                   className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-festive-accent/40 hover:bg-festive-accent-soft transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Devis Reçus</span>
+                    <span className="text-xs font-bold text-muted ">Devis Reçus</span>
                     <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent group-hover:scale-110 transition">
                       <Inbox className="w-4 h-4" />
                     </div>
@@ -1246,7 +1021,7 @@ export default function OrganizerDashboardHome({
                   className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Réservations</span>
+                    <span className="text-xs font-bold text-muted ">Réservations</span>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                       <CalendarCheck className="w-4 h-4" />
                     </div>
@@ -1269,7 +1044,7 @@ export default function OrganizerDashboardHome({
                   className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Volume d'affaires</span>
+                    <span className="text-xs font-bold text-muted ">Volume d'affaires</span>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                       <Wallet className="w-4 h-4" />
                     </div>
@@ -1293,7 +1068,7 @@ export default function OrganizerDashboardHome({
                     className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer col-span-2 md:col-span-1"
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="text-xs font-bold text-muted uppercase tracking-wider">Équipe</span>
+                      <span className="text-xs font-bold text-muted ">Équipe</span>
                       <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                         <UserCheck className="w-4 h-4" />
                       </div>
@@ -1315,7 +1090,7 @@ export default function OrganizerDashboardHome({
                     className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1 text-left cursor-pointer"
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="text-xs font-bold text-muted uppercase tracking-wider">Forfait</span>
+                      <span className="text-xs font-bold text-muted ">Forfait</span>
                       <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                         <Award className="w-4 h-4" />
                       </div>
@@ -1341,7 +1116,7 @@ export default function OrganizerDashboardHome({
                   className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Réservations</span>
+                    <span className="text-xs font-bold text-muted ">Réservations</span>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                       <CalendarCheck className="w-4 h-4" />
                     </div>
@@ -1364,7 +1139,7 @@ export default function OrganizerDashboardHome({
                   className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-festive-accent/40 hover:bg-festive-accent-soft transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Devis Reçus</span>
+                    <span className="text-xs font-bold text-muted ">Devis Reçus</span>
                     <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent group-hover:scale-110 transition">
                       <Inbox className="w-4 h-4" />
                     </div>
@@ -1387,7 +1162,7 @@ export default function OrganizerDashboardHome({
                   className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-festive-accent/40 hover:bg-festive-accent-soft transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                    <span className="text-xs font-bold text-muted ">
                       {isVendor ? 'Prestations' : 'Salles & Plans'}
                     </span>
                     <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent group-hover:scale-110 transition">
@@ -1412,7 +1187,7 @@ export default function OrganizerDashboardHome({
                   className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Volume d'affaires</span>
+                    <span className="text-xs font-bold text-muted ">Volume d'affaires</span>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                       <Wallet className="w-4 h-4" />
                     </div>
@@ -1436,7 +1211,7 @@ export default function OrganizerDashboardHome({
                     className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer col-span-2 md:col-span-1"
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="text-xs font-bold text-muted uppercase tracking-wider">Équipe</span>
+                      <span className="text-xs font-bold text-muted ">Équipe</span>
                       <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                         <UserCheck className="w-4 h-4" />
                       </div>
@@ -1455,7 +1230,7 @@ export default function OrganizerDashboardHome({
                     className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1 text-left cursor-pointer"
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="text-xs font-bold text-muted uppercase tracking-wider">Mon Forfait</span>
+                      <span className="text-xs font-bold text-muted ">Mon Forfait</span>
                       <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                         <Award className="w-4 h-4" />
                       </div>
@@ -1477,7 +1252,7 @@ export default function OrganizerDashboardHome({
                   className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Événements</span>
+                    <span className="text-xs font-bold text-muted ">Événements</span>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                       <Calendar className="w-4 h-4" />
                     </div>
@@ -1499,7 +1274,7 @@ export default function OrganizerDashboardHome({
                   className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-festive-accent/40 hover:bg-festive-accent-soft transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Invités</span>
+                    <span className="text-xs font-bold text-muted ">Invités</span>
                     <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent group-hover:scale-110 transition">
                       <Users className="w-4 h-4" />
                     </div>
@@ -1521,7 +1296,7 @@ export default function OrganizerDashboardHome({
                     className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between h-full"
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="text-xs font-bold text-muted uppercase tracking-wider">Équipe</span>
+                      <span className="text-xs font-bold text-muted ">Équipe</span>
                       <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                         <UserCheck className="w-4 h-4" />
                       </div>
@@ -1540,7 +1315,7 @@ export default function OrganizerDashboardHome({
                     className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-festive-accent/40 hover:bg-festive-accent-soft transition group flex flex-col justify-between h-full text-left cursor-pointer"
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                      <span className="text-xs font-bold text-muted ">
                         {isVendor ? 'Prestations' : 'Salles & Plans'}
                       </span>
                       <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent group-hover:scale-110 transition">
@@ -1562,7 +1337,7 @@ export default function OrganizerDashboardHome({
                   className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Devis & Packs</span>
+                    <span className="text-xs font-bold text-muted ">Devis & Packs</span>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                       <Wallet className="w-4 h-4" />
                     </div>
@@ -1582,7 +1357,7 @@ export default function OrganizerDashboardHome({
                   className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1 text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                    <span className="text-xs font-bold text-muted ">
                       {isManager ? 'Factures' : 'Mon Forfait'}
                     </span>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
@@ -1636,7 +1411,7 @@ export default function OrganizerDashboardHome({
                     <h2 className="text-base font-bold text-foreground">
                       Finances & Billetterie
                     </h2>
-                    <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                       Direction
                     </span>
                   </div>
@@ -1668,7 +1443,7 @@ export default function OrganizerDashboardHome({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Recettes Globales</span>
+                    <span className="text-xs font-bold text-muted ">Recettes Globales</span>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary">
                       <Wallet className="w-4 h-4" />
                     </div>
@@ -1685,7 +1460,7 @@ export default function OrganizerDashboardHome({
 
                 <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Ventes Billets</span>
+                    <span className="text-xs font-bold text-muted ">Ventes Billets</span>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary">
                       <Ticket className="w-4 h-4" />
                     </div>
@@ -1702,7 +1477,7 @@ export default function OrganizerDashboardHome({
 
                 <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Dons Solidaires</span>
+                    <span className="text-xs font-bold text-muted ">Dons Solidaires</span>
                     <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
                       <Heart className="w-4 h-4" />
                     </div>
@@ -1719,7 +1494,7 @@ export default function OrganizerDashboardHome({
 
                 <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Émargement Jour J</span>
+                    <span className="text-xs font-bold text-muted ">Émargement Jour J</span>
                     <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent">
                       <ScanLine className="w-4 h-4" />
                     </div>
@@ -1791,11 +1566,11 @@ export default function OrganizerDashboardHome({
                       className="p-3 rounded-2xl border border-border bg-surface hover:border-primary/40 transition group flex items-center gap-3"
                     >
                       <span className="w-12 h-[52px] shrink-0 rounded-xl bg-primary/10 flex flex-col items-center justify-center" aria-hidden>
-                        <span className="text-[11px] font-semibold uppercase text-primary leading-none">{monthLabel}</span>
+                        <span className="text-xs font-semibold uppercase text-primary leading-none">{monthLabel}</span>
                         <span className="font-display text-xl font-semibold text-foreground leading-tight">{dayLabel}</span>
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block font-semibold text-[15px] text-foreground truncate group-hover:text-primary transition">
+                        <span className="block font-semibold text-base text-foreground truncate group-hover:text-primary transition">
                           {event.title}
                         </span>
                         <span className="block text-xs text-muted truncate first-letter:uppercase">
@@ -1810,107 +1585,6 @@ export default function OrganizerDashboardHome({
             )}
           </div>
 
-          {/* Cartes d'accès rapide vers les modules spécialisés */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <button
-              type="button"
-              onClick={() => handleTabChange('guests')}
-              className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 transition text-left flex flex-col justify-between gap-3 group cursor-pointer"
-            >
-              <div className="space-y-1.5">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                  <Users className="w-4 h-4" />
-                </div>
-                <h4 className="font-bold text-sm text-foreground group-hover:text-primary transition">
-                  Invités & Protocole
-                </h4>
-                <p className="text-xs text-muted leading-relaxed">
-                  {messaging.adapt('Faire-part WhatsApp, suivi des réponses et scan smartphone jour J.')}
-                </p>
-              </div>
-              <span className="text-xs font-bold text-primary inline-flex items-center gap-1">
-                <span>Ouvrir l’onglet</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTabChange('spaces')}
-              className="p-4 rounded-2xl border border-border bg-surface hover:border-festive-accent/40 hover:bg-festive-accent-soft transition text-left flex flex-col justify-between gap-3 group cursor-pointer"
-            >
-              <div className="space-y-1.5">
-                <div className="w-8 h-8 rounded-lg bg-festive-accent-soft text-festive-accent flex items-center justify-center">
-                  <Building2 className="w-4 h-4" />
-                </div>
-                <h4 className="font-bold text-sm text-foreground group-hover:text-festive-accent transition">
-                  Salles & Marketplace
-                </h4>
-                <p className="text-xs text-muted leading-relaxed">
-                  Modélisation de plans 2D/3D, simulateur IA et devis.
-                </p>
-              </div>
-              <span className="text-xs font-bold text-festive-accent inline-flex items-center gap-1">
-                <span>Ouvrir l’onglet</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTabChange('billing')}
-              className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 transition text-left flex flex-col justify-between gap-3 group cursor-pointer"
-            >
-              <div className="space-y-1.5">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                  <Award className="w-4 h-4" />
-                </div>
-                <h4 className="font-bold text-sm text-foreground group-hover:text-primary transition">
-                  Abonnement & Quotas
-                </h4>
-                <p className="text-xs text-muted leading-relaxed">
-                  Suivi des jauges, licence, équipe et formules d’upgrade.
-                </p>
-              </div>
-              <span className="text-xs font-bold text-primary inline-flex items-center gap-1">
-                <span>Ouvrir l’onglet</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </span>
-            </button>
-          </div>
-
-          {/* Centre d'assistance & Conseils */}
-          <section className="p-4 sm:p-5 rounded-2xl border border-border bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-festive-accent-soft text-festive-accent flex items-center justify-center shrink-0">
-                <Zap className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-foreground">
-                  {isManager ? 'Besoin d’aide sur votre espace ?' : 'Besoin d’aide ou de conseils ?'}
-                </p>
-                <p className="text-xs text-muted">
-                  {isManager
-                    ? 'Consultez le guide des fonctionnalités manager et de l’équipe.'
-                    : 'Consultez notre guide pratique étape par étape.'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-              <Link
-                href="/dashboard/guide"
-                className="flex-1 sm:flex-none min-h-11 inline-flex items-center justify-center text-center px-3.5 py-2 rounded-xl border border-border hover:bg-surface-muted text-xs font-semibold text-foreground transition"
-              >
-                Guide utilisateur
-              </Link>
-              <Link
-                href={isManager ? '/dashboard/publications' : '/dashboard/catalogue'}
-                className="flex-1 sm:flex-none min-h-11 inline-flex items-center justify-center text-center px-3.5 py-2 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs"
-              >
-                {isManager ? 'Réalisations' : 'Marketplace'}
-              </Link>
-            </div>
-          </section>
         </div>
       )}
 
@@ -1937,7 +1611,7 @@ export default function OrganizerDashboardHome({
                     <h2 className="text-base font-bold text-foreground">
                       Bilan Financier & Billetterie des Événements
                     </h2>
-                    <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                       Direction
                     </span>
                   </div>
@@ -1961,7 +1635,7 @@ export default function OrganizerDashboardHome({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Recettes Globales</span>
+                    <span className="text-xs font-bold text-muted ">Recettes Globales</span>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary">
                       <Wallet className="w-4 h-4" />
                     </div>
@@ -1978,7 +1652,7 @@ export default function OrganizerDashboardHome({
 
                 <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Ventes Billets</span>
+                    <span className="text-xs font-bold text-muted ">Ventes Billets</span>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary">
                       <Ticket className="w-4 h-4" />
                     </div>
@@ -1995,7 +1669,7 @@ export default function OrganizerDashboardHome({
 
                 <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Dons Solidaires</span>
+                    <span className="text-xs font-bold text-muted ">Dons Solidaires</span>
                     <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
                       <Heart className="w-4 h-4" />
                     </div>
@@ -2012,7 +1686,7 @@ export default function OrganizerDashboardHome({
 
                 <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Émargement Jour J</span>
+                    <span className="text-xs font-bold text-muted ">Émargement Jour J</span>
                     <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent">
                       <ScanLine className="w-4 h-4" />
                     </div>
@@ -2180,7 +1854,7 @@ export default function OrganizerDashboardHome({
                   <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
                     <Mail className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                     Faire-part et réponses à l’invitation
                   </span>
                 </div>
@@ -2234,7 +1908,7 @@ export default function OrganizerDashboardHome({
                   <div className="w-10 h-10 rounded-xl bg-festive-accent-soft border border-festive-accent/20 text-festive-accent flex items-center justify-center">
                     <ScanLine className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
                     Accueil Jour J
                   </span>
                 </div>
@@ -2373,7 +2047,7 @@ export default function OrganizerDashboardHome({
                       <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition">
                         <Briefcase className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                         Offres phares
                       </span>
                     </div>
@@ -2428,7 +2102,7 @@ export default function OrganizerDashboardHome({
                       <div className="w-10 h-10 rounded-xl bg-festive-accent-soft text-festive-accent flex items-center justify-center group-hover:scale-110 transition">
                         <Layers className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
                         Location
                       </span>
                     </div>
@@ -2474,7 +2148,7 @@ export default function OrganizerDashboardHome({
                       <div className="w-10 h-10 rounded-xl bg-festive-accent-soft text-festive-accent flex items-center justify-center group-hover:scale-110 transition">
                         <Inbox className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
                         {pendingQuotesCount > 0 ? `${pendingQuotesCount} en attente` : 'Opportunités'}
                       </span>
                     </div>
@@ -2520,7 +2194,7 @@ export default function OrganizerDashboardHome({
                       <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition">
                         <Rss className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                         Vitrine
                       </span>
                     </div>
@@ -2586,7 +2260,7 @@ export default function OrganizerDashboardHome({
                         <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
                           <Briefcase className="w-5 h-5" />
                         </div>
-                        <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
                           Vitrine
                         </span>
                       </div>
@@ -2619,7 +2293,7 @@ export default function OrganizerDashboardHome({
                         <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
                           <Rss className="w-5 h-5" />
                         </div>
-                        <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
                           Réalisations
                         </span>
                       </div>
@@ -2652,7 +2326,7 @@ export default function OrganizerDashboardHome({
                       <div className="w-10 h-10 rounded-xl bg-festive-accent-soft border border-festive-accent/20 text-festive-accent flex items-center justify-center">
                         <Building2 className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
                         Plan 2D/3D
                       </span>
                     </div>
@@ -2692,7 +2366,7 @@ export default function OrganizerDashboardHome({
                       <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
                         <Sparkles className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
                         Simulateur IA
                       </span>
                     </div>
@@ -2759,7 +2433,7 @@ export default function OrganizerDashboardHome({
                       <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
                         <Wallet className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                         Devis & Contrats
                       </span>
                     </div>
@@ -2886,22 +2560,22 @@ export default function OrganizerDashboardHome({
           {/* 4 KPIs clés des réservations */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider">Total Réservations</span>
+              <span className="text-xs font-bold text-muted ">Total Réservations</span>
               <p className="text-2xl font-black text-foreground mt-2">{bookings.length}</p>
               <p className="text-xs text-muted mt-0.5">Dossiers enregistrés</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-primary uppercase tracking-wider">Confirmées / En cours</span>
+              <span className="text-xs font-bold text-primary ">Confirmées / En cours</span>
               <p className="text-2xl font-black text-primary mt-2">{confirmedBookingsCount}</p>
               <p className="text-xs text-muted mt-0.5">Dates garanties</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">En attente</span>
+              <span className="text-xs font-bold text-festive-accent ">En attente</span>
               <p className="text-2xl font-black text-festive-accent mt-2">{pendingBookingsCount}</p>
               <p className="text-xs text-muted mt-0.5">À valider / acompte requis</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-primary uppercase tracking-wider">Volume financier</span>
+              <span className="text-xs font-bold text-primary ">Volume financier</span>
               <p className="text-2xl font-black text-foreground mt-2">
                 {totalBookingsVolumeFc > 0 ? formatFc(totalBookingsVolumeFc) : '0 FC'}
               </p>
@@ -3007,12 +2681,12 @@ export default function OrganizerDashboardHome({
           {/* 4 KPIs Devis */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider">Demandes Reçues</span>
+              <span className="text-xs font-bold text-muted ">Demandes Reçues</span>
               <p className="text-2xl font-black text-foreground mt-2">{inquiries.length}</p>
               <p className="text-xs text-muted mt-0.5">Organisateurs intéressés</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">En Attente de Réponse</span>
+              <span className="text-xs font-bold text-festive-accent ">En Attente de Réponse</span>
               <div className="flex items-center gap-2 mt-2">
                 <p className="text-2xl font-black text-festive-accent">{pendingQuotesCount}</p>
                 {pendingQuotesCount > 0 && (
@@ -3024,12 +2698,12 @@ export default function OrganizerDashboardHome({
               <p className="text-xs text-muted mt-0.5">Réponse rapide recommandée</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-primary uppercase tracking-wider">Devis Acceptés</span>
+              <span className="text-xs font-bold text-primary ">Devis Acceptés</span>
               <p className="text-2xl font-black text-primary mt-2">{acceptedQuotesCount}</p>
               <p className="text-xs text-muted mt-0.5">Accords de principe</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-primary uppercase tracking-wider">Taux d'Acceptation</span>
+              <span className="text-xs font-bold text-primary ">Taux d'Acceptation</span>
               <p className="text-2xl font-black text-primary mt-2">
                 {inquiries.length > 0 ? `${Math.round((acceptedQuotesCount / inquiries.length) * 100)} %` : '—'}
               </p>
@@ -3094,7 +2768,7 @@ export default function OrganizerDashboardHome({
 
           {/* Recherche rapide */}
           <div className="p-4 rounded-2xl border border-border bg-surface/90 space-y-3">
-            <p className="text-xs font-bold text-muted uppercase tracking-wider">Recherche ciblée dans le catalogue</p>
+            <p className="text-xs font-bold text-muted ">Recherche ciblée dans le catalogue</p>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -3282,26 +2956,26 @@ export default function OrganizerDashboardHome({
           {/* 4 KPIs analytiques */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider">Volume Engagé</span>
+              <span className="text-xs font-bold text-muted ">Volume Engagé</span>
               <p className="text-2xl font-black text-foreground mt-2">
                 {totalBookingsVolumeFc > 0 ? formatFc(totalBookingsVolumeFc) : '0 FC'}
               </p>
               <p className="text-xs text-muted mt-0.5">Sur {bookings.length} réservation{bookings.length > 1 ? 's' : ''}</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-primary uppercase tracking-wider">Taux de Conversion</span>
+              <span className="text-xs font-bold text-primary ">Taux de Conversion</span>
               <p className="text-2xl font-black text-primary mt-2">
                 {inquiries.length > 0 ? `${Math.round((confirmedBookingsCount / inquiries.length) * 100)} %` : '—'}
               </p>
               <p className="text-xs text-muted mt-0.5">Devis &rarr; Réservations validées</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-primary uppercase tracking-wider">Demandes Actives</span>
+              <span className="text-xs font-bold text-primary ">Demandes Actives</span>
               <p className="text-2xl font-black text-primary mt-2">{inquiries.length + bookings.length}</p>
               <p className="text-xs text-muted mt-0.5">Intéractions clients cumulées</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">Billetterie directe</span>
+              <span className="text-xs font-bold text-festive-accent ">Billetterie directe</span>
               <p className="text-2xl font-black text-foreground mt-2">
                 {ticketingSummary?.totalRevenueFc ? formatFc(ticketingSummary.totalRevenueFc) : '0 FC'}
               </p>
@@ -3427,7 +3101,7 @@ export default function OrganizerDashboardHome({
                 <h2 className="text-base font-bold text-foreground">
                   Gestion de l’Équipe & Rôles
                 </h2>
-                <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                   {isOwner ? 'Propriétaire' : 'Manager'}
                 </span>
               </div>
@@ -3496,7 +3170,7 @@ export default function OrganizerDashboardHome({
                   {daysUntilExpiry != null && (
                     <span
                       className={cn(
-                        'text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border',
+                        'text-xs font-bold px-2.5 py-1 rounded-md border',
                         daysUntilExpiry <= 0
                           ? 'bg-danger/10 border-danger/30 text-danger'
                           : daysUntilExpiry <= 15
@@ -3584,7 +3258,7 @@ export default function OrganizerDashboardHome({
               {/* Grille adaptative des forfaits selon le type de compte */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                  <span className="text-xs font-bold text-muted">
                     {tenant?.accountKind === 'VENDOR'
                       ? 'Abonnements disponibles pour compte Prestataire / Salles'
                       : tenant?.accountKind === 'CLIENT'
@@ -3607,7 +3281,7 @@ export default function OrganizerDashboardHome({
                     <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan === 'SERVICE' ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-primary/40')}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-primary uppercase tracking-wider">Prestataire</span>
+                          <span className="text-xs font-bold text-primary ">Prestataire</span>
                           {tenant?.plan === 'SERVICE' && (
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
@@ -3632,7 +3306,7 @@ export default function OrganizerDashboardHome({
                     <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan === 'VENUE' ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-festive-accent/40')}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">Salle</span>
+                          <span className="text-xs font-bold text-festive-accent ">Salle</span>
                           {tenant?.plan === 'VENUE' && (
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
@@ -3657,7 +3331,7 @@ export default function OrganizerDashboardHome({
                     <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan === 'CATALOG' ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-primary/40')}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-primary uppercase tracking-wider">Salle & Presta</span>
+                          <span className="text-xs font-bold text-primary ">Salle & Presta</span>
                           {tenant?.plan === 'CATALOG' && (
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
@@ -3691,7 +3365,7 @@ export default function OrganizerDashboardHome({
                     <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', isB2cPlan ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-primary/40')}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-foreground uppercase tracking-wider">Particuliers (B2C)</span>
+                          <span className="text-xs font-bold text-foreground ">Particuliers (B2C)</span>
                           {isB2cPlan && (
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
@@ -3719,7 +3393,7 @@ export default function OrganizerDashboardHome({
                     <div className={cn('p-4 rounded-2xl border-2 bg-surface flex flex-col justify-between transition shadow-xs', (tenant?.plan === 'STANDARD' || tenant?.plan?.startsWith('PREMIUM')) ? 'border-primary ring-2 ring-primary/20' : 'border-primary/40 hover:border-primary')}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-primary uppercase tracking-wider">Business & Agences</span>
+                          <span className="text-xs font-bold text-primary ">Business & Agences</span>
                           {(tenant?.plan === 'STANDARD' || tenant?.plan?.startsWith('PREMIUM')) && (
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
@@ -3746,7 +3420,7 @@ export default function OrganizerDashboardHome({
                     <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan?.startsWith('ENTERPRISE') ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-festive-accent/40')}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">Entreprise & Grandes Envergures</span>
+                          <span className="text-xs font-bold text-festive-accent ">Entreprise & Grandes Envergures</span>
                           {tenant?.plan?.startsWith('ENTERPRISE') && (
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}

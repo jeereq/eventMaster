@@ -18,7 +18,7 @@ import { ZONE_MATERIAL_COLORS } from '@/lib/roomWebGLMaterials';
 import { LANDSCAPE_STYLE_META, poolOutlineSvgPath, type LandscapeStyle, type PoolShape } from '@/lib/roomOutdoorUtils';
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
 import FlowerRenderer from '@/components/FlowerRenderer';
-import { Sparkles, DoorOpen, ShieldAlert } from 'lucide-react';
+import { Sparkles, DoorOpen, ShieldAlert } from '@/components/icons';
 
 type Fixture = RoomLayoutBlueprint['fixtures'][number];
 

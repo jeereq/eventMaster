@@ -10,7 +10,7 @@ import {
   MapPin,
   ShieldCheck,
   Tag,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {

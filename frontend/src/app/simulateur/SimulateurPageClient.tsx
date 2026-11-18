@@ -36,7 +36,7 @@ import {
   QrCode,
   Share2,
   X,
-} from 'lucide-react';
+} from '@/components/icons';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import { cn } from '@/lib/cn';
 
@@ -386,7 +386,7 @@ export default function SimulateurPageClient() {
             >
               <span className="min-w-0 flex flex-col">
                 <b className="text-sm font-semibold text-foreground truncate">{scenario.type}</b>
-                <span className="text-[13px] text-muted tabular-nums">
+                <span className="text-sm text-muted tabular-nums">
                   {scenario.guests} invités · {scenario.city}
                 </span>
               </span>
@@ -407,10 +407,10 @@ export default function SimulateurPageClient() {
         <div className="page-container pt-4 md:pt-8">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="min-w-0 space-y-1">
-              <h1 className="font-display text-2xl md:text-[2.125rem] font-semibold leading-tight tracking-[-0.02em]">
+              <h1 className="font-display text-2xl md:text-4xl font-semibold leading-tight tracking-[-0.02em]">
                 {STUDIO_HEADINGS[activeStudio].title}
               </h1>
-              <p className="text-sm md:text-[15px] text-[#d7f6e9]"><ChannelText text={STUDIO_HEADINGS[activeStudio].text} /></p>
+              <p className="text-sm md:text-base text-[#d7f6e9]"><ChannelText text={STUDIO_HEADINGS[activeStudio].text} /></p>
             </div>
 
             {!allowance.unlimited ? (
@@ -428,7 +428,7 @@ export default function SimulateurPageClient() {
                 <span>
                   <b className="font-semibold">{allowance.totalRemaining}</b> jeton{allowance.totalRemaining > 1 ? 's' : ''}
                 </span>
-                <span className="rounded-full bg-[#fbbf24] px-3 py-1.5 font-semibold text-[#171614]">Recharger</span>
+                <span className="rounded-full bg-white px-3 py-1.5 font-semibold text-[#1f4a33]">Recharger</span>
               </button>
             ) : null}
           </div>
@@ -454,7 +454,7 @@ export default function SimulateurPageClient() {
                   onClick={() => handleSwitchStudio(studio.id)}
                   onKeyDown={(e) => handleTabKeyDown(e, studio.id)}
                   className={cn(
-                    'flex-1 sm:flex-none inline-flex items-center justify-center gap-2.5 min-h-12 px-2 sm:px-5 rounded-t-xl font-semibold text-sm sm:text-[15px] transition-colors cursor-pointer touch-manipulation',
+                    'flex-1 sm:flex-none inline-flex items-center justify-center gap-2.5 min-h-12 px-2 sm:px-5 rounded-t-xl font-semibold text-sm sm:text-base transition-colors cursor-pointer touch-manipulation',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#fbbf24]',
                     selected ? 'bg-background text-foreground' : 'text-[#d7f6e9] hover:bg-white/10 hover:text-white',
                   )}

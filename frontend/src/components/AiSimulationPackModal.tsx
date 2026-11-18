@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { BookmarkPlus, Building2, CalendarPlus, KeyRound, Sparkles, UserPlus } from 'lucide-react';
+import { BookmarkPlus, Building2, CalendarPlus, KeyRound, Sparkles, UserPlus } from '@/components/icons';
 import { Button, Modal } from '@/components/ui';
 import AiTokenBuyButton from '@/components/AiTokenBuyButton';
 import { formatFc } from '@/config/landingPricing';

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Clock, Coins, Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { Clock, Coins, Loader2, Sparkles, Wand2 } from '@/components/icons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   AI_ROOM_PLAN_TOKEN_COST,

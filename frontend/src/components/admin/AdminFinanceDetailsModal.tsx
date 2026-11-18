@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Coins, CreditCard, Eye, Heart, Layers, Mail, Phone, ShieldAlert, Sparkles, User, Zap } from 'lucide-react';
+import { Coins, CreditCard, Eye, Heart, Layers, Mail, Phone, ShieldAlert, Sparkles, User, Zap } from '@/components/icons';
 import { Badge, Button, Modal } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
@@ -112,7 +112,7 @@ function DetailRow({
 function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-xs font-semibold text-muted uppercase tracking-wider">{title}</h3>
+      <h3 className="text-xs font-semibold text-muted ">{title}</h3>
       <div className="rounded-[var(--radius-card)] border border-border bg-surface overflow-hidden">
         {children}
       </div>

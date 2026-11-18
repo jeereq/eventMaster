@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { UserCheck } from 'lucide-react';
+import { UserCheck } from '@/components/icons';
 import { Input } from '@/components/ui';
 
 type ReferralChoice = 'yes' | 'no';

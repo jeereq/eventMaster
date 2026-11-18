@@ -1,10 +1,8 @@
 'use client';
-import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Mail, MessageCircle, MessageSquare, ShieldCheck, Wallet } from 'lucide-react';
-import { FLEXPAY_MOBILE_OPERATORS } from '@/lib/flexPayOperators';
+import { ArrowRight } from '@/components/icons';
 import { usePlanCatalog, type PlanCatalog } from '@/hooks/usePlanCatalog';
 import {
   LANDING_PLANS,
@@ -12,14 +10,6 @@ import {
   resolvePlanMonthlyFc,
   type PlanAudience,
 } from '@/config/landingPricing';
-
-const PAYMENT_METHODS: string[] = [...FLEXPAY_MOBILE_OPERATORS, 'Visa', 'Mastercard'];
-
-const INVITATION_CHANNELS = [
-  { id: 'WHATSAPP' as const, label: 'WhatsApp', icon: MessageCircle },
-  { id: 'SMS' as const, label: 'SMS', icon: MessageSquare },
-  { id: 'EMAIL' as const, label: 'E-mail', icon: Mail },
-];
 
 /**
  * Prix d’entrée d’une famille de forfaits : le moins cher des forfaits payants.
@@ -46,12 +36,10 @@ function entryPrice(audiences: PlanAudience[], dbPlans: PlanCatalog | null): num
 }
 
 /**
- * Bandeau de confiance de l’accueil : prix d’entrée par profil, moyens de paiement
- * et canaux d’invitation. Répond aux deux questions posées avant l’inscription :
- * « combien ça coûte ? » et « comment je paie / j’invite ? ».
+ * Forfaits de l’accueil : prix d’entrée par profil, en francs congolais.
+ * Les moyens de paiement et canaux d’envoi sont dans LandingWhyCards.
  */
 export default function LandingTrustPricingBand() {
-  const messaging = useMessagingChannels();
   const { plans: dbPlans, loading } = usePlanCatalog();
 
   const offers = useMemo(() => {
@@ -84,80 +72,39 @@ export default function LandingTrustPricingBand() {
     <section
       id="tarifs"
       aria-labelledby="landing-trust-title"
-      className="em-landing-defer scroll-mt-16 md:scroll-mt-24 py-8 sm:py-14 border-t border-border bg-surface/80 dark:bg-background/80"
+      className="em-landing-defer scroll-mt-16 md:scroll-mt-24 py-14 sm:py-20 bg-surface border-y border-border"
     >
-      <div className="page-container grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 sm:p-6 space-y-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="space-y-1">
-              <h2 id="landing-trust-title" className="em-landing-heading text-xl sm:text-2xl text-foreground">
-                Des forfaits clairs, en francs congolais
-              </h2>
-              <p className="text-sm text-muted">Commencez gratuitement, passez au forfait adapté quand vous êtes prêt.</p>
-            </div>
-            <Link
-              href="/tarifs"
-              className="inline-flex items-center gap-1.5 min-h-11 text-sm font-semibold text-primary hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      <div className="page-container space-y-6 sm:space-y-8">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 id="landing-trust-title" data-reveal className="em-landing-heading text-3xl sm:text-4xl text-foreground max-w-[20ch]">
+            <span className="font-normal">Des forfaits clairs,</span> en francs congolais
+          </h2>
+          <Link
+            href="/tarifs"
+            className="inline-flex items-center gap-1.5 min-h-11 text-sm font-semibold text-primary hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            Comparer les forfaits
+            <ArrowRight className="w-4 h-4" aria-hidden />
+          </Link>
+        </div>
+        <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" role="list">
+          {offers.map((offer, index) => (
+            <li
+              key={offer.label}
+              data-reveal
+              style={{ '--i': index } as React.CSSProperties}
+              className="rounded-[1.5rem] border border-border bg-background p-5 sm:p-6 space-y-1.5"
             >
-              Comparer les forfaits
-              <ArrowRight className="w-4 h-4" aria-hidden />
-            </Link>
-          </div>
-          <ul className="grid grid-cols-2 lg:grid-cols-4 gap-2.5" role="list">
-            {offers.map((offer) => (
-              <li
-                key={offer.label}
-                className="rounded-[var(--radius-card)] border border-border bg-background p-3.5 space-y-1"
-              >
-                <p className="text-xs font-semibold text-primary">{offer.label}</p>
-                {offer.price == null ? (
-                  <span className="block h-5 w-24 rounded bg-border/60 animate-pulse" aria-label="Chargement du prix" />
-                ) : (
-                  <p className="text-base font-bold text-foreground tabular-nums leading-tight">{offer.price}</p>
-                )}
-                <p className="text-xs text-muted">{offer.note}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 sm:p-6 space-y-5">
-          <div className="space-y-2.5">
-            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Wallet className="w-4 h-4 text-primary shrink-0" aria-hidden />
-              Paiement sécurisé via FlexPay
-            </p>
-            <ul className="flex flex-wrap gap-2" role="list">
-              {PAYMENT_METHODS.map((method) => (
-                <li
-                  key={method}
-                  className="inline-flex items-center min-h-8 px-2.5 rounded-full border border-border bg-background text-xs font-semibold text-foreground"
-                >
-                  {method}
-                </li>
-              ))}
-            </ul>
-          </div>
-          {messaging.any && (
-          <div className="space-y-2.5">
-            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <ShieldCheck className="w-4 h-4 text-primary shrink-0" aria-hidden />
-              Invitations et billets envoyés par
-            </p>
-            <ul className="flex flex-wrap gap-2" role="list">
-              {INVITATION_CHANNELS.filter(({ id }) => messaging.has(id)).map(({ label, icon: Icon }) => (
-                <li
-                  key={label}
-                  className="inline-flex items-center gap-1.5 min-h-8 px-2.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary"
-                >
-                  <Icon className="w-3.5 h-3.5" aria-hidden />
-                  {label}
-                </li>
-              ))}
-            </ul>
-          </div>
-          )}
-        </div>
+              <p className="text-sm font-semibold text-primary">{offer.label}</p>
+              {offer.price == null ? (
+                <span className="block h-7 w-28 rounded bg-border/60 animate-pulse" aria-label="Chargement du prix" />
+              ) : (
+                <p className="font-display text-2xl font-semibold tabular-nums leading-tight text-foreground">{offer.price}</p>
+              )}
+              <p className="text-sm text-muted">{offer.note}</p>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

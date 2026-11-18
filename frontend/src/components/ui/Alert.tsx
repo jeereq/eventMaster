@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/cn';
-import { AlertCircle, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, AlertTriangle } from '@/components/icons';
 
 const variants = {
   error: {

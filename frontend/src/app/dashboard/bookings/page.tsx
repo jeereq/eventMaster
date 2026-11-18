@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Breadcrumbs, Alert, Button, EmptyState, Card } from '@/components/ui';
+import { PageHeader, Alert, Button, EmptyState, Card } from '@/components/ui';
 import {
   dashboardServiceHref,
   dashboardVenueHref,
@@ -21,13 +21,12 @@ import {
   Bookmark,
   Building2,
   CalendarCheck,
-  FileText,
   Heart,
   Inbox,
   Loader2,
   Store,
   Trash2,
-} from 'lucide-react';
+} from '@/components/icons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { depositPercent } from '@/lib/platformRates';
 import { useListingFavorites } from '@/lib/listingFavorites';
@@ -207,60 +206,13 @@ function OrganizerDemandesPage() {
 
   const showEventFilter = (tab === 'quotes' || tab === 'bookings') && eventOptions.length > 0;
 
-  const pageTitle =
-    role === 'vendor'
-      ? tab === 'bookings'
-        ? 'Réservations reçues'
-        : 'Devis reçus'
-      : tab === 'bookings'
-        ? 'Réservations'
-        : tab === 'quotes'
-          ? 'Devis'
-          : tab === 'packs'
-            ? 'Mes packs'
-            : tab === 'favorites'
-              ? 'Favoris'
-              : 'Devis & réservations';
-
-  const pageDescription =
-    role === 'vendor'
-      ? tab === 'bookings'
-        ? 'Dates demandées pour vos fiches.'
-        : 'Demandes reçues.'
-      : isProtocol
-        ? tab === 'bookings'
-          ? 'Dates des événements accompagnés.'
-          : 'Devis du protocole.'
-        : tab === 'bookings'
-          ? 'Dates et acomptes.'
-          : tab === 'quotes'
-            ? 'Demandes et devis.'
-            : tab === 'packs'
-              ? 'Sélections enregistrées.'
-              : tab === 'favorites'
-                ? 'Fiches enregistrées.'
-                : 'Devis et réservations.';
-
   return (
     <div className="space-y-5 w-full">
       <PageHeader
-        title={pageTitle}
-        description={pageDescription}
-        breadcrumbs={
-          <Breadcrumbs
-            items={[
-              {
-                label: isProtocol ? 'Protocole' : isClient ? 'Marketplace' : 'Accueil',
-                href: isProtocol ? '/dashboard' : isClient ? '/dashboard/catalogue' : '/dashboard',
-              },
-              { label: 'Devis & réservations' },
-            ]}
-          />
-        }
         action={
           !isProtocol ? (
             <Link href="/dashboard/catalogue" className="inline-flex">
-              <Button size="sm" leftIcon={<Store className="w-4 h-4" />}>
+              <Button size="sm" variant="secondary" leftIcon={<Store className="w-4 h-4" />}>
                 Explorer
               </Button>
             </Link>
@@ -283,12 +235,7 @@ function OrganizerDemandesPage() {
               )}
             >
               <Store className="w-4 h-4 text-primary" />
-              <span>Demandes reçues (Professionnel / Salle)</span>
-              {role === 'vendor' && pendingQuotes > 0 ? (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-600 text-white shadow-2xs">
-                  {pendingQuotes}
-                </span>
-              ) : null}
+              <span>Reçues</span>
             </button>
             <button
               type="button"
@@ -301,17 +248,10 @@ function OrganizerDemandesPage() {
               )}
             >
               <Building2 className="w-4 h-4 text-muted-foreground" />
-              <span>Mes demandes (Organisateur)</span>
+              <span>Envoyées</span>
             </button>
           </div>
 
-          <div className="text-[11px] text-muted px-2">
-            {role === 'vendor' ? (
-              <span>Vue dédiée aux prestataires et gestionnaires de salles</span>
-            ) : (
-              <span>Vue dédiée aux réservations que vous avez initiées</span>
-            )}
-          </div>
         </div>
       )}
 
@@ -326,14 +266,14 @@ function OrganizerDemandesPage() {
           {[
             {
               id: 'quotes' as const,
-              label: role === 'vendor' ? 'Devis reçus' : 'Devis',
-              count: pendingQuotes > 0 ? `${pendingQuotes} en attente` : visibleInquiries.length,
+              label: 'Devis',
+              count: pendingQuotes > 0 ? pendingQuotes : null,
               icon: Inbox,
             },
             {
               id: 'bookings' as const,
-              label: role === 'vendor' ? 'Réservations reçues' : 'Réservations',
-              count: openBookings > 0 ? `${openBookings} ouvertes` : visibleBookings.length,
+              label: 'Réservations',
+              count: openBookings > 0 ? openBookings : null,
               icon: CalendarCheck,
             },
             ...(role === 'organizer' && !isProtocol
@@ -358,14 +298,16 @@ function OrganizerDemandesPage() {
             >
               <item.icon className="w-4 h-4 shrink-0" />
               <span>{item.label}</span>
-              <span
-                className={cn(
-                  'ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold',
-                  tab === item.id ? 'bg-primary/10 text-primary' : 'bg-surface text-muted',
-                )}
-              >
-                {item.count}
-              </span>
+              {item.count ? (
+                <span
+                  className={cn(
+                    'ml-1 px-1.5 py-0.5 rounded-md text-xs font-bold tabular-nums',
+                    tab === item.id ? 'bg-primary/10 text-primary' : 'bg-surface text-muted',
+                  )}
+                >
+                  {item.count}
+                </span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -409,7 +351,7 @@ function OrganizerDemandesPage() {
         />
       ) : tab === 'packs' ? (
         packs.length === 0 ? (
-          <EmptyState
+          <EmptyState illustration="favorites"
             icon={<Bookmark className="w-5 h-5" />}
             title="Aucun pack enregistré"
             description="Enregistrez une sélection depuis le catalogue."
@@ -424,7 +366,7 @@ function OrganizerDemandesPage() {
             {packs.map((pack) => (
               <li key={pack.id}>
                 <Card interactive className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                  <p className="text-xs font-semibold text-muted">
                     {eventTypeLabel(pack.eventType)}
                     {pack.city ? ` · ${pack.city}` : ''}
                   </p>
@@ -445,7 +387,7 @@ function OrganizerDemandesPage() {
           </ul>
         )
       ) : favorites.items.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="favorites"
           icon={<Heart className="w-5 h-5" />}
           title="Aucun favori"
           description="Enregistrez une fiche depuis le marketplace."
@@ -486,7 +428,7 @@ function OrganizerDemandesPage() {
                     </div>
                     <div className="min-w-0">
                       <p className={cn(
-                        'text-[10px] font-semibold uppercase tracking-wider',
+                        'text-xs font-semibold ',
                         item.kind === 'venue'
                           ? 'text-primary'
                           : isServiceRentalCategory(item.category)
@@ -496,7 +438,7 @@ function OrganizerDemandesPage() {
                         {item.kind === 'venue' ? 'Salle' : item.categoryLabel || (isServiceRentalCategory(item.category) ? 'Matériel' : 'Prestataire')}
                       </p>
                       <p className="text-sm font-semibold truncate">{item.title}</p>
-                      <p className="text-[11px] text-muted truncate">
+                      <p className="text-xs text-muted truncate">
                         {[item.orgName, item.location, item.priceFromFc != null ? formatFc(item.priceFromFc) : 'Sur devis'].filter(Boolean).join(' · ')}
                       </p>
                     </div>
@@ -516,14 +458,6 @@ function OrganizerDemandesPage() {
         </ul>
       )}
 
-      {!loading && (tab === 'quotes' || tab === 'bookings') && !isProtocol ? (
-        <p className="text-[11px] text-muted flex items-center gap-1.5">
-          {tab === 'quotes' ? <FileText className="w-3.5 h-3.5" /> : <CalendarCheck className="w-3.5 h-3.5" />}
-          {role === 'vendor'
-            ? 'Conseil : répondez rapidement aux devis pour maximiser vos réservations confirmées.'
-            : 'Astuce : sélectionnez une période sur la fiche salle ou prestataire, puis envoyez le devis ou la réservation.'}
-        </p>
-      ) : null}
     </div>
   );
 }

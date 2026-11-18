@@ -4,10 +4,10 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Breadcrumbs, Alert, Button } from '@/components/ui';
+import { PageHeader, Alert, Button } from '@/components/ui';
 import { canPublishVenueCatalog } from '@/lib/planAccess';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
-import { CalendarCheck } from 'lucide-react';
+import { CalendarCheck } from '@/components/icons';
 import RoomsManagement from '../RoomsManagement';
 
 export default function DashboardRoomsPage() {
@@ -36,20 +36,6 @@ export default function DashboardRoomsPage() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title="Salles"
-        description={
-          catalogPublish
-            ? 'Plans 2D / 3D, équipe, publication.'
-            : 'Plans 2D / 3D et équipe. Sans publication.'
-        }
-        breadcrumbs={
-          <Breadcrumbs
-            items={[
-              { label: 'Accueil', href: '/dashboard' },
-              { label: 'Salles' },
-            ]}
-          />
-        }
         action={
           catalogPublish ? (
             <Link href="/dashboard/bookings?role=vendor" className="inline-flex">

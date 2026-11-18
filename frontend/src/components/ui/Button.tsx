@@ -3,13 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/cn';
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from '@/components/icons';
 
 const variants = {
   primary:
     'bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover focus-visible:ring-primary',
   secondary:
-    'bg-surface text-foreground border border-border hover:bg-card-hover focus-visible:ring-primary/30',
+    'bg-surface text-foreground border border-border/80 shadow-[0_1px_2px_rgba(16,24,40,0.05)] hover:bg-card-hover focus-visible:ring-primary/30',
   ghost:
     'bg-transparent text-muted hover:bg-surface-muted hover:text-foreground focus-visible:ring-primary/30',
   danger:
@@ -19,9 +19,9 @@ const variants = {
 } as const;
 
 const sizes = {
-  sm: 'min-h-[44px] px-3 py-1.5 text-xs gap-1.5 rounded-[var(--radius-button)]',
-  md: 'min-h-[44px] px-3.5 py-2 text-sm gap-2 rounded-[var(--radius-button)]',
-  lg: 'min-h-[48px] px-5 py-2.5 text-[15px] gap-2 rounded-[var(--radius-button)]',
+  sm: 'min-h-[44px] px-4 py-1.5 text-xs gap-1.5 rounded-full',
+  md: 'min-h-[44px] px-5 py-2 text-sm gap-2 rounded-full',
+  lg: 'min-h-[48px] px-6 py-2.5 text-base gap-2 rounded-full',
 } as const;
 
 export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'href'> {

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import UserGuideView from '@/components/guide/UserGuideView';
 import GuestPortalShell from '@/components/GuestPortalShell';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from '@/components/icons';
 import { fetchPublicSiteSnapshot } from '@/lib/publicSiteServer';
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -29,8 +29,8 @@ export function Card({
   return (
     <div
       className={cn(
-        'bg-surface border border-border rounded-[var(--radius-card)]',
-        elevated ? 'shadow-sm' : 'shadow-none',
+        'bg-surface border border-border/70 rounded-[var(--radius-card)]',
+        elevated ? 'shadow-[0_10px_28px_-14px_rgba(16,24,40,0.3)]' : 'shadow-[var(--shadow-soft)]',
         (hover || interactive) &&
           'em-soft-hover hover:bg-card-hover hover:border-border-subtle',
         paddingMap[padding],
@@ -56,7 +56,7 @@ export function CardHeader({
   return (
     <div className={cn('flex items-start justify-between gap-4 mb-4', className)}>
       <div className="min-w-0 space-y-1">
-        <h3 className="em-dash-title text-[17px] font-semibold text-foreground">{title}</h3>
+        <h3 className="em-dash-title text-lg font-semibold text-foreground">{title}</h3>
         {description && (
           <p className="text-sm text-muted leading-relaxed">{description}</p>
         )}

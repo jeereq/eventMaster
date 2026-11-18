@@ -3,7 +3,7 @@ import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Circle, ChevronRight, Sparkles, X } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronRight, Sparkles, X } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 import { GETTING_STARTED_CHANGED_EVENT, GETTING_STARTED_STORAGE_KEY } from '@/lib/firstLoginTour';
@@ -59,7 +59,6 @@ type MarkKey = 'guestsDone' | 'inviteDone' | 'templateDone' | 'guideDone';
 type ChecklistStep = {
   id: string;
   title: string;
-  description: string;
   href: string;
   done: boolean;
   markOnClick?: MarkKey;
@@ -103,17 +102,8 @@ export default function GettingStartedChecklist({
     if (variant === 'client') {
       return [
         {
-          id: 'guide',
-          title: 'Découvrir la plateforme',
-          description: '1 minute pour découvrir les lieux, les prestataires et vos billets.',
-          href: '/dashboard/guide?view=tour&start=1',
-          done: Boolean(flow.guideDone),
-          markOnClick: 'guideDone' as const,
-        },
-        {
           id: 'explore',
           title: 'Explorer les lieux et prestataires',
-          description: 'Parcourez les offres, découvrez les photos et notez vos favoris.',
           href: '/dashboard/catalogue',
           done: Boolean(flow.templateDone),
           markOnClick: 'templateDone' as const,
@@ -121,7 +111,6 @@ export default function GettingStartedChecklist({
         {
           id: 'quote',
           title: 'Demander un devis ou composer un pack',
-          description: 'Contactez un professionnel ou assemblez votre formule idéale.',
           href: '/dashboard/bookings',
           done: Boolean(flow.inviteDone),
           markOnClick: 'inviteDone' as const,
@@ -132,24 +121,14 @@ export default function GettingStartedChecklist({
       const startWithService = preferServices || (hasServices && !hasRooms);
       return [
         {
-          id: 'guide',
-          title: 'Découvrir votre espace pro',
-          description: '1 minute pour voir comment gérer vos fiches et réservations.',
-          href: '/dashboard/guide?view=tour&start=1',
-          done: Boolean(flow.guideDone),
-          markOnClick: 'guideDone' as const,
-        },
-        {
           id: 'offer',
           title: startWithService ? 'Publier votre première prestation' : 'Publier votre première salle',
-          description: 'Ajoutez vos belles photos, votre localisation et vos tarifs.',
           href: startWithService ? '/dashboard/marketplace' : '/dashboard/rooms',
           done: hasRooms || hasServices,
         },
         {
           id: 'billing',
           title: 'Choisir votre formule pro',
-          description: 'Activez votre vitrine et recevez directement des demandes de clients.',
           href: '/dashboard/billing',
           done: Boolean(flow.templateDone),
           markOnClick: 'templateDone' as const,
@@ -166,14 +145,12 @@ export default function GettingStartedChecklist({
       {
         id: 'event',
         title: 'Créer votre événement',
-        description: 'Donnez un nom, une date et un lieu à votre célébration.',
         href: '/dashboard/events?create=1',
         done: hasEvents,
       },
       {
         id: 'guests',
         title: 'Ajouter vos invités',
-        description: 'Importez vos contacts et organisez facilement le plan de table.',
         href: guestsHref,
         done: (hasGuests || Boolean(flow.guestsDone)) && hasEvents,
         markOnClick: 'guestsDone' as const,
@@ -182,7 +159,6 @@ export default function GettingStartedChecklist({
       {
         id: 'invite',
         title: messaging.adapt('Envoyer vos invitations WhatsApp'),
-        description: 'Partagez vos faire-part avec confirmation de présence en ligne.',
         href: inviteHref,
         done: (hasInvitations || Boolean(flow.inviteDone)) && hasEvents,
         markOnClick: 'inviteDone' as const,
@@ -193,22 +169,13 @@ export default function GettingStartedChecklist({
             {
               id: 'offer',
               title: 'Publier une offre marketplace',
-              description: 'Mettez en ligne une salle ou une prestation pour recevoir des devis.',
               href: '/dashboard/marketplace',
               done: hasRooms || hasServices,
             },
           ]
         : []),
-      {
-        id: canSell ? 'guide' : 'guide',
-        title: 'Préparer l’accueil du jour J',
-        description: 'Scannez les pass QR de vos invités en quelques secondes à l’entrée.',
-        href: '/dashboard/guide?view=tour&start=1',
-        done: Boolean(flow.guideDone),
-        markOnClick: 'guideDone' as const,
-      },
     ];
-  }, [variant, hasRooms, hasServices, preferServices, canSell, hasEvents, hasGuests, hasInvitations, firstEventId, flow.guestsDone, flow.inviteDone, flow.guideDone, flow.templateDone, messaging]);
+  }, [variant, hasRooms, hasServices, preferServices, canSell, hasEvents, hasGuests, hasInvitations, firstEventId, flow.guestsDone, flow.inviteDone, flow.templateDone, messaging]);
 
   const doneCount = steps.filter((s) => s.done).length;
   const allDone = doneCount === steps.length;
@@ -263,21 +230,8 @@ export default function GettingStartedChecklist({
         </button>
       </div>
 
-      <div
-        className="h-1.5 rounded-full bg-surface-muted mb-5 overflow-hidden"
-        role="progressbar"
-        aria-valuenow={doneCount}
-        aria-valuemin={0}
-        aria-valuemax={steps.length}
-      >
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-300"
-          style={{ width: `${(doneCount / steps.length) * 100}%` }}
-        />
-      </div>
-
       <ol className="space-y-1">
-        {steps.map((step, index) => {
+        {steps.map((step) => {
           const content = (
             <span className="flex items-start gap-3 min-w-0 flex-1">
               <span className="mt-0.5 shrink-0">
@@ -287,19 +241,13 @@ export default function GettingStartedChecklist({
                   <Circle className="w-5 h-5 text-muted" />
                 )}
               </span>
-              <span className="min-w-0">
-                <span className="flex items-center gap-2">
-                  <span className="text-[10px] font-semibold text-muted tabular-nums">{index + 1}</span>
-                  <span
-                    className={cn(
-                      'text-sm font-medium tracking-tight',
-                      step.done ? 'text-muted line-through' : 'text-foreground',
-                    )}
-                  >
-                    {step.title}
-                  </span>
-                </span>
-                <span className="block text-xs text-muted mt-0.5">{step.description}</span>
+              <span
+                className={cn(
+                  'min-w-0 text-sm font-medium tracking-tight',
+                  step.done ? 'text-muted line-through' : 'text-foreground',
+                )}
+              >
+                {step.title}
               </span>
             </span>
           );
@@ -352,32 +300,6 @@ export default function GettingStartedChecklist({
         })}
       </ol>
 
-      {nextStep && !nextStep.disabled && (
-        <div className="mt-4 pt-4 border-t border-border">
-          {nextStep.id === 'event' && onCreateEvent ? (
-            <button
-              type="button"
-              onClick={() => {
-                onStepClick(nextStep.markOnClick);
-                onCreateEvent();
-              }}
-              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground text-sm font-medium transition"
-            >
-              Continuer : {nextStep.title}
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <Link
-              href={nextStep.href}
-              onClick={() => onStepClick(nextStep.markOnClick)}
-              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground text-sm font-medium transition"
-            >
-              Continuer : {nextStep.title}
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          )}
-        </div>
-      )}
     </section>
   );
 }

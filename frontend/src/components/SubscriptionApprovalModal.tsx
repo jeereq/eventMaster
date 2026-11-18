@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { Percent, UserCheck, Loader2, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
+import { Percent, UserCheck, Loader2, CheckCircle2, AlertCircle, ArrowRight } from '@/components/icons';
 import { ANNUAL_DISCOUNT_PERCENT, getPlanBaseAmountFc, annualPeriodCountForPlan, annualPromoPayableFromPeriod, invoiceCatalogLabel, isAnnualDurationDays } from '@/config/landingPricing';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
@@ -286,7 +286,7 @@ export default function SubscriptionApprovalModal({
           </div>
 
           <div className="space-y-3">
-            <label className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
+            <label className="text-xs font-bold text-muted flex items-center gap-1.5">
               <Percent className="w-3.5 h-3.5" />
               Réduction spéciale (optionnelle)
             </label>

@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   Wand2,
   Clock,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -214,7 +214,7 @@ export default function LandingVisualBanner() {
 
                   {/* Badge flottant en haut */}
                   <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                    <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs font-bold inline-flex items-center gap-1 shadow-sm">
+                    <span className="px-2.5 py-1 rounded-full bg-black/60 border border-white/20 text-white text-xs font-bold inline-flex items-center gap-1 shadow-sm">
                       <Icon className="w-3.5 h-3.5 text-festive-on-stage" />
                       {item.badge}
                     </span>
@@ -222,7 +222,7 @@ export default function LandingVisualBanner() {
 
                   {/* Titre et localisation incrustés en bas de l'image */}
                   <div className="absolute bottom-3 left-3 right-3 text-white">
-                    <span className="hidden sm:block text-xs font-bold uppercase tracking-wider text-festive-on-stage">
+                    <span className="hidden sm:block text-xs font-bold text-festive-on-stage">
                       {item.category}
                     </span>
                     <h3 className="text-base font-bold text-white drop-shadow-sm line-clamp-1">

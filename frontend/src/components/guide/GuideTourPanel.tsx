@@ -2,7 +2,7 @@
 import { ChannelText } from '@/components/ChannelText';
 
 import React, { useMemo } from 'react';
-import { Play, RotateCcw, ListOrdered, LayoutGrid } from 'lucide-react';
+import { Play, RotateCcw, ListOrdered, LayoutGrid } from '@/components/icons';
 import { useTour } from '@/context/TourContext';
 import { useAuth } from '@/context/AuthContext';
 import { getProductTour } from '@/config/productTours';
@@ -51,15 +51,7 @@ export default function GuideTourPanel({ guideId }: GuideTourPanelProps) {
     <div className="space-y-5">
       <div className="p-5 sm:p-6 rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 space-y-4">
         <div className="space-y-1.5">
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-            <Play className="w-3.5 h-3.5" />
-            Visite interactive
-          </span>
           <h2 className="text-lg font-semibold text-foreground">{heading}</h2>
-          <p className="text-sm text-muted leading-relaxed max-w-2xl">
-            Survolez votre menu : chaque étape met en surbrillance un onglet et explique son rôle.
-            Relancez la visite à tout moment.
-          </p>
         </div>
         <Button
           onClick={() => startTour(guideId, access, tourOpts)}
@@ -76,7 +68,7 @@ export default function GuideTourPanel({ guideId }: GuideTourPanelProps) {
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <ListOrdered className="w-4 h-4 text-primary" />
           Étapes du parcours
-          <span className="text-[10px] font-medium text-muted bg-surface-muted px-1.5 py-0.5 rounded-md">
+          <span className="text-xs font-medium text-muted bg-surface-muted px-1.5 py-0.5 rounded-md">
             {tabSteps.length}
           </span>
         </h3>
@@ -86,7 +78,7 @@ export default function GuideTourPanel({ guideId }: GuideTourPanelProps) {
               key={step.id}
               className="flex gap-3 rounded-[var(--radius-button)] border border-border bg-background p-3 text-sm"
             >
-              <span className="flex-shrink-0 w-6 h-6 rounded-md bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center">
+              <span className="flex-shrink-0 w-6 h-6 rounded-md bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
                 {i + 1}
               </span>
               <div className="min-w-0 space-y-1">

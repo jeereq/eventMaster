@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { CreditCard, Smartphone } from 'lucide-react';
+import { CreditCard, Smartphone } from '@/components/icons';
 import { Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -195,7 +195,6 @@ export default function PaymentAccountPicker({
             value={phone}
             onChange={(event) => onPhoneChange(event.target.value)}
             placeholder="Ex. 24389XXXXXXX ou 089XXXXXXX"
-            leftIcon={<Smartphone className="w-4 h-4" />}
             hint={
               currency === 'USD'
                 ? 'Le montant est prélevé en dollars sur votre Mobile Money.'

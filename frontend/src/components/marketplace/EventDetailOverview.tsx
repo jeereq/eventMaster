@@ -15,7 +15,7 @@ import {
   Layers,
   ChevronDown,
   Sparkles,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Badge, Button } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
@@ -158,7 +158,7 @@ export default function EventDetailOverview({
               <Calendar className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Date & Horaire</span>
+              <span className="text-xs font-bold text-muted">Date & Horaire</span>
               <p className="text-sm sm:text-base font-bold text-foreground capitalize mt-0.5 leading-snug">
                 {fullDateLabel}
               </p>
@@ -228,7 +228,7 @@ export default function EventDetailOverview({
               <MapPin className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Lieu & Accès</span>
+              <span className="text-xs font-bold text-muted">Lieu & Accès</span>
               <p className="text-sm sm:text-base font-bold text-foreground mt-0.5 leading-snug line-clamp-2">
                 {event.location || 'Lieu communiqué aux inscrits'}
               </p>
@@ -270,7 +270,7 @@ export default function EventDetailOverview({
               <Ticket className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Billetterie & Entrées</span>
+              <span className="text-xs font-bold text-muted">Billetterie & Entrées</span>
               <p className="text-sm sm:text-base font-bold text-foreground mt-0.5">
                 {event.soldOut
                   ? 'Événement Complet'
@@ -303,7 +303,7 @@ export default function EventDetailOverview({
           </div>
 
           <div className="pt-1 border-t border-border/70 flex items-center justify-between">
-            <span className="text-[11px] text-muted">Confirmation :</span>
+            <span className="text-xs text-muted">Confirmation :</span>
             <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Réponse instantanée
@@ -318,7 +318,7 @@ export default function EventDetailOverview({
               <Building2 className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Organisé par</span>
+              <span className="text-xs font-bold text-muted">Organisé par</span>
               <p className="text-sm sm:text-base font-bold text-foreground mt-0.5 truncate">
                 {event.orgName || 'Organisation vérifiée'}
               </p>
@@ -329,7 +329,7 @@ export default function EventDetailOverview({
           </div>
 
           <div className="pt-1 border-t border-border/70 flex items-center justify-between">
-            <span className="text-[11px] text-muted">Garantie :</span>
+            <span className="text-xs text-muted">Garantie :</span>
             <span className="text-xs font-medium text-primary flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5" />
               Billet certifié avec QR Pass
@@ -348,7 +348,7 @@ export default function EventDetailOverview({
                   <Heart className="w-4 h-4 fill-rose-500/30" />
                 </span>
                 <h2 className="text-base font-bold text-foreground">Collecte de dons solidaires</h2>
-                <Badge variant="danger" className="text-[10px]">Action solidaire</Badge>
+                <Badge variant="danger" className="text-xs">Action solidaire</Badge>
               </div>
               <p className="text-xs sm:text-sm text-muted leading-relaxed pl-10">
                 {donations.cause || 'Votre contribution soutient directement les initiatives et projets de cet événement.'}
@@ -392,7 +392,7 @@ export default function EventDetailOverview({
                   style={{ width: `${Math.max(4, donationProgress)}%` }}
                 />
               </div>
-              <div className="flex items-center justify-between text-[11px] text-muted">
+              <div className="flex items-center justify-between text-xs text-muted">
                 <span>{donations.donorsCount || 0} donateur{(donations.donorsCount || 0) > 1 ? 's' : ''} mobilisé{(donations.donorsCount || 0) > 1 ? 's' : ''}</span>
                 <span>Montant minimum d’un don : {formatFc(donations.minAmountFc || 1000)}</span>
               </div>
@@ -446,7 +446,7 @@ export default function EventDetailOverview({
                       {slot.endsAt ? ` → ${slot.endsAt}` : ''}
                     </span>
                     {slot.exterior && (
-                      <Badge variant="default" className="text-[10px]">Extérieur</Badge>
+                      <Badge variant="default" className="text-xs">Extérieur</Badge>
                     )}
                   </div>
                   <p className="text-sm font-semibold text-foreground">{slot.label}</p>
@@ -486,7 +486,7 @@ export default function EventDetailOverview({
           <div className="space-y-3.5">
             {posts.map((post) => (
               <article key={post.id} className="rounded-2xl border border-border bg-surface p-4 sm:p-5 space-y-3 shadow-2xs">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                <p className="text-xs font-semibold text-muted">
                   Publié le {new Date(post.createdAt).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
                 </p>
                 {post.content && (

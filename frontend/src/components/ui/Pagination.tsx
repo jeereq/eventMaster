@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2 } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import useIsMobile from '@/hooks/useIsMobile';
 

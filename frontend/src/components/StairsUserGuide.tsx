@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { BookOpen, ChevronDown, Lightbulb, ListOrdered } from 'lucide-react';
+import { BookOpen, ChevronDown, Lightbulb, ListOrdered } from '@/components/icons';
 import { STAIRS_USER_GUIDE } from '@/lib/roomStairsUtils';
 import { cn } from '@/lib/cn';
 
@@ -34,7 +34,7 @@ export default function StairsUserGuide({
 
       {open ? (
         <div className="px-3 pb-3 space-y-3 border-t border-sky-200/60">
-          <p className="text-[11px] text-sky-950/80 leading-relaxed pt-2 whitespace-pre-line">{STAIRS_USER_GUIDE.intro}</p>
+          <p className="text-xs text-sky-950/80 leading-relaxed pt-2 whitespace-pre-line">{STAIRS_USER_GUIDE.intro}</p>
 
           <div className="space-y-1.5">
             {STAIRS_USER_GUIDE.sections.map((section) => {
@@ -46,7 +46,7 @@ export default function StairsUserGuide({
                     onClick={() => setSectionId(active ? null : section.id)}
                     className="w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left"
                   >
-                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-foreground">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
                       <ListOrdered className="w-3 h-3 text-sky-700" />
                       {section.title}
                     </span>
@@ -55,7 +55,7 @@ export default function StairsUserGuide({
                   {active ? (
                     <ol className="px-2.5 pb-2.5 space-y-1.5 list-decimal pl-6">
                       {section.steps.map((step) => (
-                        <li key={step} className="text-[10px] text-muted leading-relaxed">
+                        <li key={step} className="text-xs text-muted leading-relaxed">
                           {step}
                         </li>
                       ))}
@@ -68,12 +68,12 @@ export default function StairsUserGuide({
 
           {!compact ? (
             <div className="rounded-[var(--radius-button)] border border-amber-200/70 bg-amber-50/80 px-2.5 py-2 space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900 flex items-center gap-1">
+              <p className="text-xs font-bold text-amber-900 flex items-center gap-1">
                 <Lightbulb className="w-3 h-3" /> Astuces
               </p>
               <ul className="space-y-1">
                 {STAIRS_USER_GUIDE.tips.map((tip) => (
-                  <li key={tip} className="text-[10px] text-amber-950/80 leading-relaxed pl-2 border-l-2 border-amber-300">
+                  <li key={tip} className="text-xs text-amber-950/80 leading-relaxed pl-2 border-l-2 border-amber-300">
                     {tip}
                   </li>
                 ))}

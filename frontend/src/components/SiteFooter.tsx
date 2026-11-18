@@ -2,12 +2,11 @@
 import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import Link from 'next/link';
-import { Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
+import { Mail, MapPin, Phone } from '@/components/icons';
 import SiteBrandMark from '@/components/SiteBrandMark';
 import PWAInstallCta from '@/components/PWAInstallCta';
 import {
   FOOTER_BRAND_DESCRIPTION,
-  FOOTER_FEATURES,
   FOOTER_PRODUCT,
   FOOTER_RESOURCES,
 } from '@/config/siteContent';
@@ -42,17 +41,10 @@ export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterP
               {messaging.adapt(FOOTER_BRAND_DESCRIPTION)}
             </p>
             <PWAInstallCta variant="footer" />
-            <ul className="space-y-1.5 pt-1">
-              {FOOTER_FEATURES.slice(0, 4).map((feature) => (
-                <li key={feature} className="text-xs text-[#a3b8b0]/90 leading-snug">
-                  {messaging.adapt(feature)}
-                </li>
-              ))}
-            </ul>
           </div>
 
           <div className="col-span-1 lg:col-span-2 space-y-3.5 sm:space-y-4">
-            <h4 className="text-sm font-semibold text-white">
+            <h4 className="font-display text-base font-semibold text-white">
               Produit
             </h4>
             <ul className="space-y-2 sm:space-y-2.5">
@@ -78,7 +70,7 @@ export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterP
           </div>
 
           <div className="col-span-1 lg:col-span-3 space-y-3.5 sm:space-y-4">
-            <h4 className="text-sm font-semibold text-white">
+            <h4 className="font-display text-base font-semibold text-white">
               Ressources
             </h4>
             <ul className="space-y-2 sm:space-y-2.5">
@@ -93,7 +85,7 @@ export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterP
           </div>
 
           <div className="min-[440px]:col-span-2 lg:col-span-3 space-y-3.5 sm:space-y-4">
-            <h4 className="text-sm font-semibold text-white">
+            <h4 className="font-display text-base font-semibold text-white">
               Contact
             </h4>
             <ul className="space-y-2.5 sm:space-y-3 text-sm text-[#a3b8b0]">
@@ -142,10 +134,6 @@ export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterP
               FAQ
             </Link>
           </div>
-          <p className="inline-flex items-center gap-1.5 min-h-8">
-            <ShieldCheck className="w-3.5 h-3.5 text-brand-accent" />
-            Données isolées par organisation · HTTPS
-          </p>
         </div>
       </div>
     </footer>

@@ -3,7 +3,7 @@
 import React, { Suspense, useMemo, useRef, useCallback, useEffect, useState, forwardRef, useImperativeHandle, memo } from 'react';
 import { Canvas, ThreeEvent, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Html, ContactShadows, Environment, Sky, Stars } from '@react-three/drei';
-import { Compass, Sparkles, Crown, DoorOpen, RotateCcw } from 'lucide-react';
+import { Compass, Sparkles, Crown, DoorOpen, RotateCcw } from '@/components/icons';
 import * as THREE from 'three';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
 import {
@@ -1222,7 +1222,7 @@ function StoryStackDecks({
                     padding: '4px 8px',
                     borderRadius: 6,
                     fontSize: 11,
-                    fontWeight: 700,
+                    fontWeight: 600,
                     whiteSpace: 'nowrap',
                     background: active ? 'rgba(69,115,210,0.92)' : 'rgba(28,25,23,0.78)',
                     color: '#fff',
@@ -1230,7 +1230,7 @@ function StoryStackDecks({
                   }}
                 >
                   {story.label}
-                  <span style={{ opacity: 0.75, fontWeight: 500, marginLeft: 6 }}>
+                  <span style={{ opacity: 0.75, fontWeight: 400, marginLeft: 6 }}>
                     {elev.toFixed(1)} m
                   </span>
                 </div>
@@ -2268,7 +2268,7 @@ function TableMesh({
       })}
       {selected && !hideLabels && (
         <Html zIndexRange={[20, 0]} center distanceFactor={8} style={{ pointerEvents: 'none' }} position={[0, topY + 0.35, 0]}>
-          <div className="px-2.5 py-1 rounded-md bg-foreground/90 backdrop-blur-md text-white text-xs font-bold whitespace-nowrap shadow-md border border-white/20 flex items-center gap-1.5">
+          <div className="px-2.5 py-1 rounded-md bg-foreground/90 text-white text-xs font-bold whitespace-nowrap shadow-md border border-white/20 flex items-center gap-1.5">
             <span className="text-primary-solid font-black">{name}</span>
             {seatPicked ? (
               <span className="text-emerald-400 font-extrabold">· Siège n°{selectedSeatIndices.map((n) => n + 1).join(', ')} (Votre place)</span>
@@ -4155,7 +4155,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       {/* Préréglages de caméra cinématiques */}
       {!walkthroughActive && !wallEditMode && (
         <div
-          className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 backdrop-blur-md border border-border/70 shadow-sm max-w-[calc(100%-4.5rem)] overflow-x-auto no-scrollbar pointer-events-auto"
+          className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 border border-border/70 shadow-sm max-w-[calc(100%-4.5rem)] overflow-x-auto no-scrollbar pointer-events-auto"
           role="toolbar"
           aria-label="Angles de caméra 3D"
         >

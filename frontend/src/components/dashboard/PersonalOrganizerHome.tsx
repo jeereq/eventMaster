@@ -7,31 +7,24 @@ import {
   AlertTriangle,
   ArrowRight,
   Calendar,
-  CalendarCheck,
   Check,
   ChevronRight,
   Clock,
   Crown,
   Heart,
-  HelpCircle,
   LayoutGrid,
-  Mail,
   MapPin,
   PlusCircle,
   ScanLine,
   Send,
-  Sparkles,
-  Store,
   UserPlus,
   Users,
-} from 'lucide-react';
+} from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth, type PlanCapabilities } from '@/context/AuthContext';
-import UserAvatar from '@/components/UserAvatar';
 import NextEventCard, { pickNextEvent } from '@/components/dashboard/NextEventCard';
-import { LANDING_PLANS, isB2cPlanId } from '@/config/landingPricing';
+import { isB2cPlanId } from '@/config/landingPricing';
 import { isUnlimitedQuota } from '@/lib/planAccess';
-import { planDisplayName } from '@/lib/planCatalogDb';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import { cn } from '@/lib/cn';
 
@@ -94,7 +87,7 @@ interface JourneyStep {
  */
 export default function PersonalOrganizerHome({ events }: { events: PersonalOrganizerEvent[] }) {
   const messaging = useMessagingChannels();
-  const { user, tenant, planQuota, access, planName: activePlanName } = useAuth();
+  const { user, tenant, planQuota, access } = useAuth();
   const [stats, setStats] = useState<WorkspaceStats | null>(null);
 
   useEffect(() => {
@@ -117,8 +110,6 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
     [events],
   );
 
-  const planMeta = LANDING_PLANS.find((p) => p.id === tenant?.plan);
-  const planName = activePlanName || planDisplayName(tenant?.plan, null, planMeta?.ms365Name) || 'Particulier';
   const isOwner = Boolean(access?.isOwner) || (Boolean(user?.id) && user?.id === tenant?.managerId);
   const canCreate = access?.canCreateEvents !== false;
   const daysUntilExpiry = tenant?.licenseExpiresAt ? daysUntil(tenant.licenseExpiresAt) : null;
@@ -130,10 +121,6 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
   const maxGuests = planQuota?.limits.maxGuests;
   const guestsUnlimited = isUnlimited(maxGuests);
   const guestsPct = guestsUnlimited || !maxGuests ? 0 : Math.min(100, Math.round((usedGuests / maxGuests) * 100));
-
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
-  const firstName = user?.name?.split(' ')[0];
 
   const focusStats = focusEvent ? stats?.upcoming.find((u) => u.id === focusEvent.id) : undefined;
   const focusGuests = focusStats?.guests ?? 0;
@@ -191,44 +178,6 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
   const nextStep = steps.find((s) => !s.done) ?? null;
   const doneCount = steps.filter((s) => s.done).length;
 
-  const shortcuts = [
-    focusEvent && {
-      label: 'Ajouter des invités',
-      hint: 'Un par un ou depuis Excel',
-      href: eventDashboardHref(focusEvent.id, { tab: 'guests' }),
-      icon: UserPlus,
-    },
-    focusEvent && {
-      label: 'Plan de table 2D / 3D',
-      hint: 'Tables, allées, scène',
-      href: eventDashboardHref(focusEvent.id, { tab: 'tablePlan' }),
-      icon: LayoutGrid,
-    },
-    {
-      label: 'Faire-part',
-      hint: 'Modèles d’invitation',
-      href: '/dashboard/templates',
-      icon: Mail,
-    },
-    {
-      label: 'Salles & prestataires',
-      hint: 'Traiteur, déco, DJ, photo',
-      href: '/dashboard/catalogue',
-      icon: Store,
-    },
-    {
-      label: 'Budget avec l’IA',
-      hint: '3 formules chiffrées',
-      href: '/dashboard/catalogue?tab=plan&planView=ai',
-      icon: Sparkles,
-    },
-    {
-      label: 'Devis & réservations',
-      hint: 'Suivre vos demandes',
-      href: '/dashboard/bookings?tab=quotes',
-      icon: CalendarCheck,
-    },
-  ].filter(Boolean) as { label: string; hint: string; href: string; icon: React.ComponentType<{ className?: string }> }[];
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-16 animate-fade-in em-dashboard-home">
@@ -259,32 +208,6 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
           </Link>
         </div>
       )}
-
-      {/* En-tête */}
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex min-w-0 items-center gap-3">
-          <UserAvatar name={user?.name} src={user?.avatarUrl} size="lg" className="h-12 w-12 text-base" />
-          <div className="min-w-0">
-            <p className="truncate text-sm text-muted">
-              {greeting}
-              {firstName ? `, ${firstName}` : ''}
-            </p>
-            <h1 className="font-display truncate text-2xl font-semibold leading-tight text-foreground sm:text-[2rem]">
-              {focusEvent ? 'Ma fête en un coup d’œil' : 'Organisons votre fête'}
-            </h1>
-          </div>
-        </div>
-        <Link
-          href="/dashboard/billing"
-          className="inline-flex min-h-11 items-center gap-2 self-start rounded-full border border-border bg-surface px-3.5 text-sm text-foreground transition hover:border-primary/40 sm:self-auto"
-        >
-          <Crown className="h-4 w-4 text-primary" aria-hidden />
-          <span className="font-semibold">{planName}</span>
-          {isOwner && daysUntilExpiry != null && daysUntilExpiry > 15 && (
-            <span className="text-muted">· {daysUntilExpiry} j restants</span>
-          )}
-        </Link>
-      </header>
 
       {focusEvent ? (
         <>
@@ -352,7 +275,7 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
             </div>
 
             <ol className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-              {steps.map((step, i) => {
+              {steps.map((step) => {
                 const current = nextStep?.id === step.id;
                 const Icon = step.icon;
                 return (
@@ -380,7 +303,6 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
                         {step.done ? <Check className="h-4 w-4" aria-label="Terminé" /> : <Icon className="h-4 w-4" />}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-xs font-semibold text-muted">Étape {i + 1}</span>
                         <span className={cn('block text-sm font-semibold', step.done ? 'text-muted' : 'text-foreground')}>
                           {step.title}
                         </span>
@@ -397,33 +319,6 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
       ) : (
         <EmptyHero canCreate={canCreate && !eventsAtLimit} />
       )}
-
-      {/* Raccourcis */}
-      <section aria-labelledby="b2c-shortcuts-title">
-        <h2 id="b2c-shortcuts-title" className="mb-3 text-base font-semibold text-foreground">
-          Raccourcis
-        </h2>
-        <div className={cn('grid grid-cols-2 gap-3', shortcuts.length > 4 ? 'md:grid-cols-3 xl:grid-cols-6' : 'md:grid-cols-4')}>
-          {shortcuts.map((s) => {
-            const Icon = s.icon;
-            return (
-              <Link
-                key={s.label}
-                href={s.href}
-                className="group flex min-h-[6.5rem] flex-col justify-between gap-3 rounded-2xl border border-border bg-surface p-4 transition hover:border-primary/40 hover:bg-primary/5"
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Icon className="h-4 w-4" />
-                </span>
-                <span>
-                  <span className="block text-sm font-semibold text-foreground">{s.label}</span>
-                  <span className="block text-xs text-muted">{s.hint}</span>
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
 
       {/* Mes fêtes + forfait */}
       <section className={cn('grid gap-4', events.length > 0 && 'lg:grid-cols-3')}>
@@ -451,7 +346,7 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
                   <li key={ev.id}>
                     <Link href={eventDashboardHref(ev.id)} className="group flex items-center gap-3 py-3">
                       <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-surface-muted text-foreground">
-                        <span className="text-[10px] font-semibold uppercase leading-none text-muted">{d.month}</span>
+                        <span className="text-xs font-semibold uppercase leading-none text-muted">{d.month}</span>
                         <span className="text-lg font-bold leading-tight">{d.day}</span>
                       </span>
                       <span className="min-w-0 flex-1">
@@ -507,17 +402,7 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
         )}
 
         <div className="flex flex-col gap-4 rounded-3xl border border-border bg-surface p-4 sm:p-5">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Mon forfait</h2>
-            <p className="text-sm text-muted">{planName}</p>
-          </div>
-          <div className="flex items-baseline justify-between text-sm">
-            <span className="text-muted">Fêtes</span>
-            <span className="font-semibold tabular-nums text-foreground">
-              {usedEvents}
-              {isUnlimited(maxEvents) ? '' : ` / ${maxEvents}`}
-            </span>
-          </div>
+          <h2 className="text-base font-semibold text-foreground">Mon forfait</h2>
           <div>
             <div className="flex items-baseline justify-between text-sm">
               <span className="text-muted">Invités</span>
@@ -535,7 +420,7 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
               </div>
             )}
             {!guestsUnlimited && guestsPct >= 90 && (
-              <p className="mt-1.5 text-xs text-festive-accent">Presque plein : passez au palier supérieur pour inviter plus.</p>
+              <p className="mt-1.5 text-xs text-festive-accent">Presque plein</p>
             )}
           </div>
           <div className="mt-auto flex flex-col gap-2">
@@ -544,13 +429,6 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border text-sm font-semibold text-foreground hover:border-primary/40"
             >
               Gérer mon forfait
-            </Link>
-            <Link
-              href="/dashboard/guide"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-medium text-muted hover:text-foreground"
-            >
-              <HelpCircle className="h-4 w-4" />
-              Besoin d’aide ? Guide pas à pas
             </Link>
           </div>
         </div>
@@ -573,9 +451,9 @@ function GuestResponsesCard({
   const g = stats?.guests;
   const total = g?.total ?? 0;
   const rows = [
-    { label: 'Présents', value: g?.accepted ?? 0, dot: 'bg-primary' },
+    { label: 'Confirmés', value: g?.accepted ?? 0, dot: 'bg-primary' },
     { label: 'En attente', value: g?.pending ?? 0, dot: 'bg-festive-accent' },
-    { label: 'Absents', value: g?.declined ?? 0, dot: 'bg-muted/50' },
+    { label: 'Déclinés', value: g?.declined ?? 0, dot: 'bg-muted/50' },
   ];
 
   return (
@@ -591,7 +469,7 @@ function GuestResponsesCard({
         <>
           <p className="text-foreground">
             <span className="font-display text-4xl font-semibold tabular-nums">{g?.accepted ?? 0}</span>
-            <span className="text-sm text-muted"> présents confirmés sur {total}</span>
+            <span className="text-sm text-muted"> confirmés sur {total}</span>
           </p>
           <div className="flex h-2.5 overflow-hidden rounded-full bg-surface-muted" aria-hidden>
             {rows.map((r) =>
@@ -676,13 +554,12 @@ function EmptyHero({ canCreate }: { canCreate: boolean }) {
         </Link>
       </div>
       <ol className="relative mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {steps.map((s, i) => {
+        {steps.map((s) => {
           const Icon = s.icon;
           return (
             <li key={s.title} className="rounded-2xl bg-white/5 p-3 ring-1 ring-white/10">
               <span className="flex items-center gap-2 text-xs font-semibold text-[#b0eed5]">
                 <Icon className="h-4 w-4" aria-hidden />
-                Étape {i + 1}
               </span>
               <span className="mt-1 block text-sm font-semibold">{s.title}</span>
               <span className="block text-xs text-white/70">{s.hint}</span>

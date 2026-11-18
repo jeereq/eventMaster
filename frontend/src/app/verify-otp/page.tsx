@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, Mail, MessageSquare, RefreshCw, ShieldCheck, Smartphone } from 'lucide-react';
+import { Loader2, Mail, MessageSquare, RefreshCw, ShieldCheck, Smartphone } from '@/components/icons';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';

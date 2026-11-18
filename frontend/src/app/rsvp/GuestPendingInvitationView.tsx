@@ -9,7 +9,7 @@ import GuestGuidelinesView from '@/components/GuestGuidelinesView';
 import GuestDonationForm from '@/components/rsvp/GuestDonationForm';
 import {
   MapPin, Loader2, Clock, Heart, PartyPopper, HeartHandshake, Navigation, ArrowDown,
-} from 'lucide-react';
+} from '@/components/icons';
 import {
   type RsvpField,
   ensureMandatoryRsvpFields,

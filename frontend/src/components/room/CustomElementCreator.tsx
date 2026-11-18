@@ -11,7 +11,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { Film, ImagePlus, Scissors } from 'lucide-react';
+import { Film, ImagePlus, Scissors } from '@/components/icons';
 import { Alert, Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { CustomElementMesh } from '@/components/room/CustomElementMesh';
@@ -405,7 +405,7 @@ export default function CustomElementCreator({ open, onClose, uploadImage, uploa
                   <span className="text-xs text-muted">{processing ? 'Détourage…' : 'Choisissez une image de la vidéo'}</span>
                 )}
                 {processed?.outline && mode === 'cutout' ? (
-                  <span className="absolute top-2 left-2 text-[11px] font-semibold bg-white/90 text-emerald-800 px-2 py-0.5 rounded-full">
+                  <span className="absolute top-2 left-2 text-xs font-semibold bg-white/90 text-emerald-800 px-2 py-0.5 rounded-full">
                     Silhouette détectée
                   </span>
                 ) : null}
@@ -418,7 +418,7 @@ export default function CustomElementCreator({ open, onClose, uploadImage, uploa
                 <label className="block text-xs font-semibold text-foreground">
                   Tolérance du détourage ({tolerance})
                   <input type="range" min={0} max={100} value={tolerance} onChange={(e) => setTolerance(Number(e.target.value))} className="w-full" />
-                  <span className="block text-[11px] font-normal text-muted">Augmentez si des restes de fond subsistent, baissez si l’objet est rogné.</span>
+                  <span className="block text-xs font-normal text-muted">Augmentez si des restes de fond subsistent, baissez si l’objet est rogné.</span>
                 </label>
               ) : null}
               <button type="button" className="text-xs font-semibold text-primary hover:underline" onClick={() => fileRef.current?.click()}>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Copy, Sparkles } from 'lucide-react';
+import { Copy, Sparkles } from '@/components/icons';
 import { Button, Modal } from '@/components/ui';
 import InvitationIdentityFields from '@/components/InvitationIdentityFields';
 

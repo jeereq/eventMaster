@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CalendarCheck, CheckCircle2, Clock, FileText, Inbox } from 'lucide-react';
+import { CalendarCheck, CheckCircle2, Clock, FileText, Inbox } from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/cn';

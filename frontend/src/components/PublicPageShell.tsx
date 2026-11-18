@@ -77,8 +77,8 @@ export function PublicPageHero({
           <h1 className={cn(
             deep ? 'font-display font-semibold tracking-[-0.02em] text-white' : 'em-landing-heading text-foreground',
             compact
-              ? (deep ? 'text-2xl md:text-[2.5rem] leading-tight' : 'text-xl md:text-2xl lg:text-3xl')
-              : 'text-xl md:text-3xl lg:text-[2.5rem]',
+              ? (deep ? 'text-2xl md:text-5xl leading-tight' : 'text-xl md:text-2xl lg:text-3xl')
+              : 'text-xl md:text-3xl lg:text-5xl',
           )}>
             {title}
           </h1>

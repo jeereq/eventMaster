@@ -7,9 +7,9 @@ import {
  BarChart3, Calendar, Users, Utensils, Sparkles, 
  Loader2, AlertCircle, ChevronRight, CheckCircle, XCircle, 
  Clock, Download, FileSpreadsheet, RefreshCw, HelpCircle
-} from 'lucide-react';
+} from '@/components/icons';
 import Link from 'next/link';
-import { PageHeader, Alert, EmptyState, Button, SkeletonAnalyticsView, SkeletonStatsRow, Breadcrumbs } from '@/components/ui';
+import { PageHeader, Alert, EmptyState, Button, SkeletonAnalyticsView, SkeletonStatsRow } from '@/components/ui';
 import WorkspaceStatsOverview, { type WorkspaceStats } from '@/components/WorkspaceStatsOverview';
 import VendorStatsView from '@/components/dashboard/VendorStatsView';
 import { getWorkspaceModules } from '@/lib/planAccess';
@@ -238,15 +238,6 @@ function EventAnalyticsView() {
  return (
  <div className="space-y-8 w-full">
  <PageHeader
- title={protocolView ? 'Statistiques protocole' : 'Statistiques des événements'}
- description={
- protocolView
- ? 'Check-in et tâches du jour J.'
- : 'Événements, réponses, check-in.'
- }
- breadcrumbs={
- <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Statistiques' }]} />
- }
  action={
  events.length > 0 ? (
  <div className="flex items-center gap-2">
@@ -270,14 +261,14 @@ function EventAnalyticsView() {
  </div>
  ) : undefined
  }
- />
+/>
 
  {error && <Alert variant="error">{error}</Alert>}
 
  {workspace ? <WorkspaceStatsOverview stats={workspace} protocol={protocolView} /> : null}
 
  {events.length === 0 ? (
- <EmptyState
+ <EmptyState illustration="events"
  icon={<Calendar className="w-7 h-7" />}
  title="Aucun événement disponible"
  description="Créez un événement pour voir les chiffres."
@@ -297,13 +288,13 @@ function EventAnalyticsView() {
  ) : (
  <div className="space-y-8">
  <div>
- <h2 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">
+ <h2 className="text-sm font-bold text-muted mb-4">
  {protocolView ? 'Accueil' : 'Réponse à l’invitation'} — {selectedEvent?.title || 'événement'}
  </h2>
  {/* Quick Stats Cards */}
  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
  <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
- <span className="text-xs font-bold text-muted uppercase tracking-wider block">Invités Totaux</span>
+ <span className="text-xs font-bold text-muted block">Invités Totaux</span>
  <div className="flex items-baseline justify-between mt-3">
  <span className="text-3xl font-black text-foreground dark:text-foreground">{totalGuests}</span>
  <span className="text-xs bg-surface-muted dark:bg-surface-muted text-muted dark:text-muted px-2 py-0.5 rounded-md font-bold">100%</span>
@@ -311,7 +302,7 @@ function EventAnalyticsView() {
  </div>
 
  <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
- <span className="text-xs font-bold text-muted uppercase tracking-wider block">Présents (Acceptés)</span>
+ <span className="text-xs font-bold text-muted block">Confirmés</span>
  <div className="flex items-baseline justify-between mt-3">
  <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{acceptedCount}</span>
  <span className="text-xs bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md font-bold">{acceptedPct}%</span>
@@ -319,7 +310,7 @@ function EventAnalyticsView() {
  </div>
 
  <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
- <span className="text-xs font-bold text-muted uppercase tracking-wider block">Absents (Déclinés)</span>
+ <span className="text-xs font-bold text-muted block">Déclinés</span>
  <div className="flex items-baseline justify-between mt-3">
  <span className="text-3xl font-black text-rose-600 dark:text-rose-400">{declinedCount}</span>
  <span className="text-xs bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 px-2 py-0.5 rounded-md font-bold">{declinedPct}%</span>
@@ -327,7 +318,7 @@ function EventAnalyticsView() {
  </div>
 
  <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
- <span className="text-xs font-bold text-muted uppercase tracking-wider block">Taux de Réponse</span>
+ <span className="text-xs font-bold text-muted block">Taux de Réponse</span>
  <div className="flex items-baseline justify-between mt-3">
  <span className="text-3xl font-black text-primary dark:text-primary">{responseRate}%</span>
  <span className="text-xs bg-primary/10 dark:bg-primary/10 text-primary dark:text-primary px-2 py-0.5 rounded-md font-bold">En attente: {pendingCount}</span>
@@ -337,14 +328,14 @@ function EventAnalyticsView() {
 
  <div className="grid grid-cols-2 gap-4 sm:gap-6 mt-4">
  <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
- <span className="text-xs font-bold text-muted uppercase tracking-wider block">Check-in (scannés)</span>
+ <span className="text-xs font-bold text-muted block">Entrées</span>
  <div className="flex items-baseline justify-between mt-3">
  <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{checkedInCount}</span>
  <span className="text-xs bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md font-bold">{checkInPct}%</span>
  </div>
  </div>
  <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
- <span className="text-xs font-bold text-muted uppercase tracking-wider block">Reste à scanner</span>
+ <span className="text-xs font-bold text-muted block">Reste à scanner</span>
  <div className="flex items-baseline justify-between mt-3">
  <span className="text-3xl font-black text-amber-600 dark:text-amber-400">{Math.max(0, acceptedCount - checkedInCount)}</span>
  <span className="text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-md font-bold">Attendus: {acceptedCount}</span>
@@ -357,7 +348,7 @@ function EventAnalyticsView() {
  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
  {/* Diet/Menu Stats */}
  <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 shadow-xs space-y-4">
- <h3 className="text-sm font-bold text-foreground dark:text-foreground uppercase tracking-wider flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <h3 className="text-sm font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
  <Utensils className="w-4 h-4 text-primary" />
  Régimes Alimentaires (Présents)
  </h3>
@@ -387,7 +378,7 @@ function EventAnalyticsView() {
 
  {/* Category Stats */}
  <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 shadow-xs space-y-4">
- <h3 className="text-sm font-bold text-foreground dark:text-foreground uppercase tracking-wider flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <h3 className="text-sm font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
  <Users className="w-4 h-4 text-primary" />
  Participation par Catégorie
  </h3>
@@ -404,10 +395,10 @@ function EventAnalyticsView() {
  <span>{cat}</span>
  <span className="text-muted dark:text-muted">Total: {total}</span>
  </div>
- <div className="grid grid-cols-3 gap-1 text-[10px] text-center font-bold">
- <div className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 py-1 rounded">Présent: {accepted}</div>
- <div className="bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 py-1 rounded">Absent: {declined}</div>
- <div className="bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 py-1 rounded">Attente: {pending}</div>
+ <div className="grid grid-cols-3 gap-1 text-xs text-center font-bold">
+ <div className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 py-1 rounded">Confirmés : {accepted}</div>
+ <div className="bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 py-1 rounded">Déclinés : {declined}</div>
+ <div className="bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 py-1 rounded">En attente : {pending}</div>
  </div>
  </div>
  );
@@ -417,7 +408,7 @@ function EventAnalyticsView() {
 
  {/* Custom Questions Stats */}
  <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 shadow-xs space-y-4">
- <h3 className="text-sm font-bold text-foreground dark:text-foreground uppercase tracking-wider flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <h3 className="text-sm font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
  <Sparkles className="w-4 h-4 text-primary" />
  Questions Personnalisées (Présents)
  </h3>
@@ -489,7 +480,7 @@ function EventAnalyticsView() {
  {Object.entries(counts).map(([val, count]) => {
  const pct = totalAnswers > 0 ? Math.round((count / totalAnswers) * 100) : 0;
  return (
- <div key={val} className="flex items-center justify-between text-[10px] text-muted dark:text-muted">
+ <div key={val} className="flex items-center justify-between text-xs text-muted dark:text-muted">
  <span className="truncate max-w-[150px] font-semibold">{val}</span>
  <span>{count} ({pct}%)</span>
  </div>
@@ -532,7 +523,7 @@ function EventAnalyticsView() {
  <Download className="w-4 h-4" />
  Exporter en CSV
  </button>
- <p className="text-[10px] text-amber-700">
+ <p className="text-xs text-amber-700">
  Export réservé Enterprise.{' '}
  <Link href="/dashboard/billing" className="font-bold underline">Voir les forfaits</Link>
  </p>
@@ -549,7 +540,7 @@ function EventAnalyticsView() {
  <div className="overflow-x-auto">
  <table className="w-full text-left border-collapse text-xs">
  <thead>
- <tr className="border-b border-border-subtle dark:border-border text-muted font-bold uppercase tracking-wider">
+ <tr className="border-b border-border-subtle dark:border-border text-muted font-bold ">
  <th className="py-3 px-4">Invité</th>
  <th className="py-3 px-4">Catégorie</th>
  <th className="py-3 px-4">Statut de réponse</th>
@@ -563,11 +554,11 @@ function EventAnalyticsView() {
  <tr key={g.id} className="hover:bg-surface-muted/50 dark:hover:bg-surface-muted/30 transition">
  <td className="py-3.5 px-4 font-bold text-foreground dark:text-foreground">
  {g.firstName} {g.lastName}
- <span className="block text-[10px] text-muted font-normal">{g.email}</span>
+ <span className="block text-xs text-muted font-normal">{g.email}</span>
  </td>
  <td className="py-3.5 px-4">{g.category || 'Général'}</td>
  <td className="py-3.5 px-4">
- <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+ <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
  g.rsvp === 'ACCEPTED' ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400' :
  g.rsvp === 'DECLINED' ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400' :
  'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400'
@@ -575,8 +566,8 @@ function EventAnalyticsView() {
  {g.rsvp === 'ACCEPTED' ? <CheckCircle className="w-3 h-3" /> :
  g.rsvp === 'DECLINED' ? <XCircle className="w-3 h-3" /> :
  <Clock className="w-3 h-3" />}
- {g.rsvp === 'ACCEPTED' ? 'Présent' :
- g.rsvp === 'DECLINED' ? 'Absent' :
+ {g.rsvp === 'ACCEPTED' ? 'Confirmé' :
+ g.rsvp === 'DECLINED' ? 'Décliné' :
  'En attente'}
  </span>
  </td>
@@ -592,7 +583,7 @@ function EventAnalyticsView() {
  </tbody>
  </table>
  {guests.length > 10 && (
- <p className="text-[11px] text-muted dark:text-muted text-center mt-4">
+ <p className="text-xs text-muted dark:text-muted text-center mt-4">
  Affichage des 10 premières réponses. Utilisez l'export CSV pour obtenir la liste complète.
  </p>
  )}
@@ -627,11 +618,6 @@ export default function AnalyticsPage() {
  if (!hasEvents) {
  return (
  <div className="space-y-6 w-full">
- <PageHeader
- title="Statistiques & revenus"
- description="Demandes de devis, réservations, chiffre et commission."
- breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Statistiques' }]} />}
- />
  {vendorPanel}
  </div>
  );
@@ -661,11 +647,6 @@ export default function AnalyticsPage() {
  </div>
  {view === 'vendor' ? (
  <div className="space-y-6">
- <PageHeader
- title="Ventes marketplace"
- description="Demandes de devis, réservations, chiffre et commission."
- breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Statistiques' }]} />}
- />
  {vendorPanel}
  </div>
  ) : (

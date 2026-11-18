@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ChevronRight, Volume2, VolumeX } from 'lucide-react';
+import { Check, ChevronRight, Volume2, VolumeX } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { BrandLogoIcon } from '@/components/SiteBrandMark';
 import {
@@ -266,7 +266,7 @@ export function AiProcessFullscreenLoader({
       aria-labelledby="ai-process-loader-title"
       aria-describedby="ai-process-loader-desc"
     >
-      <div className="relative w-full max-w-md rounded-2xl border border-stage-foreground/15 bg-stage-elevated/85 backdrop-blur-md p-5 sm:p-7 shadow-2xl">
+      <div className="relative w-full max-w-md rounded-2xl border border-stage-foreground/15 bg-stage-elevated/85 p-5 sm:p-7 shadow-2xl">
         <div className="flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2 min-h-8 px-3 rounded-full bg-stage-foreground/[0.06] border border-stage-foreground/15 text-xs font-semibold text-stage-foreground">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 motion-safe:animate-pulse" aria-hidden />

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight } from '@/components/icons';
 import Modal from '@/components/ui/Modal';
 import { Button } from '@/components/ui';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
@@ -85,7 +85,7 @@ export default function RoomAmbiencePreviewModal({
             <label
               key={key}
               className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold cursor-pointer transition',
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold cursor-pointer transition',
                 scope[key]
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-border text-muted',
@@ -104,14 +104,14 @@ export default function RoomAmbiencePreviewModal({
 
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-3 items-center">
           <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase text-muted">Actuel</p>
+            <p className="text-xs font-bold uppercase text-muted">Actuel</p>
             <div className="h-40 rounded-[var(--radius-card)] overflow-hidden border border-border">
               <RoomLayoutPreview blueprint={blueprint} quality="thumb" force2d className="h-full w-full" />
             </div>
           </div>
           <ArrowRight className="w-5 h-5 text-muted mx-auto hidden sm:block" />
           <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase text-primary">Après application</p>
+            <p className="text-xs font-bold uppercase text-primary">Après application</p>
             <div className="h-40 rounded-[var(--radius-card)] overflow-hidden border border-primary/30 ring-1 ring-primary/15">
               <RoomLayoutPreview blueprint={previewBlueprint} quality="thumb" force2d className="h-full w-full" />
             </div>
@@ -119,10 +119,10 @@ export default function RoomAmbiencePreviewModal({
         </div>
 
         <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted/50 px-3 py-2.5">
-          <p className="text-[10px] font-bold uppercase text-muted mb-1.5">Modifications</p>
+          <p className="text-xs font-bold uppercase text-muted mb-1.5">Modifications</p>
           <ul className="space-y-0.5">
             {changes.map((line) => (
-              <li key={line} className="text-[11px] text-foreground">{line}</li>
+              <li key={line} className="text-xs text-foreground">{line}</li>
             ))}
           </ul>
         </div>

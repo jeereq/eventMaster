@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Clock, LayoutGrid } from 'lucide-react';
+import { Clock, LayoutGrid } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import type { AiRoomPlanComposeHistoryItem } from '@/lib/aiRoomPlanComposeHistory';
 import { StudioAiEmpty } from '@/components/StudioAiTabs';

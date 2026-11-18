@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { AlertCircle, ImagePlus, PenLine, Upload, Users, X } from 'lucide-react';
+import { AlertCircle, ImagePlus, PenLine, Upload, Users, X } from '@/components/icons';
 import { ROOM_PLAN_PHOTO_ACCEPT } from '@/lib/roomPlanAi';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -262,7 +262,7 @@ export default function RoomPlanAiComposeForm({
               <AlertCircle className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-extrabold uppercase tracking-wide text-rose-700 dark:text-rose-300">
+              <p className="text-xs font-extrabold text-rose-700 dark:text-rose-300">
                 Composition interrompue
               </p>
               <p className="text-xs text-rose-800 dark:text-rose-200 mt-0.5 leading-relaxed break-words">{error}</p>

@@ -158,7 +158,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
     route: '/dashboard/analytics',
   },
   'nav-billing': {
-    title: 'Facturation & plan',
+    title: 'Forfait',
     description:
       'Comparez les forfaits, suivez les quotas et demandez un changement d’abonnement. L’acompte et les commissions marketplace restent hors plateforme.',
     route: '/dashboard/billing',

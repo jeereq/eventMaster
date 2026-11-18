@@ -18,7 +18,7 @@ import {
   ChevronLeft, ChevronRight, X, ThumbsUp, Download, Navigation,
   QrCode, Maximize2, Printer, UserCog, UserPen, Pencil,
   Ticket, Copy, Check, Users, Link2Off, HeartHandshake, RefreshCw, Repeat, CalendarHeart,
-} from 'lucide-react';
+} from '@/components/icons';
 import GuestDonationForm from '@/components/rsvp/GuestDonationForm';
 import {
   type RsvpField,
@@ -857,7 +857,7 @@ export default function RsvpPage() {
                       </div>
                       {seatNumber != null && (
                         <div className="rounded-2xl bg-primary/10 px-3.5 py-2 text-center shrink-0">
-                          <p className="text-[11px] font-semibold text-primary">Siège</p>
+                          <p className="text-xs font-semibold text-primary">Siège</p>
                           <p className="font-display text-xl font-semibold text-foreground tabular-nums leading-none">{seatNumber}</p>
                         </div>
                       )}
@@ -1565,7 +1565,7 @@ export default function RsvpPage() {
         {expandedImages.length > 0 && (
           <div 
             ref={lightboxPanelRef}
-            className="fixed inset-0 bg-black/95 backdrop-blur-xs flex items-center justify-center z-50 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
+            className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
             role="dialog"
             aria-modal="true"
             tabIndex={-1}
@@ -1684,7 +1684,7 @@ export default function RsvpPage() {
           return (
             <div
               ref={qrPanelRef}
-              className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] animate-fade-in"
+              className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] animate-fade-in"
               role="dialog"
               aria-modal="true"
               tabIndex={-1}

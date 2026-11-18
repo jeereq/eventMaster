@@ -2,12 +2,17 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CreditCard, Eye, Heart, Loader2, Wallet } from 'lucide-react';
+import { CreditCard, Eye, Heart, Loader2, Wallet } from '@/components/icons';
 import AdminFinanceDetailsModal, { type AdminPaymentDetail } from '@/components/admin/AdminFinanceDetailsModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Badge, Input, usePageSize,
+  Alert,
+  EmptyState,
+  Pagination,
+  Badge,
+  Input,
+  usePageSize,
 } from '@/components/ui';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
@@ -337,13 +342,6 @@ export default function AdminPaymentsPage() {
 
   return (
     <div className="space-y-6 w-full">
-      <PageHeader
-        title="Paiements"
-        description="Tentatives FlexPay et manuelles."
-        breadcrumbs={
-          <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard?tab=overview' }, { label: 'Paiements' }]} />
-        }
-      />
 
       {error && <Alert variant="error">{error}</Alert>}
 
@@ -356,7 +354,7 @@ export default function AdminPaymentsPage() {
         ].map((card) => (
           <div key={card.label} className="bg-surface px-4 py-3">
             <div className="text-lg font-semibold text-foreground">{card.value}</div>
-            <div className="text-xs uppercase tracking-wider text-muted">{card.label}</div>
+            <div className="text-xs text-muted">{card.label}</div>
           </div>
         ))}
       </div>
@@ -364,11 +362,11 @@ export default function AdminPaymentsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
         <div className="bg-surface px-4 py-3">
           <div className="text-lg font-semibold text-foreground">{formatFc(totals?.amountPaidFc ?? 0)}</div>
-          <div className="text-xs uppercase tracking-wider text-muted">Montant encaissé</div>
+          <div className="text-xs text-muted">Montant encaissé</div>
         </div>
         <div className="bg-surface px-4 py-3">
           <div className="text-lg font-semibold text-foreground">{formatFc(totals?.amountAttemptedFc ?? 0)}</div>
-          <div className="text-xs uppercase tracking-wider text-muted">Volume tenté</div>
+          <div className="text-xs text-muted">Volume tenté</div>
         </div>
       </div>
 
@@ -378,7 +376,7 @@ export default function AdminPaymentsPage() {
           Récapitulatif par source
         </h2>
         {!overview?.bySource.length ? (
-          <EmptyState
+          <EmptyState illustration="payments"
             icon={<CreditCard className="w-5 h-5" />}
             title="Aucune source"
             description="Les tentatives de paiement apparaîtront ici."
@@ -387,7 +385,7 @@ export default function AdminPaymentsPage() {
           <div className="overflow-x-auto border border-border rounded-[var(--radius-card)] bg-surface">
             <table className="w-full text-sm" aria-label="Récapitulatif des paiements par source et canal">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted">
+                <tr className="border-b border-border text-left text-xs text-muted">
                   <th className="px-3 py-2.5 font-semibold">Source</th>
                   <th className="px-3 py-2.5 font-semibold">Canal</th>
                   <th className="px-3 py-2.5 font-semibold text-right">Tentatives</th>
@@ -568,7 +566,7 @@ export default function AdminPaymentsPage() {
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : !list?.items.length ? (
-        <EmptyState
+        <EmptyState illustration="payments"
           icon={<CreditCard className="w-5 h-5" />}
           title="Aucune tentative"
           description="Aucune tentative ne correspond aux filtres."

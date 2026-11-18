@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, MapPin, Store } from 'lucide-react';
+import { ArrowLeft, MapPin, Store } from '@/components/icons';
 import { api } from '@/lib/api';
 import PublicPageShell from '@/components/PublicPageShell';
 import { Button, EmptyState, Skeleton } from '@/components/ui';
@@ -91,7 +91,7 @@ export default function VendorShowcaseClient() {
             </div>
           </div>
         ) : error || !vendor ? (
-          <EmptyState
+          <EmptyState illustration="notFound"
             icon={<Store className="h-7 w-7" />}
             title="Prestataire introuvable"
             description={error || 'Cette vitrine n’existe pas ou n’est plus en ligne.'}
@@ -100,7 +100,7 @@ export default function VendorShowcaseClient() {
         ) : (
           <>
             <header className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+              <p className="text-xs font-semibold text-primary">
                 {trades.length ? trades.slice(0, 3).join(' · ') : venues.length ? 'Salle de réception' : 'Prestataire'}
               </p>
               <h1 className="font-display text-3xl font-semibold leading-tight text-foreground sm:text-4xl">

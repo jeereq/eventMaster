@@ -4,8 +4,8 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees,
-} from 'lucide-react';
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, Move, Rotate3d, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees,
+} from '@/components/icons';
 import {
   LANDSCAPE_GROUP_LABELS,
   LANDSCAPE_STYLE_META,
@@ -307,7 +307,7 @@ import {
 import { cn } from '@/lib/cn';
 import { supportsOneSideSeating, tablePlateSizeMeters } from '@/lib/tablePlanUtils';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
-import { Alert, Button, Input, Modal } from '@/components/ui';
+import { Alert, Button, IconButton, Input, Kbd, Modal, Toolbar } from '@/components/ui';
 
 const EDITOR_FIELD =
   'w-full min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
@@ -369,7 +369,7 @@ function ToolbarCluster({
 }) {
   return (
     <div role="group" aria-label={label} className={cn('flex flex-wrap items-center gap-1.5 min-w-0', className)}>
-      <span className={cn('text-xs font-semibold uppercase tracking-wide text-muted shrink-0 w-full lg:w-auto lg:mr-0.5', labelClassName)}>
+      <span className={cn('text-xs font-semibold text-muted shrink-0 w-full lg:w-auto lg:mr-0.5', labelClassName)}>
         {label}
       </span>
       {children}
@@ -547,7 +547,7 @@ function ElementRotationControls({
   return (
     <div className="space-y-2.5 p-3 rounded-xl border border-border bg-surface dark:bg-surface-elevated/40">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
+        <span className="text-xs font-bold text-muted flex items-center gap-1.5">
           <Compass className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
           {title}
         </span>
@@ -605,7 +605,7 @@ function ElementRotationControls({
             {/* Pivot central */}
             <circle cx="36" cy="36" r="3" className="fill-foreground" />
           </svg>
-          <span className="text-[10px] text-muted text-center mt-0.5">Glisser ou cliquer</span>
+          <span className="text-xs text-muted text-center mt-0.5">Glisser ou cliquer</span>
         </div>
 
         {/* 4 Directions cardinales instantanées */}
@@ -631,7 +631,7 @@ function ElementRotationControls({
                 title={`${label} (${deg}°) - ${hint}`}
               >
                 <span className="text-xs font-semibold leading-tight">{label}</span>
-                <span className="text-[10px] text-muted truncate leading-tight">{hint}</span>
+                <span className="text-xs text-muted truncate leading-tight">{hint}</span>
               </button>
             );
           })}
@@ -677,7 +677,7 @@ function ElementRotationControls({
       {/* Orientations intelligentes contextuelles */}
       {onSmartOrient && (
         <div className="pt-1.5 border-t border-border/70 space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">
+          <span className="text-xs font-bold text-muted block">
             Orientation intelligente
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -690,7 +690,7 @@ function ElementRotationControls({
               <Presentation className="w-4 h-4 text-primary shrink-0" />
               <div className="truncate">
                 <span className="block font-semibold">Face à la scène</span>
-                <span className="block text-[10px] text-muted">Oriente vers l'estrade</span>
+                <span className="block text-xs text-muted">Oriente vers l'estrade</span>
               </div>
             </button>
             <button
@@ -702,7 +702,7 @@ function ElementRotationControls({
               <Crosshair className="w-4 h-4 text-primary shrink-0" />
               <div className="truncate">
                 <span className="block font-semibold">Face au centre</span>
-                <span className="block text-[10px] text-muted">Milieu de la pièce</span>
+                <span className="block text-xs text-muted">Milieu de la pièce</span>
               </div>
             </button>
             {isChair && (
@@ -715,7 +715,7 @@ function ElementRotationControls({
                 <Circle className="w-4 h-4 text-emerald-500 shrink-0" />
                 <div className="truncate">
                   <span className="block font-semibold">Face à la table la plus proche</span>
-                  <span className="block text-[10px] text-muted">Tourne le siège vers le convive / table</span>
+                  <span className="block text-xs text-muted">Tourne le siège vers le convive / table</span>
                 </div>
               </button>
             )}
@@ -729,7 +729,7 @@ function ElementRotationControls({
                 <BrickWall className="w-4 h-4 text-amber-500 shrink-0" />
                 <div className="truncate">
                   <span className="block font-semibold">Face à la salle</span>
-                  <span className="block text-[10px] text-muted">Projette vers les spectateurs</span>
+                  <span className="block text-xs text-muted">Projette vers les spectateurs</span>
                 </div>
               </button>
             )}
@@ -885,6 +885,11 @@ export default function RoomLayoutEditor({
   const [ambiencePresetQuery, setAmbiencePresetQuery] = useState('');
   const ambienceImportRef = useRef<HTMLInputElement>(null);
   const webglRef = useRef<RoomWebGLCaptureApi>(null);
+  /** Actions des raccourcis V (vue 2D/3D) et C (recentrer), mises à jour à chaque rendu. */
+  const viewShortcutsRef = useRef<{ toggleView: () => void; recenter: () => void }>({
+    toggleView: () => {},
+    recenter: () => {},
+  });
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const pastRef = useRef<RoomLayoutBlueprint[]>([]);
@@ -1115,26 +1120,30 @@ export default function RoomLayoutEditor({
       const tag = target?.tagName?.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) return;
       const mod = e.metaKey || e.ctrlKey;
-      if (!mod) return;
       const key = e.key.toLowerCase();
+      // Raccourcis à une lettre, sans Ctrl/⌘ : Ctrl+L et Ctrl+2/3 sont pris par le navigateur
+      // (barre d'adresse, changement d'onglet), et les chiffres demandent Maj sur un clavier AZERTY.
+      if (!mod && !e.altKey) {
+        if (walkthroughActive) return;
+        if (key === 'v') {
+          e.preventDefault();
+          viewShortcutsRef.current.toggleView();
+        } else if (key === 'l') {
+          e.preventDefault();
+          setLockOrbit((v) => !v);
+        } else if (key === 'c') {
+          e.preventDefault();
+          viewShortcutsRef.current.recenter();
+        }
+        return;
+      }
+      if (!mod) return;
       if (key === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
       } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
         e.preventDefault();
         redo();
-      } else if (key === 'l') {
-        e.preventDefault();
-        setLockOrbit((v) => !v);
-        log('Basculer Déplacer / Regarder (Ctrl+L)', 'info');
-      } else if (key === '2') {
-        e.preventDefault();
-        setDepthAmount(0);
-        log('Vue Plan 2D d’architecte activée (Ctrl+2)', 'info');
-      } else if (key === '3') {
-        e.preventDefault();
-        setDepthAmount(60);
-        log('Vue 3D perspective activée (Ctrl+3)', 'info');
       } else if ((key === 'o' || key === 'e') && (e.altKey || e.shiftKey)) {
         e.preventDefault();
         optimizeClearances();
@@ -1142,7 +1151,7 @@ export default function RoomLayoutEditor({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [readOnly, undo, redo, optimizeClearances]);
+  }, [readOnly, undo, redo, optimizeClearances, walkthroughActive]);
 
   useEffect(() => {
     if (!aiPlanSuccess) return;
@@ -2316,6 +2325,14 @@ export default function RoomLayoutEditor({
     }, { message: next <= 0 ? 'Vue du dessus' : `Perspective 3D : ${next}%`, kind: 'settings' });
   };
 
+  // Raccourcis V et C : toujours la version à jour du plan (n'écrase pas une modification récente).
+  useEffect(() => {
+    viewShortcutsRef.current = {
+      toggleView: () => setDepthAmount(depthAmount > 0 ? 0 : 60),
+      recenter: () => webglRef.current?.resetCamera?.(),
+    };
+  });
+
   const outline = blueprint.roomOutline!;
   const renderQualityRaw = (blueprint.metadata.renderQuality ?? 'standard') as RenderQuality;
   const renderQuality =
@@ -2700,64 +2717,68 @@ export default function RoomLayoutEditor({
         />
       )}
       {!readOnly && !walkthroughActive ? (
-        <div
-          className="hidden lg:flex absolute top-2.5 right-2.5 z-20 items-center gap-1 p-1 rounded-full bg-background/90 backdrop-blur-md border border-border/70 shadow-sm"
-          role="toolbar"
-          aria-label="Vue du plan"
+        <Toolbar
+          label="Vue du plan"
+          className="hidden lg:flex absolute top-2.5 right-2.5 z-20 items-center gap-1 p-1 rounded-full bg-background/90 border border-border/70 shadow-sm"
         >
-          <div role="group" aria-label="Mode d’affichage" className="flex items-center gap-0.5 p-0.5 rounded-full bg-surface-muted">
-            {([
-              { amount: 0, label: '2D', icon: LayoutGrid, title: 'Plan 2D vu du dessus (Ctrl+2)' },
-              { amount: 60, label: '3D', icon: Box, title: 'Perspective 3D (Ctrl+3)' },
-            ] as const).map((mode) => {
-              const active = mode.amount === 0 ? depthAmount === 0 : depthAmount > 0;
-              const Icon = mode.icon;
-              return (
-                <button
-                  key={mode.label}
-                  type="button"
-                  aria-pressed={active}
-                  title={mode.title}
-                  onClick={() => {
-                    if (active) return;
-                    setDepthAmount(mode.amount);
-                  }}
-                  className={cn(
-                    'inline-flex items-center gap-1 min-h-9 px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                    active ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  <Icon className="w-3.5 h-3.5" aria-hidden />
-                  {mode.label}
-                </button>
-              );
-            })}
+          <div role="group" aria-label="Mode d’affichage" className="flex items-center gap-0.5 rounded-full bg-surface-muted">
+            <IconButton
+              label="Afficher le plan 2D"
+              icon={LayoutGrid}
+              shortcut={['V']}
+              tooltipSide="bottom"
+              active={depthAmount === 0}
+              aria-pressed={depthAmount === 0}
+              onClick={() => setDepthAmount(0)}
+            />
+            <IconButton
+              label="Afficher la perspective 3D"
+              icon={Box}
+              shortcut={['V']}
+              tooltipSide="bottom"
+              active={depthAmount > 0}
+              aria-pressed={depthAmount > 0}
+              onClick={() => {
+                if (depthAmount === 0) setDepthAmount(60);
+              }}
+            />
           </div>
-          <button
-            type="button"
-            onClick={() => setLockOrbit((v) => !v)}
-            aria-pressed={!lockOrbit}
-            title={lockOrbit ? 'Mode Déplacer : glissez les objets. Cliquez pour tourner la vue (Ctrl+L)' : 'Mode Regarder : glissez pour tourner la vue. Cliquez pour déplacer les objets (Ctrl+L)'}
-            className="inline-flex items-center gap-1.5 min-h-9 px-3 rounded-full text-xs font-semibold text-foreground hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-          >
-            {lockOrbit ? <MoveHorizontal className="w-3.5 h-3.5" aria-hidden /> : <Video className="w-3.5 h-3.5" aria-hidden />}
-            {lockOrbit ? 'Déplacer' : 'Regarder'}
-          </button>
-          <button
-            type="button"
+          <div role="group" aria-label="Effet du glisser sur le plan" className="flex items-center gap-0.5 rounded-full bg-surface-muted">
+            <IconButton
+              label="Déplacer les objets"
+              icon={Move}
+              shortcut={['L']}
+              tooltipSide="bottom"
+              active={lockOrbit}
+              aria-pressed={lockOrbit}
+              onClick={() => setLockOrbit(true)}
+            />
+            <IconButton
+              label="Tourner la vue"
+              icon={Rotate3d}
+              shortcut={['L']}
+              tooltipSide="bottom"
+              active={!lockOrbit}
+              aria-pressed={!lockOrbit}
+              onClick={() => setLockOrbit(false)}
+            />
+          </div>
+          <IconButton
+            label="Recentrer la vue"
+            icon={Crosshair}
+            shortcut={['C']}
+            tooltipSide="bottom"
             onClick={() => {
               webglRef.current?.resetCamera?.();
             }}
-            title="Recentrer la vue sur la salle"
-            aria-label="Recentrer la vue"
-            className="inline-flex items-center justify-center min-h-9 min-w-9 rounded-full text-foreground hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-          >
-            <Crosshair className="w-4 h-4" aria-hidden />
-          </button>
-        </div>
+          />
+        </Toolbar>
       ) : null}
       {selection.length > 0 && !readOnly && (
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 p-1 rounded-full bg-surface/95 dark:bg-surface-elevated/95 backdrop-blur-md border border-border shadow-xl text-foreground animate-in fade-in zoom-in-95 duration-150">
+        <Toolbar
+          label="Actions sur la sélection"
+          className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 p-1 rounded-full bg-surface/95 dark:bg-surface-elevated/95 border border-border shadow-xl text-foreground animate-in fade-in zoom-in-95 duration-150"
+        >
           <div className="px-3 min-h-11 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center gap-1.5 select-none">
             <BoxSelect className="w-4 h-4" aria-hidden />
             <span>{selection.length}</span>
@@ -2766,44 +2787,30 @@ export default function RoomLayoutEditor({
           <div className="h-5 w-px bg-border my-auto mx-0.5" />
 
           {caps.canDuplicate && (
-            <button
-              type="button"
-              onClick={duplicateSelection}
-              className="min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              title="Dupliquer (Cmd/Ctrl+D)"
-              aria-label="Dupliquer la sélection"
-            >
-              <Copy className="w-4 h-4" />
-            </button>
+            <IconButton label="Dupliquer la sélection" icon={Copy} shortcut={['Mod', 'D']} onClick={duplicateSelection} />
           )}
 
           {/* Menu Rotation & Orientation Rapide */}
           <div className="relative">
-            <button
-              type="button"
+            <IconButton
+              label="Rotation et orientation"
+              icon={RotateCw}
+              aria-expanded={hudRotateOpen}
+              className={hudRotateOpen ? 'bg-surface-muted' : undefined}
               onClick={() => {
                 setHudRotateOpen((v) => !v);
                 setHudAlignOpen(false);
                 setHudColorOpen(false);
               }}
-              className={cn(
-                'min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                hudRotateOpen && 'bg-primary/15 text-primary',
-              )}
-              title="Rotation & Orientation (R)"
-              aria-label="Menu rotation et orientation"
-              aria-expanded={hudRotateOpen}
-            >
-              <RotateCw className="w-4 h-4" />
-            </button>
+            />
 
             {hudRotateOpen && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2.5 rounded-xl bg-surface dark:bg-surface-elevated border border-border shadow-2xl z-40 w-64 space-y-2 animate-in fade-in slide-in-from-bottom-1">
                 <div className="flex items-center justify-between px-1">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                  <span className="text-xs font-bold text-muted">
                     Rotation & Angle
                   </span>
-                  <span className="text-[10px] text-muted">Raccourci : R</span>
+                  <span className="text-xs text-muted">Raccourci : R</span>
                 </div>
 
                 <div className="grid grid-cols-4 gap-1">
@@ -2879,7 +2886,7 @@ export default function RoomLayoutEditor({
                     <Presentation className="w-4 h-4 text-primary shrink-0" />
                     <div>
                       <span className="block font-semibold">Face à la scène</span>
-                      <span className="block text-[10px] text-muted font-normal">Oriente vers l'estrade / podium</span>
+                      <span className="block text-xs text-muted font-normal">Oriente vers l'estrade / podium</span>
                     </div>
                   </button>
                   <button
@@ -2896,7 +2903,7 @@ export default function RoomLayoutEditor({
                     <Crosshair className="w-4 h-4 text-primary shrink-0" />
                     <div>
                       <span className="block font-semibold">Face au centre</span>
-                      <span className="block text-[10px] text-muted font-normal">Milieu de la pièce</span>
+                      <span className="block text-xs text-muted font-normal">Milieu de la pièce</span>
                     </div>
                   </button>
                   <button
@@ -2920,26 +2927,20 @@ export default function RoomLayoutEditor({
 
           {selection.length >= 2 && caps.canAlign && (
             <div className="relative">
-              <button
-                type="button"
+              <IconButton
+                label="Aligner la sélection"
+                icon={AlignCenter}
+                aria-expanded={hudAlignOpen}
+                className={hudAlignOpen ? 'bg-surface-muted' : undefined}
                 onClick={() => {
                   setHudAlignOpen((v) => !v);
                   setHudColorOpen(false);
                 }}
-                className={cn(
-                  'min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                  hudAlignOpen && 'bg-primary/15 text-primary',
-                )}
-                title="Aligner les éléments sélectionnés"
-                aria-label="Aligner les éléments sélectionnés"
-                aria-expanded={hudAlignOpen}
-              >
-                <AlignCenter className="w-4 h-4" />
-              </button>
+              />
 
               {hudAlignOpen && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2.5 rounded-xl bg-surface dark:bg-surface-elevated border border-border shadow-2xl z-40 w-60 space-y-2 animate-in fade-in slide-in-from-bottom-1">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted px-1 block">
+                  <span className="text-xs font-bold text-muted px-1 block">
                     Aligner & répartir
                   </span>
                   <div className="grid grid-cols-4 gap-1.5">
@@ -2998,26 +2999,20 @@ export default function RoomLayoutEditor({
 
           {/* Quick Color Picker */}
           <div className="relative">
-            <button
-              type="button"
+            <IconButton
+              label="Teinter la sélection"
+              icon={Palette}
+              aria-expanded={hudColorOpen}
+              className={hudColorOpen ? 'bg-surface-muted' : undefined}
               onClick={() => {
                 setHudColorOpen((v) => !v);
                 setHudAlignOpen(false);
               }}
-              className={cn(
-                'min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                hudColorOpen && 'bg-primary/15 text-primary',
-              )}
-              title="Teinter le lot"
-              aria-label="Teinter les éléments sélectionnés"
-              aria-expanded={hudColorOpen}
-            >
-              <Palette className="w-4 h-4" />
-            </button>
+            />
 
             {hudColorOpen && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-3 rounded-xl bg-surface dark:bg-surface-elevated border border-border shadow-2xl z-40 w-52 space-y-2.5 animate-in fade-in slide-in-from-bottom-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted px-1 block">
+                <span className="text-xs font-bold text-muted px-1 block">
                   Palette rapide
                 </span>
                 <div className="grid grid-cols-4 gap-2 p-1">
@@ -3061,26 +3056,10 @@ export default function RoomLayoutEditor({
 
           <div className="h-5 w-px bg-border my-auto mx-0.5" />
 
-          <button
-            type="button"
-            onClick={deleteSelected}
-            className="min-h-11 min-w-11 rounded-full hover:bg-rose-500/10 text-rose-500 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
-            title="Supprimer (Suppr / Backspace)"
-            aria-label="Supprimer les éléments sélectionnés"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <IconButton label="Supprimer la sélection" icon={Trash2} shortcut={['Delete']} tone="danger" onClick={deleteSelected} />
 
-          <button
-            type="button"
-            onClick={() => setSelection([])}
-            className="min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-muted hover:text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            title="Désélectionner (Échap)"
-            aria-label="Désélectionner tout"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+          <IconButton label="Désélectionner" icon={X} shortcut={['Escape']} onClick={() => setSelection([])} />
+        </Toolbar>
       )}
     </div>
   );
@@ -5423,7 +5402,7 @@ export default function RoomLayoutEditor({
                 <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted/40 px-3 py-2.5 space-y-3">
                   <div>
                     <p className={EDITOR_HEADING}>Définition de l’escalier</p>
-                    <p className="text-[11px] font-semibold text-foreground mt-1">{formatStairSummary(def)}</p>
+                    <p className="text-xs font-semibold text-foreground mt-1">{formatStairSummary(def)}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
@@ -8112,7 +8091,7 @@ export default function RoomLayoutEditor({
       {caps.fixtureKinds.includes('landscape')
         ? (['vegetation', 'water', 'ambiance'] as LandscapeGroup[]).map((group) => (
           <React.Fragment key={group}>
-            <span className="basis-full text-[11px] font-semibold uppercase tracking-wide text-muted pt-1">{LANDSCAPE_GROUP_LABELS[group]}</span>
+            <span className="basis-full text-xs font-semibold text-muted pt-1">{LANDSCAPE_GROUP_LABELS[group]}</span>
             {LANDSCAPE_STYLE_ORDER.filter((style) => LANDSCAPE_STYLE_META[style].group === group).map((style) => (
               <button
                 key={style}
@@ -8505,7 +8484,7 @@ export default function RoomLayoutEditor({
                 <span>Allée centrale de passage</span>
               </label>
 
-              <span className="text-[11px] text-muted">
+              <span className="text-xs text-muted">
                 Capacité totale estimée : <strong className="text-foreground">{estimateAmphitheaterSeats(amphiStyle, amphiTiers, amphiSeatsPerRow)} places</strong>
               </span>
             </div>
@@ -9073,7 +9052,7 @@ export default function RoomLayoutEditor({
       )}
       {quickCreate === 'stairs' && (
         <>
-          <p className="text-[11px] text-muted self-center">
+          <p className="text-xs text-muted self-center">
             Depuis <span className="font-semibold text-foreground">{resolveStories(blueprint).find((s) => s.id === resolveActiveStoryId(blueprint))?.label ?? 'RDC'}</span>, créer un escalier vers :
           </p>
           {resolveStories(blueprint)
@@ -9106,7 +9085,7 @@ export default function RoomLayoutEditor({
       )}
       {quickCreate === 'balconies' && (
         <>
-          <p className="text-[11px] text-muted self-center">Balcon sur l’étage actif :</p>
+          <p className="text-xs text-muted self-center">Balcon sur l’étage actif :</p>
           {(Object.keys(balconySideLabels) as BalconySide[]).map((side) => (
             <button
               key={side}
@@ -9146,7 +9125,7 @@ export default function RoomLayoutEditor({
   const activeStory = stories.find((s) => s.id === resolveActiveStoryId(blueprint));
   const storyBar = (
     <div className="flex flex-wrap items-center gap-2 px-2.5 py-2 rounded-[var(--radius-card)] border border-border bg-surface-muted/50">
-      <span className="text-xs font-bold uppercase tracking-wide text-muted shrink-0">Étage</span>
+      <span className="text-xs font-bold text-muted shrink-0">Étage</span>
       <div className="flex flex-wrap gap-1">
         {stories.map((story) => (
           <button
@@ -9403,15 +9382,16 @@ export default function RoomLayoutEditor({
             </div>
           </div>
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
-            <span className="text-muted font-medium">Caméra libre / bloquée</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Ctrl+L</kbd>
+            <span className="text-muted font-medium">Déplacer les objets / Tourner la vue</span>
+            <Kbd keys={['L']} className="text-foreground" />
           </div>
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
-            <span className="text-muted font-medium">Plan 2D zénithal / Vue 3D</span>
-            <div className="flex gap-1 font-mono text-xs">
-              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+2</kbd>
-              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+3</kbd>
-            </div>
+            <span className="text-muted font-medium">Plan 2D / Perspective 3D</span>
+            <Kbd keys={['V']} className="text-foreground" />
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Recentrer la vue</span>
+            <Kbd keys={['C']} className="text-foreground" />
           </div>
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
             <span className="text-muted font-medium">Dupliquer l’élément</span>
@@ -9479,7 +9459,7 @@ export default function RoomLayoutEditor({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <p className="font-bold text-xs uppercase tracking-wider">
+              <p className="font-bold text-xs ">
                 Score d'espacement : {clearanceReport.score}/100
               </p>
               <span
@@ -9526,7 +9506,7 @@ export default function RoomLayoutEditor({
 
         {clearanceReport.conflicts.length > 0 ? (
           <div className="space-y-1.5">
-            <p className="text-xs font-bold text-muted uppercase tracking-wider">
+            <p className="text-xs font-bold text-muted ">
               Anomalies physiques détectées ({clearanceReport.conflicts.length}) :
             </p>
             <ul className="max-h-48 overflow-y-auto space-y-1.5 rounded-xl border border-border p-2 bg-surface-muted/30 text-xs">
@@ -9584,14 +9564,14 @@ export default function RoomLayoutEditor({
           <div className="p-3 rounded-xl bg-surface-muted border border-border">
             <span className="text-xs text-muted block">Capacité assise</span>
             <span className="text-xl font-bold text-foreground">{inventoryReport.totalCapacity} pers.</span>
-            <span className="text-[10px] text-muted block mt-0.5">
+            <span className="text-xs text-muted block mt-0.5">
               {inventoryReport.tableSeats} tables · {inventoryReport.rowSeats} rangées
             </span>
           </div>
           <div className="p-3 rounded-xl bg-surface-muted border border-border">
             <span className="text-xs text-muted block">Surface totale</span>
             <span className="text-xl font-bold text-foreground">{inventoryReport.totalAreaM2} m²</span>
-            <span className="text-[10px] text-muted block mt-0.5">
+            <span className="text-xs text-muted block mt-0.5">
               {blueprint.canvas?.widthM ?? 20}m × {blueprint.canvas?.heightM ?? 16}m
             </span>
           </div>
@@ -9600,12 +9580,12 @@ export default function RoomLayoutEditor({
             <span className="text-xl font-bold text-foreground">
               {inventoryReport.ratioM2PerSeat > 0 ? `${inventoryReport.ratioM2PerSeat} m²` : '—'}
             </span>
-            <span className="text-[10px] text-muted block mt-0.5">par personne assise</span>
+            <span className="text-xs text-muted block mt-0.5">par personne assise</span>
           </div>
           <div className="p-3 rounded-xl bg-surface-muted border border-border">
             <span className="text-xs text-muted block">Total références</span>
             <span className="text-xl font-bold text-foreground">{inventoryReport.items.length}</span>
-            <span className="text-[10px] text-muted block mt-0.5">équipements distincts</span>
+            <span className="text-xs text-muted block mt-0.5">équipements distincts</span>
           </div>
         </div>
 
@@ -9613,9 +9593,9 @@ export default function RoomLayoutEditor({
         <div className="max-h-[380px] overflow-y-auto space-y-3.5 pr-1">
           {Object.entries(inventoryReport.itemsByCategory).map(([category, catItems]) => (
             <div key={category} className="space-y-1.5">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted flex items-center justify-between">
+              <h4 className="text-xs font-bold text-muted flex items-center justify-between">
                 <span>{category}</span>
-                <span className="text-[11px] font-semibold text-foreground bg-surface-muted px-2 py-0.5 rounded-full border border-border">
+                <span className="text-xs font-semibold text-foreground bg-surface-muted px-2 py-0.5 rounded-full border border-border">
                   {catItems.reduce((sum, item) => sum + item.count, 0)} unité(s)
                 </span>
               </h4>
@@ -9624,8 +9604,8 @@ export default function RoomLayoutEditor({
                   <div key={item.id} className="p-2.5 flex items-center justify-between gap-3 text-xs hover:bg-surface-muted/40 transition-colors">
                     <div className="min-w-0">
                       <p className="font-semibold text-foreground truncate">{item.name}</p>
-                      {item.specs ? <p className="text-muted text-[11px] truncate">{item.specs}</p> : null}
-                      {item.notes ? <p className="text-primary text-[11px] font-medium">{item.notes}</p> : null}
+                      {item.specs ? <p className="text-muted text-xs truncate">{item.specs}</p> : null}
+                      {item.notes ? <p className="text-primary text-xs font-medium">{item.notes}</p> : null}
                     </div>
                     <div className="shrink-0 text-right">
                       <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-bold text-xs">
@@ -9823,7 +9803,7 @@ export default function RoomLayoutEditor({
             'flex min-h-0 flex-1 flex-col',
             fillHost
               ? 'h-full w-full'
-              : 'fixed inset-0 z-[1100] bg-background/70 backdrop-blur-sm p-1.5 sm:p-3',
+              : 'fixed inset-0 z-[1100] bg-background/70 p-1.5 sm:p-3',
           )}
         >
           <div
@@ -9901,7 +9881,7 @@ export default function RoomLayoutEditor({
         initialCrop={cropFixture?.imageCrop}
       />
       <div className="space-y-3">
-        <div className="sticky top-0 z-20 -mx-1 px-1 pb-2 space-y-2 bg-background/95 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none md:mx-0 md:px-0 md:pb-0">
+        <div className="sticky top-0 z-20 -mx-1 px-1 pb-2 space-y-2 bg-background/95 md:static md:bg-transparent md:mx-0 md:px-0 md:pb-0">
           {header}
           <div className="hidden lg:block space-y-2">
             {templateBar}
@@ -9920,7 +9900,7 @@ export default function RoomLayoutEditor({
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 uppercase tracking-wide flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
                     <Sparkles className="w-3 h-3" /> Succès Studio 2D / 3D
                   </span>
                   <span className="font-bold text-foreground">Plan généré par l’IA</span>

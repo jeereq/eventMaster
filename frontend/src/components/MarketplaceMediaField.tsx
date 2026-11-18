@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Crop, Play, Star, Trash2, Upload, ImagePlus, X,
-} from 'lucide-react';
+} from '@/components/icons';
 import { uploadMarketplaceMedia, dataUrlToFile } from '@/lib/cloudinaryUpload';
 import {
   MARKETPLACE_MAX_PHOTOS,
@@ -286,7 +286,7 @@ export default function MarketplaceMediaField({
                 <img src={currentUrl} alt={`Photo ${galleryIndex + 1} de la galerie`} className="w-full h-full object-contain bg-surface-muted" />
               )}
               {galleryIndex === 0 && (
-                <span className="absolute top-2 left-2 text-[10px] font-semibold uppercase tracking-wider bg-primary-solid text-primary-foreground px-2 py-0.5 rounded-md">
+                <span className="absolute top-2 left-2 text-xs font-semibold bg-primary-solid text-primary-foreground px-2 py-0.5 rounded-md">
                   Couverture
                 </span>
               )}
@@ -394,7 +394,7 @@ export default function MarketplaceMediaField({
             }}
           />
         </div>
-        <p className="text-[11px] text-muted">
+        <p className="text-xs text-muted">
           Glissez-déposez ici. JPEG, PNG, WebP, HEIC jusqu’à 10 Mo · MP4, WebM, MOV jusqu’à 80 Mo.
           Les fichiers s’affichent et s’envoient automatiquement. Vous pouvez recadrer ensuite.
         </p>
@@ -418,7 +418,7 @@ export default function MarketplaceMediaField({
                   <img src={item.previewUrl} alt={item.file.name || 'Prévisualisation à envoyer'} className="w-full h-full object-cover" />
                 )}
                 <span
-                  className="absolute top-0 right-0 bg-surface/90 text-[10px] px-1"
+                  className="absolute top-0 right-0 bg-surface/90 text-xs px-1"
                   onClick={(e) => {
                     e.stopPropagation();
                     removeStaging(item.id);
@@ -460,7 +460,7 @@ export default function MarketplaceMediaField({
                     ['w', 'Largeur', active.crop.w],
                     ['h', 'Hauteur', active.crop.h],
                   ] as const).map(([key, label, val]) => (
-                    <label key={key} className="text-[11px] space-y-1">
+                    <label key={key} className="text-xs space-y-1">
                       <span className="font-medium text-muted">{label}</span>
                       <input
                         type="range"
@@ -489,7 +489,7 @@ export default function MarketplaceMediaField({
           <p className="text-xs text-muted">Choisissez des fichiers pour les prévisualiser avant l’envoi Cloudinary.</p>
         )}
       </div>
-      {localError ? <p className="text-[11px] text-rose-600">{localError}</p> : null}
+      {localError ? <p className="text-xs text-rose-600">{localError}</p> : null}
     </div>
   );
 }

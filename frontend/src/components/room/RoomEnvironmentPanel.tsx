@@ -7,7 +7,7 @@
  */
 
 import React, { useRef, useState } from 'react';
-import { Dices, ImagePlus, RotateCcw, Sun, Trees } from 'lucide-react';
+import { Dices, ImagePlus, RotateCcw, Sun, Trees } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import {
   DEFAULT_EXTRA_SPECIES_COUNT,
@@ -220,7 +220,7 @@ export function RoomEnvironmentPanel({
       <div className="grid gap-4 lg:grid-cols-2">
         {/* ───────── Abords ───────── */}
         <section className="space-y-3">
-          <h5 className="text-[11px] font-semibold uppercase tracking-wide text-muted">Abords & terrain</h5>
+          <h5 className="text-xs font-semibold text-muted">Abords & terrain</h5>
           <label className="block text-xs font-semibold text-foreground">
             Décor de base
             <select
@@ -394,7 +394,7 @@ export function RoomEnvironmentPanel({
 
         {/* ───────── Soleil & ciel ───────── */}
         <section className="space-y-3">
-          <h5 className="text-[11px] font-semibold uppercase tracking-wide text-muted flex items-center gap-1">
+          <h5 className="text-xs font-semibold text-muted flex items-center gap-1">
             <Sun className="w-3.5 h-3.5" aria-hidden /> Soleil, ciel & ambiance
           </h5>
           <Slider

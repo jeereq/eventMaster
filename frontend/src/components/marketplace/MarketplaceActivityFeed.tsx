@@ -14,7 +14,7 @@ import {
   Heart, MessageCircle, Send, Trash2, Loader2, Image as ImageIcon,
   Video, X, ChevronLeft, ChevronRight, Plus, Building2, Sparkles,
   Share2, Check, Maximize2,
-} from 'lucide-react';
+} from '@/components/icons';
 
 export type MarketplaceFeedMedia = { url: string; type: 'IMAGE' | 'VIDEO' };
 
@@ -124,7 +124,7 @@ export function PostMediaGrid({
                     loading="lazy"
                   />
                   {isFourthAndMore && (
-                    <div className="absolute inset-0 bg-black/65 backdrop-blur-2xs flex items-center justify-center text-white text-base font-bold">
+                    <div className="absolute inset-0 bg-black/65 flex items-center justify-center text-white text-base font-bold">
                       +{extraCount + 1} photos
                     </div>
                   )}
@@ -320,7 +320,7 @@ export function MarketplaceActivityFeedManager({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-bold text-foreground">{authorLabel}</p>
-                  <p className="text-[11px] text-muted">{formatRelativeDate(post.createdAt)}</p>
+                  <p className="text-xs text-muted">{formatRelativeDate(post.createdAt)}</p>
                 </div>
                 <button
                   type="button"
@@ -513,7 +513,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                       ? 'bg-white shadow-xs'
                       : idx < activeSnapIndex
                         ? 'bg-white/80'
-                        : 'bg-white/30 backdrop-blur-xs',
+                        : 'bg-white/30',
                   )}
                 />
               ))}
@@ -525,7 +525,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
             'absolute inset-x-3 sm:inset-x-4 z-20 flex items-center justify-between pointer-events-none',
             media.length > 1 ? 'top-6' : 'top-3 sm:top-4',
           )}>
-            <div className="pointer-events-auto inline-flex items-center gap-2 p-1 pr-3 sm:pr-3.5 rounded-full bg-black/55 backdrop-blur-md border border-white/20 text-white shadow-lg transition-transform hover:scale-[1.02]">
+            <div className="pointer-events-auto inline-flex items-center gap-2 p-1 pr-3 sm:pr-3.5 rounded-full bg-black/55 border border-white/20 text-white shadow-lg transition-transform hover:scale-[1.02]">
               <div className={cn(
                 'w-8 h-8 rounded-full p-[1.5px] overflow-hidden shrink-0 flex items-center justify-center',
                 isVenue
@@ -538,11 +538,11 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
               </div>
               <div className="min-w-0 flex flex-col justify-center">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs sm:text-[13px] font-bold tracking-tight text-white truncate max-w-[140px] sm:max-w-[200px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                  <span className="text-xs sm:text-sm font-bold tracking-tight text-white truncate max-w-[140px] sm:max-w-[200px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                     {authorLabel}
                   </span>
                   <span className={cn(
-                    'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border',
+                    'text-[9px] font-bold px-1.5 py-0.5 rounded-full border',
                     isVenue
                       ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
                       : 'bg-amber-500/20 text-amber-300 border-amber-400/30',
@@ -550,7 +550,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                     {isVenue ? 'Salle' : 'Pro'}
                   </span>
                 </div>
-                <span className="text-[11px] text-white/85 font-medium truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+                <span className="text-xs text-white/85 font-medium truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
                   {formatRelativeDate(post.createdAt)}
                 </span>
               </div>
@@ -610,7 +610,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
               onClick={() => onToggleLike(post.id)}
               disabled={isLikeBusy}
               className={cn(
-                'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
+                'w-11 h-11 rounded-full bg-black/50 border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
                 liked && 'border-rose-500/40 bg-black/60 shadow-rose-500/20',
               )}
               aria-pressed={liked}
@@ -621,7 +621,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                 'w-5 h-5 transition-transform duration-200',
                 liked ? 'text-rose-500 fill-rose-500 scale-110 drop-shadow-[0_0_8px_rgba(244,63,94,0.7)]' : 'text-white',
               )} />
-              <span className="text-[10px] font-bold text-white drop-shadow-xs -mt-0.5 tabular-nums tracking-tight">
+              <span className="text-xs font-bold text-white drop-shadow-xs -mt-0.5 tabular-nums tracking-tight">
                 {post.likeCount ?? likes.length}
               </span>
             </button>
@@ -631,7 +631,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
               type="button"
               onClick={() => setCommentsExpanded((prev) => !prev)}
               className={cn(
-                'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
+                'w-11 h-11 rounded-full bg-black/50 border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
                 commentsExpanded && 'border-primary/60 bg-black/70',
               )}
               aria-expanded={commentsExpanded}
@@ -640,7 +640,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
               title="Commentaires"
             >
               <MessageCircle className="w-5 h-5 text-white" />
-              <span className="text-[10px] font-bold text-white drop-shadow-xs -mt-0.5 tabular-nums tracking-tight">
+              <span className="text-xs font-bold text-white drop-shadow-xs -mt-0.5 tabular-nums tracking-tight">
                 {commentCount}
               </span>
             </button>
@@ -650,7 +650,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
               type="button"
               onClick={() => onShare(post.id)}
               className={cn(
-                'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
+                'w-11 h-11 rounded-full bg-black/50 border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
                 isCopied && 'border-emerald-400/60 bg-emerald-950/60 text-emerald-300',
               )}
               aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette réalisation ou copier le lien"}
@@ -674,7 +674,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                   const idx = images.indexOf(currentMedia.url);
                   onOpenLightbox(images, Math.max(0, idx));
                 }}
-                className="w-11 h-11 sm:w-10 sm:h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white hover:bg-black/60 hover:scale-105 active:scale-90 transition shadow-md touch-manipulation"
+                className="w-11 h-11 sm:w-10 sm:h-10 rounded-full bg-black/40 border border-white/15 flex items-center justify-center text-white/90 hover:text-white hover:bg-black/60 hover:scale-105 active:scale-90 transition shadow-md touch-manipulation"
                 aria-label="Ouvrir la story en plein écran"
                 title="Ouvrir la story en plein écran"
               >
@@ -688,10 +688,10 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
             {/* Badge indicateur de snap si multi-snaps */}
             {media.length > 1 && (
               <div className="flex items-center gap-2 pointer-events-auto">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/10 tabular-nums">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-black/50 text-white tabular-nums">
                   Snap {activeSnapIndex + 1} / {media.length}
                 </span>
-                <span className="hidden sm:inline text-[11px] text-white/85 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">Touchez les côtés ou glissez</span>
+                <span className="hidden sm:inline text-xs text-white/85 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">Touchez les côtés ou glissez</span>
               </div>
             )}
 
@@ -710,7 +710,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                   <button
                     type="button"
                     onClick={() => setTextExpanded((prev) => !prev)}
-                    className="text-[11px] font-bold text-white/90 hover:text-white underline underline-offset-2 mt-0.5 focus-visible:outline-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                    className="text-xs font-bold text-white/90 hover:text-white underline underline-offset-2 mt-0.5 focus-visible:outline-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
                   >
                     {textExpanded ? 'Moins' : 'Lire la suite'}
                   </button>
@@ -730,7 +730,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
           {/* En-tête auteur */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full p-[1.5px] bg-white/30 backdrop-blur-xs flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full p-[1.5px] bg-white/30 flex items-center justify-center">
                 <div className="w-full h-full rounded-full bg-black/20 flex items-center justify-center text-white">
                   {isVenue ? <Building2 className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
                 </div>
@@ -742,7 +742,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                     {isVenue ? 'Salle' : 'Pro'}
                   </span>
                 </div>
-                <p className="text-[10px] text-white/70">{formatRelativeDate(post.createdAt)}</p>
+                <p className="text-xs text-white/70">{formatRelativeDate(post.createdAt)}</p>
               </div>
             </div>
           </div>
@@ -761,7 +761,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                 type="button"
                 onClick={() => onToggleLike(post.id)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold',
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 text-white hover:bg-black/60 transition text-xs font-bold',
                   liked && 'bg-rose-500/80 text-white',
                 )}
                 aria-pressed={liked}
@@ -773,7 +773,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
               <button
                 type="button"
                 onClick={() => setCommentsExpanded((prev) => !prev)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 text-white hover:bg-black/60 transition text-xs font-bold"
                 aria-expanded={commentsExpanded}
                 aria-controls={`venue-comments-${post.id}`}
                 aria-label={commentsExpanded ? "Masquer les commentaires" : `Afficher les commentaires (${commentCount})`}
@@ -785,7 +785,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
             <button
               type="button"
               onClick={() => onShare(post.id)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 text-white hover:bg-black/60 transition text-xs font-bold"
               aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette réalisation ou copier le lien"}
             >
               {isCopied ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
@@ -808,7 +808,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                   >
                     <div className="flex justify-between items-center gap-2">
                       <span className="font-semibold text-foreground break-words tracking-tight">{c.authorName}</span>
-                      <span className="text-[11px] text-muted shrink-0 tabular-nums">{formatRelativeDate(c.createdAt)}</span>
+                      <span className="text-xs text-muted shrink-0 tabular-nums">{formatRelativeDate(c.createdAt)}</span>
                     </div>
                     <p className="text-foreground/90 whitespace-pre-line leading-relaxed break-words">{c.content}</p>
                   </li>
@@ -1020,7 +1020,7 @@ export default function MarketplaceActivityFeed({
                 </div>
                 <div className="absolute right-3 bottom-14 sm:bottom-16 flex flex-col items-center gap-2.5">
                   {[...Array(3)].map((_, j) => (
-                    <div key={j} className="w-11 h-11 rounded-full bg-white/15 backdrop-blur-sm" />
+                    <div key={j} className="w-11 h-11 rounded-full bg-white/15" />
                   ))}
                 </div>
                 <div className="space-y-1.5 max-w-[70%]">

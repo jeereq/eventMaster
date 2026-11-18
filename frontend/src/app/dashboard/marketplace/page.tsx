@@ -8,8 +8,18 @@ import { useAuth } from '@/context/AuthContext';
 import { getQuotaLockMessage, getQuotaActionMessage, getWorkspaceModules, isUnlimitedQuota } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import {
-  PageHeader, Button, Breadcrumbs, Alert, Modal, EmptyState, StatusPill,
-  Pagination, usePaginateItems, usePageSize, ViewModeToggle, useViewMode, listStackClass,
+  PageHeader,
+  Button,
+  Alert,
+  Modal,
+  EmptyState,
+  StatusPill,
+  Pagination,
+  usePaginateItems,
+  usePageSize,
+  ViewModeToggle,
+  useViewMode,
+  listStackClass,
 } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import {
@@ -37,7 +47,7 @@ import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
   AlertTriangle, CalendarCheck, Globe, GlobeLock, Inbox, KeyRound, Loader2, Plus, Sparkles, Trash2,
-} from 'lucide-react';
+} from '@/components/icons';
 import { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import ServiceOfferingForm, {
   focusOfferingField,
@@ -431,7 +441,7 @@ export default function MarketplaceDeskPage() {
   if (!canManage) {
     return (
       <div className="max-w-lg">
-        <PageHeader title="Marketplace" description="Réservé aux propriétaires et managers de l’organisation." />
+        <Alert variant="info">Réservé aux propriétaires et managers de l’organisation.</Alert>
       </div>
     );
   }
@@ -447,11 +457,7 @@ export default function MarketplaceDeskPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Mes offres"
-        description={`Vos fiches publiées au catalogue${showBeverages ? ' et vos tarifs boissons' : ''}. Commission ${commissionPercent(site)} %.`}
-        breadcrumbs={
-          <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Mes offres' }]} />
-        }
+        note={`Commission ${commissionPercent(site)} %`}
         action={
           listingTab ? (
             <div className="flex flex-wrap items-center gap-2">
@@ -627,7 +633,7 @@ export default function MarketplaceDeskPage() {
       ) : tab === 'beverages' ? (
         <VendorBeveragePrices />
       ) : listingPool.length === 0 ? (
-          <EmptyState
+          <EmptyState illustration="media"
             icon={listingIsRental ? <KeyRound className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
             title={listingIsRental ? 'Aucun matériel / équipement' : 'Aucune prestation'}
             description={listingIsRental
@@ -645,7 +651,7 @@ export default function MarketplaceDeskPage() {
             }
           />
         ) : filteredServices.length === 0 ? (
-          <EmptyState
+          <EmptyState illustration="search"
             icon={listingIsRental ? <KeyRound className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
             title={listingIsRental ? 'Aucun matériel pour ces filtres' : 'Aucune prestation pour ces filtres'}
             description={listingIsRental
@@ -704,7 +710,7 @@ export default function MarketplaceDeskPage() {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                        <p className="text-xs font-semibold text-primary">
                           {SERVICE_CATEGORY_LABELS[item.category]}
                         </p>
                         <h3 className="font-semibold text-foreground truncate">{item.title}</h3>
@@ -742,7 +748,7 @@ export default function MarketplaceDeskPage() {
                   </div>
                   <div className="p-4 space-y-2 flex-1 flex flex-col">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                      <p className="text-xs font-semibold text-primary">
                         {SERVICE_CATEGORY_LABELS[item.category]}
                       </p>
                       <h3 className="font-semibold text-foreground">{item.title}</h3>

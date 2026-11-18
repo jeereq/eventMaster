@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Building2, CalendarCheck, Inbox, KeyRound, Loader2, Sparkles } from 'lucide-react';
+import { Building2, CalendarCheck, Inbox, KeyRound, Loader2, Sparkles } from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Modal, StatusPill } from '@/components/ui';
@@ -265,7 +265,7 @@ export default function EventPrepVendorSheet({
                       <span className="text-muted">{kindIcon(offer.lane)}</span>
                       {offer.title}
                     </p>
-                    <p className="text-[11px] text-muted mt-0.5">
+                    <p className="text-xs text-muted mt-0.5">
                       {kindLabel(offer.lane)}
                       {offer.price != null ? ` · dès ${formatFc(offer.price)}` : ' · sur devis'}
                     </p>
@@ -309,7 +309,7 @@ export default function EventPrepVendorSheet({
 
           {extras.inquiries.length > 0 || extras.bookings.length > 0 ? (
             <div className="space-y-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+              <p className="text-xs font-semibold text-muted">
                 Aussi sur cet événement
               </p>
               <ul className="space-y-1">

@@ -26,7 +26,7 @@ import {
   EyeOff,
   Filter,
   Loader2,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Button, Input, StatusPill, Badge, EmptyState } from '@/components/ui';
 import type { EventDonationsReportResponse, EventDonationItem } from '@/lib/donationsReport';
 
@@ -124,7 +124,7 @@ export default function EventDonationsReportView({
               <Heart className="w-4 h-4 fill-rose-500/20" />
             </span>
             <h2 className="text-lg font-bold text-foreground">Reporting des dons solidaires</h2>
-            <Badge variant="danger" className="text-[10px]">Solidarité</Badge>
+            <Badge variant="danger" className="text-xs">Solidarité</Badge>
           </div>
           <p className="text-xs text-muted">
             {config?.cause
@@ -190,7 +190,7 @@ export default function EventDonationsReportView({
             <p className="text-lg font-black text-rose-700 dark:text-rose-300 tabular-nums">
               {formatFc(summary.collectedAmountFc)}
             </p>
-            <p className="text-[11px] text-muted">
+            <p className="text-xs text-muted">
               {summary.donationsPaidCount} contribution{summary.donationsPaidCount > 1 ? 's' : ''} payée{summary.donationsPaidCount > 1 ? 's' : ''}
             </p>
           </div>
@@ -204,7 +204,7 @@ export default function EventDonationsReportView({
             <p className="text-lg font-black text-foreground tabular-nums">
               {summary.targetAmountFc ? formatFc(summary.targetAmountFc) : 'Montant libre'}
             </p>
-            <p className="text-[11px] text-muted">
+            <p className="text-xs text-muted">
               {summary.progressPercent != null ? `${summary.progressPercent}% atteint` : 'Sans plafond'}
             </p>
           </div>
@@ -218,7 +218,7 @@ export default function EventDonationsReportView({
             <p className="text-lg font-black text-primary tabular-nums">
               {summary.donorsCount}
             </p>
-            <p className="text-[11px] text-muted">
+            <p className="text-xs text-muted">
               {summary.anonymousDonationsCount > 0
                 ? `${summary.anonymousDonationsCount} anonyme${summary.anonymousDonationsCount > 1 ? 's' : ''}`
                 : '100% nominatifs'}
@@ -234,7 +234,7 @@ export default function EventDonationsReportView({
             <p className="text-lg font-black text-foreground tabular-nums">
               {formatFc(summary.averageDonationFc)}
             </p>
-            <p className="text-[11px] text-muted">par don payé</p>
+            <p className="text-xs text-muted">par don payé</p>
           </div>
 
           {/* Don le plus élevé */}
@@ -246,7 +246,7 @@ export default function EventDonationsReportView({
             <p className="text-lg font-black text-foreground tabular-nums">
               {formatFc(summary.highestDonationFc)}
             </p>
-            <p className="text-[11px] text-muted">Record enregistré</p>
+            <p className="text-xs text-muted">Record enregistré</p>
           </div>
 
           {/* Pass d'accès donateurs */}
@@ -258,7 +258,7 @@ export default function EventDonationsReportView({
             <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
               {summary.attendeePassesCount}
             </p>
-            <p className="text-[11px] text-muted">Invités au guichet</p>
+            <p className="text-xs text-muted">Invités au guichet</p>
           </div>
         </div>
       )}
@@ -301,7 +301,7 @@ export default function EventDonationsReportView({
       {data?.channels && data.channels.length > 0 && (
         <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 space-y-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
+            <h3 className="text-xs font-bold text-muted flex items-center gap-1.5">
               <Smartphone className="w-4 h-4 text-primary" />
               Répartition par canal de paiement
             </h3>
@@ -320,7 +320,7 @@ export default function EventDonationsReportView({
                 <div className="w-full h-1.5 rounded-full bg-border overflow-hidden">
                   <div className="h-full bg-primary rounded-full" style={{ width: `${ch.percent}%` }} />
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-muted">
+                <div className="flex items-center justify-between text-xs text-muted">
                   <span>{formatFc(ch.amountFc)}</span>
                   <span>{ch.count} don{ch.count > 1 ? 's' : ''}</span>
                 </div>
@@ -472,12 +472,12 @@ export default function EventDonationsReportView({
                         {donation.buyerName}
                       </span>
                       {donation.isAnonymous ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/25 px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/25 px-2 py-0.5 rounded-full">
                           <EyeOff className="w-3 h-3" />
                           Anonyme
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted bg-surface-muted px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted bg-surface-muted px-2 py-0.5 rounded-full">
                           <Eye className="w-3 h-3" />
                           Nominatif
                         </span>
@@ -494,7 +494,7 @@ export default function EventDonationsReportView({
                       {donation.flexPayOrderNumber && (
                         <>
                           <span aria-hidden>·</span>
-                          <span className="font-mono text-[11px]">Réf : {donation.flexPayOrderNumber}</span>
+                          <span className="font-mono text-xs">Réf : {donation.flexPayOrderNumber}</span>
                         </>
                       )}
                     </p>
@@ -505,7 +505,7 @@ export default function EventDonationsReportView({
                       {formatFc(donation.amountFc)}
                     </span>
                     {donation.guest && (
-                      <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
+                      <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
                         <CheckCircle2 className="w-3 h-3" />
                         Pass invité {donation.guest.checkedInAt ? '(Entrée validée)' : '(Émis)'}
                       </span>

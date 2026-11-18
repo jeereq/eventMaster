@@ -9,7 +9,7 @@ import {
   Loader2, Heart, Plus, Video, Eye, MessageCircle,
   RefreshCw, X, ChevronLeft, ChevronRight, BookOpen,
   Rss, Search, Download, Globe
-} from 'lucide-react';
+} from '@/components/icons';
 
 interface Comment {
   id: string;
@@ -509,7 +509,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
 
               {postMediaFiles.length > 0 && (
                 <div className="space-y-2">
-                  <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">
+                  <span className="text-xs font-semibold text-muted ">
                     Fichiers ({postMediaFiles.length})
                   </span>
                   <div className="grid grid-cols-3 gap-2">
@@ -607,7 +607,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
                         </div>
                         <div>
                           <span className="font-semibold text-foreground text-sm block">Organisateur</span>
-                          <span className="text-[10px] text-muted">{formatRelativeDate(post.createdAt)}</span>
+                          <span className="text-xs text-muted">{formatRelativeDate(post.createdAt)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-0.5">
@@ -725,13 +725,13 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
                         <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                           {post.comments.map(comment => (
                             <div key={comment.id} className="flex gap-2.5">
-                              <div className="w-7 h-7 rounded-full bg-primary/15 text-primary flex items-center justify-center font-semibold text-[10px] flex-shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-primary/15 text-primary flex items-center justify-center font-semibold text-xs flex-shrink-0">
                                 {comment.authorName[0]?.toUpperCase()}
                               </div>
                               <div className="flex-1 min-w-0 py-0.5">
                                 <div className="flex items-center justify-between gap-2 mb-0.5">
                                   <span className="font-semibold text-foreground text-xs">{comment.authorName}</span>
-                                  <span className="text-[10px] text-muted">{formatRelativeDate(comment.createdAt)}</span>
+                                  <span className="text-xs text-muted">{formatRelativeDate(comment.createdAt)}</span>
                                 </div>
                                 <p className="text-muted text-xs leading-relaxed">{comment.content}</p>
                               </div>
@@ -822,7 +822,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
                           <span className="font-semibold text-foreground text-sm block truncate">
                             {share.guest.firstName} {share.guest.lastName}
                           </span>
-                          <span className="text-[10px] text-muted">{formatRelativeDate(share.createdAt)}</span>
+                          <span className="text-xs text-muted">{formatRelativeDate(share.createdAt)}</span>
                         </div>
                         {photosList.length > 0 && (
                           <button
@@ -889,7 +889,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
                       )}
 
                       <div className="mt-auto pt-2 border-t border-border">
-                        <span className="text-[10px] text-muted truncate block">{share.guest.email}</span>
+                        <span className="text-xs text-muted truncate block">{share.guest.email}</span>
                       </div>
                     </div>
                   </article>
@@ -903,7 +903,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
       {/* Image lightbox */}
       {expandedImages.length > 0 && (
         <div
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
           onClick={() => setExpandedImages([])}
         >
           <div className="relative max-w-4xl max-h-[85vh] flex items-center justify-center">

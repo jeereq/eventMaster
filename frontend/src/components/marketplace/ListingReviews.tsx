@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { MessageSquareQuote, Store } from 'lucide-react';
+import { MessageSquareQuote, Store } from '@/components/icons';
 import { api } from '@/lib/api';
 import { ratingLabel, type MarketplaceReview, type RatingSummary } from '@/lib/marketplaceReviews';
 import { ReviewStars } from '@/components/marketplace/ReviewStars';

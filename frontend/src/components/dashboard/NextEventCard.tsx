@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Calendar, MapPin } from 'lucide-react';
+import { ArrowRight, Calendar, MapPin } from '@/components/icons';
 
 export interface NextEventCardEvent {
   id: string;
@@ -64,18 +64,13 @@ export default function NextEventCard({
       href={href ?? `/dashboard/events/${event.id}`}
       className="group relative block overflow-hidden rounded-3xl bg-[#1f4a33] p-5 sm:p-6 text-white transition hover:bg-[#275a3d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full border-[28px] border-[#34ad7a] opacity-25"
-      />
       <div className="relative flex flex-col gap-4">
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-[#34ad7a] px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.06em] text-[#10291c]">
+          <span className="rounded-full bg-[#34ad7a] px-2.5 py-1 text-xs font-semibold text-[#10291c]">
             {countdownLabel(date)}
           </span>
-          <span className="text-xs text-[#b0eed5]">Prochain événement</span>
         </div>
-        <h2 className="font-display text-2xl sm:text-[1.75rem] font-semibold leading-tight text-white">
+        <h2 className="font-display text-2xl sm:text-3xl font-semibold leading-tight text-white">
           {event.title}
         </h2>
         <div className="flex flex-col gap-2 text-sm text-[#d7f6e9] sm:flex-row sm:flex-wrap sm:gap-x-6">

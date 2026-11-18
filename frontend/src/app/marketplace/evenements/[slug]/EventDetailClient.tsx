@@ -22,7 +22,7 @@ import { catalogueReturnBackLabel, getCatalogueReturn } from '@/lib/catalogueQue
 import { CLIENT_AGENDA_HREF } from '@/lib/marketplace';
 import { useAuth } from '@/context/AuthContext';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { Ticket } from 'lucide-react';
+import { Ticket } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { eventPublicPriceDisplay } from '@/lib/ticketPricing';
 import { photosFromEvent } from '@/lib/eventConfig';
@@ -34,7 +34,7 @@ function eventDateKey(iso: string) {
 function PublicFeedPost({ post }: { post: PublicEventPost }) {
   return (
     <article className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+      <p className="text-xs font-semibold text-muted">
         {new Date(post.createdAt).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
       </p>
       {post.content && <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{post.content}</p>}

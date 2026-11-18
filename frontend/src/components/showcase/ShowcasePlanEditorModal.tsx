@@ -12,7 +12,7 @@ import {
   ChevronDown,
   ChevronUp,
   LayoutGrid,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
@@ -189,7 +189,7 @@ export default function ShowcasePlanEditorModal({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary-solid dark:text-primary">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary-solid dark:text-primary">
                 Modèle Vitrine 2D / 3D
               </span>
               <span className="text-xs text-muted hidden sm:inline">
@@ -241,7 +241,7 @@ export default function ShowcasePlanEditorModal({
         <div className="bg-surface border-b border-border px-4 py-3 sm:px-6 shadow-sm space-y-3 animate-in slide-in-from-top-2 duration-150 shrink-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
-              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1">
+              <label className="text-xs font-bold text-muted block mb-1">
                 Nom du modèle *
               </label>
               <input
@@ -254,7 +254,7 @@ export default function ShowcasePlanEditorModal({
             </div>
 
             <div>
-              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1">
+              <label className="text-xs font-bold text-muted block mb-1">
                 Badge / Sous-titre
               </label>
               <input
@@ -267,7 +267,7 @@ export default function ShowcasePlanEditorModal({
             </div>
 
             <div>
-              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1">
+              <label className="text-xs font-bold text-muted block mb-1">
                 Catégorie vitrine
               </label>
               <select
@@ -284,7 +284,7 @@ export default function ShowcasePlanEditorModal({
             </div>
 
             <div>
-              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1">
+              <label className="text-xs font-bold text-muted block mb-1">
                 Forme de salle
               </label>
               <select

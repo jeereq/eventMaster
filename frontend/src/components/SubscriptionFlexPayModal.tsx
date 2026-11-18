@@ -8,7 +8,7 @@ import {
   Loader2,
   ShieldCheck,
   Smartphone,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Modal, Button, ConfirmDialog } from '@/components/ui';
 import { api } from '@/lib/api';
 import type { FlexPayMobileOperatorId } from '@/lib/flexPayOperators';

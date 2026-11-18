@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
-import { Download, Share, Smartphone, X } from 'lucide-react';
+import { Share, Smartphone, X } from '@/components/icons';
+import { isAndroidDevice, isIosDevice } from '@/lib/pwa';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import usePwaInstall from '@/hooks/usePwaInstall';
 import { cn } from '@/lib/cn';
@@ -84,6 +85,63 @@ function InstallHelp({
   );
 }
 
+type Platform = 'ios' | 'android' | 'other';
+
+/** Logos officiels (Simple Icons, domaine public CC0). */
+function BrandSvg({ path, className }: { path: string; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className}>
+      <path d={path} />
+    </svg>
+  );
+}
+
+/** Triangle Google Play en 4 couleurs. */
+function PlayLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className={className}>
+      <polygon points="4,1.5 4,22.5 14,12" fill="#00c3ff" />
+      <polygon points="4,1.5 14,12 15.5,8.6" fill="#00e676" />
+      <polygon points="4,22.5 14,12 15.5,15.4" fill="#ff3a44" />
+      <polygon points="15.5,8.6 21,12 15.5,15.4 14,12" fill="#ffd400" />
+    </svg>
+  );
+}
+
+const APPLE_PATH =
+  'M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701';
+
+const noopSubscribe = () => () => {};
+const readPlatform = (): Platform => (isIosDevice() ? 'ios' : isAndroidDevice() ? 'android' : 'other');
+
+/** Logo de la plateforme de l’appareil : Apple sur iPhone / iPad, Android sur Android, sinon un téléphone. */
+function PlatformLogo({ className }: { className?: string }) {
+  const platform = useSyncExternalStore<Platform>(noopSubscribe, readPlatform, () => 'other');
+  if (platform === 'ios') return <BrandSvg path={APPLE_PATH} className={className} />;
+  if (platform === 'android') return <PlayLogo className={className} />;
+  return <Smartphone className={className} aria-hidden />;
+}
+
+/** Bouton d’installation au format « badge de store » : fond noir, logo de la plateforme, deux lignes. */
+function InstallBadge({ busy, onClick }: { busy: boolean; onClick: () => void }) {
+  const platform = useSyncExternalStore<Platform>(noopSubscribe, readPlatform, () => 'other');
+  const target = platform === 'ios' ? 'iPhone' : platform === 'android' ? 'Android' : null;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      className="inline-flex h-12 shrink-0 items-center gap-2.5 rounded-xl bg-black px-3.5 text-left text-white transition hover:bg-neutral-800 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+    >
+      <PlatformLogo className="h-6 w-6 shrink-0" />
+      <span className="flex flex-col justify-center leading-none">
+        {target ? <span className="block text-[10px] opacity-80 mb-0.5">Installer sur</span> : null}
+        <span className="block text-sm font-semibold">{target ?? 'Installer l’app'}</span>
+      </span>
+    </button>
+  );
+}
+
 export default function PWAInstallCta({
   variant = 'header',
 }: {
@@ -116,28 +174,16 @@ export default function PWAInstallCta({
     if (chipDismissed) return null;
     const chip = (
       <div
-        className="md:hidden pointer-events-none fixed z-[45] left-[max(0.75rem,env(safe-area-inset-left))] bottom-[calc(var(--em-site-fab-bottom)+3.75rem)] max-w-[min(16rem,calc(100vw-1.5rem))]"
+        className="md:hidden pointer-events-none fixed z-[45] left-[max(0.75rem,env(safe-area-inset-left))] bottom-[calc(var(--em-site-fab-bottom)+3.75rem)] max-w-[calc(100vw-1.5rem)]"
         role="region"
         aria-label="Installer l’application"
       >
-        <div className="pointer-events-auto relative flex items-center gap-1 rounded-2xl border border-border bg-surface text-foreground shadow-lg pl-2.5 pr-1 py-1">
-          <Smartphone className="w-4 h-4 shrink-0 text-primary" aria-hidden />
-          <p className="min-w-0 text-xs font-semibold leading-tight">
-            Installer l’app
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            loading={busy}
-            onClick={() => void install()}
-            className="shrink-0"
-          >
-            Installer
-          </Button>
+        <div className="pointer-events-auto relative flex items-center gap-1 rounded-2xl border border-border bg-surface text-foreground shadow-lg p-1">
+          <InstallBadge busy={busy} onClick={() => void install()} />
           <button
             type="button"
             onClick={dismissChip}
-            className="shrink-0 inline-flex items-center justify-center min-h-11 min-w-11 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="shrink-0 inline-flex h-12 w-12 items-center justify-center rounded-xl text-muted hover:text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label="Masquer l’invitation d’installation"
           >
             <X className="w-4 h-4" aria-hidden />
@@ -159,15 +205,7 @@ export default function PWAInstallCta({
   if (variant === 'footer') {
     return (
       <div className="space-y-2">
-        <Button
-          type="button"
-          size="sm"
-          loading={busy}
-          onClick={() => void install()}
-          leftIcon={<Download className="w-3.5 h-3.5" />}
-        >
-          Installer l’application
-        </Button>
+        <InstallBadge busy={busy} onClick={() => void install()} />
         {helpCopy ? <InstallHelp copy={helpCopy} onClose={closeHelp} /> : null}
       </div>
     );
@@ -181,7 +219,7 @@ export default function PWAInstallCta({
         variant="ghost"
         loading={busy}
         onClick={() => void install()}
-        leftIcon={<Smartphone className="w-4 h-4" />}
+        leftIcon={<PlatformLogo className="w-4 h-4" />}
         aria-label={`Installer ${site.platformName}`}
         title="Installer l’application"
         className="text-primary hover:bg-primary/10"

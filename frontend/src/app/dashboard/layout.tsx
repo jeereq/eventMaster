@@ -13,7 +13,7 @@ import {
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
  PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet, Bell,
  Inbox, Sparkles, Heart, Rss, Coins, LayoutGrid,
-} from 'lucide-react';
+} from '@/components/icons';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import PWAInstallCta from '@/components/PWAInstallCta';
 import SiteBrandMark from '@/components/SiteBrandMark';
@@ -33,7 +33,6 @@ import DashboardMobileBottomBar, {
 import DashboardMobileMenuSheet from '@/components/dashboard/DashboardMobileMenuSheet';
 import UserAvatar from '@/components/UserAvatar';
 import ViewCustomizerDrawer, {
- ViewCustomizerEdgeHandle,
  ViewCustomizerTrigger,
 } from '@/components/ViewCustomizer';
 import { Tooltip } from '@/components/ui';
@@ -158,7 +157,7 @@ const NAV_TOOLTIPS: Record<string, string> = {
  'Demandes abonnement': 'Approuver ou refuser les forfaits',
  'Forfaits & tarifs': 'Configurer les plans SaaS',
  Factures: 'Historique et détail des factures',
- 'Versements SaaS': 'Commissions commerciaux plateforme, hors EventMaster',
+ 'Versements SaaS': 'Commissions des commerciaux plateforme',
  'Réglages plateforme': 'Intégrations e-mail, WhatsApp…',
  'Guide utilisateur': 'Documentation et visite guidée',
  'Mon compte': 'Profil et sécurité du compte',
@@ -174,7 +173,7 @@ const NAV_TOOLTIPS: Record<string, string> = {
 	'Mes billets': 'Inscriptions, filtres et badge QR',
 	Statistiques: 'Réponse à l’invitation, check-in, tâches et analyses d’événements',
  Modèles: 'Concepteur d’invitations',
- 'Facturation & plan': 'Forfait, quotas et upgrade',
+ Forfait: 'Forfait, quotas et renouvellement',
  Notifications: 'Alertes tâches, devis, factures et réservations',
  'Journal d’audit': 'Actions Super Admin et Commercial',
  Catalogue: 'Fiches, demandes et réservations publiques',
@@ -260,7 +259,7 @@ function buildB2bOrganizerNav(opts: {
     ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users, description: 'Managers, protocole et droits d’accès' }]
     : []),
    ...(access?.canViewBilling
-    ? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard, description: 'Forfait, quotas et renouvellement' }]
+    ? [{ name: 'Forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
     : []),
    ...(access?.canViewInvoices
     ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText, description: 'Historique et téléchargement' }]
@@ -528,7 +527,7 @@ function buildDashboardNav(opts: {
 
 		const billingItems: NavItem[] = [
 			...(access?.canViewBilling
-				? [{ name: 'Abonnement & forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
+				? [{ name: 'Forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
 				: []),
 			...(access?.canViewInvoices
 				? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
@@ -594,7 +593,7 @@ function buildDashboardNav(opts: {
 			]),
 			navSection('Mon forfait', [
 				...(access?.canViewBilling
-					? [{ name: 'Forfait & paiement', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
+					? [{ name: 'Forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
 					: []),
 				...(access?.canViewInvoices
 					? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
@@ -667,7 +666,7 @@ function buildDashboardNav(opts: {
 
 	const billingItems: NavItem[] = [
 		...(access?.canViewBilling
-			? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
+			? [{ name: 'Forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
 			: []),
 		...(access?.canViewInvoices
 			? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
@@ -805,7 +804,7 @@ function SidebarNav({
  {collapsed && isNotifications ? (
   <UnreadCountBadge
     count={unreadCount}
-    className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 inline-flex items-center justify-center rounded-full bg-danger text-primary-foreground text-[10px] font-bold tabular-nums"
+    className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 inline-flex items-center justify-center rounded-full bg-danger text-primary-foreground text-xs font-bold tabular-nums"
   />
  ) : null}
  </span>
@@ -820,11 +819,11 @@ function SidebarNav({
  {!collapsed && isNotifications ? (
   <UnreadCountBadge
     count={unreadCount}
-    className="ml-auto min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-danger text-primary-foreground text-[10px] font-bold tabular-nums"
+    className="ml-auto min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-danger text-primary-foreground text-xs font-bold tabular-nums"
   />
  ) : null}
  {!collapsed && !isNotifications && item.badge ? (
-  <span className="ml-auto min-w-[20px] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-festive-accent-soft text-festive-accent text-[11px] font-bold tabular-nums">
+  <span className="ml-auto min-w-[20px] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-festive-accent-soft text-festive-accent text-xs font-bold tabular-nums">
     {item.badge > 99 ? '99+' : item.badge}
   </span>
  ) : null}
@@ -839,9 +838,52 @@ function SidebarNav({
  );
 }
 
+/** Forfait de l’organisation : lien vers la page Forfait quand l’utilisateur peut la voir, sinon simple étiquette. */
+function TenantPlanLink({
+  isClient,
+  planLabel,
+  canOpen,
+  onNavigate,
+}: {
+  isClient: boolean;
+  planLabel: string;
+  canOpen: boolean;
+  onNavigate: () => void;
+}) {
+  const base = 'mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-xs font-bold text-primary';
+  if (isClient) {
+    return (
+      <div className={base}>
+        <ShieldCheck className="w-3.5 h-3.5" aria-hidden />
+        Compte client
+      </div>
+    );
+  }
+  if (!canOpen) {
+    return (
+      <div className={base}>
+        <Sparkles className="w-3.5 h-3.5" aria-hidden />
+        Forfait {planLabel}
+      </div>
+    );
+  }
+  return (
+    <Link
+      href="/dashboard/billing"
+      onClick={onNavigate}
+      title="Voir ou changer mon forfait"
+      className={`${base} hover:bg-primary/20 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40`}
+    >
+      <Sparkles className="w-3.5 h-3.5" aria-hidden />
+      Forfait {planLabel}
+      <span className="font-medium underline underline-offset-2">Changer</span>
+    </Link>
+  );
+}
+
 function DashboardMobileTitle() {
  const { title } = useDashboardTitle();
- return <span className="em-dash-title font-semibold text-base text-foreground truncate">{title}</span>;
+ return <h1 className="em-dash-title font-semibold text-base text-foreground truncate">{title}</h1>;
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -954,6 +996,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  }, []);
 
  const isClientAccount = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
+ const canOpenBilling = !isClientAccount && Boolean(access?.isOwner || access?.canViewBilling);
  const workspace = getWorkspaceModules({
   accountKind: tenant?.accountKind,
   access,
@@ -1110,7 +1153,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         style={{ ['--em-sidebar-width' as string]: sidebarCollapsed ? '4.5rem' : '16rem' }}
       >
         {/* Header mobile */}
-        <header className="md:hidden bg-surface/95 backdrop-blur-md border-b border-border px-3 flex items-center justify-between fixed inset-x-0 top-0 z-40 pt-[env(safe-area-inset-top,0px)]">
+        <header className="md:hidden bg-surface/95 border-b border-border px-3 flex items-center justify-between fixed inset-x-0 top-0 z-40 pt-[env(safe-area-inset-top,0px)]">
           <div className="h-12 w-full flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
               <SiteBrandMark href="/dashboard" showLabel={false} />
@@ -1184,18 +1227,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     {sidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
                   </button>
                 </Tooltip>
-                {!sidebarCollapsed && (
-                  <Tooltip content={theme === 'light' ? 'Passer en sombre' : 'Passer en clair'} side="bottom">
-                    <button
-                      type="button"
-                      onClick={toggleTheme}
-                      className="p-2 rounded-full border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
-                      aria-label="Changer de thème"
-                    >
-                      {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-                    </button>
-                  </Tooltip>
-                )}
               </div>
             </div>
 
@@ -1229,12 +1260,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <div className="font-semibold text-foreground text-sm truncate mt-0.5">
                       {tenant.name}
                     </div>
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-xs font-bold text-primary">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      {isClientAccount
-                        ? 'Client'
-                        : `Plan ${tenantPlanLabel}`}
-                    </div>
+                    <TenantPlanLink isClient={isClientAccount} planLabel={tenantPlanLabel} canOpen={canOpenBilling} onNavigate={() => setMobileMenuOpen(false)} />
                   </div>
                 ) : null}
               </>
@@ -1306,18 +1332,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {!sidebarCollapsed && 'Déconnexion'}
               </button>
             </Tooltip>
-            {sidebarCollapsed && (
-              <Tooltip content={theme === 'light' ? 'Passer en sombre' : 'Passer en clair'} side="right" className="flex w-full">
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className="flex w-full items-center justify-center p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
-                  aria-label="Changer de thème"
-                >
-                  {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-                </button>
-              </Tooltip>
-            )}
           </div>
         </aside>
 
@@ -1361,12 +1375,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {isClientAccount ? 'Compte' : 'Organisation'}
               </div>
               <div className="font-semibold text-foreground text-sm truncate mt-0.5">{tenant.name}</div>
-              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-xs font-bold text-primary">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                {isClientAccount
-                  ? 'Client'
-                  : `Plan ${tenantPlanLabel}`}
-              </div>
+              <TenantPlanLink isClient={isClientAccount} planLabel={tenantPlanLabel} canOpen={canOpenBilling} onNavigate={() => setMobileMenuOpen(false)} />
             </div>
           ) : null}
 
@@ -1403,29 +1412,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <span className="text-xs text-muted truncate block">Mon compte</span>
               </div>
             </Link>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="flex items-center justify-center gap-2 min-h-11 px-3 rounded-2xl bg-surface-muted/40 border border-border/60 text-xs font-semibold text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation"
-              >
-                {theme === 'light' ? (
-                  <>
-                    <Moon className="w-4 h-4 text-muted" /> Mode sombre
-                  </>
-                ) : (
-                  <>
-                    <Sun className="w-4 h-4 text-amber-500" /> Mode clair
-                  </>
-                )}
-              </button>
+            <div>
               <button
                 type="button"
                 onClick={() => {
                   logout();
                   setMobileMenuOpen(false);
                 }}
-                className="flex items-center justify-center gap-2 min-h-11 px-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/15 transition active:scale-95 touch-manipulation"
+                className="flex w-full items-center justify-center gap-2 min-h-11 px-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/15 transition active:scale-95 touch-manipulation"
               >
                 <LogOut className="w-4 h-4" />
                 Déconnexion
@@ -1436,10 +1430,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Contenu principal */}
       <main id="main-content" className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain bg-background flex flex-col">
-        <DashboardTopBar
-          sidebarCollapsed={sidebarCollapsed}
-          onToggleSidebar={toggleSidebarCollapsed}
-        />
+        <DashboardTopBar />
         <div className="em-auth-container relative z-10 pt-3 sm:pt-6 lg:pt-8 pb-[calc(6.25rem+var(--em-site-install-bar)+env(safe-area-inset-bottom,0px))] md:pb-6 lg:pb-8 flex-1 em-dashboard-content">
           <UserLegalGate>
             {children}
@@ -1465,7 +1456,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <div id="em-dashboard-stage" />
 
-      <ViewCustomizerEdgeHandle />
       <ViewCustomizerDrawer />
       <ProductTourOverlay />
     </div>

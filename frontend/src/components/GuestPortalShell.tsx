@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Calendar, HelpCircle, MapPin } from 'lucide-react';
+import { Calendar, HelpCircle, MapPin } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { scrollAppToTop, tapHaptic } from '@/lib/mobileNative';
 import { prefersReducedMotion } from '@/lib/prefersReducedMotion';
@@ -101,7 +101,7 @@ export default function GuestPortalShell({
   return (
     <div className={cn('em-guest-page flex flex-col min-h-dvh', className)} inert={inert || undefined}>
       <CelebrateMood />
-      <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-40 border-b border-border bg-surface/90 pt-[env(safe-area-inset-top)]">
         <div className="w-full max-w-xl mx-auto min-h-14 flex items-center justify-between gap-2 sm:gap-3 py-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
           {showBrand ? (
             <Link href="/" className="flex items-center gap-2.5 min-w-0 hover:opacity-90 transition">
@@ -119,7 +119,7 @@ export default function GuestPortalShell({
                 {brandLabel.slice(0, 1).toUpperCase()}
               </span>
               <div className="min-w-0">
-                <h1 className="font-display text-[15px] sm:text-base font-semibold text-foreground truncate leading-tight">{title}</h1>
+                <h1 className="font-display text-base sm:text-base font-semibold text-foreground truncate leading-tight">{title}</h1>
                 <p className="text-xs text-muted truncate leading-snug">{eyebrow || brandLabel}</p>
               </div>
             </div>
@@ -154,7 +154,7 @@ export default function GuestPortalShell({
       >
         {showBrand && (
           <div className="mb-5 space-y-1">
-            <h1 className="text-2xl sm:text-[1.75rem] font-display font-semibold text-foreground leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-display font-semibold text-foreground leading-tight">
               {title}
             </h1>
             {eyebrow ? (
@@ -168,7 +168,7 @@ export default function GuestPortalShell({
       {tabs ? (
         <nav
           aria-label="Navigation de l’espace invité"
-          className="em-tabbar fixed bottom-0 inset-x-0 z-40 border-t border-border bg-surface/92 dark:bg-stage-elevated/95 backdrop-blur-2xl backdrop-saturate-150 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.18)]"
+          className="em-tabbar fixed bottom-0 inset-x-0 z-40 border-t border-border bg-surface/92 dark:bg-stage-elevated/95 backdrop-saturate-150 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.18)]"
         >
           {tabs}
         </nav>
@@ -259,7 +259,7 @@ export function GuestPortalTabBar({
               }}
               aria-label={tab.label}
               className={cn(
-                'em-tab relative flex flex-col items-center justify-center gap-0.5 min-h-[50px] py-1 px-0.5 rounded-2xl text-[10.5px] min-[400px]:text-[11px] transition-colors duration-200 touch-manipulation',
+                'em-tab relative flex flex-col items-center justify-center gap-0.5 min-h-[50px] py-1 px-0.5 rounded-2xl text-xs min-[400px]:text-xs transition-colors duration-200 touch-manipulation',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                 active ? 'text-primary-solid dark:text-primary font-semibold' : 'text-muted hover:text-foreground font-medium',
               )}
@@ -337,7 +337,7 @@ export function GuestEventHero({
         </div>
         <div className="space-y-1">
           {greeting ? <p className="text-sm text-[#b0eed5]">{greeting}</p> : null}
-          <h2 className="font-display text-[1.625rem] sm:text-[1.75rem] font-semibold leading-[1.15] text-white break-words">
+          <h2 className="font-display text-2xl sm:text-3xl font-semibold leading-[1.15] text-white break-words">
             {title}
           </h2>
         </div>

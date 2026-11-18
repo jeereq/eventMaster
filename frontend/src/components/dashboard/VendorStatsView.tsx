@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Briefcase, Building2, CalendarCheck, Clock, Eye, Inbox, RefreshCw, Star, Store, Wallet } from 'lucide-react';
+import { Briefcase, Building2, CalendarCheck, Clock, Eye, Inbox, RefreshCw, Star, Store, Wallet } from '@/components/icons';
 import { ratingLabel } from '@/lib/marketplaceReviews';
 import { api } from '@/lib/api';
 import { formatFc } from '@/config/landingPricing';
@@ -137,7 +137,7 @@ function RevenueBars({ months }: { months: VendorStats['months'] }) {
       </div>
       <div className="mt-1 flex gap-[2px]">
         {months.map((m, index) => (
-          <span key={m.month} className={cn('flex-1 text-center text-[10px] text-muted', index % 2 === 1 && 'max-sm:invisible')}>
+          <span key={m.month} className={cn('flex-1 text-center text-xs text-muted', index % 2 === 1 && 'max-sm:invisible')}>
             {monthLabel(m.month)}
           </span>
         ))}
@@ -261,7 +261,7 @@ export default function VendorStatsView({ isVenue }: { isVenue: boolean }) {
       </div>
 
       {nothingYet ? (
-        <EmptyState
+        <EmptyState illustration="inbox"
           icon={isVenue ? <Building2 className="h-7 w-7" /> : <Briefcase className="h-7 w-7" />}
           title="Pas encore de demande"
           description="Vos chiffres apparaîtront ici dès la première demande de devis. Une fiche complète avec photos attire plus de clients."

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Coins, Sparkles } from 'lucide-react';
+import { Coins, Sparkles } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { AI_TOKEN_PACK_SIZE, aiTokenCostLegend, type AiAllowance } from '@/lib/aiTokens';
 

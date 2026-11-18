@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Minimize2, SlidersHorizontal } from 'lucide-react';
+import { Minimize2, SlidersHorizontal } from '@/components/icons';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import MarketplacePublicNav, { type MarketplaceNavId } from '@/components/MarketplacePublicNav';
@@ -73,7 +73,7 @@ export function CatalogueFocusStage({
               onClick={() => setFiltersVisible((open) => !open)}
               aria-pressed={filtersVisible}
               aria-controls="catalogue-focus-filters"
-              className="min-h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="min-h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               {filtersVisible ? 'Masquer' : 'Filtres'}
@@ -241,7 +241,7 @@ export default function CatalogueSearchLayout({
             <MarketplacePublicNav
               dense
               active={activeNav}
-              className="bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
+              className="bg-surface/90 border-white/25 dark:border-white/10 shadow-lg"
             />
           }
           filters={renderFilters('float')}
@@ -266,12 +266,12 @@ export default function CatalogueSearchLayout({
             <div className="flex items-start gap-2">
               <MarketplacePublicNav
                 active={activeNav}
-                className="flex-1 min-w-0 bg-surface/95 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
+                className="flex-1 min-w-0 bg-surface/95 border-white/25 dark:border-white/10 shadow-lg"
               />
               <button
                 type="button"
                 onClick={exitMap}
-                className="min-h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="min-h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 <Minimize2 className="w-3.5 h-3.5" />
                 Quitter
@@ -296,7 +296,7 @@ export default function CatalogueSearchLayout({
       />
 
       <div className="page-container py-3 md:py-10 flex-1 space-y-3 md:space-y-6">
-        <div className="sticky top-[var(--em-site-header)] z-20 -mx-1 px-1 py-0 md:py-1 bg-background/90 backdrop-blur-md">
+        <div className="sticky top-[var(--em-site-header)] z-20 -mx-1 px-1 py-0 md:py-1 bg-background/90">
           {renderFilters('card')}
         </div>
         {aboveResults}

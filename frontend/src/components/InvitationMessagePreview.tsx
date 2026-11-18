@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { wrapBrandedWhatsApp } from '@/lib/whatsappTone';
 import { useMessagingChannels } from '@/hooks/useMessagingChannels';
@@ -320,17 +320,17 @@ export default function InvitationMessagePreview({
         >
           <div className="bg-stage px-4 py-3 text-stage-foreground flex items-center justify-between">
             <div>
-              <p className="text-[10px] uppercase font-bold tracking-wider opacity-70">SMS Transactionnel</p>
+              <p className="text-xs uppercase font-bold tracking-wider opacity-70">SMS Transactionnel</p>
               <p className="text-sm font-semibold truncate">EXP : {orgName ? orgName.toUpperCase().slice(0, 11) : 'EVENTMASTER'}</p>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface/20 text-stage-foreground font-mono">Dream Digital / GSM</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-surface/20 text-stage-foreground font-mono">Dream Digital / GSM</span>
           </div>
           <div className="p-3.5 min-h-[140px] bg-surface flex flex-col justify-between">
             <div className="max-w-[88%] rounded-2xl rounded-bl-xs bg-surface-muted border border-border/80 px-3.5 py-2.5 text-xs text-foreground leading-relaxed">
               <p className="whitespace-pre-line font-sans">{smsText}</p>
-              <span className="block text-[10px] text-muted text-right mt-1">Maintenant · SMS</span>
+              <span className="block text-xs text-muted text-right mt-1">Maintenant · SMS</span>
             </div>
-            <p className="text-[11px] text-muted mt-3">Rendu SMS direct sur mobile avec lien de réponse instantané.</p>
+            <p className="text-xs text-muted mt-3">Rendu SMS direct sur mobile avec lien de réponse instantané.</p>
           </div>
         </div>
       )}

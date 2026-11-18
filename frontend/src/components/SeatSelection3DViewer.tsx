@@ -21,7 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-} from 'lucide-react';
+} from '@/components/icons';
 
 export type SeatSelection3DRow = {
   tableId: string;
@@ -83,7 +83,7 @@ function SeatPreviewQualityChips({
       className={cn(
         'flex shrink-0 gap-1 rounded-full p-0.5',
         variant === 'overlay'
-          ? 'border border-background/20 bg-foreground/80 backdrop-blur-md'
+          ? 'border border-background/20 bg-foreground/80'
           : 'border border-border bg-surface',
       )}
       role="group"

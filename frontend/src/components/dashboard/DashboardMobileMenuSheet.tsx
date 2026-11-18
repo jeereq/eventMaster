@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { X } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 /**
@@ -44,7 +44,7 @@ export default function DashboardMobileMenuSheet({
   return createPortal(
     <div className="md:hidden">
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[55] transition-opacity animate-in fade-in duration-200"
+        className="fixed inset-0 bg-black/60 z-[55] transition-opacity animate-in fade-in duration-200"
         onClick={() => {
           if (document.body.dataset.emTour === '1') return;
           onClose();

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Percent, Wallet } from 'lucide-react';
+import { Percent, Wallet } from '@/components/icons';
 import { Modal, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 
@@ -130,7 +130,7 @@ export default function SubscriptionDiscountRequestModal({
         </div>
 
         <label className="block space-y-1.5">
-          <span className="text-xs font-bold text-muted uppercase tracking-wider">Motif</span>
+          <span className="text-xs font-bold text-muted ">Motif</span>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}

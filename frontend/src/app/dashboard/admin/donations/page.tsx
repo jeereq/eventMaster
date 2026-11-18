@@ -25,7 +25,7 @@ import {
   ArrowUpRight,
   TrendingUp,
   Loader2,
-} from 'lucide-react';
+} from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -128,8 +128,6 @@ export default function AdminDonationsPage() {
       />
 
       <PageHeader
-        title="Reporting des dons solidaires"
-        description="Dons et collectes."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -254,7 +252,7 @@ export default function AdminDonationsPage() {
       {data?.channels && data.channels.length > 0 && (
         <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 space-y-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
+            <h3 className="text-xs font-bold text-muted flex items-center gap-1.5">
               <Smartphone className="w-4 h-4 text-primary" />
               Parts de marché par canal opérateur en RDC
             </h3>
@@ -334,7 +332,7 @@ export default function AdminDonationsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs" aria-label="Top événements collecteurs">
                 <thead>
-                  <tr className="border-b border-border text-muted uppercase text-xs font-bold tracking-wider">
+                  <tr className="border-b border-border text-muted text-xs font-bold ">
                     <th className="pb-3 pr-4">Événement</th>
                     <th className="pb-3 px-4">Organisation</th>
                     <th className="pb-3 px-4">Collecté (FC)</th>
@@ -409,7 +407,7 @@ export default function AdminDonationsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs" aria-label="Top organisations collectrices">
                 <thead>
-                  <tr className="border-b border-border text-muted uppercase text-xs font-bold tracking-wider">
+                  <tr className="border-b border-border text-muted text-xs font-bold ">
                     <th className="pb-3 pr-4">Organisation</th>
                     <th className="pb-3 px-4">Événements avec dons</th>
                     <th className="pb-3 px-4">Montant total collecté (FC)</th>

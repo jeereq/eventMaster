@@ -11,7 +11,7 @@ import {
   ShieldAlert, Send, Clock, CheckCircle2, XCircle,
   Loader2, CreditCard, Check, LogOut, RefreshCw,
   Smartphone, ShieldCheck, ChevronDown, Zap,
-} from 'lucide-react';
+} from '@/components/icons';
 import {
   LANDING_PLANS,
   paidPlanIdsForBillingContext,
@@ -271,10 +271,8 @@ export default function PWARestrictedScreen() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-between font-sans antialiased relative overflow-hidden">
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
 
-      <header className="border-b border-border bg-surface/50 backdrop-blur-md px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 relative z-10">
+      <header className="border-b border-border bg-surface px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 relative z-10">
         <div className="flex items-center gap-3 min-w-0">
           <div className="bg-primary-solid p-2 rounded-xl text-primary-foreground">
             <ShieldAlert className="w-5 h-5" />
@@ -337,7 +335,7 @@ export default function PWARestrictedScreen() {
                 )}
               >
                 {plan.badge && (
-                  <span className="absolute top-0 right-4 transform -translate-y-1/2 bg-primary-solid text-primary-foreground text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="absolute top-0 right-4 transform -translate-y-1/2 bg-primary-solid text-primary-foreground text-[9px] font-extrabold px-2 py-0.5 rounded-full ">
                     {plan.badge}
                   </span>
                 )}
@@ -346,12 +344,12 @@ export default function PWARestrictedScreen() {
                     <h3 className="font-bold text-sm text-foreground">{plan.name}</h3>
                     <div className="flex items-baseline gap-1 mt-1">
                       <span className="text-xl font-black text-foreground">{plan.price}</span>
-                      <span className="text-[10px] text-muted">{planPricePeriodSuffix(plan.id) || '/ mois'}</span>
+                      <span className="text-xs text-muted">{planPricePeriodSuffix(plan.id) || '/ mois'}</span>
                     </div>
                   </div>
                   <ul className="space-y-1.5 border-t border-border pt-3">
                     {plan.highlights.slice(0, 3).map((feat) => (
-                      <li key={feat} className="flex items-center gap-1.5 text-[10px] text-foreground">
+                      <li key={feat} className="flex items-center gap-1.5 text-xs text-foreground">
                         <Check className="w-3 h-3 text-primary flex-shrink-0" />
                         <span className="truncate"><ChannelText text={feat} /></span>
                       </li>
@@ -361,7 +359,7 @@ export default function PWARestrictedScreen() {
                 <div className="pt-4">
                   <div
                     className={cn(
-                      'w-full py-1.5 rounded-lg text-center text-[10px] font-bold transition',
+                      'w-full py-1.5 rounded-lg text-center text-xs font-bold transition',
                       requestedPlan === plan.id
                         ? 'bg-primary-solid text-primary-foreground'
                         : 'bg-surface-muted text-foreground',
@@ -397,7 +395,7 @@ export default function PWARestrictedScreen() {
             )}
 
             <div className="p-3 bg-surface-muted/60 border border-border rounded-xl space-y-1 mb-4">
-              <span className="text-[10px] text-muted font-bold uppercase tracking-wider block">Forfait sélectionné</span>
+              <span className="text-xs text-muted font-bold block">Forfait sélectionné</span>
               <span className="text-sm font-extrabold text-primary">
                 {selectedPlan
                   ? `${selectedPlan.name} — ${selectedPlan.price} ${planPricePeriodSuffix(selectedPlan.id)}`
@@ -407,7 +405,7 @@ export default function PWARestrictedScreen() {
 
             {onlinePaymentAvailable && (
               <div className="space-y-3 mb-5">
-                <div className="flex items-center gap-2 text-[10px] font-bold text-muted uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-xs font-bold text-muted ">
                   <Zap className="w-3.5 h-3.5 text-primary" />
                   Payer maintenant · activation immédiate
                 </div>
@@ -431,7 +429,7 @@ export default function PWARestrictedScreen() {
                     Carte bancaire
                   </button>
                 </div>
-                <p className="flex items-start gap-1.5 text-[10px] text-muted leading-relaxed">
+                <p className="flex items-start gap-1.5 text-xs text-muted leading-relaxed">
                   <ShieldCheck className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-px" />
                   <span>
                     Paiement sécurisé FlexPay : Orange Money, M-Pesa, Airtel Money, Visa / Mastercard.
@@ -456,7 +454,7 @@ export default function PWARestrictedScreen() {
             {(!onlinePaymentAvailable || manualOpen) && (
             <form onSubmit={handleSubmit} className={cn('space-y-4', onlinePaymentAvailable && 'pt-4')}>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                <label className="text-xs font-bold text-muted ">
                   Référence de paiement / Message
                 </label>
                 <textarea
@@ -501,7 +499,7 @@ export default function PWARestrictedScreen() {
           </div>
 
           <div className="bg-surface/40 border border-border rounded-3xl p-6">
-            <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-4 flex items-center gap-1.5">
+            <h4 className="text-xs font-bold text-muted mb-4 flex items-center gap-1.5">
               <Clock className="w-4 h-4 text-primary" />
               Historique des demandes ({requests.length})
             </h4>
@@ -520,7 +518,7 @@ export default function PWARestrictedScreen() {
                       <span className="text-xs font-bold text-foreground">
                         {planLabel(req.requestedPlan)}
                       </span>
-                      <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                      <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
                         req.status === 'APPROVED' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' :
                         req.status === 'REJECTED' ? 'bg-rose-500/10 border border-rose-500/20 text-rose-400' :
                         'bg-amber-500/10 border border-amber-500/20 text-amber-400'
@@ -532,7 +530,7 @@ export default function PWARestrictedScreen() {
                       </span>
                     </div>
                     {(isFlexPayRequest(req) || req.approvedAmount) && (
-                      <p className="text-[10px] text-muted">
+                      <p className="text-xs text-muted">
                         {isFlexPayRequest(req)
                           ? `Paiement en ligne · ${req.paymentProvider === 'flexpay_mobile' ? 'Mobile Money' : 'Carte'}`
                           : 'Demande manuelle'}
@@ -540,7 +538,7 @@ export default function PWARestrictedScreen() {
                       </p>
                     )}
                     {req.proofOfPayment && (
-                      <p className="text-[10px] text-muted italic truncate" title={req.proofOfPayment}>
+                      <p className="text-xs text-muted italic truncate" title={req.proofOfPayment}>
                         &quot;{req.proofOfPayment}&quot;
                       </p>
                     )}
@@ -548,7 +546,7 @@ export default function PWARestrictedScreen() {
                       <button
                         type="button"
                         onClick={() => openRetry(req)}
-                        className="w-full py-1.5 rounded-lg bg-primary/10 border border-primary/25 text-primary text-[10px] font-bold hover:bg-primary/15 transition cursor-pointer"
+                        className="w-full py-1.5 rounded-lg bg-primary/10 border border-primary/25 text-primary text-xs font-bold hover:bg-primary/15 transition cursor-pointer"
                       >
                         {req.status === 'QUOTED'
                           ? 'Payer le tarif négocié'
@@ -584,7 +582,7 @@ export default function PWARestrictedScreen() {
         />
       ) : null}
 
-      <footer className="bg-background border-t border-border py-6 text-center text-[10px] text-muted">
+      <footer className="bg-background border-t border-border py-6 text-center text-xs text-muted">
         <p>© {new Date().getFullYear()} EventMaster SaaS. Isolation stricte garantie. Tous droits réservés.</p>
       </footer>
     </div>

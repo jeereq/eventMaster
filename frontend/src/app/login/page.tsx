@@ -4,40 +4,33 @@ import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import {
-  Calendar, Lock, Sparkles, Table, MessageSquare, Ticket, QrCode,
-} from 'lucide-react';
-import { AuthSplitLayout } from '@/components/AuthSplitLayout';
-import { Button, Alert, PasswordInput, Card, IdentifierInput, identifierValue } from '@/components/ui';
+import { ArrowUpRight } from '@/components/icons';
+import { AuthPhotoLayout } from '@/components/AuthPhotoLayout';
+import { Button, Alert, PasswordInput, IdentifierInput, identifierValue } from '@/components/ui';
 import type { IdentifierMode } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { authOtpMethodOptions, defaultPhoneAuthOtpMethod, phoneAuthOtpMethods, type PhoneAuthOtpMethod } from '@/lib/authOtpChannels';
 
-const FEATURES = [
-  { icon: MessageSquare, title: 'Réponses en temps réel', desc: 'Voyez qui a confirmé, relancez les autres sur WhatsApp en un clic.' },
-  { icon: Table, title: 'Plan de salle 2D et 3D', desc: 'Placez vos invités à table et partagez la salle avant le jour J.' },
-  { icon: QrCode, title: 'Accueil par QR code', desc: 'Votre équipe scanne les invitations à l’entrée, même sur un simple téléphone.' },
-  { icon: Calendar, title: 'Tout au même endroit', desc: 'Budget, prestataires, billets et invités : votre événement vous attend.' },
-];
-
-const CLIENT_FEATURES = [
-  { icon: Ticket, title: 'Billets et inscriptions', desc: 'Retrouvez vos places et votre badge QR dans Mes billets.' },
-  { icon: Calendar, title: 'Devis et réservations', desc: 'Envoyez un devis salle ou presta, puis suivez vos demandes.' },
-  { icon: Table, title: 'Marketplace', desc: 'Salles, prestataires, matériel & équipements et événements publics — grille, liste ou carte.' },
-  { icon: Sparkles, title: 'Compte client', desc: 'Sans abonnement : devis, billets et favoris.' },
-];
+/** Identifiants préremplis en développement (frontend/.env.local), jamais en production. */
+const DEV_LOGIN =
+  process.env.NODE_ENV === 'development'
+    ? {
+        email: process.env.NEXT_PUBLIC_DEV_LOGIN_EMAIL ?? '',
+        password: process.env.NEXT_PUBLIC_DEV_LOGIN_PASSWORD ?? '',
+      }
+    : { email: '', password: '' };
 
 export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <AuthSplitLayout title="Chargement…" description="" features={FEATURES} backHref="/" backLabel="Retour au site">
-          <Card padding="lg" className="shadow-xl animate-pulse h-96">
+        <AuthPhotoLayout title="Heureux de vous revoir." description="" cardTitle="Connexion">
+          <div className="h-96 rounded-2xl bg-surface-muted animate-pulse">
             <span className="sr-only">Chargement du formulaire de connexion</span>
-          </Card>
-        </AuthSplitLayout>
+          </div>
+        </AuthPhotoLayout>
       }
     >
       <LoginPageContent />
@@ -58,12 +51,12 @@ function LoginPageContent() {
 
   const defaultMode: IdentifierMode =
     !authOtpMethodOptions(authChannels).includes('EMAIL') ? 'phone' : 'email';
-  const [mode, setMode] = useState<IdentifierMode>(defaultMode);
+  const [mode, setMode] = useState<IdentifierMode>(DEV_LOGIN.email ? 'email' : defaultMode);
   const [phoneMethod, setPhoneMethod] = useState<PhoneAuthOtpMethod>(() => defaultPhoneAuthOtpMethod(authChannels));
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(DEV_LOGIN.email);
   const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
   const [phoneNational, setPhoneNational] = useState('');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState(DEV_LOGIN.password);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -85,30 +78,32 @@ function LoginPageContent() {
   };
 
   return (
-    <AuthSplitLayout
-      title={isClientFlow ? 'Connectez-vous pour retrouver vos demandes et billets.' : 'Heureux de vous revoir !'}
+    <AuthPhotoLayout
+      title={isClientFlow ? 'Vos billets et vos demandes.' : 'Heureux de vous revoir.'}
+      cardTitle="Connexion"
+      cardSubtitle={
+        <>
+          Nouveau ici ?{' '}
+          <Link href={registerHref} className="font-semibold text-[#a6f04d] hover:underline">
+            Créer un compte gratuit
+          </Link>
+        </>
+      }
       description={
         isClientFlow
-          ? 'Après connexion, vous revenez à la fiche. Un compte est requis pour un devis, une réservation ou un billet.'
-          : 'Vos invités, votre salle et vos billets vous attendent là où vous les avez laissés.'
+          ? 'Après connexion, vous revenez à la fiche.'
+          : 'Vos invités, votre salle et vos billets vous attendent.'
       }
-      features={isClientFlow ? CLIENT_FEATURES : FEATURES}
-      featureStyle="list"
-      backHref="/"
-      backLabel="Retour au site"
-      hideMobileTitle
+      photoAction={
+        <Link
+          href={registerHref}
+          className="inline-flex items-center gap-2 min-h-12 rounded-2xl bg-white px-5 text-sm font-semibold text-[#10291c] shadow-lg hover:bg-[#f1fbe6] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a6f04d]"
+        >
+          <ArrowUpRight className="w-4 h-4" aria-hidden />
+          Créer un compte gratuit
+        </Link>
+      }
     >
-      <Card padding="lg" className="border-border shadow-sm">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Connexion</h1>
-          <p className="mt-2 text-sm text-muted">
-            Nouveau ici ?{' '}
-            <Link href={registerHref} className="font-semibold text-primary hover:underline">
-              Créer un compte gratuit
-            </Link>
-          </p>
-        </div>
-
         {error && <Alert variant="error" className="mb-5">{error}</Alert>}
 
         <form className="space-y-5" onSubmit={handleSubmit}>
@@ -126,7 +121,8 @@ function LoginPageContent() {
             selectedPhoneMethod={phoneMethod}
             onPhoneMethodChange={setPhoneMethod}
             customPhoneLabel={phoneMethod === 'WHATSAPP' && phoneAuthOtpMethods(authChannels).includes('WHATSAPP') ? 'Numéro WhatsApp' : 'Numéro de téléphone'}
-            customPhoneHint="Le numéro de votre compte : indicatif pays, puis le numéro sans le 0."
+            customPhoneHint=""
+            showPhoneRecorded={false}
           />
 
           <PasswordInput
@@ -137,7 +133,6 @@ function LoginPageContent() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            leftIcon={<Lock className="w-4 h-4" />}
             labelExtra={
               <Link href="/ask-reset-password" className="text-xs font-semibold text-primary hover:underline min-h-11 inline-flex items-center">
                 Mot de passe oublié ?
@@ -145,11 +140,10 @@ function LoginPageContent() {
             }
           />
 
-          <Button type="submit" fullWidth size="lg" loading={loading}>
+          <Button type="submit" fullWidth size="lg" loading={loading} className="rounded-2xl">
             Se connecter
           </Button>
         </form>
-      </Card>
-    </AuthSplitLayout>
+    </AuthPhotoLayout>
   );
 }

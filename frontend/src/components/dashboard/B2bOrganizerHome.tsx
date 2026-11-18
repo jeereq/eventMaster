@@ -5,32 +5,19 @@ import Link from 'next/link';
 import {
   AlertTriangle,
   ArrowRight,
-  BarChart3,
-  BookOpen,
-  Building2,
-  Briefcase,
   Calendar,
   CalendarCheck,
   CheckCircle2,
   ChevronRight,
   Clock,
-  CreditCard,
-  FileText,
   Inbox,
-  Mail,
   MapPin,
   PlusCircle,
-  Rss,
-  ScanLine,
-  Sparkles,
-  Store,
   Ticket,
-  UserPlus,
   Users,
   Wallet,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Button } from '@/components/ui';
-import UserAvatar from '@/components/UserAvatar';
 import NextEventCard, { pickNextEvent } from '@/components/dashboard/NextEventCard';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
@@ -49,18 +36,11 @@ interface QuotaPair {
 }
 
 export interface B2bOrganizerHomeProps {
-  userName?: string | null;
-  userAvatarUrl?: string | null;
-  tenantName?: string | null;
   planName: string;
   daysUntilExpiry: number | null;
   isOwner: boolean;
-  isManager: boolean;
   canManageTeam: boolean;
   canViewBilling: boolean;
-  canSell: boolean;
-  showRooms: boolean;
-  showProtocol: boolean;
   events: OrganizerEventItem[];
   pendingQuotesCount: number;
   pendingBookingsCount: number;
@@ -75,11 +55,6 @@ export interface B2bOrganizerHomeProps {
 }
 
 const UNLIMITED = 9999;
-
-function greeting() {
-  const hour = new Date().getHours();
-  return hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
-}
 
 function ratio({ used, max }: QuotaPair) {
   if (used == null || max == null || max <= 0 || max >= UNLIMITED) return null;
@@ -161,43 +136,24 @@ function KpiCard({
 interface TodoItem {
   id: string;
   label: string;
-  detail: string;
+  detail?: string;
   href: string;
   count?: number;
   icon: React.ComponentType<{ className?: string }>;
   urgent?: boolean;
 }
 
-interface ModuleLink {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-interface ModuleGroup {
-  title: string;
-  description: string;
-  links: ModuleLink[];
-}
-
 /**
  * Accueil de l’organisateur B2B (forfaits Business, Premium, Entreprise) :
- * ce qui attend une action, les indicateurs clés et l’agenda des événements,
- * puis les espaces de travail rangés par métier.
+ * ce qui attend une action, les indicateurs clés et l’agenda des événements.
+ * Pas de raccourcis : le menu latéral les porte déjà.
  */
 export default function B2bOrganizerHome({
-  userName,
-  userAvatarUrl,
-  tenantName,
   planName,
   daysUntilExpiry,
   isOwner,
-  isManager,
   canManageTeam,
   canViewBilling,
-  canSell,
-  showRooms,
-  showProtocol,
   events,
   pendingQuotesCount,
   pendingBookingsCount,
@@ -208,7 +164,6 @@ export default function B2bOrganizerHome({
   managersQuota,
   checklist,
 }: B2bOrganizerHomeProps) {
-  const firstName = userName?.split(' ')[0];
   const nextEvent = useMemo(() => pickNextEvent(events), [events]);
 
   const upcoming = useMemo(() => {
@@ -224,7 +179,7 @@ export default function B2bOrganizerHome({
   const licenceSoon = daysUntilExpiry != null && daysUntilExpiry <= 15;
 
   const todo: TodoItem[] = [];
-  if (licenceSoon && canViewBilling) {
+  if (licenceSoon && (canViewBilling || isOwner)) {
     todo.push({
       id: 'licence',
       label: daysUntilExpiry! <= 0 ? 'Renouveler l’abonnement' : 'Licence bientôt expirée',
@@ -232,7 +187,7 @@ export default function B2bOrganizerHome({
         daysUntilExpiry! <= 0
           ? 'Les invitations et le contrôle d’accès sont suspendus.'
           : `Expire dans ${daysUntilExpiry} jour${daysUntilExpiry! > 1 ? 's' : ''}.`,
-      href: '/dashboard/billing',
+      href: canViewBilling ? '/dashboard/billing' : '/dashboard/profile',
       icon: AlertTriangle,
       urgent: true,
     });
@@ -242,9 +197,6 @@ export default function B2bOrganizerHome({
     todo.push({
       id: 'quotes',
       label: asVendor ? 'Demandes de devis reçues' : 'Devis en cours',
-      detail: asVendor
-        ? 'Des clients attendent votre chiffrage.'
-        : 'Demandes envoyées aux prestataires, sans réponse finale.',
       href: asVendor ? '/dashboard/bookings?tab=quotes&role=vendor' : '/dashboard/bookings?tab=quotes',
       count: pendingQuotesCount,
       icon: Inbox,
@@ -255,9 +207,6 @@ export default function B2bOrganizerHome({
     todo.push({
       id: 'bookings',
       label: asVendor ? 'Réservations à confirmer' : 'Réservations en attente',
-      detail: asVendor
-        ? 'Demandes de réservation de vos salles et offres.'
-        : 'Salles et prestations pas encore confirmées.',
       href: asVendor ? '/dashboard/bookings?tab=bookings&role=vendor' : '/dashboard/bookings?tab=bookings',
       count: pendingBookingsCount,
       icon: CalendarCheck,
@@ -267,7 +216,6 @@ export default function B2bOrganizerHome({
     todo.push({
       id: 'orders',
       label: 'Commandes non payées',
-      detail: 'Billets réservés dont le paiement n’est pas encore reçu.',
       href: '/dashboard/tickets',
       count: ticketing!.pendingOrdersCount,
       icon: Ticket,
@@ -284,100 +232,13 @@ export default function B2bOrganizerHome({
     });
   }
 
-  const groups: ModuleGroup[] = [
-    {
-      title: 'Événements & jour J',
-      description: 'Préparer, vendre et accueillir.',
-      links: [
-        { label: 'Événements', href: '/dashboard/events', icon: Calendar },
-        { label: 'Billetterie', href: '/dashboard/tickets', icon: Ticket },
-        ...(showProtocol ? [{ label: 'Protocole', href: '/dashboard/protocol', icon: ScanLine }] : []),
-        { label: 'Modèles', href: '/dashboard/templates', icon: Mail },
-      ],
-    },
-    {
-      title: 'Achats & prestataires',
-      description: 'Trouver un lieu, comparer, réserver.',
-      links: [
-        { label: 'Explorer', href: '/dashboard/catalogue', icon: Store },
-        { label: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', icon: Sparkles },
-        { label: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox },
-        { label: 'Réservations', href: '/dashboard/bookings?tab=bookings', icon: CalendarCheck },
-      ],
-    },
-    {
-      title: 'Vitrine',
-      description: 'Ce que vous montrez et proposez.',
-      links: [
-        ...(showRooms ? [{ label: 'Salles', href: '/dashboard/rooms', icon: Building2 }] : []),
-        ...(canSell ? [{ label: 'Mes offres', href: '/dashboard/marketplace', icon: Briefcase }] : []),
-        { label: 'Réalisations', href: '/dashboard/publications', icon: Rss },
-        { label: 'Statistiques', href: '/dashboard/analytics', icon: BarChart3 },
-      ],
-    },
-    {
-      title: 'Organisation',
-      description: 'Équipe, forfait et factures.',
-      links: [
-        ...(canManageTeam ? [{ label: 'Équipe', href: '/dashboard/team', icon: Users }] : []),
-        ...(canViewBilling
-          ? [
-              { label: 'Facturation', href: '/dashboard/billing', icon: CreditCard },
-              { label: 'Factures', href: '/dashboard/invoices', icon: FileText },
-            ]
-          : []),
-        { label: 'Guide', href: '/dashboard/guide', icon: BookOpen },
-      ],
-    },
-  ];
-
   return (
     <div className="space-y-6 pb-16 animate-fade-in em-dashboard-home">
-      {/* En-tête : qui, quel forfait, action principale */}
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex min-w-0 items-center gap-3">
-          <UserAvatar name={userName} src={userAvatarUrl} size="lg" className="h-12 w-12 text-base" />
-          <div className="min-w-0">
-            <p className="truncate text-sm text-muted">
-              {greeting()}
-              {firstName ? `, ${firstName}` : ''}
-              {tenantName ? ` · ${tenantName}` : ''}
-            </p>
-            <h1 className="truncate text-2xl font-semibold leading-tight text-foreground sm:text-[1.75rem]">
-              {isManager ? 'Espace Manager' : 'Espace Business'}
-            </h1>
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-primary/15 dark:text-primary">
-                Forfait {planName}
-              </span>
-              {isOwner && daysUntilExpiry != null && (
-                <span
-                  className={cn(
-                    'rounded-full px-2.5 py-0.5 text-xs font-semibold',
-                    daysUntilExpiry <= 0
-                      ? 'bg-danger/10 text-danger'
-                      : licenceSoon
-                        ? 'bg-amber-100 text-amber-800 dark:bg-festive-accent-soft dark:text-festive-accent'
-                        : 'border border-border bg-surface text-muted',
-                  )}
-                >
-                  {daysUntilExpiry <= 0 ? 'Licence expirée' : `Licence · ${daysUntilExpiry} j restants`}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {canManageTeam && (
-            <Button href="/dashboard/team" variant="secondary" leftIcon={<UserPlus className="h-4 w-4" />}>
-              Inviter un membre
-            </Button>
-          )}
-          <Button href="/dashboard/events?create=1" leftIcon={<PlusCircle className="h-4 w-4" />}>
-            Nouvel événement
-          </Button>
-        </div>
-      </header>
+      <div className="flex justify-end">
+        <Button href="/dashboard/events?create=1" leftIcon={<PlusCircle className="h-4 w-4" />}>
+          Nouvel événement
+        </Button>
+      </div>
 
       {/* Prochain événement + file « à traiter » */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-5" aria-label="Priorités">
@@ -389,14 +250,6 @@ export default function B2bOrganizerHome({
               <Calendar className="h-6 w-6 text-primary" aria-hidden />
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Aucun événement à venir</h2>
-                <p className="mt-1 text-sm text-muted">
-                  Créez votre prochaine réception, séminaire ou lancement : invitations, billetterie et accueil QR suivent.
-                </p>
-              </div>
-              <div>
-                <Button href="/dashboard/events?create=1" size="sm" leftIcon={<PlusCircle className="h-4 w-4" />}>
-                  Créer un événement
-                </Button>
               </div>
             </div>
           )}
@@ -415,9 +268,6 @@ export default function B2bOrganizerHome({
             <div className="flex flex-1 flex-col items-center justify-center gap-2 py-6 text-center">
               <CheckCircle2 className="h-7 w-7 text-primary" aria-hidden />
               <p className="text-sm font-semibold text-foreground">Tout est à jour</p>
-              <p className="max-w-[16rem] text-xs text-muted">
-                Aucun devis, réservation ou paiement n’attend votre réponse.
-              </p>
             </div>
           ) : (
             <ul className="mt-3 divide-y divide-border">
@@ -439,7 +289,7 @@ export default function B2bOrganizerHome({
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold text-foreground">{item.label}</span>
-                        <span className="block truncate text-xs text-muted">{item.detail}</span>
+                        {item.detail ? <span className="block truncate text-xs text-muted">{item.detail}</span> : null}
                       </span>
                       {item.count != null && (
                         <span className="rounded-full bg-foreground px-2 py-0.5 text-xs font-bold tabular-nums text-background">
@@ -491,15 +341,7 @@ export default function B2bOrganizerHome({
             icon={Wallet}
             href="/dashboard/tickets"
           />
-        ) : (
-          <KpiCard
-            label="Billetterie"
-            value="—"
-            hint="Ventes et pass QR"
-            icon={Ticket}
-            href="/dashboard/tickets"
-          />
-        )}
+        ) : null}
         <KpiCard
           label="Équipe"
           value={quotaLabel(managersQuota)}
@@ -510,9 +352,9 @@ export default function B2bOrganizerHome({
         />
       </section>
 
-      {/* Agenda + espaces de travail */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <div className="min-w-0 rounded-3xl border border-border bg-surface p-4 sm:p-5 lg:col-span-2">
+      {/* Agenda */}
+      <section>
+        <div className="min-w-0 rounded-3xl border border-border bg-surface p-4 sm:p-5">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-base font-semibold text-foreground">Ensuite à l’agenda</h2>
             <Link href="/dashboard/events" className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-primary hover:underline">
@@ -536,7 +378,7 @@ export default function B2bOrganizerHome({
                       className="group -mx-2 flex min-h-14 items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     >
                       <span className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <span className="text-[10px] font-bold uppercase leading-none">
+                        <span className="text-xs font-bold uppercase leading-none">
                           {date.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}
                         </span>
                         <span className="text-base font-bold leading-tight tabular-nums">{date.getDate()}</span>
@@ -550,7 +392,7 @@ export default function B2bOrganizerHome({
                           </span>
                         ) : null}
                       </span>
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-muted">
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-muted">
                         <Clock className="h-3 w-3" aria-hidden />
                         {countdown(days)}
                       </span>
@@ -562,31 +404,6 @@ export default function B2bOrganizerHome({
           )}
         </div>
 
-        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:col-span-3">
-          {groups
-            .filter((group) => group.links.length > 0)
-            .map((group) => (
-              <div key={group.title} className="rounded-[var(--radius-card)] border border-border bg-surface p-4">
-                <h3 className="text-sm font-semibold text-foreground">{group.title}</h3>
-                <p className="text-xs text-muted">{group.description}</p>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {group.links.map((link) => {
-                    const Icon = link.icon;
-                    return (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-xs font-medium text-foreground transition hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                      >
-                        <Icon className="h-3.5 w-3.5 text-primary" aria-hidden />
-                        {link.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-        </div>
       </section>
     </div>
   );

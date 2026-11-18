@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { Building2, ChevronDown, ChevronUp, ExternalLink, KeyRound, Loader2, Play, Sparkles } from 'lucide-react';
+import { Building2, ChevronDown, ChevronUp, ExternalLink, KeyRound, Loader2, Play, Sparkles } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Button, Modal, StatusPill, Alert } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';

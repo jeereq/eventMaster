@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Box, BrickWall, Home, LayoutGrid, Maximize2, Minimize2, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { Box, BrickWall, Home, LayoutGrid, Maximize2, Minimize2, RotateCcw, ZoomIn, ZoomOut } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 const FOCUSABLE_SELECTOR = [
@@ -201,7 +201,7 @@ export function PlanSceneControls({
     'inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-full text-xs font-semibold transition touch-manipulation active:scale-95',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
     overlay
-      ? 'border border-background/20 bg-foreground/80 text-background backdrop-blur-md'
+      ? 'border border-background/20 bg-foreground/80 text-background'
       : 'border border-border bg-surface text-foreground shadow-sm',
   );
   const pressed = overlay

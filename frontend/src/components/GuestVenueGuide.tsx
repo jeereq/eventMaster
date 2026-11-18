@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { MapPin, Navigation, Play, Square, Loader2, LocateFixed, AlertCircle } from 'lucide-react';
+import { MapPin, Navigation, Play, Square, Loader2, LocateFixed, AlertCircle } from '@/components/icons';
 import { geocodeLocation, loadLeaflet } from '@/lib/leafletLoader';
 import { DEFAULT_BRAND_PALETTE } from '@/lib/brandTheme';
 
@@ -347,7 +347,7 @@ export default function GuestVenueGuide({
               <Loader2 className="w-6 h-6 text-primary animate-spin" />
             </div>
           )}
-          <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-surface/95 backdrop-blur-sm text-xs font-semibold text-foreground shadow-sm">
+          <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-surface/95 text-xs font-semibold text-foreground shadow-sm">
             <MapPin className="w-3 h-3 text-primary" />
             {destinationLabel}
           </div>

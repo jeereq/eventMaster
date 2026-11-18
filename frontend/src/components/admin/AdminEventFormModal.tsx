@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useId, useState } from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar } from '@/components/icons';
 import { Alert, Button, Input, Modal } from '@/components/ui';
 
 const SELECT_CLASS =

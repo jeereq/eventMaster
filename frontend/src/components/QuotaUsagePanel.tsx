@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Calendar, Users, Mail, LayoutGrid, UserCog, Store } from 'lucide-react';
+import { Calendar, Users, Mail, LayoutGrid, UserCog, Store } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import {
   formatQuotaMax,

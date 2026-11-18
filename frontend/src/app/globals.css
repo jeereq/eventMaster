@@ -3,10 +3,13 @@
 /* Les variantes dark: ne s'appliquent pas dans un `.em-light-island` (aperçu / document volontairement clair). */
 @custom-variant dark (&:where(.dark, .dark *):not(:where(.em-light-island, .em-light-island *)));
 
-/* ─── Asana-inspired tokens: warm neutrals, flat elevation, soft radius ───
-   Verts de marque = les deux verts du logo :
+/* ─── Couleurs : surfaces neutres (gris sans teinte), un seul accent ───
+   Fond (L0) #f4f7f5, cartes et panneaux (L1) blancs, séparés par une bordure fine.
+   L'accent est le vert de la marque, réservé aux actions importantes (boutons principaux,
+   navigation active, liens, focus) :
      • vert forêt  #31714c (texte / boutons en clair — blanc dessus 5.8:1, sur fond 5.4:1)
      • vert menthe #6ee6b6 (texte / accents en sombre — 10.5:1 sur --surface sombre)
+   L'ambre (--festive-accent) et le rose (--danger) sont des couleurs d'état, pas des accents.
    L'échelle `emerald-*` de Tailwind est redéfinie plus bas sur ces deux teintes. */
 :root {
   --background: #f4f7f5;
@@ -25,9 +28,9 @@
   --muted: #3d4f48;
   --sidebar: #edf2ef;
   --card-hover: #f8faf9;
-  --radius-card: 1.125rem; /* cartes arrondies ~18px */
-  --radius-button: 0.75rem;
-  --shadow-soft: 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --radius-card: 1.25rem; /* cartes arrondies 20px */
+  --radius-button: 0.875rem; /* champs 14px ; les boutons sont en pilule */
+  --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -14px rgba(16, 24, 40, 0.18);
   /* Barre publique mobile flottante / surélevée (marge + capsule + safe-area) */
   --em-site-header: 4.75rem;
   --em-site-bottom-nav: calc(0.5rem + 3.25rem + max(0.5rem, env(safe-area-inset-bottom, 0px)));
@@ -54,6 +57,75 @@
   --stage-foreground: #f7f4ef;
   /* États (erreur / danger) — rose EventMaster, pas rose Tailwind ad hoc */
   --danger: #be123c;
+}
+
+/* ─── Site public : blocs teintés, titres Manrope, photos en arche ───
+   Toutes les teintes dérivent de la palette d'origine (vert EventMaster) : pas de nouvelle couleur.
+   Les blocs se recalculent seuls en mode sombre. */
+:root {
+  --em-forest: var(--primary-solid);
+  --em-forest-deep: #1f4a33;
+  --em-sage: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  --em-peach: var(--surface-muted);
+  --em-butter: color-mix(in srgb, var(--brand-accent) 14%, var(--surface));
+  --em-marker: color-mix(in srgb, var(--brand-accent) 28%, transparent);
+  --em-terracotta: var(--brand-accent);
+  --em-on-pastel: var(--foreground);
+}
+
+.dark {
+  --em-forest-deep: #0b1512;
+}
+
+html:has(.em-site-header) {
+  --font-heading: var(--font-serif);
+  /* !important : applyViewPreferences pose ces deux arrondis en style inline sur <html>. */
+  --radius-button: 999px !important;
+  --radius-card: 1.5rem !important;
+}
+
+html:has(.em-site-header) :is(.em-landing-heading, .font-display) {
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Mot surligné des titres. */
+.em-mark {
+  background: var(--em-marker);
+  color: inherit;
+  border-radius: 0.22em;
+  padding: 0 0.14em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Photo « mordue » sur ses deux bords par deux colonnes de demi-cercles de la couleur de la carte (--bite). */
+.em-bite {
+  position: relative;
+}
+.em-bite::before,
+.em-bite::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 28px;
+  background: radial-gradient(circle at 0 50%, var(--bite, #1f4a33) 6.5px, transparent 7px) 0 0 / 14px 14px repeat;
+  pointer-events: none;
+}
+.em-bite::before {
+  left: 0;
+}
+.em-bite::after {
+  right: 0;
+  transform: scaleX(-1);
+}
+
+/* Photo en arche. */
+.em-arch {
+  border-radius: 999px 999px 1.5rem 1.5rem;
 }
 
 /* Ambiance Celebrate — surfaces tièdes, accent festif (dashboard reste Work par défaut) */
@@ -83,8 +155,9 @@ html[data-mood="celebrate"].dark,
   --stage-elevated: #151d1a;
 }
 
-/* Sombre « forêt » : anthracite teinté vert, aligné sur le design public émeraude.
-   Contrastes (WCAG AA) : foreground 14:1, muted 7:1, primary (menthe du logo) 10.5:1 sur --surface. */
+/* Sombre : gris neutres (même hiérarchie qu'en clair), relief par bordure et liseré haut,
+   pas de halo. Contrastes (WCAG AA) : foreground 14:1, muted 7:1, primary (menthe du logo)
+   10.5:1 sur --surface. */
 .dark {
   color-scheme: dark;
   --background: #131a17;
@@ -103,7 +176,8 @@ html[data-mood="celebrate"].dark,
   --sidebar: #0f1513;
   --card-hover: #1f2925;
   --surface-warm: #131a17;
-  --shadow-soft: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  /* Liseré clair en haut des cartes plutôt qu'une ombre (invisible sur fond sombre). */
+  --shadow-soft: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   /* #be123c tombait à 2.5:1 sur fond sombre ; les boutons pleins gardent le rose foncé (voir .bg-danger). */
   --danger: #fb7185;
   --festive-on-stage: #fcd34d;
@@ -125,6 +199,68 @@ html[data-mood="celebrate"].dark,
   --color-emerald-800: #275a3d;
   --color-emerald-900: #1f4a33;
   --color-emerald-950: #10291c;
+
+  /* Ombres douces et diffuses (alpha < 0.08) : la bordure fine porte le relief, l'ombre l'accompagne. */
+  --shadow-2xs: 0 1px 1px rgb(0 0 0 / 0.03);
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.03);
+  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 4px 12px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 8px 24px rgb(0 0 0 / 0.07);
+  --shadow-2xl: 0 12px 32px rgb(0 0 0 / 0.07);
+
+  /* ─── Typographie : deux graisses, une échelle « tierce mineure » (×1.2) ───
+     Racine à 15px (voir `html`) : les valeurs rem ci-dessous donnent les px indiqués.
+     Graisses : 400 pour le texte, 600 pour les titres et l'emphase. Toutes les classes
+     font-* retombent sur l'une des deux. */
+  --font-weight-thin: 400;
+  --font-weight-extralight: 400;
+  --font-weight-light: 400;
+  --font-weight-normal: 400;
+  --font-weight-medium: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 600;
+
+  /* Tailles : méta 12, secondaire 14, corps 16, puis titres 19 · 23 · 28 · 33 · 40 · 48 · 57.
+     Interlignage décroissant : 1.55 sur le corps, 1.1 sur les grands titres. */
+  --text-xs: 0.8rem; /* 12px — méta (dates, aide, légal) */
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.9333rem; /* 14px — secondaire */
+  --text-sm--line-height: 1.5;
+  --text-base: 1.0667rem; /* 16px — corps */
+  --text-base--line-height: 1.55;
+  --text-lg: 1.0667rem; /* = corps : l'échelle n'a pas de pas à 17px */
+  --text-lg--line-height: 1.55;
+  --text-xl: 1.28rem; /* 19px — sous-titre */
+  --text-xl--line-height: 1.25;
+  --text-2xl: 1.5333rem; /* 23px */
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 1.84rem; /* 28px */
+  --text-3xl--line-height: 1.2;
+  --text-4xl: 2.2133rem; /* 33px */
+  --text-4xl--line-height: 1.15;
+  --text-5xl: 2.6533rem; /* 40px */
+  --text-5xl--line-height: 1.1;
+  --text-6xl: 3.1867rem; /* 48px */
+  --text-6xl--line-height: 1.1;
+  --text-7xl: 3.82rem; /* 57px — plus grand pas */
+  --text-7xl--line-height: 1.1;
+  --text-8xl: 3.82rem;
+  --text-8xl--line-height: 1.1;
+  --text-9xl: 3.82rem;
+  --text-9xl--line-height: 1.1;
+
+  /* Interlignes nommés plafonnés à 1.6 pour le texte courant. */
+  --leading-relaxed: 1.6;
+  --leading-loose: 1.6;
+}
+
+/* Corps de texte par défaut : 16px, interligne 1.55 (le reste de l'échelle part de là). */
+body {
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
 }
 
 /* Sombre : --primary devient la menthe du logo (texte lisible), donc trop claire pour un
@@ -161,6 +297,14 @@ html.dark:not([data-brand="custom"]) .hover\:bg-primary-hover:hover:not(.em-ligh
   --color-stage-elevated: var(--stage-elevated);
   --color-stage-foreground: var(--stage-foreground);
   --color-danger: var(--danger);
+  --color-forest: var(--em-forest);
+  --color-forest-deep: var(--em-forest-deep);
+  --color-sage: var(--em-sage);
+  --color-peach: var(--em-peach);
+  --color-butter: var(--em-butter);
+  --color-marker: var(--em-marker);
+  --color-terracotta: var(--em-terracotta);
+  --color-on-pastel: var(--em-on-pastel);
   --font-sans: var(--font-body), system-ui, "Helvetica Neue", Arial, sans-serif;
   --font-display: var(--font-heading), var(--font-body), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -265,14 +409,44 @@ h1, h2, h3, h4 {
   font-weight: 600;
 }
 
-/* Tableau de bord : titres en Outfit, comme le site public */
+/* Tableau de bord : titres en Manrope, comme le site public */
+/* ─── Style « board » partagé : bandeau d'en-tête et cartes blanches flottantes ─── */
+/* Fondu linéaire doux menthe → vert → ambre (couleurs de la marque, pas de halo radial). */
+.em-header-wash {
+  background: linear-gradient(
+    115deg,
+    color-mix(in srgb, var(--brand-accent) 24%, var(--surface)) 0%,
+    color-mix(in srgb, var(--primary) 9%, var(--surface)) 48%,
+    color-mix(in srgb, var(--festive-accent) 15%, var(--surface)) 100%
+  );
+}
+
+/* Cartes construites à la main dans le tableau de bord (fond surface + bordure + grand arrondi) :
+   même ombre douce et bordure allégée que les cartes du board. */
+.em-dashboard-content
+  .bg-surface.border:is([class*='radius-card'], .rounded-2xl, .rounded-3xl):not(input, textarea, select, button) {
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+.em-dashboard-content .bg-surface.border:is(.rounded-2xl, .rounded-3xl):not(input, textarea, select, button) {
+  border-radius: var(--radius-card);
+}
+
+/* Barres d'onglets du tableau de bord : piste et onglets en pilule (sauf onglets soulignés). */
+.em-dashboard-content [role='tablist'][class*='bg-surface-muted'] {
+  border-radius: 9999px;
+}
+.em-dashboard-content [role='tablist'] > :is([role='tab'], button):not([class*='border-b'], [data-tab-card]) {
+  border-radius: 9999px;
+}
+
 .em-dashboard-content :is(h1, h2, h3),
 .em-dash-title {
   font-family: var(--font-heading), var(--font-body), system-ui, sans-serif;
   letter-spacing: -0.01em;
 }
 
-/* Chiffres clés : Outfit, poids moyen (moins « criard » que l’extrabold) */
+/* Chiffres clés : Manrope, poids moyen (moins « criard » que l’extrabold) */
 .em-dashboard-content .tabular-nums.font-extrabold {
   font-family: var(--font-heading), var(--font-body), system-ui, sans-serif;
   font-weight: 600;
@@ -414,11 +588,29 @@ h1, h2, h3, h4 {
   }
 }
 
+/* ─── Mouvement de l'accueil ───
+   Apparition au défilement : 8px + opacité, 300ms, courbe de sortie douce, léger décalage entre
+   éléments voisins (--i × 60ms). Rien n'est masqué sans le script (.em-motion, LandingMotion)
+   ni quand le visiteur demande moins de mouvement. Seuls opacity et transform sont animés. */
 @media (prefers-reduced-motion: no-preference) {
+  .em-motion [data-reveal] {
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity 300ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: calc(var(--i, 0) * 60ms);
+  }
+  .em-motion [data-reveal].is-in {
+    opacity: 1;
+    transform: none;
+  }
   .em-reveal {
     opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.45s ease, transform 0.45s ease;
+    transform: translateY(8px);
+    transition:
+      opacity 300ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
   }
   .em-reveal.is-visible {
     opacity: 1;
@@ -426,7 +618,7 @@ h1, h2, h3, h4 {
   }
   .em-stagger > * {
     opacity: 0;
-    animation: slide-up 0.4s ease-out forwards;
+    animation: slide-up 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
   .em-stagger > *:nth-child(1) { animation-delay: 0.04s; }
   .em-stagger > *:nth-child(2) { animation-delay: 0.1s; }
@@ -467,62 +659,6 @@ html[data-mood="celebrate"] .font-display {
   background-color: var(--background);
 }
 
-/* Dégradés radiaux chaleureux & élégants (Prestige & Célébration) */
-.em-landing-hero::before,
-.em-landing-hero::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(90px);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.em-landing-hero::before {
-  top: -15%;
-  left: -10%;
-  width: 55vw;
-  height: 55vw;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--festive-accent) 16%, transparent) 0%,
-    color-mix(in srgb, var(--primary) 8%, transparent) 45%,
-    transparent 70%
-  );
-}
-
-.em-landing-hero::after {
-  bottom: -20%;
-  right: -10%;
-  width: 60vw;
-  height: 60vw;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--primary) 14%, transparent) 0%,
-    color-mix(in srgb, var(--festive-accent) 6%, transparent) 50%,
-    transparent 75%
-  );
-}
-
-.dark .em-landing-hero::before {
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--festive-accent) 18%, transparent) 0%,
-    color-mix(in srgb, var(--primary) 12%, transparent) 45%,
-    transparent 70%
-  );
-}
-
-.dark .em-landing-hero::after {
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--primary) 18%, transparent) 0%,
-    color-mix(in srgb, var(--festive-accent) 12%, transparent) 50%,
-    transparent 75%
-  );
-}
-
-/* ─── Dégradés d'ambiance émeraude pour toutes les sections de la landing page ─── */
 .em-landing-section-glow,
 .em-landing-section-glow-alt {
   position: relative;
@@ -713,115 +849,10 @@ body[data-em-sheet-open] .em-ai-fab {
   }
 }
 
-.em-landing-section-glow::before,
-.em-landing-section-glow-alt::before {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(48px);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.em-landing-section-glow::after,
-.em-landing-section-glow-alt::after {
-  content: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .em-landing-section-glow::before,
-  .em-landing-section-glow-alt::before {
-    content: none;
-  }
-}
-
-.em-landing-section-glow::before {
-  top: -10%;
-  right: -8%;
-  width: 45vw;
-  height: 45vw;
-  max-width: 550px;
-  max-height: 550px;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--primary) 12%, transparent) 0%,
-    color-mix(in srgb, var(--brand-accent) 6%, transparent) 50%,
-    transparent 75%
-  );
-}
-
-.em-landing-section-glow::after {
-  bottom: -15%;
-  left: -8%;
-  width: 50vw;
-  height: 50vw;
-  max-width: 600px;
-  max-height: 600px;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--festive-accent) 10%, transparent) 0%,
-    color-mix(in srgb, var(--primary) 6%, transparent) 55%,
-    transparent 75%
-  );
-}
-
-.em-landing-section-glow-alt::before {
-  top: -10%;
-  left: -8%;
-  width: 45vw;
-  height: 45vw;
-  max-width: 550px;
-  max-height: 550px;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--brand-accent) 12%, transparent) 0%,
-    color-mix(in srgb, var(--primary) 6%, transparent) 50%,
-    transparent 75%
-  );
-}
-
-.em-landing-section-glow-alt::after {
-  bottom: -15%;
-  right: -8%;
-  width: 50vw;
-  height: 50vw;
-  max-width: 600px;
-  max-height: 600px;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--primary) 10%, transparent) 0%,
-    color-mix(in srgb, var(--festive-accent) 6%, transparent) 50%,
-    transparent 75%
-  );
-}
-
-.dark .em-landing-section-glow::before,
-.dark .em-landing-section-glow-alt::before {
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--primary) 14%, transparent) 0%,
-    color-mix(in srgb, var(--brand-accent) 8%, transparent) 45%,
-    transparent 70%
-  );
-}
-
-.dark .em-landing-section-glow::after,
-.dark .em-landing-section-glow-alt::after {
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--festive-accent) 14%, transparent) 0%,
-    color-mix(in srgb, var(--primary) 10%, transparent) 50%,
-    transparent 75%
-  );
-}
-
 .em-stage {
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse at 82% -10%, color-mix(in srgb, var(--primary) 28%, transparent), transparent 52%),
-    radial-gradient(ellipse at 12% 110%, color-mix(in srgb, var(--festive-accent) 22%, transparent), transparent 48%),
-    var(--stage);
+  background: var(--stage);
   color: var(--stage-foreground);
 }
 
@@ -842,79 +873,10 @@ body[data-em-sheet-open] .em-ai-fab {
   position: relative;
 }
 
-.em-dashboard-glow-bg::before,
-.em-dashboard-glow-bg::after {
-  content: '';
-  position: fixed;
-  border-radius: 50%;
-  filter: blur(120px);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.em-dashboard-glow-bg::before {
-  top: 0;
-  right: 0;
-  width: 40vw;
-  height: 40vw;
-  max-width: 600px;
-  max-height: 600px;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--primary) 7%, transparent) 0%,
-    color-mix(in srgb, var(--brand-accent) 3%, transparent) 50%,
-    transparent 70%
-  );
-}
-
-.em-dashboard-glow-bg::after {
-  bottom: 5%;
-  left: 15%;
-  width: 35vw;
-  height: 35vw;
-  max-width: 500px;
-  max-height: 500px;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--brand-accent) 5%, transparent) 0%,
-    transparent 65%
-  );
-}
-
-.dark .em-dashboard-glow-bg::before {
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--primary) 10%, transparent) 0%,
-    color-mix(in srgb, var(--brand-accent) 5%, transparent) 45%,
-    transparent 70%
-  );
-}
-
-.dark .em-dashboard-glow-bg::after {
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--brand-accent) 8%, transparent) 0%,
-    transparent 65%
-  );
-}
-
 .em-dashboard-card-glow {
   position: relative;
-  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--primary) 4%, var(--surface)) 0%,
-    var(--surface) 100%
-  );
-}
-
-.dark .em-dashboard-card-glow {
-  border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--primary) 8%, var(--surface)) 0%,
-    var(--surface) 100%
-  );
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .em-landing-hero-grid {
@@ -941,66 +903,24 @@ body[data-em-sheet-open] .em-ai-fab {
   position: relative;
 }
 
-.em-landing-stage::before,
-.em-landing-stage::after {
-  content: '';
-  position: absolute;
-  pointer-events: none;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--festive-accent) 22%, var(--border));
-}
-
-.em-landing-stage::before {
-  inset: -8% -6% -12% -6%;
-  opacity: 0.7;
-}
-
-.em-landing-stage::after {
-  inset: 6% 10% 10% 10%;
-  opacity: 0.4;
-  border-color: color-mix(in srgb, var(--primary) 18%, var(--border));
-}
-
 .em-landing-card {
   position: relative;
   z-index: 1;
-  transform: rotate(-1.4deg);
-  transition: transform 0.35s ease;
-  box-shadow:
-    0 18px 40px -18px color-mix(in srgb, var(--foreground) 28%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--festive-accent) 18%, var(--border));
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px -16px color-mix(in srgb, var(--foreground) 20%, transparent);
 }
 
-.em-landing-card:hover {
-  transform: rotate(0deg);
-}
-
-/* ─── Nouveaux utilitaires HUD & Dark Luxe (Inspiration JumpBot & Cinematic) ─── */
 .em-glow-text {
   color: var(--primary);
-  font-weight: 700;
+  font-weight: 600;
   display: inline;
-}
-
-.dark .em-glow-text {
-  color: var(--primary);
-  text-shadow: 0 0 24px color-mix(in srgb, var(--primary) 45%, transparent);
 }
 
 .em-hud-pill {
   border-radius: 999px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
-  background: color-mix(in srgb, var(--surface) 85%, transparent);
-  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.08);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dark .em-hud-pill {
-  border-color: color-mix(in srgb, var(--primary) 35%, rgba(255, 255, 255, 0.1));
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
-  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.4), 0 0 15px -3px color-mix(in srgb, var(--primary) 20%, transparent);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: border-color 0.2s ease;
 }
 
 .em-hud-card {
@@ -1008,20 +928,11 @@ body[data-em-sheet-open] .em-ai-fab {
   border-radius: var(--radius-card);
   border: 1px solid var(--border);
   background: var(--surface);
-  box-shadow: 0 8px 30px -8px rgba(0, 0, 0, 0.06);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.dark .em-hud-card {
-  border-color: color-mix(in srgb, var(--border) 80%, var(--primary) 20%);
-  background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 95%, transparent) 0%, color-mix(in srgb, var(--surface-muted) 80%, transparent) 100%);
-  box-shadow: 0 12px 36px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: border-color 0.2s ease;
 }
 
 .em-hud-card:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--primary) 50%, var(--border));
-  box-shadow: 0 16px 40px -12px color-mix(in srgb, var(--primary) 25%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
 }
 
 .em-glow-icon-box {
@@ -1029,17 +940,8 @@ body[data-em-sheet-open] .em-ai-fab {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-button);
-  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
   color: var(--primary);
-  box-shadow: 0 0 16px -2px color-mix(in srgb, var(--primary) 35%, transparent);
-  transition: all 0.25s ease;
-}
-
-.em-hud-card:hover .em-glow-icon-box {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  box-shadow: 0 0 24px 0 color-mix(in srgb, var(--primary) 60%, transparent);
 }
 
 .em-ribbon-badge {
@@ -1048,13 +950,12 @@ body[data-em-sheet-open] .em-ai-fab {
   right: -28px;
   transform: rotate(45deg);
   padding: 3px 32px;
-  background: linear-gradient(135deg, var(--primary), var(--brand-accent));
-  color: #ffffff;
+  background: var(--primary);
+  color: var(--primary-foreground);
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 40%, transparent);
   z-index: 20;
 }
 
@@ -1192,7 +1093,7 @@ body[data-em-sheet-open] .em-ai-fab {
 
 .em-guest-date__month {
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   color: var(--primary);
 }
@@ -1222,7 +1123,7 @@ body[data-em-sheet-open] .em-ai-fab {
 
 .em-guest-section-label {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--primary);
@@ -1471,8 +1372,7 @@ body[data-em-sheet-open] .em-ai-fab {
   place-items: center;
   border-radius: 4px;
   color: #fff;
-  background: rgba(15, 23, 42, 0.62);
-  backdrop-filter: blur(6px);
+  background: rgba(15, 23, 42, 0.85);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
 }
 
@@ -1523,7 +1423,7 @@ body[data-em-sheet-open] .em-ai-fab {
   background: rgba(15, 23, 42, 0.92);
   color: #fff;
   font-size: 8px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -1651,6 +1551,23 @@ body[data-em-sheet-open] .em-ai-fab {
   }
 }
 
+/* Enveloppe détourée de l'accueil : flotte légèrement derrière le téléphone. */
+@keyframes em-photo-hover {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(1.5deg); }
+}
+
+.em-photo-hover {
+  animation: em-photo-hover 7s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .em-photo-hover {
+    animation: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .em-map-marker-hit,
   .em-map-marker-card,
@@ -1714,9 +1631,6 @@ body[data-em-sheet-open] .em-ai-fab {
   border-color: color-mix(in srgb, var(--festive-accent) 30%, var(--border));
 }
 
-.em-focus-filters .em-filter-chip-sm {
-  backdrop-filter: blur(12px);
-}
 
 @media (prefers-reduced-motion: reduce) {
   .em-map-marker-hit,
@@ -2729,4 +2643,42 @@ body[data-em-sheet-open] .em-ai-fab {
 .em-snap-card {
   scroll-snap-align: center;
   flex: 0 0 min(72vw, 260px);
+}
+
+/* Sous-menu du menu principal : glisse depuis le lien (180ms), sans animation en mouvement réduit. */
+@media (prefers-reduced-motion: no-preference) {
+  .em-nav-menu:not([hidden]) > ul {
+    transform-origin: top center;
+    transition:
+      opacity 150ms ease-out,
+      transform 180ms cubic-bezier(0.23, 1, 0.32, 1);
+    @starting-style {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.97);
+    }
+  }
+}
+
+/* ─── Illustrations maison (états vides, 404, erreurs) ───
+   Disque jaune pâle, objet vert, accent corail, traits encre. Se recalculent en sombre. */
+:root {
+  --ill-disk: color-mix(in srgb, #fde68a 55%, var(--surface));
+  --ill-main: #34ad7a;
+  --ill-deep: #1f7a52;
+  --ill-ink: #0f1f1a;
+  --ill-coral: #f2785c;
+  --ill-paper: #ffffff;
+  --ill-line: #d5ddd9;
+  --ill-doodle: #0f1f1a;
+}
+
+.dark {
+  --ill-disk: color-mix(in srgb, #fde68a 24%, var(--surface));
+  --ill-main: #3fbf88;
+  --ill-deep: #2a8a60;
+  --ill-ink: #0b1210;
+  --ill-coral: #f2785c;
+  --ill-paper: #eef3f1;
+  --ill-line: #9fb0a8;
+  --ill-doodle: #9fb0a8;
 }

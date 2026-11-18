@@ -10,9 +10,8 @@ import {
   Edit3,
   Layers,
   Palette,
-  Sparkles,
   Wand2,
-} from 'lucide-react';
+} from '@/components/icons';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import {
   templateContentToLandingPreview,
@@ -30,7 +29,6 @@ interface TemplatePreviewModalProps {
   onUseInStudio?: (t: TemplateCardItem) => void;
   canEdit?: boolean;
   canDuplicate?: boolean;
-  isOwnerOrManager?: boolean;
 }
 
 export default function TemplatePreviewModal({
@@ -42,7 +40,6 @@ export default function TemplatePreviewModal({
   onUseInStudio,
   canEdit = false,
   canDuplicate = false,
-  isOwnerOrManager = true,
 }: TemplatePreviewModalProps) {
   const [deviceView, setDeviceView] = useState<'mobile' | 'desktop'>('mobile');
   const panelRef = useRef<HTMLDivElement>(null);
@@ -138,15 +135,6 @@ export default function TemplatePreviewModal({
         <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-4 bg-surface-muted/50">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" aria-hidden />
-                Aperçu du modèle d&apos;invitation
-              </span>
-              {isOwnerOrManager && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                  Vue organisateur
-                </span>
-              )}
               {isGlobal ? (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-muted text-foreground border border-border">
                   Bibliothèque EventMaster

@@ -8,7 +8,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
-import { Ticket, Plus, Minus, X, Check, Users, Loader2, Heart } from 'lucide-react';
+import { Ticket, Plus, Minus, X, Check, Users, Loader2, Heart } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
@@ -665,7 +665,7 @@ export default function EventTicketCheckoutForm({
           {/* Cause soutenue */}
           {donationsConfig?.cause && (
             <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 block">
+              <span className="text-xs font-bold text-rose-600 dark:text-rose-400 block">
                 Cause soutenue
               </span>
               <p className="text-xs text-foreground leading-relaxed">{donationsConfig.cause}</p>
@@ -692,7 +692,7 @@ export default function EventTicketCheckoutForm({
                     %)
                   </span>
                 ) : (
-                  <span className="text-muted text-[11px]">
+                  <span className="text-muted text-xs">
                     {donationsConfig.donorsCount || 0} donateur
                     {(donationsConfig.donorsCount || 0) > 1 ? 's' : ''}
                   </span>
@@ -728,7 +728,7 @@ export default function EventTicketCheckoutForm({
                 </div>
               )}
 
-              <div className="flex items-center justify-between text-[11px] text-muted">
+              <div className="flex items-center justify-between text-xs text-muted">
                 <span>
                   {donationsConfig.donorsCount || 0} donateur
                   {(donationsConfig.donorsCount || 0) > 1 ? 's' : ''} solidaire
@@ -792,7 +792,7 @@ export default function EventTicketCheckoutForm({
                 onChange={(e) => setDonationAmountFc(e.target.value)}
                 required
               />
-              <p className="text-[11px] text-muted">
+              <p className="text-xs text-muted">
                 Paiement direct sécurisé via Mobile Money (M-Pesa, Orange, Airtel, Afrimoney) ou Carte bancaire.
               </p>
             </div>
@@ -841,7 +841,7 @@ export default function EventTicketCheckoutForm({
                 <Ticket className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold block">Pass d’accès invité inclus</span>
-                  <span className="text-[11px] text-muted">
+                  <span className="text-xs text-muted">
                     Votre don vous ouvre automatiquement un pass d&apos;accès invité « Donateur » avec badge QR pour entrer à l&apos;événement.
                   </span>
                 </div>
@@ -1111,7 +1111,7 @@ export default function EventTicketCheckoutForm({
                   {quantity > 1 ? `(${quantity} places)` : '(1 place)'}
                 </span>
               </div>
-              <p className="text-[11px] text-muted">
+              <p className="text-xs text-muted">
                 {event.ticketsPerBuyerLimit
                   ? `Jusqu’à ${event.ticketsPerBuyerLimit} billet${event.ticketsPerBuyerLimit > 1 ? 's' : ''} par personne. Vous pouvez payer plusieurs fois, dans cette limite.`
                   : 'Vous pouvez acheter plusieurs fois avec le même compte.'}

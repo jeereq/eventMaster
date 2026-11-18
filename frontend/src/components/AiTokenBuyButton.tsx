@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Coins } from 'lucide-react';
+import { Coins } from '@/components/icons';
 import { Button } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { usePlatformSite } from '@/context/PlatformSiteContext';

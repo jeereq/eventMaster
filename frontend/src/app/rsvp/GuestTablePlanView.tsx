@@ -12,7 +12,7 @@ import GuestRoomPlanCanvas from '@/components/GuestRoomPlanCanvas';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import { buildTablePlanPreviewBlueprint } from '@/lib/tablePlanPreviewBlueprint';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
-import { LayoutGrid, Users, Maximize2, Download, MapPin, EyeOff, ShieldCheck, Sparkles, X } from 'lucide-react';
+import { LayoutGrid, Users, Maximize2, Download, MapPin, EyeOff, ShieldCheck, Sparkles, X } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
 import { api } from '@/lib/api';
@@ -368,14 +368,14 @@ export default function GuestTablePlanView({
               />
 
               {/* Beacon HUD 3D "Mon emplacement" */}
-              <div className="absolute top-3 left-3 z-20 flex items-center gap-2.5 rounded-2xl bg-stage/90 backdrop-blur-md px-3.5 py-2 text-stage-foreground shadow-lg border border-white/15 animate-fade-in pointer-events-none max-w-[85%]">
+              <div className="absolute top-3 left-3 z-20 flex items-center gap-2.5 rounded-2xl bg-stage/90 px-3.5 py-2 text-stage-foreground shadow-lg border border-white/15 animate-fade-in pointer-events-none max-w-[85%]">
                 <span className="relative flex h-3 w-3 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 motion-reduce:hidden"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400"></span>
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                    <p className="text-xs font-semibold text-emerald-400">
                       Mon emplacement 3D
                     </p>
                     {(tableDetails?.zoneName || ticketPlacement?.zoneName) && (
@@ -395,7 +395,7 @@ export default function GuestTablePlanView({
 
               {/* Carte d'inspection d'une table sélectionnée en 3D */}
               {inspectedTable && inspectedTable.id !== guestTableId && (
-                <div className="absolute bottom-16 left-3 right-3 sm:right-auto z-20 rounded-2xl bg-foreground/90 backdrop-blur-md p-3 text-background shadow-lg border border-background/20 animate-fade-in max-w-sm flex items-center justify-between gap-3">
+                <div className="absolute bottom-16 left-3 right-3 sm:right-auto z-20 rounded-2xl bg-foreground/90 p-3 text-background shadow-lg border border-background/20 animate-fade-in max-w-sm flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <p className="text-xs font-bold text-white truncate">{inspectedTable.name}</p>
@@ -437,7 +437,7 @@ export default function GuestTablePlanView({
                 <button
                   type="button"
                   onClick={() => setPlanView('2d')}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-11 rounded-xl bg-surface/95 backdrop-blur-md text-foreground border border-border text-xs font-semibold hover:bg-surface shadow-sm transition active:scale-95 touch-manipulation"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-11 rounded-xl bg-surface/95 text-foreground border border-border text-xs font-semibold hover:bg-surface shadow-sm transition active:scale-95 touch-manipulation"
                 >
                   <MapPin className="w-3.5 h-3.5 text-primary" />
                   <span>Voir en 2D</span>
@@ -514,7 +514,7 @@ export default function GuestTablePlanView({
             className="rounded-2xl px-3.5 py-3 text-center min-w-[76px] shrink-0 border bg-surface/80"
             style={{ borderColor: `color-mix(in srgb, ${theme.accentColor} 22%, var(--border))` }}
           >
-            <p className="text-[9px] font-bold uppercase tracking-wider text-muted">Siège</p>
+            <p className="text-[9px] font-bold text-muted">Siège</p>
             <p className="text-lg font-black text-foreground mt-0.5">
               {tableDetails.seatIndex !== undefined ? tableDetails.seatIndex + 1 : '—'}
             </p>
@@ -522,11 +522,11 @@ export default function GuestTablePlanView({
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-surface/80 border border-border rounded-xl p-3">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wider">Type</p>
+            <p className="text-xs font-semibold text-muted ">Type</p>
             <p className="text-sm font-semibold text-foreground mt-0.5">{getTableShapeLabel(tableDetails.shape)}</p>
           </div>
           <div className="bg-surface/80 border border-border rounded-xl p-3">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wider">Capacité</p>
+            <p className="text-xs font-semibold text-muted ">Capacité</p>
             <p className="text-sm font-semibold text-foreground mt-0.5">{tableDetails.capacity} places</p>
           </div>
         </div>

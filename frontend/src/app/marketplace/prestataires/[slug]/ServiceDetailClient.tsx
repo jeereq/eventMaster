@@ -23,7 +23,7 @@ import {
   type PublicService,
 } from '@/lib/marketplace';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { Sparkles, KeyRound } from 'lucide-react';
+import { Sparkles, KeyRound } from '@/components/icons';
 import MarketplaceActivityFeed from '@/components/marketplace/MarketplaceActivityFeed';
 import ListingReviews from '@/components/marketplace/ListingReviews';
 import { trackListingView } from '@/lib/marketplaceReviews';

@@ -3,7 +3,7 @@
 import React, { useRef, useState } from 'react';
 import {
   Plus, Trash2, Shirt, Save, Eye, ImagePlus, Loader2,
-} from 'lucide-react';
+} from '@/components/icons';
 import {
   type GuestGuidelines,
   type DressCodePresetId,
@@ -204,7 +204,7 @@ export default function EventGuestGuidelinesEditor({
         {/* Recommendations */}
         <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
           <h3 className="text-sm font-semibold text-foreground">Avantages & recommandations</h3>
-          <p className="text-[11px] text-muted leading-relaxed">
+          <p className="text-xs text-muted leading-relaxed">
             Parking, cadeaux, horaires, extras (welcome drink, open bar…) — visibles par les invités sur la réponse à l’invitation.
           </p>
 
@@ -409,9 +409,9 @@ function GuidelineImageField({
           ))}
         </ul>
       ) : (
-        <p className="text-[11px] text-muted">Optionnel — photo de tenue, plan d’accès, illustration…</p>
+        <p className="text-xs text-muted">Optionnel — photo de tenue, plan d’accès, illustration…</p>
       )}
-      {error ? <p className="text-[11px] text-rose-600">{error}</p> : null}
+      {error ? <p className="text-xs text-rose-600">{error}</p> : null}
     </div>
   );
 }

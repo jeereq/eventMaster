@@ -4,18 +4,29 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Calendar, Eye, Loader2, LogIn, MapPin, Trash2, AlertTriangle, Heart, X
-} from 'lucide-react';
+} from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, StatusPill,
-  ProjectCard, ListRowAction, SkeletonTabContent, ViewModeToggle, useViewMode,
-  usePageSize, listStackClass, Button, Modal
+  Alert,
+  EmptyState,
+  Pagination,
+  StatusPill,
+  ProjectCard,
+  ListRowAction,
+  SkeletonTabContent,
+  ViewModeToggle,
+  useViewMode,
+  usePageSize,
+  listStackClass,
+  Button,
+  Modal,
 } from '@/components/ui';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
 import { formatFc } from '@/config/landingPricing';
 import useIsMobile from '@/hooks/useIsMobile';
+import { confirmSupportSession } from '@/lib/confirmSupportSession';
 
 interface AdminEventRow {
   id: string;
@@ -130,6 +141,7 @@ export default function AdminEventsPage() {
   }, [load]);
 
   const openWorkspace = async (tenantId: string) => {
+    if (!confirmSupportSession()) return;
     try {
       setOpeningId(tenantId);
       const payload = await api.post(`/admin/tenants/${tenantId}/impersonate`);
@@ -188,18 +200,6 @@ export default function AdminEventsPage() {
 
   return (
     <div className="space-y-6 w-full">
-      <PageHeader
-        title="Événements (supervision)"
-        description="Tous les événements. Pas de création ici."
-        breadcrumbs={
-          <Breadcrumbs
-            items={[
-              { label: 'Accueil', href: '/dashboard?tab=overview' },
-              { label: 'Événements' },
-            ]}
-          />
-        }
-      />
 
       {error && <Alert variant="error">{error}</Alert>}
 
@@ -293,7 +293,7 @@ export default function AdminEventsPage() {
       {loading ? (
         <SkeletonTabContent mode={viewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
       ) : items.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="events"
           icon={<Calendar className="w-5 h-5" />}
           title="Aucun événement"
           description="Aucun événement ne correspond à ces filtres."
@@ -351,7 +351,7 @@ export default function AdminEventsPage() {
                         <MapPin className="w-3 h-3 shrink-0" />
                         {e.location || 'Sans lieu'}
                       </p>
-                      <p className="text-[11px] text-muted">{dateLabel}</p>
+                      <p className="text-xs text-muted">{dateLabel}</p>
                       <div className="flex flex-wrap items-center gap-1.5">
                         {visibilityChip}
                         {ticketsChip}
@@ -360,7 +360,7 @@ export default function AdminEventsPage() {
                         {invitesChip}
                       </div>
                       {isBlocked && (e as any).adminBlockReason && (
-                        <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium truncate">
+                        <p className="text-xs text-rose-600 dark:text-rose-400 font-medium truncate">
                           Motif : {(e as any).adminBlockReason}
                         </p>
                       )}
@@ -512,7 +512,7 @@ export default function AdminEventsPage() {
             className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
           {!moderation?.isBlocked && (
-            <span id="moderation-reason-hint" className="text-[11px] text-muted">
+            <span id="moderation-reason-hint" className="text-xs text-muted">
               {moderationReason.trim().length}/8 caractères min.
             </span>
           )}

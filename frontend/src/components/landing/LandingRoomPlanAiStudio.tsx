@@ -13,7 +13,7 @@ import {
   Wand2,
   Clock,
   Sparkles,
-} from 'lucide-react';
+} from '@/components/icons';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { isProtocolUser, PROTOCOL_CREATIVE_DENIED } from '@/lib/protocolAccess';
@@ -374,7 +374,7 @@ export default function LandingRoomPlanAiStudio({
       ) : (
         <div className={cn(lockExpanded && 'flex flex-col min-h-0')}>
           {!lockExpanded ? (
-          <div className="px-5 sm:px-7 pt-5 pb-4 border-b border-border bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_55%)]">
+          <div className="px-5 sm:px-7 pt-5 pb-4 border-b border-border">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3.5 min-w-0">
                 <span className="w-10 h-10 rounded-[var(--radius-card)] bg-primary-solid text-primary-foreground inline-flex items-center justify-center shrink-0">

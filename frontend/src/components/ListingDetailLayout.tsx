@@ -10,7 +10,7 @@ import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
 import { CLOSE_PAYMENT_CONFIRM } from '@/lib/pendingTicketPayment';
 import { isVideoUrl, listingSrcSet, sizedMediaUrl, type MarketplaceActivityPreviewItem, type PublicService, type PublicVenue } from '@/lib/marketplace';
 import MarketplaceFormTabs, { listingTabPanelId, type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { ArrowLeft, Play, Ticket, Heart } from 'lucide-react';
+import { ArrowLeft, Play, Ticket, Heart } from '@/components/icons';
 import ShareButton from '@/components/ShareButton';
 import { listingPublicUrl, listingShareTitle } from '@/lib/share';
 import ListingActivityHighlights from '@/components/marketplace/ListingActivityHighlights';
@@ -655,7 +655,7 @@ export default function ListingDetailLayout({
 
           <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-5 lg:gap-12">
             <div className="flex min-w-0 flex-col gap-4 lg:col-span-3">
-              <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md', embedded ? 'top-12' : 'top-[var(--em-site-header)]', 'md:top-[var(--em-site-header)]')}>
+              <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95', embedded ? 'top-12' : 'top-[var(--em-site-header)]', 'md:top-[var(--em-site-header)]')}>
                 <MarketplaceFormTabs
                   value={viewTab}
                   onChange={onTab}
@@ -708,7 +708,7 @@ export default function ListingDetailLayout({
 
               {/* Sur mobile, afficher le bloc prix et le titre pour une identification immédiate de la billetterie / réservation */}
               <div className="lg:hidden pt-4 border-t border-border space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                <p className="text-xs font-semibold text-primary">
                   {listingKind === 'event' ? 'Billetterie & Inscription' : 'Demande & Réservation'}
                 </p>
                 {priceBlock}
@@ -731,7 +731,7 @@ export default function ListingDetailLayout({
       {!error && showCommerce && (
         <div
           className={cn(
-            'lg:hidden fixed inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur-md shadow-[0_-8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)]',
+            'lg:hidden fixed inset-x-0 z-40 border-t border-border bg-background/95 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)]',
             embedded
               ? 'bottom-[var(--em-dash-bottom-nav)] pb-2.5 md:bottom-0 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]'
               : 'bottom-[var(--em-site-bottom-nav)] pb-2.5 md:bottom-0 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]',

@@ -24,7 +24,7 @@ import FixtureRenderer from '@/components/FixtureRenderer';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import { PlanSceneControls, PlanZoomControls } from '@/components/PlanViewChrome';
-import { MapPin, Sparkles } from 'lucide-react';
+import { MapPin, Sparkles } from '@/components/icons';
 import type { GuestPlanFixture, GuestRoomOutline, GuestTablePlanOverviewItem } from '@/app/rsvp/GuestTablePlanView';
 import type { PricingZone } from '@/lib/ticketPricing';
 

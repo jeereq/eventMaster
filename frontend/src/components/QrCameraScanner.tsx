@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { Camera, CameraOff, Loader2 } from 'lucide-react';
+import { Camera, CameraOff, Loader2 } from '@/components/icons';
 import { Button } from '@/components/ui';
 
 interface QrCameraScannerProps {
@@ -118,7 +118,7 @@ export default function QrCameraScanner({ active, onScan, onError }: QrCameraSca
  <p className="text-sm text-rose-600 font-medium">{cameraError}</p>
  )}
  <p className="text-xs text-muted text-center">
- Placez le QR code de confirmation de présence de l&apos;invité dans le cadre.
+ Placez le QR code de l&apos;invité dans le cadre.
  </p>
  </div>
  );

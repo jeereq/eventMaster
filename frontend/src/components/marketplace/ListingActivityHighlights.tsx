@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Rss, Heart, MessageCircle, ArrowRight } from 'lucide-react';
+import { Rss, Heart, MessageCircle, ArrowRight } from '@/components/icons';
 import type { MarketplaceActivityPreviewItem } from '@/lib/marketplace';
 import { isVideoUrl, sizedMediaUrl } from '@/lib/marketplace';
 import { cn } from '@/lib/cn';

@@ -16,7 +16,7 @@ import {
   Sparkles,
   Mail,
   LayoutGrid,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Button, Alert } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';

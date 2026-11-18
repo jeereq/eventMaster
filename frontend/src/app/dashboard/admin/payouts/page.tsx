@@ -3,13 +3,23 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Download, Loader2, Wallet, Eye, Ticket, HeartHandshake, CheckCircle2, Clock, ShieldCheck, Building2, Calendar, FileText } from 'lucide-react';
+import { Download, Loader2, Wallet, Eye, Ticket, HeartHandshake, CheckCircle2, Clock, ShieldCheck, Building2, Calendar, FileText } from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/cn';
 import {
-  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Button, Modal, usePageSize,
-  ViewModeToggle, useViewMode, ProjectCard, StatusPill, listStackClass,
+  PageHeader,
+  Alert,
+  EmptyState,
+  Pagination,
+  Button,
+  Modal,
+  usePageSize,
+  ViewModeToggle,
+  useViewMode,
+  ProjectCard,
+  StatusPill,
+  listStackClass,
 } from '@/components/ui';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
@@ -565,20 +575,7 @@ export default function AdminSaasPayoutsPage() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title={payoutTab === 'saas' ? "Versements SaaS" : "Reversements Événements (Billetterie & Dons)"}
-        description={
-          payoutTab === 'saas'
-            ? `Commissions commerciaux : ${firstPct} % puis ${renewPct} %.`
-            : 'Recettes billets et dons, après retenue.'
-        }
-        breadcrumbs={
-          <Breadcrumbs
-            items={[
-              { label: 'Accueil', href: '/dashboard?tab=overview' },
-              { label: payoutTab === 'saas' ? 'Versements SaaS' : 'Reversements Événements' },
-            ]}
-          />
-        }
+        note={payoutTab === 'saas' ? `Commissions commerciaux : ${firstPct} % puis ${renewPct} %` : undefined}
         action={
           <div className="flex items-center gap-2">
             {payoutTab === 'saas' ? (
@@ -649,18 +646,18 @@ export default function AdminSaasPayoutsPage() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl p-3.5 sm:p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Dû</p>
+          <p className="text-xs font-bold text-amber-700">Dû</p>
           <p className="text-lg sm:text-xl font-extrabold text-amber-900 dark:text-amber-200 mt-1">{formatFc(data?.sums.dueFc ?? 0)}</p>
           <p className="text-xs text-amber-700">{data?.sums.dueCount ?? 0} commercial(aux)</p>
         </div>
         <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-3.5 sm:p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Versé</p>
+          <p className="text-xs font-bold text-emerald-700">Versé</p>
           <p className="text-lg sm:text-xl font-extrabold text-emerald-800 dark:text-emerald-200 mt-1">{formatFc(data?.sums.paidFc ?? 0)}</p>
           <p className="text-xs text-emerald-700">{data?.sums.paidCount ?? 0} dossier(s)</p>
         </div>
         <div className="bg-surface-muted border border-border rounded-xl p-3.5 sm:p-4 col-span-2">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">Payeur</p>
-          <p className="text-sm font-semibold text-foreground mt-1">EventMaster via FlexPay Pay Out (ou hors plateforme)</p>
+          <p className="text-xs font-bold text-muted">Payeur</p>
+          <p className="text-sm font-semibold text-foreground mt-1">EventMaster · Mobile Money (FlexPay Pay Out) ou virement</p>
           <p className="text-xs text-muted mt-1">
             Distinct de la commission vendeur marketplace.{' '}
             <Link href="/dashboard/admin/catalogue" className="text-primary hover:underline">Ouvrir le catalogue</Link>
@@ -749,7 +746,7 @@ export default function AdminSaasPayoutsPage() {
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : !data?.items.length ? (
-        <EmptyState
+        <EmptyState illustration="payments"
           icon={<Wallet className="w-5 h-5" />}
           title="Aucun versement"
           description="Aucune commission pour ces filtres."
@@ -984,7 +981,7 @@ export default function AdminSaasPayoutsPage() {
           {/* KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="bg-surface-muted border border-border rounded-xl p-3.5 sm:p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted">Total Encaissé Brut</p>
+              <p className="text-xs font-bold text-muted">Total Encaissé Brut</p>
               <p className="text-lg sm:text-xl font-extrabold text-foreground mt-1">
                 {formatFc(eventPayoutsData?.kpis?.totalGrossCollectedFc ?? 0)}
               </p>
@@ -993,8 +990,8 @@ export default function AdminSaasPayoutsPage() {
 
             <div className="bg-primary/10 border border-primary/20 rounded-xl p-3.5 sm:p-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold uppercase tracking-wider text-primary">Retenue Plateforme</p>
-                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-primary/20 text-primary">3% - 5%</span>
+                <p className="text-xs font-bold text-primary">Retenue Plateforme</p>
+                <span className="text-xs font-extrabold px-1.5 py-0.5 rounded bg-primary/20 text-primary">3% - 5%</span>
               </div>
               <p className="text-lg sm:text-xl font-extrabold text-primary mt-1">
                 {formatFc(eventPayoutsData?.kpis?.totalPlatformRetentionFc ?? 0)}
@@ -1003,7 +1000,7 @@ export default function AdminSaasPayoutsPage() {
             </div>
 
             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl p-3.5 sm:p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Net À Reverser</p>
+              <p className="text-xs font-bold text-amber-700">Net À Reverser</p>
               <p className="text-lg sm:text-xl font-extrabold text-amber-900 dark:text-amber-200 mt-1">
                 {formatFc(eventPayoutsData?.kpis?.totalNetPayoutDueFc ?? 0)}
               </p>
@@ -1011,7 +1008,7 @@ export default function AdminSaasPayoutsPage() {
             </div>
 
             <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-3.5 sm:p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Net Déjà Reversé</p>
+              <p className="text-xs font-bold text-emerald-700">Net Déjà Reversé</p>
               <p className="text-lg sm:text-xl font-extrabold text-emerald-800 dark:text-emerald-200 mt-1">
                 {formatFc(eventPayoutsData?.kpis?.totalNetPayoutPaidFc ?? 0)}
               </p>
@@ -1088,7 +1085,7 @@ export default function AdminSaasPayoutsPage() {
                     </Button>
                   </div>
                 </div>
-                <p className="text-[11px] text-muted">
+                <p className="text-xs text-muted">
                   Minimum {formatFc(ap.minFc)} par reversement. Seul le numéro de reversement saisi par l’organisateur est
                   utilisé ; un événement bloqué, sans numéro ou dont le dernier versement a été refusé sur le même numéro
                   attend une action manuelle. En cas d’annulation de paiements après un reversement, le trop-versé est
@@ -1161,7 +1158,7 @@ export default function AdminSaasPayoutsPage() {
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : !eventPayoutsData?.events?.length ? (
-            <EmptyState
+            <EmptyState illustration="tickets"
               icon={<Ticket className="w-8 h-8 text-muted" />}
               title="Aucun événement avec recettes"
               description="Aucun événement pour ces critères."
@@ -1241,15 +1238,15 @@ export default function AdminSaasPayoutsPage() {
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-border/60">
                           <div>
-                            <span className="text-[11px] text-muted block">Brut</span>
+                            <span className="text-xs text-muted block">Brut</span>
                             <span className="font-semibold">{formatFc(ev.ticketingGrossFc)}</span>
                           </div>
                           <div>
-                            <span className="text-[11px] text-muted block">Retenue</span>
+                            <span className="text-xs text-muted block">Retenue</span>
                             <span className="font-semibold text-rose-600">-{formatFc(ev.ticketingRetentionFc)}</span>
                           </div>
                           <div>
-                            <span className="text-[11px] text-muted block">Net</span>
+                            <span className="text-xs text-muted block">Net</span>
                             <span className="font-bold text-primary">{formatFc(ev.ticketingNetFc)}</span>
                           </div>
                         </div>
@@ -1266,15 +1263,15 @@ export default function AdminSaasPayoutsPage() {
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-border/60">
                           <div>
-                            <span className="text-[11px] text-muted block">Brut</span>
+                            <span className="text-xs text-muted block">Brut</span>
                             <span className="font-semibold">{formatFc(ev.donationsGrossFc)}</span>
                           </div>
                           <div>
-                            <span className="text-[11px] text-muted block">Retenue</span>
+                            <span className="text-xs text-muted block">Retenue</span>
                             <span className="font-semibold text-rose-600">-{formatFc(ev.donationsRetentionFc)}</span>
                           </div>
                           <div>
-                            <span className="text-[11px] text-muted block">Net</span>
+                            <span className="text-xs text-muted block">Net</span>
                             <span className="font-bold text-primary">{formatFc(ev.donationsNetFc)}</span>
                           </div>
                         </div>

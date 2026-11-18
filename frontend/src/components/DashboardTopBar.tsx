@@ -1,19 +1,21 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { isB2cPlanId } from '@/config/landingPricing';
 import { useTheme } from '@/context/ThemeContext';
 import { NotificationBell } from '@/components/CommercialNotifications';
-import UserAvatar from '@/components/UserAvatar';
 import { ViewCustomizerTrigger } from '@/components/ViewCustomizer';
 import { Tooltip } from '@/components/ui';
 import PWAInstallCta from '@/components/PWAInstallCta';
-import { Sun, Moon, User, PanelLeft, PanelLeftClose, LogOut } from 'lucide-react';
+import { Sun, Moon } from '@/components/icons';
 
-export function useDashboardTitle(): { title: string; subtitle?: string } {
+/**
+ * Titre unique de l’écran (barre du haut sur desktop, en-tête mobile).
+ * Même libellé que l’entrée du menu : pas de sous-titre, pas de second titre dans la page.
+ */
+export function useDashboardTitle(): { title: string } {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user, access, tenant, planFeatures } = useAuth();
@@ -21,129 +23,95 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
   const isPersonal =
     isB2cPlanId(tenant?.plan || '') || isB2cPlanId(tenant?.pendingPlan || '') || planFeatures?.audience === 'B2C';
 
-  return useMemo(() => {
+  const title = useMemo(() => {
     if (pathname.startsWith('/dashboard/events')) {
-      if (searchParams.get('mode') === 'protocol') return { title: 'Accueil jour J', subtitle: 'Scan des QR et placement' };
-      if (isPersonal) return { title: 'Mes fêtes', subtitle: 'Invités, faire-part et plan de table' };
-      return { title: 'Événements', subtitle: 'Vos réceptions et invités' };
+      if (searchParams.get('mode') === 'protocol') return 'Accueil jour J';
+      return isPersonal ? 'Mes fêtes' : 'Événements';
     }
-    if (pathname.startsWith('/dashboard/templates')) return { title: 'Modèles', subtitle: 'Faire-part et invitations' };
-    if (pathname.startsWith('/dashboard/analytics')) return { title: 'Statistiques', subtitle: 'Réponses à l’invitation et présences' };
-    if (pathname.startsWith('/dashboard/billing')) return { title: 'Abonnement', subtitle: 'Formule et quotas' };
-    if (pathname.startsWith('/dashboard/invoices')) return { title: 'Factures', subtitle: 'Historique des paiements' };
-    if (pathname.startsWith('/dashboard/rooms')) return { title: 'Salles', subtitle: 'Plans 2D et fiches' };
-    if (pathname.startsWith('/dashboard/team')) return { title: 'Équipe', subtitle: 'Membres et rôles' };
-    if (pathname.startsWith('/dashboard/marketplace')) return { title: 'Mes offres', subtitle: 'Prestations, matériel et boissons' };
-    if (pathname.startsWith('/dashboard/bookings')) return { title: 'Devis & Réservations', subtitle: 'Échanges et dates confirmées' };
-    if (pathname.startsWith('/dashboard/profile')) return { title: 'Mon compte', subtitle: 'Profil et sécurité' };
-    if (pathname.startsWith('/dashboard/notifications')) return { title: 'Notifications', subtitle: 'Alertes de votre compte' };
-    if (pathname.startsWith('/dashboard/audit')) return { title: 'Journal d’audit', subtitle: 'Actions plateforme' };
+    if (pathname.startsWith('/dashboard/protocol')) return 'Accueil jour J';
+    if (pathname.startsWith('/dashboard/templates')) return isPersonal ? 'Faire-part' : 'Modèles';
+    if (pathname.startsWith('/dashboard/analytics')) return 'Statistiques';
+    if (pathname.startsWith('/dashboard/billing')) return 'Forfait';
+    if (pathname.startsWith('/dashboard/invoices')) return 'Factures';
+    if (pathname.startsWith('/dashboard/rooms')) return isPersonal ? 'Plans de salle' : 'Salles';
+    if (pathname.startsWith('/dashboard/team')) return isPersonal ? 'Co-organisateurs' : 'Équipe';
+    if (pathname.startsWith('/dashboard/marketplace')) return 'Mes offres';
+    if (pathname.startsWith('/dashboard/bookings')) {
+      if (tab === 'bookings') return 'Réservations';
+      if (tab === 'packs') return 'Mes packs';
+      if (tab === 'favorites') return 'Favoris';
+      return 'Demandes de devis';
+    }
+    if (pathname.startsWith('/dashboard/profile')) return 'Mon compte';
+    if (pathname.startsWith('/dashboard/guide')) return 'Guide utilisateur';
+    if (pathname.startsWith('/dashboard/publications')) return 'Réalisations';
+    if (pathname.startsWith('/dashboard/notifications')) return 'Notifications';
+    if (pathname.startsWith('/dashboard/audit')) return 'Journal d’audit';
     if (pathname.startsWith('/dashboard/tickets')) {
       const isClient = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
-      const isOrg = !isClient && Boolean(access?.isOwner || access?.level === 'owner' || access?.level === 'manager' || access?.level === 'protocol' || tenant?.accountKind === 'ORGANIZER');
-      return isOrg
-        ? { title: 'Billetterie', subtitle: 'Commandes, entrées et contrôle d’accès' }
-        : { title: 'Mes billets', subtitle: 'Pass d’accès et QR codes' };
+      const isOrg = !isClient && Boolean(access?.isOwner || access?.level === 'owner' || access?.level === 'manager' || access?.level === 'protocol' || access?.level === 'staff' || tenant?.accountKind === 'ORGANIZER');
+      return isOrg && tab !== 'my' ? 'Billetterie' : 'Mes billets';
     }
-    if (pathname.startsWith('/dashboard/catalogue/salles')) return { title: 'Salle', subtitle: 'Fiche du lieu' };
-    if (pathname.startsWith('/dashboard/catalogue/prestataires')) return { title: 'Prestation', subtitle: 'Fiche professionnelle' };
-    if (pathname.startsWith('/dashboard/catalogue/locations')) return { title: 'Matériel & Équipements', subtitle: 'Fiche équipement' };
+    if (pathname.startsWith('/dashboard/catalogue/salles')) return 'Salle';
+    if (pathname.startsWith('/dashboard/catalogue/prestataires')) return 'Prestation';
+    if (pathname.startsWith('/dashboard/catalogue/locations')) return 'Matériel & Équipements';
     if (pathname.startsWith('/dashboard/catalogue')) {
-      const hub = searchParams.get('hub');
+      const hub = searchParams.get('hub') || tab;
       const kind = searchParams.get('kind');
-      if (kind === 'event' && (!hub || hub === 'explore')) {
-        return { title: 'Événements', subtitle: 'Événements et billetterie' };
-      }
-      if (hub === 'plan') return { title: 'Simulateur', subtitle: 'Studios actifs, budget et devis' };
-      if (hub === 'favorites') return { title: 'Favoris', subtitle: 'Vos coups de cœur enregistrés' };
-      if (hub === 'packs') return { title: 'Mes packs', subtitle: 'Vos sélections sur mesure' };
-      return { title: 'Marketplace', subtitle: 'Salles, prestataires et matériel & équipements' };
+      if (kind === 'event' && (!hub || hub === 'explore')) return 'Événements';
+      if (hub === 'plan') return isPersonal ? 'Budget IA' : 'Simulateur';
+      if (hub === 'favorites') return 'Mes favoris';
+      if (hub === 'packs') return 'Mes packs';
+      return isPersonal ? 'Salles & prestataires' : 'Explorer';
     }
-    if (pathname.startsWith('/dashboard/admin/catalogue')) return { title: 'Catalogue', subtitle: 'Modération marketplace' };
-    if (pathname.startsWith('/dashboard/admin/payments')) return { title: 'Paiements', subtitle: 'Tentatives et sources' };
-    if (pathname.startsWith('/dashboard/admin/donations')) return { title: 'Dons solidaires', subtitle: 'Reporting des collectes de fonds' };
-    if (pathname.startsWith('/dashboard/admin/ai-tokens')) return { title: 'Jetons IA', subtitle: 'Consommation par action' };
-    if (pathname.startsWith('/dashboard/admin/payouts')) return { title: 'Versements SaaS', subtitle: 'Commissions hors plateforme' };
-    if (pathname.startsWith('/dashboard/admin/events')) return { title: 'Événements', subtitle: 'Console Super Admin' };
-    if (pathname.startsWith('/dashboard/admin/guests')) return { title: 'Invités', subtitle: 'Console Super Admin' };
-    if (pathname.startsWith('/dashboard/commercial')) return { title: 'Parrainage', subtitle: 'Commissions plateforme' };
-    if (pathname.startsWith('/dashboard/org-commercial')) return { title: 'Réseau commercial', subtitle: 'Parrainage organisation' };
+    if (pathname.startsWith('/dashboard/admin/catalogue')) return 'Catalogue';
+    if (pathname.startsWith('/dashboard/admin/payments')) return 'Paiements';
+    if (pathname.startsWith('/dashboard/admin/donations')) return 'Dons solidaires';
+    if (pathname.startsWith('/dashboard/admin/ai-tokens')) return 'Jetons IA';
+    if (pathname.startsWith('/dashboard/admin/payouts')) return 'Versements SaaS';
+    if (pathname.startsWith('/dashboard/admin/events')) return 'Événements';
+    if (pathname.startsWith('/dashboard/admin/guests')) return 'Invités';
+    if (pathname.startsWith('/dashboard/commercial')) return 'Parrainage & commissions';
+    if (pathname.startsWith('/dashboard/org-commercial')) return 'Réseau commercial';
 
     if (pathname === '/dashboard' || pathname === '/dashboard/') {
       if (user?.role === 'SUPER_ADMIN' || user?.role === 'COMMERCIAL') {
         const titles: Record<string, string> = {
-          overview: 'Accueil opérationnel',
+          overview: 'Accueil',
           tenants: 'Organisations',
           users: 'Utilisateurs',
-          templates: 'Modèles globaux',
-          'message-templates': 'Messages invités',
+          templates: 'Modèles invitation',
+          'message-templates': 'Messages automatiques',
           events: 'Événements',
           guests: 'Invités',
-          analytics: 'Analytique',
-          settings: 'Réglages',
-          'subscription-requests': 'Demandes d’abonnement',
-          'subscription-plans': 'Forfaits',
+          analytics: 'Analyses',
+          settings: 'Réglages plateforme',
+          'subscription-requests': 'Demandes abonnement',
+          'subscription-plans': 'Forfaits & tarifs',
           invoices: 'Factures',
         };
         const key = tab || (user.role === 'SUPER_ADMIN' ? 'overview' : 'tenants');
-        return {
-          title: user.role === 'COMMERCIAL' ? 'Espace commercial' : 'Console Super Admin',
-          subtitle: titles[key] || 'Pilotage',
-        };
+        return titles[key] || 'Accueil';
       }
-      if (tenant?.accountKind === 'CLIENT' || access?.level === 'client') {
-        return { title: 'Accueil', subtitle: 'Mon espace client' };
-      }
-      return { title: 'Tableau de bord', subtitle: 'Vue d’ensemble' };
+      if (tenant?.accountKind === 'CLIENT' || access?.level === 'client') return 'Accueil';
+      return isPersonal ? 'Ma fête' : 'Tableau de bord';
     }
 
-    return { title: 'EventMaster', subtitle: undefined };
+    return 'EventMaster';
   }, [pathname, tab, searchParams, isPersonal, user?.role, access?.level, access?.isOwner, tenant?.accountKind]);
+
+  return { title };
 }
 
-export default function DashboardTopBar({
-  sidebarCollapsed,
-  onToggleSidebar,
-}: {
-  sidebarCollapsed?: boolean;
-  onToggleSidebar?: () => void;
-} = {}) {
-  const { user, tenant, logout } = useAuth();
+export default function DashboardTopBar() {
   const { theme, toggleTheme } = useTheme();
-  const { title, subtitle } = useDashboardTitle();
+  const { title } = useDashboardTitle();
 
-  const roleLabel =
-    user?.role === 'SUPER_ADMIN'
-      ? 'Super Admin'
-      : user?.role === 'COMMERCIAL'
-        ? 'Commercial'
-        : tenant?.name || 'Organisation';
-
+  // Utilisateur, déconnexion et repli du menu sont dans la barre latérale : pas de doublon ici.
   return (
-    <header className="hidden md:block sticky top-0 z-30 shrink-0 border-b border-border bg-surface/95 backdrop-blur-md isolate">
+    <header className="hidden md:block sticky top-0 z-30 shrink-0 border-b border-border bg-surface/95 isolate">
       <div className="em-auth-container h-16 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          {onToggleSidebar && (
-            <Tooltip
-              content={sidebarCollapsed ? 'Déplier la barre latérale (Ctrl+B)' : 'Réduire la barre latérale (Ctrl+B)'}
-              side="bottom"
-            >
-              <button
-                type="button"
-                onClick={onToggleSidebar}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-full border border-border bg-surface text-foreground hover:bg-surface-muted transition touch-manipulation cursor-pointer shrink-0"
-                aria-label={sidebarCollapsed ? 'Déplier la barre latérale' : 'Réduire la barre latérale'}
-              >
-                {sidebarCollapsed ? <PanelLeft className="w-4 h-4 text-primary" /> : <PanelLeftClose className="w-4 h-4" />}
-              </button>
-            </Tooltip>
-          )}
-
-          <div className="min-w-0">
-            <h1 className="em-dash-title text-base lg:text-lg font-semibold text-foreground truncate leading-tight">{title}</h1>
-            {subtitle && <p className="text-xs text-muted truncate">{subtitle}</p>}
-          </div>
-        </div>
+        <h1 className="em-dash-title min-w-0 text-base lg:text-lg font-semibold text-foreground truncate leading-tight">{title}</h1>
 
         <div className="flex items-center gap-2 shrink-0">
           <PWAInstallCta variant="header" />
@@ -157,27 +125,6 @@ export default function DashboardTopBar({
               aria-label="Changer de thème"
             >
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </button>
-          </Tooltip>
-          <Link
-            href="/dashboard/profile"
-            className="inline-flex min-h-11 items-center gap-2 pl-1.5 pr-3 py-1 rounded-full border border-border bg-surface hover:bg-surface-muted transition max-w-[14rem]"
-          >
-            <UserAvatar name={user?.name} src={user?.avatarUrl} size="sm" className="rounded-full" />
-            <span className="min-w-0 hidden lg:block">
-              <span className="block text-xs font-semibold text-foreground truncate">{user?.name || 'Compte'}</span>
-              <span className="block text-[10px] text-muted truncate">{roleLabel}</span>
-            </span>
-            <User className="w-3.5 h-3.5 text-muted lg:hidden" />
-          </Link>
-          <Tooltip content="Se déconnecter" side="bottom">
-            <button
-              type="button"
-              onClick={logout}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-full border border-border bg-surface text-muted hover:text-rose-600 hover:bg-rose-500/10 hover:border-rose-500/30 transition cursor-pointer"
-              aria-label="Se déconnecter"
-            >
-              <LogOut className="w-4 h-4" />
             </button>
           </Tooltip>
         </div>

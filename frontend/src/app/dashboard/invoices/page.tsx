@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, FileText } from 'lucide-react';
-import { PageHeader, Alert, SkeletonInvoicesView, SkeletonList } from '@/components/ui';
+import { Loader2, FileText } from '@/components/icons';
+import { Alert, SkeletonInvoicesView, SkeletonList } from '@/components/ui';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 
 export default function OrgInvoicesPage() {
@@ -33,10 +33,6 @@ export default function OrgInvoicesPage() {
 
   return (
     <div className="space-y-8 w-full">
-      <PageHeader
-        title="Factures"
-        description={`Factures de ${tenant.name}.`}
-      />
 
       {error && <Alert variant="error">{error}</Alert>}
 
@@ -50,7 +46,6 @@ export default function OrgInvoicesPage() {
         ) : (
           <InvoiceListPanel
             invoices={invoices}
-            emptyMessage="Aucune facture encore. Une facture apparaît ici dès qu'une demande d'abonnement est approuvée par la plateforme."
           />
         )}
       </div>

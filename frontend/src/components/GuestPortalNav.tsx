@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Home, ChevronLeft } from 'lucide-react';
+import { Home, ChevronLeft } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 interface GuestPortalHomeLinkProps {

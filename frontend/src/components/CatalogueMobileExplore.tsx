@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Building2, Calendar, KeyRound, ChevronUp, LayoutGrid, Locate, Navigation, SlidersHorizontal, Sparkles, X } from 'lucide-react';
+import { Building2, Calendar, KeyRound, ChevronUp, LayoutGrid, Locate, Navigation, SlidersHorizontal, Sparkles, X } from '@/components/icons';
 import MarketplaceLocationsMap, {
   type MarketplaceMapHandle,
   type MarketplaceMapMarker,
@@ -85,7 +85,7 @@ function StoryCard({
             <span className={cn('inline-flex h-6 w-6 items-center justify-center rounded-[var(--radius-button)] shadow-sm', accent.iconBox)}>
               <Icon className="w-3 h-3" strokeWidth={2.4} />
             </span>
-            <span className={cn('rounded-[var(--radius-button)] px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wider shadow-sm', accent.badge)}>
+            <span className={cn('rounded-[var(--radius-button)] px-1.5 py-0.5 text-xs font-semibold shadow-sm', accent.badge)}>
               {catalogueKindLabel(displayKind)}
             </span>
           </span>
@@ -174,7 +174,7 @@ function SheetRow({
         </span>
       </div>
       <div className="min-w-0 flex-1">
-        <p className={cn('text-xs font-semibold uppercase tracking-wider', displayKind === 'service' ? 'text-[color:var(--festive-accent)]' : displayKind === 'rental' ? 'text-cyan-800' : displayKind === 'event' ? 'text-emerald-700' : 'text-primary')}>
+        <p className={cn('text-xs font-semibold ', displayKind === 'service'? 'text-[color:var(--festive-accent)]': displayKind === 'rental'? 'text-cyan-800': displayKind === 'event'? 'text-emerald-700': 'text-primary')}>
           {catalogueKindLabel(displayKind)}
         </p>
         <p className="text-sm font-semibold text-foreground truncate">{item.title}</p>
@@ -365,7 +365,7 @@ export default function CatalogueMobileExplore({
             <button
               type="button"
               onClick={onExit}
-              className="min-h-11 px-2.5 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="min-h-11 px-2.5 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <X className="w-3.5 h-3.5" />
               Quitter
@@ -378,7 +378,7 @@ export default function CatalogueMobileExplore({
               onClick={() => setFiltersVisible((open) => !open)}
               aria-pressed={filtersVisible}
               aria-controls="catalogue-explore-filters"
-              className="min-h-11 px-2.5 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="min-h-11 px-2.5 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               {filtersVisible ? 'Masquer' : 'Filtres'}
@@ -397,7 +397,7 @@ export default function CatalogueMobileExplore({
         <button
           type="button"
           onClick={() => mapApi.current?.recenter()}
-          className="absolute z-10 right-3 bottom-3 h-10 w-10 rounded-full bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center justify-center text-foreground touch-manipulation active:scale-95"
+          className="absolute z-10 right-3 bottom-3 h-10 w-10 rounded-full bg-surface/90 border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center justify-center text-foreground touch-manipulation active:scale-95"
           style={{
             transform: `translateY(-${sheetH}px)`,
             transition: dragging ? 'none' : 'transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)',
@@ -411,7 +411,7 @@ export default function CatalogueMobileExplore({
 
       <section
         ref={sheetRef}
-        className="absolute z-20 left-0 right-0 bottom-0 rounded-t-[var(--radius-card)] border border-border bg-surface/95 backdrop-blur-xl shadow-[0_-12px_40px_rgba(15,23,42,0.18)] flex flex-col overflow-hidden"
+        className="absolute z-20 left-0 right-0 bottom-0 rounded-t-[var(--radius-card)] border border-border bg-surface/95 shadow-[0_-12px_40px_rgba(15,23,42,0.18)] flex flex-col overflow-hidden"
         style={{
           height: sheetH,
           paddingBottom: 'env(safe-area-inset-bottom)',

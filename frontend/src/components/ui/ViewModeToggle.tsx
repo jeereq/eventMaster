@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Columns2, Columns3, LayoutGrid, List } from 'lucide-react';
+import { Columns2, Columns3, LayoutGrid, List } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import useIsMobile from '@/hooks/useIsMobile';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Copy, Plus, Trash2, Save } from 'lucide-react';
+import { Copy, Plus, Trash2, Save } from '@/components/icons';
 import {
  createCustomTheme,
  deleteCustomThemeFromBlueprint,

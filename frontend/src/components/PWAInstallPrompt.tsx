@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Download, Share, Smartphone, X } from 'lucide-react';
+import { Download, Share, Smartphone, X } from '@/components/icons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
 import { isPwaInstalled } from '@/lib/pwa';

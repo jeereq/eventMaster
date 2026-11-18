@@ -6,14 +6,13 @@ import {
   Sparkles,
   MapPin,
   Tag,
-  Briefcase,
   ChevronRight,
   ChevronLeft,
   CheckCircle2,
   DollarSign,
   Compass,
   ArrowRight,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Modal, Button, Input, Alert } from '@/components/ui';
 import CityLocationFields from '@/components/CityLocationFields';
 import {
@@ -214,7 +213,6 @@ export default function FirstLoginOnboardingModal({
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder={isVenue ? 'Ex: Domaine Royal / Salle Prestige' : 'Ex: Élite Traiteur & Déco'}
-              leftIcon={<Building2 className="w-4 h-4" />}
             />
 
             <div className="space-y-2">
@@ -300,7 +298,6 @@ export default function FirstLoginOnboardingModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={`Ex: Service complet ${SERVICE_CATEGORY_LABELS[category] || ''}`}
-              leftIcon={<Briefcase className="w-4 h-4" />}
             />
 
             <div className="space-y-2">
@@ -369,7 +366,6 @@ export default function FirstLoginOnboardingModal({
                 value={priceFromFc}
                 onChange={(e) => setPriceFromFc(e.target.value)}
                 placeholder="Ex: 250000"
-                leftIcon={<DollarSign className="w-4 h-4" />}
               />
 
               <label className="block">
@@ -399,7 +395,7 @@ export default function FirstLoginOnboardingModal({
               />
             </label>
 
-            <p className="text-[11px] text-muted">
+            <p className="text-xs text-muted">
               Vous pourrez ajouter des photos, préciser vos disponibilités et publier votre fiche complète à tout moment depuis l’onglet « Mes offres ».
             </p>
 

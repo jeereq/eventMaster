@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Beer, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Beer, Loader2, Plus, Trash2 } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Alert, Badge, Button, EmptyState } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
@@ -233,7 +233,7 @@ export default function VendorBeveragePrices() {
       </div>
 
       {visible.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="media"
           icon={<Beer className="w-5 h-5" />}
           title="Aucune marque au catalogue"
           description="Le catalogue plateforme ne contient pas encore de marque dans cette famille."

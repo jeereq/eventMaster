@@ -56,12 +56,12 @@ import {
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
  Undo2, Redo2, History, Download, SlidersHorizontal, LayoutTemplate,
- Calendar, MapPin, User, Users, MessageSquare, Layers, Move, Crown, ArrowRight, Check, Clock,
+ Calendar, MapPin, User, Users, MessageSquare, Layers, Move, Crown, ArrowRight, Check,
  BookOpen, FolderHeart,
-} from 'lucide-react';
+} from '@/components/icons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
-import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, usePaginateItems, usePageSize, Modal } from '@/components/ui';
+import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Pagination, usePaginateItems, usePageSize, Modal } from '@/components/ui';
 import InvitationDuplicateModal, { type InvitationDuplicateValues } from '@/components/InvitationDuplicateModal';
 import { emptyInvitationStructuredBrief, type InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
 import InvitationAiComposeForm, {
@@ -247,7 +247,7 @@ const ELEMENT_TYPE_META: Record<CanvasElement['type'], { label: string; icon: ty
 };
 
 export default function TemplatesPage() {
- const { user, planFeatures, planQuota, tenant, access, planName } = useAuth();
+ const { user, planFeatures, planQuota, tenant, planName } = useAuth();
  /** Nom commercial du forfait (base) ; l'identifiant brut seulement si le nom n'est pas chargé. */
  const planLabel = planName || tenant?.plan || null;
  const { trackJob } = useStudioJobs();
@@ -315,12 +315,6 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  );
  const isSuperAdmin = isPlatformTemplateAdmin;
  const fromAdminConsole = studioOrigin === 'admin' && isPlatformTemplateAdmin;
- const isOwnerOrManager = Boolean(
-  access?.isOwner ||
-  access?.level === 'manager' ||
-  user?.orgRole === 'MANAGER' ||
-  isPlatformTemplateAdmin,
- );
  const canUseCustomTemplates = isPlatformTemplateAdmin || planFeatures?.customTemplates === true;
  const canUseMockupImport = true;
  const canUseMockupOcr = isPlatformTemplateAdmin || planFeatures?.mockupOcr === true;
@@ -1926,6 +1920,8 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 sm:px-8 lg:px-10 py-6">
  {aiComposeStudioTab === 'create' ? (
 <InvitationAiComposeForm
+  hideRepeatedHints
+  busyHint="Génération en cours. Vous pouvez fermer : la carte s’ouvrira dans l’éditeur."
   idPrefix="ai-compose"
   mode={aiComposeMode}
   onModeChange={selectAiComposeMode}
@@ -3164,11 +3160,7 @@ const studioModelPhotos = useMemo(
  </div>
  }
  >
- {draftSavedAt ? (
- <p className="text-sm text-muted leading-relaxed">
- Dernier brouillon local : {draftSavedAt}. Les invités ne verront les changements qu&apos;après enregistrement.
- </p>
- ) : null}
+ {draftSavedAt ? <p className="text-xs text-muted">Brouillon du {draftSavedAt}</p> : null}
  </Modal>
 
  <Modal
@@ -3185,7 +3177,7 @@ const studioModelPhotos = useMemo(
  Enregistrement de modèle d’invitation
  </span>
  <span className="text-xs text-muted block font-normal">
- Votre création est sauvegardée en brouillon local sur cet appareil
+ Brouillon gardé sur cet appareil
  </span>
  </div>
  </div>
@@ -3198,8 +3190,8 @@ const studioModelPhotos = useMemo(
  </p>
  <p className="text-xs text-muted leading-relaxed">
  {!canUseCustomTemplates
- ? "La création et l'enregistrement de faire-part personnalisés sont réservés aux offres professionnelles et supérieures. Votre modèle a bien été sauvegardé sur cet appareil pour que vous ne perdiez pas votre travail."
- : `Vous avez atteint la limite de ${planQuota ? `${planQuota.limits.maxTemplates} ` : ''}modèle(s) d'invitation de votre formule actuelle${planLabel ? ` (${planLabel})` : ''}. Pour enregistrer ce nouveau modèle sans supprimer les précédents, activez une formule supérieure.`}
+ ? 'Enregistrement réservé aux forfaits professionnels.'
+ : `Limite de ${planQuota ? `${planQuota.limits.maxTemplates} ` : ''}modèle(s) atteinte${planLabel ? ` (${planLabel})` : ''}.`}
  </p>
  </div>
 
@@ -3290,7 +3282,7 @@ const studioModelPhotos = useMemo(
  <span className="text-xs text-muted font-mono">{entry.time}</span>
  </div>
  {isCurrent ? (
- <span className="text-xs font-bold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/20">
+ <span className="text-xs font-bold text-primary px-2 py-0.5 rounded bg-primary/20">
  Actuel
  </span>
  ) : (
@@ -3318,7 +3310,7 @@ const studioModelPhotos = useMemo(
             <div className="flex items-center gap-2 min-w-0">
               <Sparkles className="w-4 h-4 text-primary shrink-0" aria-hidden />
               <span className="leading-tight text-muted">
-                <strong className="font-semibold text-foreground">Mode Découverte & Conception :</strong> Vous pouvez concevoir, tester et prévisualiser votre modèle librement. L&apos;enregistrement sur votre compte requiert un forfait supérieur.
+                Enregistrement : forfait supérieur requis.
               </span>
             </div>
             <button
@@ -3487,7 +3479,7 @@ const studioModelPhotos = useMemo(
  </div>
  {isSuperAdmin && (
  <div className="flex flex-wrap items-center gap-2 sm:pl-14">
- <label className="text-xs font-bold text-muted uppercase tracking-wider" htmlFor="template-scope">
+ <label className="text-xs font-bold text-muted "htmlFor="template-scope">
  Visible pour
  </label>
  <select
@@ -3550,7 +3542,7 @@ const studioModelPhotos = useMemo(
    </div>
    <div className="min-w-0">
      <div className="flex items-center gap-2 flex-wrap">
-       <span className="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 uppercase tracking-wide flex items-center gap-1">
+       <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
          <Sparkles className="w-3 h-3" /> Succès Studio
        </span>
        <span className="font-bold text-foreground">Modèle mis à jour avec l’IA</span>
@@ -3583,7 +3575,7 @@ const studioModelPhotos = useMemo(
    </div>
    <div className="min-w-0">
      <div className="flex items-center gap-2 flex-wrap">
-       <span className="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-rose-500/20 text-rose-700 dark:text-rose-300 uppercase tracking-wide">
+       <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-rose-500/20 text-rose-700 dark:text-rose-300 ">
          ⚠️ Erreur Studio
        </span>
        <span className="font-bold text-foreground">Opération interrompue</span>
@@ -3670,12 +3662,8 @@ const studioModelPhotos = useMemo(
 
             {isInviteBlocked ? (
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-center space-y-1">
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300">
-                  <Clock className="w-3.5 h-3.5" />
-                  Fonctionnalité à venir
-                </span>
-                <p className="text-[11px] text-muted leading-tight">
-                  L&apos;assistant IA est temporairement désactivé par l&apos;administration.
+                <p className="text-xs text-muted leading-tight">
+                  Assistant IA désactivé par l&apos;administration.
                 </p>
               </div>
             ) : (
@@ -3759,7 +3747,7 @@ const studioModelPhotos = useMemo(
 
  {importedPalette && (
  <div className="space-y-2 pb-4 border-b border-border-subtle">
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Couleurs de la maquette</h3>
+ <h3 className="text-xs font-bold text-muted ">Couleurs de la maquette</h3>
  <div className="flex flex-wrap gap-1.5">
  {(['primary', 'secondary', 'accent', 'background'] as const).map((key) => {
  const labels = {
@@ -3827,14 +3815,12 @@ const studioModelPhotos = useMemo(
             value={invitationHonorees}
             onChange={(e) => setInvitationHonorees(e.target.value)}
             placeholder="ex. Amina & Jean-Marc"
-            leftIcon={<Users className="h-4 w-4" aria-hidden />}
           />
           <Input
             label="Date de la cérémonie"
             type="date"
             value={invitationDate}
             onChange={(e) => setInvitationDate(e.target.value)}
-            leftIcon={<Calendar className="h-4 w-4" aria-hidden />}
           />
           <p className="text-xs text-muted leading-relaxed">S’affichent tout de suite sur la carte.</p>
           {canvasElements.some((el) => ['text', 'button', 'rsvp-block'].includes(el.type)) && (
@@ -3902,7 +3888,7 @@ const studioModelPhotos = useMemo(
               </span>
               <div className="min-w-0">
                 <span className="block font-bold">Formulaire de réponse à l’invitation</span>
-                <span className="block text-[11px] text-muted font-normal">Validation de présence avec repas & accompagnants</span>
+                <span className="block text-xs text-muted font-normal">Validation de présence avec repas & accompagnants</span>
               </div>
             </button>
           </div>
@@ -4038,7 +4024,7 @@ const studioModelPhotos = useMemo(
  ) : (
  <>
  <div className="space-y-3">
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Thèmes de couleurs</h3>
+ <h3 className="text-xs font-bold text-muted ">Thèmes de couleurs</h3>
  <div className="grid grid-cols-2 gap-2">
  {(showAllThemes
  ? invitationColorThemes(tenant?.branding)
@@ -4080,7 +4066,7 @@ const studioModelPhotos = useMemo(
  </div>
 
  <div className="space-y-2">
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Typographie</h3>
+ <h3 className="text-xs font-bold text-muted ">Typographie</h3>
  <select
  value={fontTheme}
  onChange={(e) => setFontTheme(e.target.value)}
@@ -4101,12 +4087,12 @@ const studioModelPhotos = useMemo(
 
  {/* Canvas dimensions */}
  <div className="space-y-3 p-3 rounded-2xl border border-primary/20 bg-primary/10">
-          <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+          <h4 className="text-xs font-bold text-primary flex items-center gap-1.5">
  <Layout className="w-3.5 h-3.5" />
  Taille du modèle
  </h4>
  <div className="space-y-1.5">
-            <label className="text-xs font-bold text-muted uppercase tracking-wider">Format prédéfini</label>
+            <label className="text-xs font-bold text-muted ">Format prédéfini</label>
  <select
  value={canvasSizePreset}
  onChange={(e) => handleCanvasPresetChange(e.target.value as CanvasSizePreset)}
@@ -4155,7 +4141,7 @@ const studioModelPhotos = useMemo(
 
  {/* Background Type */}
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Type d'arrière-plan</label>
+ <label className="text-xs font-bold text-muted ">Type d'arrière-plan</label>
  <div className="grid grid-cols-3 gap-1.5">
  {[
  { id: 'color', label: 'Couleur' },
@@ -4177,7 +4163,7 @@ const studioModelPhotos = useMemo(
  {/* Background Color Picker (For color and pattern types) */}
  {bgType !== 'image' && (
  <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">Couleur de fond</label>
+ <label className="text-xs font-bold text-muted block">Couleur de fond</label>
  <div className="flex gap-2">
  <input 
  type="color" 
@@ -4231,7 +4217,7 @@ const studioModelPhotos = useMemo(
  {/* Pattern Selector */}
  {bgType === 'pattern' && (
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Style de Texture</label>
+ <label className="text-xs font-bold text-muted ">Style de Texture</label>
  <select 
  value={bgPattern}
  onChange={(e) => setBgPattern(e.target.value as any)}
@@ -4259,7 +4245,7 @@ const studioModelPhotos = useMemo(
  {bgType === 'image' && (
  <div className="space-y-4">
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Image de fond</label>
+ <label className="text-xs font-bold text-muted ">Image de fond</label>
  <input 
  type="file" 
  accept="image/*"
@@ -4268,7 +4254,7 @@ const studioModelPhotos = useMemo(
  />
  </div>
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Ou URL d'image de fond</label>
+ <label className="text-xs font-bold text-muted ">Ou URL d'image de fond</label>
  <input 
  type="text" 
  value={bgImageUrl}
@@ -4291,9 +4277,9 @@ const studioModelPhotos = useMemo(
 
  {aiVariants.length > 1 && (
    <div className="space-y-1.5 pt-1">
-     <label className="text-xs font-bold text-muted uppercase tracking-wider flex items-center justify-between">
+     <label className="text-xs font-bold text-muted flex items-center justify-between">
        <span>Fidèle ou ample ({aiVariants.length})</span>
-       <span className="text-[10px] text-primary lowercase font-normal">cliquez pour basculer</span>
+       <span className="text-xs text-primary lowercase font-normal">cliquez pour basculer</span>
      </label>
      <div className="grid grid-cols-2 gap-2">
        {aiVariants.map((varUrl, idx) => {
@@ -4350,7 +4336,7 @@ const studioModelPhotos = useMemo(
 
  {/* Frame Type Selection */}
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Style d'Encadrement / Cadre</label>
+ <label className="text-xs font-bold text-muted ">Style d'Encadrement / Cadre</label>
  <select 
  value={frameType}
  onChange={(e) => setFrameType(e.target.value as any)}
@@ -4377,7 +4363,7 @@ const studioModelPhotos = useMemo(
  {frameType === 'floral-arch' && (
  <div className="space-y-4 border-t border-border-subtle pt-4">
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Type de Fleurs</label>
+ <label className="text-xs font-bold text-muted ">Type de Fleurs</label>
  <select 
  value={floralType}
  onChange={(e) => setFloralType(e.target.value as any)}
@@ -4392,7 +4378,7 @@ const studioModelPhotos = useMemo(
  </div>
 
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">Couleur des Fleurs</label>
+ <label className="text-xs font-bold text-muted block">Couleur des Fleurs</label>
  <div className="flex gap-2">
  <input 
  type="color" 
@@ -4410,7 +4396,7 @@ const studioModelPhotos = useMemo(
  </div>
 
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider flex justify-between">
+ <label className="text-xs font-bold text-muted flex justify-between">
  <span>Densité de l'Arche</span>
  <span className="text-primary font-extrabold">{floralDensity} fleurs</span>
  </label>
@@ -4458,7 +4444,7 @@ const studioModelPhotos = useMemo(
                 title="Désélectionner l'élément actuel (Échap)"
               >
                 <span>Désélectionner</span>
-                <kbd className="hidden sm:inline px-1 py-0.5 text-[10px] font-mono rounded bg-surface border border-border/80 text-foreground">Échap</kbd>
+                <kbd className="hidden sm:inline px-1 py-0.5 text-xs font-mono rounded bg-surface border border-border/80 text-foreground">Échap</kbd>
               </button>
             ) : (
               <span className="text-xs text-muted hidden sm:inline">
@@ -4470,7 +4456,7 @@ const studioModelPhotos = useMemo(
         </div>
 
         <p className="lg:hidden text-center text-xs text-muted">
-          Touchez un élément pour le régler. IA, ajouts et apparence sont dans le dock en bas.
+          Touchez un élément pour le régler.
         </p>
 
         <div className="w-full rounded-3xl bg-surface-muted/30 dark:bg-black/20 border border-border/60 p-4 sm:p-8 min-h-[560px] flex flex-col items-center justify-center relative overflow-hidden">
@@ -4850,7 +4836,7 @@ const studioModelPhotos = useMemo(
  onPointerLeave={handleFreePointerUp}
  >
  {canvasElements.length === 0 ? (
-            <div className="w-full text-center py-16 px-6 rounded-2xl border border-dashed border-border/80 bg-surface/50 backdrop-blur-xs flex flex-col items-center justify-center gap-4">
+            <div className="w-full text-center py-16 px-6 rounded-2xl border border-dashed border-border/80 bg-surface flex flex-col items-center justify-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-2xs">
                 <Sparkles className="w-6 h-6" />
               </div>
@@ -5222,7 +5208,7 @@ const studioModelPhotos = useMemo(
  )}
 
  {el.type === 'rsvp-block' && (
-              <div className="bg-surface/85 backdrop-blur-sm border border-border rounded-2xl p-5 space-y-4 pointer-events-none shadow-sm">
+              <div className="bg-surface/85 border border-border rounded-2xl p-5 space-y-4 pointer-events-none shadow-sm">
  <div className="font-bold text-foreground text-center text-sm">{el.text}</div>
  
  {/* Render customizable fields preview */}
@@ -5230,7 +5216,7 @@ const studioModelPhotos = useMemo(
  <div className="space-y-3 border-t border-b border-border/60 py-3 text-left">
  {el.rsvpFields.map((field) => (
  <div key={field.id} className="space-y-1">
-                        <label className="text-xs font-bold text-muted uppercase tracking-wider">
+                        <label className="text-xs font-bold text-muted ">
  {field.label} {field.required && <span className="text-rose-500">*</span>}
  </label>
  {field.type === 'text' && (
@@ -5271,7 +5257,7 @@ const studioModelPhotos = useMemo(
 
  {canvasElements.some((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside') && (
           <div className="w-full space-y-3" style={{ maxWidth: 'min(100%, 42rem)' }}>
-            <p className="text-center text-xs font-bold uppercase tracking-wider text-primary">
+            <p className="text-center text-xs font-bold text-primary">
               Formulaire de réponse à l’invitation sous la carte
  </p>
  {canvasElements
@@ -5386,13 +5372,13 @@ const studioModelPhotos = useMemo(
  {['text', 'button', 'image', 'rsvp-block'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
  <div className="space-y-1.5">
  <div className="flex justify-between items-center">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">
+ <label className="text-xs font-bold text-muted ">
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' ? "Texte alternatif" :
  canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' ? "Titre de réponse" :
  "Texte"}
  </label>
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'text' && (
- <span className="text-xs text-primary font-bold uppercase tracking-wider">
+ <span className="text-xs text-primary font-bold ">
  {'{{firstName}}'}
  </span>
  )}
@@ -5408,7 +5394,7 @@ const studioModelPhotos = useMemo(
 
  {/* Color + size + align — essential */}
  <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">
+ <label className="text-xs font-bold text-muted block">
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' ? "Couleur du bouton" :
  canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' ? "Couleur du trait" :
  canvasElements.find(e => e.id === selectedElementId)?.type === 'triangle' ? "Couleur de remplissage" :
@@ -5432,7 +5418,7 @@ const studioModelPhotos = useMemo(
 
  {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Taille</label>
+ <label className="text-xs font-bold text-muted ">Taille</label>
  <select 
  value={elFontSize}
  onChange={(e) => handlePropertyChange('fontSize', e.target.value)}
@@ -5474,7 +5460,7 @@ const studioModelPhotos = useMemo(
  )}
 
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Alignement</label>
+ <label className="text-xs font-bold text-muted ">Alignement</label>
  <div className="grid grid-cols-3 gap-2">
  {['left', 'center', 'right'].map((align) => (
  <button
@@ -5492,7 +5478,7 @@ const studioModelPhotos = useMemo(
  {/* Button essentials */}
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' && (
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Style de bouton</label>
+ <label className="text-xs font-bold text-muted ">Style de bouton</label>
  <select 
  value={elButtonStyle}
  onChange={(e) => handlePropertyChange('buttonStyle', e.target.value)}
@@ -5510,7 +5496,7 @@ const studioModelPhotos = useMemo(
 
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'divider' && (
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Style du séparateur</label>
+ <label className="text-xs font-bold text-muted ">Style du séparateur</label>
  <select
  value={elDividerStyle}
  onChange={(e) => handlePropertyChange('dividerStyle', e.target.value)}
@@ -5530,7 +5516,7 @@ const studioModelPhotos = useMemo(
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' && (
  <div className="space-y-3">
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Importer une image</label>
+ <label className="text-xs font-bold text-muted ">Importer une image</label>
  <input
  type="file"
  accept="image/*"
@@ -5539,7 +5525,7 @@ const studioModelPhotos = useMemo(
  />
  </div>
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">URL</label>
+ <label className="text-xs font-bold text-muted ">URL</label>
  <input 
  type="text"
  value={elImageUrl}
@@ -5563,7 +5549,7 @@ const studioModelPhotos = useMemo(
 
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' && (
  <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Emplacement</label>
+ <label className="text-xs font-bold text-muted ">Emplacement</label>
  <div className="grid grid-cols-2 gap-2">
  {[
  { id: 'inline' as const, label: 'Dans la carte' },
@@ -5573,7 +5559,7 @@ const studioModelPhotos = useMemo(
  key={opt.id}
  type="button"
  onClick={() => handlePropertyChange('rsvpPlacement', opt.id)}
- className={`py-2 px-2 border rounded-xl text-[11px] font-bold transition ${
+ className={`py-2 px-2 border rounded-xl text-xs font-bold transition ${
  elRsvpPlacement === opt.id
  ? 'border-primary bg-primary/10 text-primary'
  : 'border-border text-muted hover:bg-surface-muted'
@@ -5589,7 +5575,7 @@ const studioModelPhotos = useMemo(
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' && (
  <div className="space-y-3 border-t border-border pt-3">
  <div className="flex items-center justify-between gap-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Formulaire</label>
+ <label className="text-xs font-bold text-muted ">Formulaire</label>
  <button
  type="button"
  onClick={handleEnsureReportingRsvpFields}
@@ -5610,7 +5596,7 @@ const studioModelPhotos = useMemo(
 
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' && (
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Style de courbe</label>
+ <label className="text-xs font-bold text-muted ">Style de courbe</label>
  <select 
  value={elCurveStyle}
  onChange={(e) => handlePropertyChange('curveStyle', e.target.value)}
@@ -5630,7 +5616,7 @@ const studioModelPhotos = useMemo(
  {propsAdvanced && (
  <div className="space-y-4 border-t border-border-subtle pt-4">
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Largeur</label>
+ <label className="text-xs font-bold text-muted ">Largeur</label>
  <select 
  value={elWidth}
  onChange={(e) => handlePropertyChange('width', e.target.value)}
@@ -5645,7 +5631,7 @@ const studioModelPhotos = useMemo(
  {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
  <>
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Police</label>
+ <label className="text-xs font-bold text-muted ">Police</label>
  <select
  value={elFontFamily}
  onChange={(e) => handlePropertyChange('fontFamily', e.target.value)}
@@ -5657,7 +5643,7 @@ const studioModelPhotos = useMemo(
  </select>
  </div>
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Espacement lettres</label>
+ <label className="text-xs font-bold text-muted ">Espacement lettres</label>
  <select
  value={elLetterSpacing}
  onChange={(e) => handlePropertyChange('letterSpacing', e.target.value)}
@@ -5673,7 +5659,7 @@ const studioModelPhotos = useMemo(
 
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' && (
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Lien (URL)</label>
+ <label className="text-xs font-bold text-muted ">Lien (URL)</label>
  <input 
  type="text" 
  value={elButtonLink}
@@ -5687,7 +5673,7 @@ const studioModelPhotos = useMemo(
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' && (
  <>
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Style d'image</label>
+ <label className="text-xs font-bold text-muted ">Style d'image</label>
  <select
  value={elImageStyle}
  onChange={(e) => handlePropertyChange('imageStyle', e.target.value)}
@@ -5700,7 +5686,7 @@ const studioModelPhotos = useMemo(
  </div>
  <div className="grid grid-cols-2 gap-2">
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Largeur</label>
+ <label className="text-xs font-bold text-muted ">Largeur</label>
  <input 
  type="text" 
  value={elImageWidth}
@@ -5710,7 +5696,7 @@ const studioModelPhotos = useMemo(
  />
  </div>
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Hauteur</label>
+ <label className="text-xs font-bold text-muted ">Hauteur</label>
  <input 
  type="text" 
  value={elImageHeight}
@@ -5721,7 +5707,7 @@ const studioModelPhotos = useMemo(
  </div>
  </div>
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Mode d'affichage</label>
+ <label className="text-xs font-bold text-muted ">Mode d'affichage</label>
  <select 
  value={elImageObjectFit}
  onChange={(e) => handlePropertyChange('imageObjectFit', e.target.value)}
@@ -5738,7 +5724,7 @@ const studioModelPhotos = useMemo(
 
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' && (
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Épaisseur</label>
+ <label className="text-xs font-bold text-muted ">Épaisseur</label>
  <select 
  value={elStrokeWidth}
  onChange={(e) => handlePropertyChange('strokeWidth', e.target.value)}
@@ -5755,7 +5741,7 @@ const studioModelPhotos = useMemo(
 
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'triangle' && (
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Taille</label>
+ <label className="text-xs font-bold text-muted ">Taille</label>
  <select 
  value={elShapeSize}
  onChange={(e) => handlePropertyChange('shapeSize', e.target.value)}
@@ -5771,7 +5757,7 @@ const studioModelPhotos = useMemo(
  )}
 
  <div className="space-y-1">
- <span className="text-xs font-bold text-muted uppercase tracking-wider">Palette rapide</span>
+ <span className="text-xs font-bold text-muted ">Palette rapide</span>
  <div className="flex flex-wrap gap-1.5">
  {[
  { hex: '#c5a059', name: 'Or' },
@@ -5805,13 +5791,10 @@ const studioModelPhotos = useMemo(
      <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
        <Layers className="w-4 h-4 text-primary" aria-hidden /> Éléments de la carte
      </h3>
-     <p className="text-xs text-muted mt-1 leading-relaxed">
-       Choisissez un élément ici ou sur la carte pour le régler.
-     </p>
    </div>
    {canvasElements.length === 0 ? (
      <p className="text-xs text-muted rounded-[var(--radius-button)] border border-dashed border-border px-3 py-4 text-center leading-relaxed">
-       La carte est vide. Ajoutez un texte depuis l’onglet Ajouter, ou créez-la avec l’IA.
+       Aucun élément
      </p>
    ) : (
      <ul className="space-y-1" aria-label="Éléments de la carte">
@@ -5858,7 +5841,7 @@ const studioModelPhotos = useMemo(
 
  {isSuperAdmin && !selectedTenantId && (
  <div className="space-y-3 p-3 rounded-2xl border border-primary/20 bg-primary/5">
- <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+ <h4 className="text-xs font-bold text-primary flex items-center gap-1.5">
  <Globe className="w-3.5 h-3.5" />
  Page d&apos;accueil publique
  </h4>
@@ -5876,7 +5859,7 @@ const studioModelPhotos = useMemo(
  </button>
  </label>
  <div className="space-y-1.5">
- <label htmlFor="template-ai-token-cost" className="text-xs font-bold text-muted uppercase tracking-wider">
+ <label htmlFor="template-ai-token-cost"className="text-xs font-bold text-muted ">
  Coût IA (jetons)
  </label>
  <input
@@ -5894,7 +5877,7 @@ const studioModelPhotos = useMemo(
  <p className="text-xs text-muted">Prix facturé quand ce modèle sert de base dans le studio (défaut {AI_INVITATION_COMPOSE_TOKEN_COST}).</p>
  </div>
  <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted uppercase tracking-wider">Catégorie sur la page d&apos;accueil</label>
+              <label className="text-xs font-bold text-muted ">Catégorie sur la page d&apos;accueil</label>
  <select
  value={landingCategory}
  onChange={(e) => setLandingCategory(e.target.value as 'private' | 'corporate' | 'casual')}
@@ -5906,7 +5889,7 @@ const studioModelPhotos = useMemo(
  </select>
  </div>
  <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted uppercase tracking-wider">Accroche (visiteurs)</label>
+              <label className="text-xs font-bold text-muted ">Accroche (visiteurs)</label>
  <textarea
  value={landingDescription}
  onChange={(e) => setLandingDescription(e.target.value)}
@@ -5977,7 +5960,7 @@ const studioModelPhotos = useMemo(
 
  {/* Aspect Ratio Selector */}
  <div className="w-full space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block text-center">Format de recadrage</label>
+ <label className="text-xs font-bold text-muted block text-center">Format de recadrage</label>
  <div className="flex flex-wrap justify-center gap-2">
  {[
  { id: '1:1', label: '1:1 (Carré)' },
@@ -6065,7 +6048,7 @@ const studioModelPhotos = useMemo(
 
  {/* Zoom Slider */}
  <div className="w-full space-y-2">
- <div className="flex justify-between text-xs font-bold text-muted uppercase tracking-wider">
+ <div className="flex justify-between text-xs font-bold text-muted ">
  <span>Zoom</span>
  <span className="font-mono text-primary">{Math.round(cropZoom * 100)}%</span>
  </div>
@@ -6099,14 +6082,14 @@ const studioModelPhotos = useMemo(
  <button 
  type="button"
  onClick={() => setCropperOpen(false)}
- className="flex-1 py-2.5 border border-border text-muted font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-surface-muted transition"
+ className="flex-1 py-2.5 border border-border text-muted font-bold rounded-xl text-xs hover:bg-surface-muted transition"
  >
  Annuler
  </button>
  <button 
  type="button"
  onClick={handleApplyCrop}
- className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-primary/10"
+ className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-xs transition shadow-md shadow-primary/10"
  >
  Valider le rognage
  </button>
@@ -6143,31 +6126,6 @@ const studioModelPhotos = useMemo(
       />
  <div className="space-y-6">
  <PageHeader
- title={
- isSuperAdmin
- ? 'Concepteur de modèles'
- : 'Vos cartons d’invitation'
- }
- description={
- isSuperAdmin
- ? 'Création des modèles. La vitrine se règle dans la console.'
- : 'Créez la carte avec l’IA, importez-en une, ou partez d’un modèle de la bibliothèque.'
- }
- breadcrumbs={
- <Breadcrumbs
- items={
- isSuperAdmin
- ? [
- { label: 'Console', href: '/dashboard?tab=templates' },
- { label: 'Concepteur' },
- ]
- : [
- { label: 'Accueil', href: '/dashboard' },
- { label: 'Modèles' },
- ]
- }
- />
- }
  action={
  <div className="flex flex-wrap gap-2">
  {isSuperAdmin && (
@@ -6213,14 +6171,14 @@ const studioModelPhotos = useMemo(
  </Button>
  </div>
  }
- />
+/>
 
  {(!canUseCustomTemplates || templatesAtLimit) && user?.role === 'USER' && (
  <PlanLimitCallout kind="templates" planQuota={planQuota} planName={planLabel} />
  )}
  {isSuperAdmin && (
  <div className="rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground space-y-1">
- <p className="font-semibold text-primary text-xs uppercase tracking-wider">Nuance des vues</p>
+ <p className="font-semibold text-primary text-xs ">Nuance des vues</p>
  <p className="text-xs text-muted leading-relaxed">
  <strong className="text-foreground">Catalogue Super Admin</strong> (`/dashboard?tab=templates`) : supervision globale,
  filtres Global / Organisation, activation « Vitrine landing ».
@@ -6231,7 +6189,7 @@ const studioModelPhotos = useMemo(
  </div>
  )}
 
- {!canUseCustomTemplates && user?.role === 'USER' && (
+ {!canUseCustomTemplates && !templatesAtLimit && user?.role === 'USER' && (
  <PlanLimitCallout feature="customTemplates" planName={planLabel} />
  )}
  {canUseCustomTemplates && !canUseMockupOcr && user?.role === 'USER' && (
@@ -6567,7 +6525,6 @@ const studioModelPhotos = useMemo(
  setPreviewTemplate(null);
  void startAiComposeFromModel(t);
  }}
- isOwnerOrManager={isOwnerOrManager}
  />
 
  <Modal
@@ -6584,7 +6541,7 @@ const studioModelPhotos = useMemo(
  Enregistrement de modèle d’invitation
  </span>
  <span className="text-xs text-muted block font-normal">
- Votre création est sauvegardée en brouillon local sur cet appareil
+ Brouillon gardé sur cet appareil
  </span>
  </div>
  </div>
@@ -6597,8 +6554,8 @@ const studioModelPhotos = useMemo(
  </p>
  <p className="text-xs text-muted leading-relaxed">
  {!canUseCustomTemplates
- ? "La création et l'enregistrement de faire-part personnalisés sont réservés aux offres professionnelles et supérieures. Votre modèle a bien été sauvegardé sur cet appareil pour que vous ne perdiez pas votre travail."
- : `Vous avez atteint la limite de ${planQuota ? `${planQuota.limits.maxTemplates} ` : ''}modèle(s) d'invitation de votre formule actuelle${planLabel ? ` (${planLabel})` : ''}. Pour enregistrer ce nouveau modèle sans supprimer les précédents, activez une formule supérieure.`}
+ ? 'Enregistrement réservé aux forfaits professionnels.'
+ : `Limite de ${planQuota ? `${planQuota.limits.maxTemplates} ` : ''}modèle(s) atteinte${planLabel ? ` (${planLabel})` : ''}.`}
  </p>
  </div>
 

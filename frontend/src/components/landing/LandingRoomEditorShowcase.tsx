@@ -13,7 +13,7 @@ import {
   Users,
   ScanLine,
   ShieldCheck,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -177,7 +177,7 @@ export default function LandingRoomEditorShowcase() {
                         <h3 className="text-base sm:text-lg font-bold text-foreground group-hover:text-primary transition-colors">
                           {messaging.adapt(feat.title)}
                         </h3>
-                        <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                        <span className="text-xs font-bold text-muted">
                           {feat.badge}
                         </span>
                       </div>

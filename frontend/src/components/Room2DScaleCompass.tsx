@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Compass } from 'lucide-react';
+import { Compass } from '@/components/icons';
 
 interface Room2DScaleCompassProps {
   widthM: number;
@@ -67,7 +67,7 @@ export default function Room2DScaleCompass({
       {placement === 'grouped' ? (
         <>
           {/* Repères d’architecte regroupés en bas à droite : ils ne masquent plus les contrôles de vue en haut. */}
-          <div className="absolute bottom-2.5 right-2.5 z-10 flex items-center gap-2.5 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10">
+          <div className="absolute bottom-2.5 right-2.5 z-10 flex items-center gap-2.5 px-2.5 py-1.5 rounded-md bg-black/60 text-white shadow-2xs border border-white/10">
             <span className="flex items-center gap-1 text-xs font-bold tracking-wider">
               <Compass className="w-4 h-4 text-amber-400" />
               N
@@ -78,7 +78,7 @@ export default function Room2DScaleCompass({
             </span>
             <span className="h-6 w-px bg-white/20" />
             <span className="flex flex-col items-stretch gap-0.5">
-              <span className="flex items-center justify-between text-[10px] font-mono font-bold gap-2">
+              <span className="flex items-center justify-between text-xs font-mono font-bold gap-2">
                 <span>0</span>
                 <span>{scaleM} m</span>
               </span>
@@ -92,18 +92,18 @@ export default function Room2DScaleCompass({
       ) : (
         <>
           {/* Rose des vents / Boussole NORD (Haut gauche) */}
-          <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10 text-xs font-bold tracking-wider">
+          <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-black/60 text-white shadow-2xs border border-white/10 text-xs font-bold tracking-wider">
             <Compass className="w-4 h-4 text-amber-400" />
             <span>N</span>
           </div>
 
           {/* Dimensions réelles de la salle (Haut droite) */}
-          <div className="absolute top-2.5 right-2.5 z-10 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10 text-xs font-mono font-semibold tabular-nums">
+          <div className="absolute top-2.5 right-2.5 z-10 px-2.5 py-1.5 rounded-md bg-black/60 text-white shadow-2xs border border-white/10 text-xs font-mono font-semibold tabular-nums">
             {safeW.toFixed(1)} m × {safeH.toFixed(1)} m ({areaM2} m²)
           </div>
 
           {/* Barre d'échelle métrique (Bas droite) */}
-          <div className="absolute bottom-2.5 right-2.5 z-10 flex flex-col items-end gap-0.5 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10">
+          <div className="absolute bottom-2.5 right-2.5 z-10 flex flex-col items-end gap-0.5 px-2.5 py-1.5 rounded-md bg-black/60 text-white shadow-2xs border border-white/10">
             <div className="flex items-center justify-between text-xs font-mono font-bold w-full gap-2.5">
               <span>0</span>
               <span>{scaleM} m</span>

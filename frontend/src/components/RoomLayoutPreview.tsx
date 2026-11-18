@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { createPortal } from 'react-dom';
-import { DoorOpen } from 'lucide-react';
+import { DoorOpen } from '@/components/icons';
 import {
   RoomLayoutBlueprint,
   getRoomOutlineClipPath,
@@ -335,7 +335,7 @@ function ThumbPreview({
         }
         return null;
       })}
-      <div className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[8px] font-bold text-white/90 backdrop-blur-xs flex items-center gap-1 shadow-2xs">
+      <div className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[8px] font-bold text-white/90 flex items-center gap-1 shadow-2xs">
         <span>{blueprint.metadata.totalSeats} pl.</span>
         <span>·</span>
         <span>{blueprint.canvas.widthM}×{blueprint.canvas.heightM}m</span>
@@ -660,7 +660,7 @@ export default function RoomLayoutPreview({
   return (
     <div className={cn('space-y-2', className)}>
       {showHeader && (
-        <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between text-xs font-bold uppercase tracking-wider text-muted">
+        <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between text-xs font-bold text-muted">
           <span className="truncate">{roomTypeLabels[blueprint.roomType]} · {theme.name}</span>
           <span className="shrink-0 tabular-nums">
             {blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
@@ -770,7 +770,7 @@ export default function RoomLayoutPreview({
                   aria-pressed={walkthroughActive}
                   className={cn(
                     'inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-full text-xs font-semibold transition touch-manipulation',
-                    'border border-background/20 bg-foreground/80 text-background backdrop-blur-md',
+                    'border border-background/20 bg-foreground/80 text-background',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                     walkthroughActive && 'bg-background text-foreground border-background',
                   )}

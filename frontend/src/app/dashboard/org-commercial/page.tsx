@@ -5,8 +5,8 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
  Building2, Loader2, TrendingUp, Users, Wallet,
-} from 'lucide-react';
-import { Button, PageHeader, SkeletonCommercialView, Pagination, usePaginateItems, usePageSize } from '@/components/ui';
+} from '@/components/icons';
+import { Button, SkeletonCommercialView, Pagination, usePaginateItems, usePageSize } from '@/components/ui';
 import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 
  interface OrgCommercialDashboard {
@@ -75,10 +75,6 @@ export default function OrgCommercialPage() {
 
  return (
  <div className="space-y-6">
- <PageHeader
- title="Réseau commercial"
- description="Parrainages et commissions."
- />
 
  <div className="grid sm:grid-cols-3 gap-4">
  <div className="bg-white dark:bg-background border rounded-2xl p-5">
@@ -95,7 +91,7 @@ export default function OrgCommercialPage() {
  {data.stats.monthlyCommission.toLocaleString('fr-FR')} FC
  </div>
  {(data.stats.monthlyDue ?? 0) > 0 && (
- <p className="text-[11px] text-amber-700 mt-1">Dont {data.stats.monthlyDue!.toLocaleString('fr-FR')} FC à verser</p>
+ <p className="text-xs text-amber-700 mt-1">Dont {data.stats.monthlyDue!.toLocaleString('fr-FR')} FC à verser</p>
  )}
  </div>
  <div className="bg-white dark:bg-background border rounded-2xl p-5">

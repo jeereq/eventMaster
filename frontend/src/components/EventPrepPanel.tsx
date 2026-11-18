@@ -18,7 +18,7 @@ import {
   Sparkles,
   Inbox,
   X,
-} from 'lucide-react';
+} from '@/components/icons';
 import { api } from '@/lib/api';
 import { Button, Card, CardHeader, EmptyState, Input, StatusPill } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
@@ -171,7 +171,7 @@ function FilterSelect({
 }) {
   return (
     <label className="space-y-1 min-w-0">
-      <span className="block text-xs font-semibold uppercase tracking-wider text-muted">{label}</span>
+      <span className="block text-xs font-semibold text-muted">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -196,7 +196,7 @@ function FilterPills({
 }) {
   return (
     <div className="space-y-1 min-w-0">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p>
+      <p className="text-xs font-semibold text-muted">{label}</p>
       <div className="flex flex-wrap gap-1">
         {options.map((option) => (
           <button
@@ -386,7 +386,7 @@ function PrepLane({
               ))}
             </FilterSelect>
             <label className="space-y-1 min-w-0">
-              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Capacité min.</span>
+              <span className="block text-xs font-semibold text-muted">Capacité min.</span>
               <Input
                 type="number"
                 min={1}
@@ -446,7 +446,7 @@ function PrepLane({
           </li>
         ) : (isVenue ? venues : services).length === 0 ? (
           <li>
-            <EmptyState
+            <EmptyState illustration="search"
               className="py-8"
               title={emptySearch}
               description="Élargissez la ville ou réinitialisez les filtres."
@@ -953,7 +953,7 @@ export default function EventPrepPanel({
         </div>
         {vendorGroups.length > 0 ? (
           <div className="mt-4 space-y-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Par prestataire</p>
+            <p className="text-xs font-semibold text-muted">Par prestataire</p>
             <ul className="space-y-2">
               {vendorGroups.map((group) => {
                 const offers = [
@@ -1043,7 +1043,7 @@ export default function EventPrepPanel({
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground tracking-tight">
               <Bookmark className="w-4 h-4 text-primary" />
               Packs enregistrés
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{savedPacks.length}</span>
+              <span className="text-xs font-semibold text-muted">{savedPacks.length}</span>
             </span>
             <ChevronDown className="w-4 h-4 text-muted transition-transform group-open:rotate-180" />
           </summary>
@@ -1054,7 +1054,7 @@ export default function EventPrepPanel({
                 <li key={pack.id} className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 space-y-2">
                   <div>
                     <p className="text-sm font-semibold truncate">{pack.name}</p>
-                    <p className="text-[11px] text-muted truncate">{formatFc(pack.totalFc)}</p>
+                    <p className="text-xs text-muted truncate">{formatFc(pack.totalFc)}</p>
                   </div>
                   {pack.items.length > 0 ? (
                     <ul className="space-y-1">
@@ -1104,7 +1104,7 @@ export default function EventPrepPanel({
                 <TabIcon className={cn('w-4 h-4', active ? LANE_TONE[tab.id].icon : '')} />
                 {tab.label}
                 <span className={cn(
-                  'min-w-5 h-5 px-1 rounded-full text-[10px] inline-flex items-center justify-center',
+                  'min-w-5 h-5 px-1 rounded-full text-xs inline-flex items-center justify-center',
                   tab.count > 0 ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-muted',
                 )}>
                   {tab.count}
@@ -1120,7 +1120,7 @@ export default function EventPrepPanel({
           <div className={lane === 'venue' ? 'space-y-4' : 'hidden'}>
             {orgRooms.length > 0 ? (
               <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-3 space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Salle de l’organisation</p>
+                <p className="text-xs font-semibold text-muted">Salle de l’organisation</p>
                 <p className="text-xs text-muted">Liez une de vos salles pour importer le plan 2D. Indépendant du choix marketplace.</p>
                 <select
                   value={currentRoomId || ''}
@@ -1184,7 +1184,7 @@ export default function EventPrepPanel({
       ) : null}
 
       <Card>
-        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted" htmlFor="event-prep-notes">
+        <label className="text-xs font-semibold text-muted"htmlFor="event-prep-notes">
           Notes {view === 'final' ? 'de la solution' : view === 'ai' ? 'de la simulation IA' : 'de la simulation'}
         </label>
         <textarea
@@ -1343,7 +1343,7 @@ function PrepFinalComposer({
           </div>
 
           <div className="space-y-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Salle</p>
+            <p className="text-xs font-semibold text-muted">Salle</p>
             <div className="flex flex-wrap gap-2">
               {([
                 { id: 'none' as const, label: 'Aucune' },
@@ -1358,7 +1358,7 @@ function PrepFinalComposer({
                   type="button"
                   onClick={() => setVenueSource(option.id)}
                   className={cn(
-                    'px-2.5 py-1.5 rounded-[var(--radius-button)] text-[11px] font-semibold border transition',
+                    'px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold border transition',
                     venueSource === option.id
                       ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                       : 'border-border text-muted hover:text-foreground',
@@ -1372,7 +1372,7 @@ function PrepFinalComposer({
 
           {vendorOptions.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Prestataires & Matériel</p>
+              <p className="text-xs font-semibold text-muted">Prestataires & Matériel</p>
               <ul className="space-y-1.5">
                 {vendorOptions.map((option) => {
                   const pick = vendorPicks[option.slug] || 'none';
@@ -1390,7 +1390,7 @@ function PrepFinalComposer({
                             type="button"
                             onClick={() => setVendorPicks((prev) => ({ ...prev, [option.slug]: id }))}
                             className={cn(
-                              'px-2 py-1 rounded-[var(--radius-button)] text-[10px] font-semibold border',
+                              'px-2 py-1 rounded-[var(--radius-button)] text-xs font-semibold border',
                               pick === id ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
                             )}
                           >
@@ -1432,7 +1432,7 @@ function RetainedColumn({
   const items = React.Children.toArray(children).filter(Boolean);
   return (
     <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/30 p-3 space-y-2 min-h-[7.5rem]">
-      <p className={cn('text-[10px] font-semibold uppercase tracking-wider inline-flex items-center gap-1.5', LANE_TONE[tone].icon)}>
+      <p className={cn('text-xs font-semibold inline-flex items-center gap-1.5', LANE_TONE[tone].icon)}>
         {icon}
         {label}
         <span className="text-muted font-semibold">· {items.length}</span>

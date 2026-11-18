@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Navigation } from 'lucide-react';
+import { Navigation } from '@/components/icons';
 
 export default function ListingDetailIntro({
   facts,

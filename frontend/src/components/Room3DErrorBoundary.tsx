@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, LayoutGrid } from 'lucide-react';
+import { AlertTriangle, RefreshCw, LayoutGrid } from '@/components/icons';
 import Button from '@/components/ui/Button';
 
 interface Props {
@@ -63,7 +63,7 @@ export default class Room3DErrorBoundary extends Component<Props, State> {
               <summary className="cursor-pointer font-medium hover:text-foreground transition select-none">
                 Détails techniques de l’interruption
               </summary>
-              <p className="mt-1 font-mono text-[11px] break-all text-rose-500 whitespace-pre-wrap">
+              <p className="mt-1 font-mono text-xs break-all text-rose-500 whitespace-pre-wrap">
                 {this.state.error.message}
               </p>
             </details>

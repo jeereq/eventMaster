@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Percent } from 'lucide-react';
+import { Percent } from '@/components/icons';
 import { getPlanBaseAmountFc, invoiceCatalogLabel, type PlanId } from '@/config/landingPricing';
 
 interface BillingDiscountFieldsProps {
@@ -66,7 +66,7 @@ export default function BillingDiscountFields({
 
   return (
     <div className={`space-y-3 ${compact ? '' : 'pt-1'}`}>
-      <label className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
+      <label className="text-xs font-bold text-muted flex items-center gap-1.5">
         <Percent className="w-3.5 h-3.5" />
         Réduction spéciale
       </label>

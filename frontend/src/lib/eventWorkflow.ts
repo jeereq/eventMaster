@@ -102,21 +102,17 @@ function isStepComplete(step: Omit<EventWorkflowStep, 'status'>): boolean {
   return Boolean(step.detail?.startsWith('✓'));
 }
 
+/** Une étape facultative n’est jamais « à faire » : l’étape courante est la première étape obligatoire ouverte. */
 function resolveStatuses(steps: Omit<EventWorkflowStep, 'status'>[]): EventWorkflowStep[] {
-  const firstOpen = steps.findIndex((step, index) => {
-    if (isStepComplete(step)) return false;
-    if (step.optional && steps.some((later, laterIndex) => laterIndex > index && isStepComplete(later))) {
-      return false;
-    }
-    return true;
-  });
+  const firstOpen = steps.findIndex((step) => !step.optional && !isStepComplete(step));
 
   return steps.map((step, index) => {
     if (isStepComplete(step)) {
       return { ...step, status: 'complete' as const };
     }
-    if (step.optional && steps.some((later, laterIndex) => laterIndex > index && isStepComplete(later))) {
-      return { ...step, status: 'skipped' as const };
+    if (step.optional) {
+      const laterDone = steps.some((later, laterIndex) => laterIndex > index && isStepComplete(later));
+      return { ...step, status: laterDone ? ('skipped' as const) : ('upcoming' as const) };
     }
     if (firstOpen === -1) {
       return { ...step, status: index === steps.length - 1 ? 'current' : 'complete' };
@@ -250,7 +246,7 @@ export function computeEventWorkflowState(input: {
     {
       id: 'tablePlan',
       title: 'Plan de table',
-      description: 'Placez les invités ; le PDF et le GPS partent à l’confirmation de présence.',
+      description: 'Placez les invités ; le PDF et le GPS partent à la confirmation de présence.',
       tab: 'tablePlan',
       detail: tablePlanDetail,
     },
