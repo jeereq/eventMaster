@@ -10,6 +10,7 @@ export type PlanFeatureKey =
   | 'mockupOcr'
   | 'roomThemesFixtures'
   | 'guestPhotoAvatars'
+  | 'guestAvatars'
   | 'commercialNetwork'
   | 'adminReports';
 
@@ -241,6 +242,7 @@ export function formatPlanFeaturesResponse(snapshot: TenantPlanSnapshot) {
       mockupOcr: f.mockupOcr,
       roomThemesFixtures: f.roomThemesFixtures,
       guestPhotoAvatars: f.guestPhotoAvatars,
+      guestAvatars: f.guestAvatars,
       commercialNetwork: f.commercialNetwork,
       adminReports: f.adminReports,
       roomEditorLevel: f.roomEditorLevel,

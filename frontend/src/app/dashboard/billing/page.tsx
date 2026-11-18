@@ -75,6 +75,7 @@ interface BillingStatus {
     mockupOcr: boolean;
     roomThemesFixtures: boolean;
     guestPhotoAvatars?: boolean;
+    guestAvatars?: boolean;
     commercialNetwork: boolean;
     adminReports: boolean;
     roomEditorLevel: string;
@@ -107,6 +108,7 @@ function capabilityLabels(commercialPct: number): Array<{
     { key: 'customRsvpFields', label: 'Champs de réponse à l’invitation personnalisables' },
     { key: 'mockupOcr', label: 'OCR import maquette' },
     { key: 'roomThemesFixtures', label: 'Thèmes & fixtures salles' },
+    { key: 'guestAvatars', label: 'Invités simulés (avatars) dans la salle' },
     { key: 'guestPhotoAvatars', label: 'Avatars d’invités avec photo' },
     { key: 'commercialNetwork', label: `Réseau commercial (${commercialPct} %)` },
     { key: 'adminReports', label: 'Rapports avancés' },

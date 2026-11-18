@@ -72,6 +72,7 @@ export function getFeatureLockMessage(
     customRsvpFields: 'Les champs de réponse à l’invitation sur-mesure nécessitent un forfait supérieur',
     mockupOcr: 'L’import de maquette avec reconnaissance intelligente (OCR) est réservé aux forfaits supérieurs',
     roomThemesFixtures: 'Les thèmes avancés et décors 2D de salle nécessitent un forfait supérieur',
+    guestAvatars: 'Les invités simulés (avatars dans la salle) sont inclus à partir du forfait Business',
     guestPhotoAvatars: 'Les avatars d’invités avec la photo de la personne sont inclus à partir du forfait Premium (et dans les forfaits Particulier et Salle)',
     commercialNetwork: 'L’accès au réseau commercial est réservé aux offres supérieures',
     adminReports: 'Les analyses et rapports détaillés sont réservés aux forfaits supérieurs',

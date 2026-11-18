@@ -183,6 +183,8 @@ export type RoomPlanAiDraft = {
   guestDressCode?: import('@/lib/roomGuestSimulation').GuestDressCodeSetting;
   /** Invités avec photo ajoutés dans le simulateur. */
   guestPortraits?: import('@/lib/roomGuestSimulation').GuestPortrait[];
+  /** Invités simulés affichés dans le simulateur (remplissage, danse). */
+  guestSimulation?: import('@/lib/roomGuestSimulation').GuestSimulationSettings;
   savedAt: string;
 };
 

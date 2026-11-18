@@ -24,6 +24,7 @@ export type DbPlanCatalogEntry = {
   adminReports?: boolean;
   roomThemesFixtures?: boolean;
   guestPhotoAvatars?: boolean;
+  guestAvatars?: boolean;
   roomEditorLevel?: string;
   supportLevel?: string;
   promoActive?: boolean;
@@ -89,6 +90,7 @@ const COMPARISON_RESOLVERS: Record<
     db.customRsvpFields ?? null,
   'Export revenus & commissions (admin)': (_id, db) => db.adminReports ?? null,
   'Thèmes d’ambiance & éclairage (12 presets)': (_id, db) => db.roomThemesFixtures ?? null,
+  'Invités simulés (avatars) dans la salle': (_id, db) => db.guestAvatars ?? null,
   'Invités simulés avec photo de la personne': (_id, db) => db.guestPhotoAvatars ?? null,
   'Éditeur de salle 2D / 3D': (_id, db) => {
     if (db.maxRooms != null && db.maxRooms <= 0) return '—';

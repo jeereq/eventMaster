@@ -767,6 +767,23 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
   },
   {
     category: 'Salles & plans',
+    label: 'Invités simulés (avatars) dans la salle',
+    values: {
+      FREE: false,
+      ...b2cSame(true),
+      STANDARD: true,
+      PREMIUM_1: true,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
+    },
+  },
+  {
+    category: 'Salles & plans',
     label: 'Invités simulés avec photo de la personne',
     values: {
       FREE: false,

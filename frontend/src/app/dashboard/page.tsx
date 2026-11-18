@@ -3631,6 +3631,22 @@ function DashboardPageContent() {
                                     <div className="flex items-center gap-2">
                                       <input
                                         type="checkbox"
+                                        id={`guest-avatars-${planKey}`}
+                                        checked={plan.guestAvatars !== false}
+                                        onChange={(e) => {
+                                          const updatedPlans = { ...adminSettings.plans };
+                                          updatedPlans[planKey] = { ...plan, guestAvatars: e.target.checked };
+                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                        }}
+                                        className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
+                                      />
+                                      <label htmlFor={`guest-avatars-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                        Invités simulés
+                                      </label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
                                         id={`guest-photos-${planKey}`}
                                         checked={Boolean(plan.guestPhotoAvatars)}
                                         onChange={(e) => {

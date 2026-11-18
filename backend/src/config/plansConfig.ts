@@ -47,6 +47,8 @@ export interface PlanDefinition {
   roomThemesFixtures: boolean;
   /** Invités simulés personnalisés : photo de la personne sur son avatar 3D. */
   guestPhotoAvatars: boolean;
+  /** Invités simulés (avatars) dans l'éditeur de salle. */
+  guestAvatars: boolean;
   adminReports: boolean;
   roomEditorLevel: 'basic' | 'standard' | 'advanced' | 'complete';
   commercialNetwork: boolean;
@@ -142,6 +144,7 @@ function personalPlan(
     seatNotifications: true,
     roomThemesFixtures: true,
     guestPhotoAvatars: true,
+    guestAvatars: true,
     adminReports: true,
     roomEditorLevel: 'complete',
     commercialNetwork: false,
@@ -170,6 +173,7 @@ export function getDefaultPlans(): PlansConfiguration {
       seatNotifications: true,
       roomThemesFixtures: false,
       guestPhotoAvatars: false,
+      guestAvatars: false,
       adminReports: false,
       roomEditorLevel: 'basic',
       commercialNetwork: false,
@@ -226,6 +230,7 @@ export function getDefaultPlans(): PlansConfiguration {
       seatNotifications: true,
       roomThemesFixtures: true,
       guestPhotoAvatars: false,
+      guestAvatars: true,
       adminReports: false,
       roomEditorLevel: 'standard',
       commercialNetwork: false,
@@ -250,6 +255,7 @@ export function getDefaultPlans(): PlansConfiguration {
       seatNotifications: true,
       roomThemesFixtures: true,
       guestPhotoAvatars: true,
+      guestAvatars: true,
       adminReports: false,
       roomEditorLevel: 'advanced',
       commercialNetwork: false,
@@ -274,6 +280,7 @@ export function getDefaultPlans(): PlansConfiguration {
       seatNotifications: true,
       roomThemesFixtures: true,
       guestPhotoAvatars: true,
+      guestAvatars: true,
       adminReports: false,
       roomEditorLevel: 'advanced',
       commercialNetwork: false,
@@ -298,6 +305,7 @@ export function getDefaultPlans(): PlansConfiguration {
       seatNotifications: true,
       roomThemesFixtures: true,
       guestPhotoAvatars: true,
+      guestAvatars: true,
       adminReports: true,
       roomEditorLevel: 'complete',
       commercialNetwork: false,
@@ -322,6 +330,7 @@ export function getDefaultPlans(): PlansConfiguration {
       seatNotifications: true,
       roomThemesFixtures: true,
       guestPhotoAvatars: true,
+      guestAvatars: true,
       adminReports: true,
       roomEditorLevel: 'complete',
       commercialNetwork: false,
@@ -346,6 +355,7 @@ export function getDefaultPlans(): PlansConfiguration {
       seatNotifications: true,
       roomThemesFixtures: true,
       guestPhotoAvatars: true,
+      guestAvatars: true,
       adminReports: true,
       roomEditorLevel: 'complete',
       commercialNetwork: false,
@@ -370,6 +380,7 @@ export function getDefaultPlans(): PlansConfiguration {
       seatNotifications: false,
       roomThemesFixtures: true,
       guestPhotoAvatars: true,
+      guestAvatars: true,
       adminReports: false,
       roomEditorLevel: 'complete',
       commercialNetwork: false,
@@ -395,6 +406,7 @@ export function getDefaultPlans(): PlansConfiguration {
       seatNotifications: false,
       roomThemesFixtures: false,
       guestPhotoAvatars: false,
+      guestAvatars: false,
       adminReports: false,
       roomEditorLevel: 'basic',
       commercialNetwork: false,
@@ -420,6 +432,7 @@ export function getDefaultPlans(): PlansConfiguration {
       seatNotifications: false,
       roomThemesFixtures: true,
       guestPhotoAvatars: true,
+      guestAvatars: true,
       adminReports: false,
       roomEditorLevel: 'complete',
       commercialNetwork: false,
@@ -454,6 +467,7 @@ export function mergePlan(base: PlanDefinition, override?: Partial<PlanDefinitio
     seatNotifications: override.seatNotifications ?? base.seatNotifications,
     roomThemesFixtures: override.roomThemesFixtures ?? base.roomThemesFixtures,
     guestPhotoAvatars: override.guestPhotoAvatars ?? base.guestPhotoAvatars ?? false,
+    guestAvatars: override.guestAvatars ?? base.guestAvatars ?? true,
     adminReports: override.adminReports ?? base.adminReports,
     roomEditorLevel: override.roomEditorLevel ?? base.roomEditorLevel,
     commercialNetwork: override.commercialNetwork ?? base.commercialNetwork,

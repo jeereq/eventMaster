@@ -92,6 +92,7 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
         mockupOcr: currentLimits.mockupOcr,
         roomThemesFixtures: currentLimits.roomThemesFixtures,
         guestPhotoAvatars: currentLimits.guestPhotoAvatars,
+        guestAvatars: currentLimits.guestAvatars,
         commercialNetwork: currentLimits.commercialNetwork,
         adminReports: currentLimits.adminReports,
         roomEditorLevel: currentLimits.roomEditorLevel,
