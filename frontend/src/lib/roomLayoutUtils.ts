@@ -65,7 +65,8 @@ export type ChairStyle =
   | 'phoenix'
   | 'windsor'
   | 'bistro'
-  | 'scandi';
+  | 'scandi'
+  | 'cinema';
 /** Matériau d’assise. */
 export type SeatMaterial =
   | 'velvet'
@@ -155,7 +156,7 @@ export type RoofStyle =
   | 'barrel'
   | 'sawtooth';
 
-export type ScreenKind = 'stageLedWall' | 'wallTv' | 'tableMonitor' | 'laptop' | 'desktopPc';
+export type ScreenKind = 'stageLedWall' | 'wallTv' | 'tableMonitor' | 'laptop' | 'desktopPc' | 'cinemaScreen';
 export type ScreenRatio = '16:9' | '21:9' | '9:16' | '32:9';
 export type ScreenContent = 'presentation' | 'video' | 'matrix' | 'off' | 'glow';
 
@@ -165,6 +166,7 @@ export const screenKindLabels: Record<ScreenKind, string> = {
   tableMonitor: 'Écran de table / Régie',
   laptop: 'Ordinateur portable (Laptop)',
   desktopPc: 'Ordinateur fixe (PC tout-en-un)',
+  cinemaScreen: 'Grand écran de cinéma (toile tendue)',
 };
 
 export const screenRatioLabels: Record<ScreenRatio, string> = {
@@ -420,13 +422,15 @@ export type AmphitheaterStyle =
   | 'modernFan'
   | 'romanSemiCircle'
   | 'tieredSteps'
-  | 'horseshoeU';
+  | 'horseshoeU'
+  | 'cinemaStadium';
 
 export const amphitheaterStyleLabels: Record<AmphitheaterStyle, string> = {
   modernFan: 'Éventail royal (Arc étagé)',
   romanSemiCircle: 'Théâtre antique (Demi-cercle 180°)',
   tieredSteps: 'Gradins droits étagés',
   horseshoeU: 'Fer à cheval (U-shape immersif)',
+  cinemaStadium: 'Salle de cinéma (gradins stadium + grand écran)',
 };
 /** Styles de fenêtre configurables. */
 export type WindowStyle = 'rectangular' | 'arched' | 'bay' | 'french';
@@ -781,6 +785,8 @@ export interface RoomLayoutBlueprint {
         amphitheaterStyle?: AmphitheaterStyle;
         /** Élévation du gradin (m) — amphithéâtre en pente. */
         elevationM?: number;
+        /** Largeur (m) des allées latérales en escalier de part et d’autre du rang (salle de cinéma). */
+        sideAisleM?: number;
         /** Point de visée en % (scène) pour orienter les sièges. */
         focusX?: number;
         focusY?: number;
@@ -1941,15 +1947,20 @@ export function generateAmphitheaterRows(options: {
     groupId = makeLayoutId('amphi'),
   } = options;
 
+  const cinema = style === 'cinemaStadium';
   const concentricity =
     style === 'romanSemiCircle' ? 1 :
     style === 'horseshoeU' ? 0.85 :
     style === 'modernFan' ? 0.72 :
+    // Cinéma : rangs à peine cintrés, tous tournés vers le centre de l’écran.
+    cinema ? 0.3 :
     0;
   const depthM = options.depthM ?? 18;
-  const radiusStart = options.radiusStart ?? (style === 'romanSemiCircle' ? 20 : 23);
-  const radiusStep = options.radiusStep ?? (style === 'tieredSteps' ? 9 : 8.2);
-  const risePerTierM = style === 'tieredSteps' ? 0.32 : 0.26;
+  // Cinéma « stadium » : marche de 1,15 m (siège + passage), contremarche de 45 cm,
+  // premier rang à ~5,5 m de l’écran ; les autres gradins gardent leur pas historique.
+  const radiusStart = options.radiusStart ?? (cinema ? (5.5 / depthM) * 100 : style === 'romanSemiCircle' ? 20 : 23);
+  const radiusStep = options.radiusStep ?? (cinema ? (1.15 / depthM) * 100 : style === 'tieredSteps' ? 9 : 8.2);
+  const risePerTierM = cinema ? 0.45 : style === 'tieredSteps' ? 0.32 : 0.26;
 
   const rows: Array<Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>> = [];
 
@@ -1978,7 +1989,9 @@ export function generateAmphitheaterRows(options: {
       y: opts.y,
       curve: opts.curve,
       rotation: opts.rotation,
-      aisleSplit: style === 'horseshoeU' ? opts.suffix === 'fond' : aisleSplit,
+      aisleSplit: cinema ? false : style === 'horseshoeU' ? opts.suffix === 'fond' : aisleSplit,
+      // Cinéma : circulation par deux escaliers latéraux, comme dans les multiplexes.
+      ...(cinema ? { sideAisleM: aisleSplit ? 1.1 : 0.9 } : {}),
       aisleWidthPct: 14,
       elevationM: opts.elevationM,
       focusX,
@@ -1992,7 +2005,10 @@ export function generateAmphitheaterRows(options: {
   for (let t = 0; t < tierCount; t += 1) {
     const letter = String.fromCharCode(65 + t);
     const radius = radiusStart + t * radiusStep;
-    const elevationM = Number(((t + 1) * risePerTierM).toFixed(2));
+    // Cinéma : le premier rang reste presque au niveau du sol, puis chaque rang monte d’une contremarche pleine.
+    const elevationM = cinema
+      ? Number((0.15 + t * risePerTierM).toFixed(2))
+      : Number(((t + 1) * risePerTierM).toFixed(2));
     const seats = seatsGrownForTier(style, seatsPerRow, t);
     // Rangées concentriques au foyer : la courbure dépend du rayon réel en mètres.
     const curve = concentricity > 0
@@ -2079,6 +2095,7 @@ export const chairStyleLabels: Record<ChairStyle, string> = {
   windsor: 'Windsor (barreaux)',
   bistro: 'Bistrot cannée',
   scandi: 'Coque scandinave',
+  cinema: 'Fauteuil cinéma (haut dossier)',
 };
 
 export const seatMaterialLabels: Record<SeatMaterial, string> = {
@@ -3360,6 +3377,73 @@ function dressTemplate(templateId: string, blueprint: RoomLayoutBlueprint): Room
 }
 
 /**
+ * Salle de cinéma « stadium » (≈ 15 × 19 m utiles, 220 places) : gradins de 45 cm
+ * pour que chaque rang voie au-dessus du précédent, deux escaliers latéraux,
+ * écran scope 2.39:1 presque mur à mur, murs acoustiques sombres et entrée
+ * latérale à l’avant de la salle, comme dans un multiplexe.
+ */
+function buildCinemaHallTemplate(rowCount = 11, seatsPerRow = 20): RoomLayoutBlueprint {
+  const canvas = { widthM: 17, heightM: 21 };
+  const outline = defaultRoomOutline('rectangle');
+  const screenY = outline.y + 0.4;
+  const rows = generateAmphitheaterRows({
+    style: 'cinemaStadium',
+    tierCount: Math.max(3, Math.min(14, rowCount)),
+    seatsPerRow: Math.max(8, Math.min(30, seatsPerRow)),
+    chairType: 'THEATER',
+    chairStyle: 'cinema',
+    seatMaterial: 'leather',
+    focusY: screenY + 1,
+    depthM: canvas.heightM,
+  });
+  const WALL = '#3d3542';
+  const walls = wallsFromRoomOutline(outline, { heightM: 8, texture: 'fluted', withEntrance: false }).map((wall, i) => ({
+    ...wall,
+    color: WALL,
+    // Pas de fenêtres dans une salle obscure : une entrée et une sortie de secours près de l’écran.
+    openings:
+      i === 3 ? [createWallOpening('door', { t: 0.86, style: 'double' })]
+        : i === 1 ? [createWallOpening('door', { t: 0.14, style: 'fireExit' })]
+          : [],
+  }));
+  const screenWidthM = Math.min(14, canvas.widthM * (outline.w / 100) - 1.6);
+  const screenWPct = (screenWidthM / canvas.widthM) * 100;
+  return refreshBlueprintMetadata({
+    version: 1,
+    templateId: 'cinema-hall',
+    roomType: 'AMPHITHEATER',
+    canvas,
+    roomOutline: outline,
+    walls,
+    furniture: rows,
+    fixtures: [
+      {
+        ...createBlueprintFixture('screen'),
+        id: makeLayoutId('screen'),
+        x: 50 - screenWPct / 2,
+        y: screenY,
+        w: screenWPct,
+        h: (0.6 / canvas.heightM) * 100,
+        screenKind: 'cinemaScreen',
+        screenRatio: '21:9',
+        screenElevationM: 1.2,
+        label: 'Grand écran',
+      },
+    ],
+    metadata: {
+      totalSeats: rows.reduce((sum, row) => sum + row.seatCount, 0),
+      floorType: 'moquette',
+      floorColor: '#4a4150',
+      wallPaintColor: WALL,
+      // Lumières de salle allumées (entracte) : la salle reste lisible en 3D.
+      lightingPreset: 'banquet',
+      showRoof: false,
+      showChandeliers: false,
+    },
+  });
+}
+
+/**
  * Appartement témoin (≈ 18 × 8 m utiles) dans l’esprit d’une visite immobilière
  * en maquette : façade nord entièrement vitrée, cloisons intérieures, bois clair.
  * De gauche à droite : chambre + dressing, salle de bain, séjour, salle à manger,
@@ -4491,6 +4575,14 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
         },
       });
     },
+  },
+  {
+    id: 'cinema-hall',
+    name: 'Salle de cinéma',
+    description: 'Gradins stadium, fauteuils haut dossier et grand écran mural',
+    roomType: 'AMPHITHEATER',
+    outlineShape: 'rectangle',
+    build: (p) => buildCinemaHallTemplate(p?.rowCount, p?.seatsPerRow),
   },
   {
     id: 'empty-rectangle',
@@ -7604,6 +7696,7 @@ export const screenKindSizeM: Record<ScreenKind, { w: number; d: number }> = {
   tableMonitor: { w: 0.8, d: 0.4 },
   laptop: { w: 0.4, d: 0.35 },
   desktopPc: { w: 0.6, d: 0.4 },
+  cinemaScreen: { w: 10, d: 0.6 },
 };
 
 /** Conserve un libellé perso ; n’écrase que s’il vaut encore le défaut précédent. */

@@ -144,9 +144,10 @@ export function RowSeatsLOD({
     </Html>
   ) : null;
 
-  // Fauteuils de salle : modèle capitonné instancié (joues partagées, coque, accoudoirs bois)
-  // dès que la qualité n’impose pas le modèle détaillé siège par siège.
-  const upholsteredRow = (chairType === 'THEATER' || chairType === 'ARMCHAIR') && lod !== 'full';
+  // Fauteuils de salle : modèle capitonné instancié (joues partagées entre voisins, coque,
+  // accoudoirs) à toutes les qualités : c’est la forme réelle d’un rang de théâtre ou de cinéma,
+  // là où des chaises individuelles sur pieds donnaient un rendu de salle polyvalente.
+  const upholsteredRow = chairType === 'THEATER' || chairType === 'ARMCHAIR' || chairStyle === 'cinema';
   const poses = useMemo<SeatPose[]>(
     () =>
       upholsteredRow
@@ -166,7 +167,7 @@ export function RowSeatsLOD({
           spacing={spacing}
           seatColor={color}
           frameColor={frame}
-          variant={chairType === 'ARMCHAIR' ? 'lounge' : 'theater'}
+          variant={chairStyle === 'cinema' ? 'cinema' : chairType === 'ARMCHAIR' ? 'lounge' : 'theater'}
           picked={picked}
           blocked={blocked}
           castShadow={castShadow}

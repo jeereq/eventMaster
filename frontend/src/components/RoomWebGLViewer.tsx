@@ -88,9 +88,14 @@ import {
 } from '@/components/CatalogueFurnitureMeshes';
 import { CatalogueInterstoryStairs } from '@/components/CatalogueStairs';
 import { CatalogueBalcony } from '@/components/CatalogueBalcony';
+import { CinemaScreenMesh } from '@/components/room/CinemaScreenMesh';
 import {
   AmphitheaterRiser,
+  AmphitheaterBankRails,
+  type AmphitheaterBankRail,
   RISER_FRONT_OVERHANG_M,
+  RISER_TREAD_M,
+  riserExtentX,
   EventStage,
   StageFlowerCluster,
   EventZoneSurface,
@@ -124,7 +129,7 @@ import {
 } from '@/components/roomCelebrationMeshes';
 import { ConcertInstrumentMesh, EventBarMesh } from '@/components/CataloguePodiumBarMeshes';
 import type { BarBack, BarFront, BarMetal, BarStool, BarTop } from '@/lib/roomBarDesign';
-import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
+import { clampRowSeatCount, rowArcZ, rowCurveFactor } from '@/lib/roomAmphitheaterGeom';
 import { detectLayoutClearanceConflicts } from '@/lib/roomLayoutClearance';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import { entranceViewPose } from '@/lib/roomWalkthrough';
@@ -3252,7 +3257,15 @@ function FixtureMesh({
       ) : kind === 'djBooth' ? (
         <DjBoothMesh w={w} d={d} color={color ?? '#1c1917'} selected={selected} />
       ) : kind === 'screen' ? (
-        screenKind === 'wallTv' ? (
+        screenKind === 'cinemaScreen' ? (
+          <CinemaScreenMesh
+            w={w}
+            ratio={screenRatio ?? '21:9'}
+            elevationM={screenElevationM ?? 1.2}
+            powered={screenPowered ?? true}
+            selected={selected}
+          />
+        ) : screenKind === 'wallTv' ? (
           <WallTvMesh
             w={Math.max(0.8, w)}
             ratio={screenRatio ?? '16:9'}
@@ -4088,27 +4101,120 @@ function SceneContent({
     [heightM, orbitControlsRef, widthM],
   );
 
-  // Marche de chaque gradin prolongée jusqu’à la rangée qui la surplombe (même bloc de gradins).
-  const riserTreadById = useMemo(() => {
+  // Marche de chaque gradin prolongée jusqu’à la rangée qui la surplombe (même bloc de gradins),
+  // et hauteur de contremarche de chaque rang par rapport à celui du dessous (demi-marches d’allée).
+  const { riserTreadById, riserRiseById } = useMemo(() => {
     const rows = blueprint.furniture.filter(
       (f): f is Extract<typeof f, { kind: 'row' }> => f.kind === 'row',
     );
-    const map = new Map<string, number>();
+    const tread = new Map<string, number>();
+    const rise = new Map<string, number>();
     for (const row of rows) {
       const elev = row.elevationM ?? (row.tier > 0 ? row.tier * 0.38 : 0);
       let best = Infinity;
+      let above: { id: string; elev: number } | null = null;
       for (const other of rows) {
         if (other.id === row.id || other.storyId !== row.storyId) continue;
         const otherElev = other.elevationM ?? (other.tier > 0 ? other.tier * 0.38 : 0);
         if (otherElev <= elev + 0.02 || Math.abs(other.x - row.x) > 8 || (other.rotation ?? 0) !== (row.rotation ?? 0)) continue;
         const dy = ((other.y - row.y) / 100) * heightM;
-        if (dy > 0.3 && dy < best) best = dy;
+        if (dy > 0.3 && dy < best) {
+          best = dy;
+          above = { id: other.id, elev: otherElev };
+        }
       }
-      if (Number.isFinite(best) && best < 3) map.set(row.id, Math.max(0.5, best - RISER_FRONT_OVERHANG_M + 0.02));
+      if (Number.isFinite(best) && best < 3 && above) {
+        tread.set(row.id, Math.max(0.5, best - RISER_FRONT_OVERHANG_M + 0.02));
+        rise.set(above.id, Math.min(rise.get(above.id) ?? Infinity, above.elev - elev));
+      }
     }
-    return map;
+    return { riserTreadById: tread, riserRiseById: rise };
   }, [blueprint.furniture, heightM]);
   const riserFinish = blueprint.metadata.showWalls === false ? 'stone' : 'wood';
+  const finishForRow = (row: { chairStyle?: string }) =>
+    riserFinish === 'wood' && row.chairStyle === 'cinema' ? 'carpet' as const : riserFinish;
+
+  // Blocs de gradins (même groupe, même orientation) : garde-corps continus qui suivent la pente
+  // sur les deux flancs, et lisse de sécurité derrière le dernier rang.
+  const amphitheaterBanks = useMemo(() => {
+    const rows = blueprint.furniture.filter(
+      (f): f is Extract<typeof f, { kind: 'row' }> =>
+        f.kind === 'row' && Boolean(f.groupId) && ((f.elevationM ?? 0) > 0.05 || f.tier > 0),
+    );
+    const groups = new Map<string, typeof rows>();
+    for (const row of rows) {
+      const key = `${row.groupId}|${row.storyId ?? ''}|${row.rotation ?? 0}`;
+      groups.set(key, [...(groups.get(key) ?? []), row]);
+    }
+    const banks: Array<{ key: string; storyId?: string; finish: 'wood' | 'stone' | 'carpet'; rails: AmphitheaterBankRail[] }> = [];
+    for (const [key, list] of groups) {
+      if (list.length < 2) continue;
+      const sorted = [...list].sort(
+        (a, b) => (a.elevationM ?? a.tier * 0.38) - (b.elevationM ?? b.tier * 0.38),
+      );
+      const top = sorted[sorted.length - 1];
+      const topElev = top.elevationM ?? top.tier * 0.38;
+      if (topElev < 0.6) continue;
+      const RAIL_H = 0.9;
+      const toWorld = (row: (typeof sorted)[number], lx: number, y: number, lz: number): [number, number, number] => {
+        const [wx, wz] = pctToWorld(row.x, row.y, widthM, heightM);
+        const r = ((row.rotation ?? 0) * Math.PI) / 180;
+        return [wx + lx * Math.cos(r) + lz * Math.sin(r), y, wz - lx * Math.sin(r) + lz * Math.cos(r)];
+      };
+      const geom = (row: (typeof sorted)[number]) => {
+        const count = clampRowSeatCount(row.seatCount);
+        const ext = riserExtentX(count, 0.55, row.aisleSplit === true, row.aisleWidthPct ?? 14, row.sideAisleM ?? 0);
+        const curveF = rowCurveFactor(row.curve ?? 0);
+        const elev = Math.max(row.elevationM ?? row.tier * 0.38, 0.14);
+        const tread = riserTreadById.get(row.id) ?? RISER_TREAD_M;
+        return {
+          ...ext,
+          elev,
+          zFront: (x: number) => rowArcZ(x, 0.55, curveF) - RISER_FRONT_OVERHANG_M,
+          zBack: (x: number) => rowArcZ(x, 0.55, curveF) + tread,
+        };
+      };
+      const rails: AmphitheaterBankRail[] = [];
+      for (const side of [-1, 1] as const) {
+        const points: AmphitheaterBankRail['points'] = [];
+        const posts: AmphitheaterBankRail['posts'] = [];
+        sorted.forEach((row, i) => {
+          const g = geom(row);
+          const x = side < 0 ? g.x0 + 0.07 : g.x1 - 0.07;
+          const front = toWorld(row, x, g.elev, g.zFront(x) + 0.1);
+          // La main courante démarre au sol devant le premier gradin, comme une rampe d’escalier.
+          if (i === 0) {
+            const start = toWorld(row, x, 0, g.zFront(x) - 0.25);
+            points.push([start[0], RAIL_H, start[2]]);
+            posts.push([start[0], 0, start[2], RAIL_H]);
+          }
+          points.push([front[0], g.elev + RAIL_H, front[2]]);
+          if (i % 2 === 1 || i === sorted.length - 1) posts.push([front[0], g.elev, front[2], RAIL_H]);
+          if (i === sorted.length - 1) {
+            const back = toWorld(row, x, g.elev, g.zBack(x) - 0.06);
+            points.push([back[0], g.elev + RAIL_H, back[2]]);
+            posts.push([back[0], g.elev, back[2], RAIL_H]);
+          }
+        });
+        rails.push({ points, posts });
+      }
+      // Lisse arrière du dernier rang (chute vers l’arrière du bloc).
+      const g = geom(top);
+      const back: AmphitheaterBankRail = { points: [], posts: [] };
+      const n = 12;
+      for (let i = 0; i <= n; i += 1) {
+        const x = g.x0 + 0.07 + ((g.x1 - g.x0 - 0.14) * i) / n;
+        const p = toWorld(top, x, g.elev + RAIL_H + 0.1, g.zBack(x) - 0.06);
+        back.points.push(p);
+        // Pas de poteau au milieu d’une allée centrale.
+        if (i % 3 === 0 && !(top.aisleSplit && i === n / 2)) back.posts.push([p[0], g.elev, p[2], RAIL_H + 0.1]);
+      }
+      rails.push(back);
+      banks.push({ key, storyId: top.storyId, finish: finishForRow(top), rails });
+    }
+    return banks;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blueprint.furniture, widthM, heightM, riserTreadById, riserFinish]);
 
   const blockedByTable = useMemo(() => {
     const map = new Map<string, number[]>();
@@ -4454,6 +4560,13 @@ function SceneContent({
         );
       })}
 
+      {amphitheaterBanks
+        .filter((bank) => isStoryVisible(blueprint, bank.storyId))
+        .map((bank) => (
+          <group key={`bank-${bank.key}`} position={[0, worldElevationForStory(blueprint, bank.storyId), 0]}>
+            <AmphitheaterBankRails rails={bank.rails} finish={bank.finish} />
+          </group>
+        ))}
       {blueprint.furniture.filter((item) => isStoryVisible(blueprint, item.storyId)).map((item) => {
         const storyElev = worldElevationForStory(blueprint, item.storyId);
         if (item.kind === 'zone') {
@@ -4568,7 +4681,9 @@ function SceneContent({
                   aisleWidthPct={item.aisleWidthPct}
                   selected={selected.some((s) => s.kind === 'row' && s.id === item.id)}
                   treadBackM={riserTreadById.get(item.id)}
-                  finish={riserFinish}
+                  riseM={riserRiseById.get(item.id)}
+                  sideAisleM={item.sideAisleM}
+                  finish={finishForRow(item)}
                 />
               ) : null}
               {(() => {

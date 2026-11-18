@@ -139,6 +139,7 @@ const CHAIR_STYLE_TWEAKS: Record<ChairStyle, Partial<ChairVisual>> = {
   windsor: { backHeight: 0.6, seatSize: [0.44, 0.045, 0.42], scale: 1.02, hasArms: false, cushion: false },
   bistro: { backHeight: 0.5, seatSize: [0.4, 0.035, 0.38], scale: 0.98, hasArms: false, cushion: false },
   scandi: { backHeight: 0.42, seatSize: [0.46, 0.05, 0.44], scale: 1, hasArms: false, cushion: false },
+  cinema: { backHeight: 0.82, seatSize: [0.52, 0.15, 0.52], scale: 1.12, hasArms: true, cushion: true },
 };
 
 export function resolveChairVisual(

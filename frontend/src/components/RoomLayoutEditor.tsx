@@ -1986,20 +1986,43 @@ export default function RoomLayoutEditor({
   const addAmphitheaterQuick = () => {
     const activeStoryId = resolveActiveStoryId(blueprint);
     const groupId = `amphi_${Date.now().toString(36)}`;
+    const cinema = amphiStyle === 'cinemaStadium';
     const rows = generateAmphitheaterRows({
       style: amphiStyle,
       tierCount: amphiTiers,
       seatsPerRow: amphiSeatsPerRow,
       chairType: amphiChairType,
-      chairStyle: amphiChairStyle,
+      // Salle de cinéma : fauteuils haut dossier à porte-gobelet par défaut.
+      chairStyle: cinema && amphiChairType === 'THEATER' ? 'cinema' : amphiChairStyle,
       seatMaterial: amphiSeatMaterial,
       aisleSplit: amphiAisleSplit,
       groupId,
       depthM: blueprint.canvas.heightM,
+      ...(cinema ? { focusY: 8 } : {}),
     }).map((r) => ({ ...r, storyId: activeStoryId }));
 
     const hasStage = blueprint.fixtures.some((f) => f.kind === 'stage' || f.kind === 'podium');
-    const extras = hasStage
+    const hasCinemaScreen = blueprint.fixtures.some((f) => f.kind === 'screen' && f.screenKind === 'cinemaScreen');
+    // Cinéma : grand écran scope presque mur à mur au lieu d’une scène.
+    const screenWidthM = Math.min(16, blueprint.canvas.widthM * 0.82);
+    const screenWPct = (screenWidthM / blueprint.canvas.widthM) * 100;
+    const extras = cinema
+      ? hasCinemaScreen
+        ? []
+        : [{
+            ...createBlueprintFixture('screen', blueprint.canvas),
+            x: 50 - screenWPct / 2,
+            y: 4,
+            w: screenWPct,
+            h: (0.6 / blueprint.canvas.heightM) * 100,
+            screenKind: 'cinemaScreen' as const,
+            screenRatio: '21:9' as const,
+            screenElevationM: 1.2,
+            label: 'Grand écran',
+            storyId: activeStoryId,
+            groupId,
+          }]
+      : hasStage
       ? []
       : [{
           ...createBlueprintFixture('stage'),
@@ -2018,7 +2041,12 @@ export default function RoomLayoutEditor({
         furniture: [...blueprint.furniture, ...rows],
         fixtures: extras.length ? [...blueprint.fixtures, ...extras] : blueprint.fixtures,
       },
-      { message: `Amphithéâtre ${amphitheaterStyleLabels[amphiStyle]} créé (${rows.length} gradins)`, kind: 'add' },
+      {
+        message: cinema
+          ? `Salle de cinéma créée (${rows.length} rangs, grand écran)`
+          : `Amphithéâtre ${amphitheaterStyleLabels[amphiStyle]} créé (${rows.length} gradins)`,
+        kind: 'add',
+      },
     );
     setQuickCreate(null);
     setSelection(rows.map((r) => ({ kind: 'row' as const, id: r.id })));
@@ -2308,6 +2336,7 @@ export default function RoomLayoutEditor({
       tableMonitor: { w: 6, h: 4, elev: 0.76, tilt: 6 },
       laptop: { w: 4, h: 3, elev: 0.76, tilt: 0 },
       desktopPc: { w: 5, h: 4, elev: 0.76, tilt: 4 },
+      cinemaScreen: { w: 60, h: 3, elev: 1.2, tilt: 0 },
     };
     const def = sizeDefaults[screenKind];
     const realSize = realFixtureFootprintPct('screen', blueprint.canvas, { screenKind }) ?? def;
@@ -6997,6 +7026,7 @@ export default function RoomLayoutEditor({
                         tableMonitor: { w: 6, h: 4, elev: surfElev, tilt: 6 },
                         laptop: { w: 4, h: 3, elev: surfElev, tilt: 0 },
                         desktopPc: { w: 5, h: 4, elev: surfElev, tilt: 4 },
+                        cinemaScreen: { w: 60, h: 3, elev: 1.2, tilt: 0 },
                       };
                       const def = sizeDefaults[nextKind];
                       updateFixture(
@@ -8210,7 +8240,7 @@ export default function RoomLayoutEditor({
                     onChange={(e) => updateFurniture(selectedFurniture.id, { aisleSplit: e.target.checked }, 'Allée de passage')}
                     className="rounded border-border size-4"
                   />
-                  <span>Allée centrale de passage</span>
+                  <span>{amphiStyle === 'cinemaStadium' ? 'Escaliers latéraux larges' : 'Allée centrale de passage'}</span>
                 </label>
                 {selectedFurniture.aisleSplit && (
                   <span className="text-xs text-muted">Largeur 14%</span>
@@ -9830,7 +9860,9 @@ export default function RoomLayoutEditor({
                 Générateur d’Amphithéâtre & Gradins Étagés
               </h4>
               <p className="text-xs text-muted">
-                Disposition fluide en arcs concentriques avec élévation et allée centrale de passage
+                {amphiStyle === 'cinemaStadium'
+                  ? 'Gradins stadium de 45 cm, escaliers latéraux balisés et grand écran mural'
+                  : 'Disposition fluide en arcs concentriques avec élévation et allée centrale de passage'}
               </p>
             </div>
             <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
@@ -9903,7 +9935,7 @@ export default function RoomLayoutEditor({
                   onChange={(e) => setAmphiAisleSplit(e.target.checked)}
                   className="rounded border-border text-primary"
                 />
-                <span>Allée centrale de passage</span>
+                <span>{amphiStyle === 'cinemaStadium' ? 'Escaliers latéraux larges' : 'Allée centrale de passage'}</span>
               </label>
 
               <span className="text-xs text-muted">
@@ -9917,7 +9949,7 @@ export default function RoomLayoutEditor({
               className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}
             >
               <Sparkles className="w-4 h-4" aria-hidden />
-              Générer l’amphithéâtre
+              {amphiStyle === 'cinemaStadium' ? 'Créer la salle de cinéma' : 'Générer l’amphithéâtre'}
             </button>
           </div>
         </div>
