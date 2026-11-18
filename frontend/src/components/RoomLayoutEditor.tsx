@@ -3,10 +3,16 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useHideAiFabWhileVisible } from '@/components/landing/useHideAiFabWhileVisible';
 import { ROOM_INTRO_VIEWS, introViewLabel, resolveIntroView, type RoomIntroView } from '@/lib/roomIntroView';
+import {
+  DEFAULT_GUEST_SIMULATION,
+  GUEST_FILL_CHOICES,
+  buildGuestSimulation,
+  type GuestSimulationSettings,
+} from '@/lib/roomGuestSimulation';
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
-  GraduationCap, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence,
+  GraduationCap, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence, Users,
 } from 'lucide-react';
 import { buildPlotGrid, buildSinglePlot, findFreePlotSpot, isOpenSpace, nextPlotLabel, normalizePlotGrid, plotGridFootprint, PLOT_COLORS, PLOT_GRID_DEFAULTS, type PlotGridOptions } from '@/lib/roomPlots';
 import {
@@ -543,7 +549,12 @@ function EditorToolGroup({
     if (!open) return;
     const onPointer = (event: PointerEvent) => {
       const node = wrapRef.current;
-      if (node && event.target instanceof Node && !node.contains(event.target)) onToggle(id);
+      if (!node || !(event.target instanceof Element)) return;
+      // La barre d’outils existe en deux exemplaires (ordinateur / mobile, l’un masqué) :
+      // un clic dans l’un ne doit pas être pris pour un clic « à l’extérieur » par l’autre,
+      // sinon le menu se refermait avant que le bouton touché ne réagisse (sur mobile).
+      if (event.target.closest(`[data-tool-group="${id}"]`)) return;
+      onToggle(id);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onToggle(id);
@@ -558,7 +569,7 @@ function EditorToolGroup({
 
   if (items.length === 0) return null;
   return (
-    <div ref={wrapRef} className="contents lg:relative lg:inline-flex">
+    <div ref={wrapRef} data-tool-group={id} className="contents lg:relative lg:inline-flex">
       <button
         type="button"
         className={cn(
@@ -1043,6 +1054,9 @@ export default function RoomLayoutEditor({
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   // Aperçu de la « découverte du plan » : chaque incrément rejoue l’arrivée choisie.
   const [introReplayKey, setIntroReplayKey] = useState(0);
+  // Simulation des invités : vue de travail de l’organisateur, non enregistrée sur le plan
+  // (les visiteurs et la billetterie ne voient pas de faux invités sur les places).
+  const [guestSim, setGuestSim] = useState<GuestSimulationSettings | null>(null);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
   const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors' | 'podiums' | 'instruments' | 'bars' | 'hospitality' | 'environment' | 'elements' | 'plots'>(null);
   const [elementCreatorOpen, setElementCreatorOpen] = useState(false);
@@ -2609,6 +2623,14 @@ export default function RoomLayoutEditor({
 
   const replayIntro = () => setIntroReplayKey((k) => k + 1);
 
+  const guestSummary = guestSim ? buildGuestSimulation(blueprint, guestSim) : null;
+  const hasDanceFloor = blueprint.furniture.some((f) => f.kind === 'zone' && f.zoneKind === 'dance');
+  const toggleGuestSim = () => {
+    const next = guestSim ? null : DEFAULT_GUEST_SIMULATION;
+    setGuestSim(next);
+    log(next ? 'Invités simulés affichés' : 'Invités simulés masqués', 'info');
+  };
+
   const setIntroView = (view: RoomIntroView) => {
     updateBlueprint(
       { ...blueprint, metadata: { ...blueprint.metadata, introView: view } },
@@ -2980,6 +3002,7 @@ export default function RoomLayoutEditor({
         // À l’ouverture, l’éditeur garde le survol ; l’aperçu rejoue la perspective choisie pour les visiteurs.
         introView={introReplayKey > 0 ? undefined : 'arc'}
         introReplayKey={introReplayKey}
+        guestSimulation={guestSim}
         onSelect={handleCanvasSelect}
         onMoveItem={handleWebGLMove}
         onMoveEnd={handleWebGLMoveEnd}
@@ -9228,6 +9251,45 @@ export default function RoomLayoutEditor({
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
       >
+      <button
+        type="button"
+        onClick={toggleGuestSim}
+        aria-pressed={Boolean(guestSim)}
+        title="Asseoir des invités sur les chaises et les faire danser sur la piste, pour se représenter la salle pleine (non enregistré sur le plan)"
+        className={cn(EDITOR_TOOL, guestSim ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <Users className="w-3.5 h-3.5" aria-hidden />
+        {guestSummary
+          ? `Invités : ${guestSummary.seated + guestSummary.standing + guestSummary.dancing}`
+          : 'Invités simulés'}
+      </button>
+      {guestSim ? (
+        <label className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')} title="Part des places occupées">
+          <span>Remplissage</span>
+          <select
+            value={String(guestSim.fill)}
+            onChange={(e) => setGuestSim({ ...guestSim, fill: Number(e.target.value) })}
+            className="bg-transparent text-xs font-bold text-foreground outline-none"
+            aria-label="Remplissage de la salle"
+          >
+            {GUEST_FILL_CHOICES.map((f) => (
+              <option key={f} value={String(f)}>{Math.round(f * 100)} %</option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {guestSim && hasDanceFloor ? (
+        <button
+          type="button"
+          onClick={() => setGuestSim({ ...guestSim, dancing: !guestSim.dancing })}
+          aria-pressed={guestSim.dancing}
+          title="Des invités dansent sur la piste"
+          className={cn(EDITOR_TOOL, guestSim.dancing ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+        >
+          <Music2 className="w-3.5 h-3.5" aria-hidden />
+          {guestSim.dancing ? `Danse : ${guestSummary?.dancing ?? 0}` : 'Danse'}
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={toggleRoofVisible}
