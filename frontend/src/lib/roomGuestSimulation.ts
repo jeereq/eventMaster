@@ -94,6 +94,171 @@ const TROUSERS = ['#141418', '#1d2027', '#2a2522', '#30343d'];
 const HAIR = ['#120d0b', '#171110', '#1d1612', '#2a1d16', '#3b2a1f', '#6b4a2f'];
 const HEADWRAPS = ['#c8a24a', '#d62828', '#ffd166', '#b5179e', '#118ab2', '#e07a5f', '#06d6a0', '#f4f1de', '#fb8500'];
 
+/* ------------------------------------------------------------------ */
+/* Thème de la soirée (dress code)                                     */
+/* ------------------------------------------------------------------ */
+
+/** Thème de la soirée : il habille les invités simulés (tenues, couleurs, foulards). */
+export type GuestDressCode = 'mixte' | 'blanc' | 'gala' | 'traditionnel' | 'cocktail' | 'business' | 'noir' | 'couleurs';
+
+/** Thème choisi pour le plan, avec les couleurs de la fête pour « Aux couleurs de la fête ». */
+export interface GuestDressCodeSetting {
+  id: GuestDressCode;
+  /** 1 à 4 couleurs (hexadécimal), utilisées par le thème « couleurs ». */
+  colors?: string[];
+}
+
+interface DressCodePalette {
+  /** Part des costumes, robes et boubous. */
+  weights: [number, number, number];
+  suits: readonly string[];
+  trousers: readonly string[];
+  outfits: readonly string[];
+  headwraps: readonly string[];
+  /** Probabilité d'un foulard / gele pour une robe ou un boubou. */
+  headwrapChance: number;
+}
+
+export const GUEST_DRESS_CODES: ReadonlyArray<{ id: GuestDressCode; label: string; hint: string }> = [
+  { id: 'mixte', label: 'Tenues variées', hint: 'Costumes, robes et boubous de toutes les couleurs' },
+  { id: 'blanc', label: 'Soirée blanche', hint: 'Tout le monde en blanc, crème et champagne' },
+  { id: 'gala', label: 'Gala / tenue de soirée', hint: 'Smokings noirs et robes longues aux tons profonds' },
+  { id: 'traditionnel', label: 'Mariage traditionnel', hint: 'Pagnes, wax, boubous et foulards colorés' },
+  { id: 'cocktail', label: 'Cocktail chic', hint: 'Costumes clairs et robes aux couleurs vives ou pastel' },
+  { id: 'business', label: 'Conférence / séminaire', hint: 'Costumes sobres, tons marine et gris' },
+  { id: 'noir', label: 'Soirée en noir', hint: 'Tout en noir, quelques touches dorées' },
+  { id: 'couleurs', label: 'Aux couleurs de la fête', hint: 'Les invités portent les couleurs choisies pour la fête' },
+];
+
+const DRESS_CODE_PALETTES: Record<Exclude<GuestDressCode, 'couleurs'>, DressCodePalette> = {
+  mixte: { weights: [0.42, 0.4, 0.18], suits: SUITS, trousers: TROUSERS, outfits: OUTFITS, headwraps: HEADWRAPS, headwrapChance: 0.38 },
+  blanc: {
+    weights: [0.42, 0.4, 0.18],
+    suits: ['#f4f1de', '#ece6d6', '#f7f4ee', '#e8e2d0'],
+    trousers: ['#efe9dc', '#f4f1de', '#e3dccb'],
+    outfits: ['#fbf8f1', '#f4f1de', '#efe7d6', '#f6efe0', '#e9dcc0', '#fffdf8'],
+    headwraps: ['#f4f1de', '#e9dcc0', '#c8a24a'],
+    headwrapChance: 0.35,
+  },
+  gala: {
+    weights: [0.48, 0.46, 0.06],
+    suits: ['#0f0f12', '#15161b', '#1b1f2e'],
+    trousers: ['#0f0f12', '#141418'],
+    outfits: ['#0f0f12', '#5a0f1e', '#0f3d33', '#1b2a5a', '#c8a24a', '#6b1d5e', '#b8b8c0'],
+    headwraps: ['#c8a24a', '#0f0f12', '#5a0f1e'],
+    headwrapChance: 0.15,
+  },
+  traditionnel: {
+    weights: [0.2, 0.3, 0.5],
+    suits: ['#1b1b1f', '#3a2a1f', '#c8a24a', '#2d6a4f'],
+    trousers: ['#141418', '#2a2522'],
+    outfits: ['#e07a5f', '#f2a541', '#118ab2', '#06d6a0', '#d62828', '#ffd166', '#5b2a86', '#2d6a4f', '#fb8500', '#b5179e'],
+    headwraps: ['#c8a24a', '#d62828', '#ffd166', '#118ab2', '#fb8500', '#5b2a86', '#06d6a0'],
+    headwrapChance: 0.7,
+  },
+  cocktail: {
+    weights: [0.45, 0.5, 0.05],
+    suits: ['#3a3f4b', '#5b6b82', '#c9b79c', '#2f3e57', '#7a6a58'],
+    trousers: ['#2a2d35', '#c9b79c', '#3a3f4b'],
+    outfits: ['#f4a6b8', '#a8dadc', '#ffd6a5', '#cdb4db', '#e63946', '#457b9d', '#f1c0e8', '#90be6d'],
+    headwraps: ['#f4a6b8', '#ffd6a5', '#a8dadc'],
+    headwrapChance: 0.1,
+  },
+  business: {
+    weights: [0.6, 0.32, 0.08],
+    suits: ['#1f2a44', '#2b2f38', '#3a3f4b', '#23262e', '#4b5563'],
+    trousers: ['#1d2027', '#2b2f38', '#30343d'],
+    outfits: ['#1f2a44', '#3a3f4b', '#7a1f2b', '#f4f1de', '#2f3e57', '#5b6b82'],
+    headwraps: ['#1f2a44', '#7a1f2b'],
+    headwrapChance: 0.08,
+  },
+  noir: {
+    weights: [0.45, 0.45, 0.1],
+    suits: ['#0f0f12', '#141418'],
+    trousers: ['#0f0f12', '#141418'],
+    outfits: ['#0f0f12', '#151518', '#1c1c20'],
+    headwraps: ['#0f0f12', '#c8a24a'],
+    headwrapChance: 0.25,
+  },
+};
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/** Palette d'un thème ; « couleurs » se construit à partir des couleurs de la fête. */
+export function dressCodePalette(setting?: GuestDressCodeSetting | null): DressCodePalette {
+  const id = setting?.id ?? 'mixte';
+  if (id !== 'couleurs') return DRESS_CODE_PALETTES[id] ?? DRESS_CODE_PALETTES.mixte;
+  const colors = (setting?.colors ?? []).filter((c) => HEX.test(c)).slice(0, 4);
+  if (colors.length === 0) return DRESS_CODE_PALETTES.mixte;
+  return {
+    weights: [0.4, 0.42, 0.18],
+    // Les hommes portent les couleurs de la fête ou un costume sombre relevé par elles.
+    suits: [...colors, '#1b1b1f'],
+    trousers: ['#141418', '#1d2027'],
+    outfits: colors,
+    headwraps: colors,
+    headwrapChance: 0.4,
+  };
+}
+
+/** Couleurs reconnues dans une description (« rouge et or », « bleu roi »…). */
+const COLOR_WORDS: ReadonlyArray<[RegExp, string]> = [
+  [/bleu (roi|electrique)/, '#1d4ed8'],
+  [/bleu (marine|nuit)/, '#1f2a44'],
+  [/bleu ciel/, '#7cb7e8'],
+  [/turquoise/, '#1fb5a8'],
+  [/emeraude/, '#0f5c4d'],
+  [/bordeaux|grenat/, '#6d1a2a'],
+  [/fuchsia/, '#b5179e'],
+  [/\bbleue?s?\b/, '#2563eb'],
+  [/\bvert(e|s|es)?\b/, '#2d6a4f'],
+  [/\brouges?\b/, '#c1121f'],
+  [/\b(or|dore|dorees?|dores)\b/, '#c8a24a'],
+  [/\b(argent|argente|argentee?s?)\b/, '#b8b8c0'],
+  [/\broses?\b/, '#e5739a'],
+  [/\b(violet(te)?s?|mauve|lilas)\b/, '#6b2fa0'],
+  [/\borange\b/, '#f28c28'],
+  [/\bjaunes?\b/, '#f2c94c'],
+  [/\bbeiges?\b/, '#d8c3a5'],
+  [/\b(blanc|blanche|blancs|blanches)\b/, '#f4f1de'],
+  [/\b(noir|noire|noirs|noires)\b/, '#111114'],
+];
+
+function normalizeText(text: string): string {
+  return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * Thème de la soirée deviné à partir de la description de la fête (studio IA,
+ * nom de l'événement…). `null` si rien de clair : on garde des tenues variées.
+ */
+export function detectDressCode(text: string | null | undefined): GuestDressCodeSetting | null {
+  if (!text) return null;
+  const t = normalizeText(text);
+  if (/soiree blanche|tout en blanc|all white|white party|dress ?code ?:? ?blanc/.test(t)) return { id: 'blanc' };
+  if (/tout en noir|all black|soiree noire|black party|dress ?code ?:? ?noir/.test(t)) return { id: 'noir' };
+  if (/gala|black tie|smoking|tenue de soiree|soiree chic|tenue correcte exigee/.test(t)) return { id: 'gala' };
+  if (/traditionnel|coutumier|\bdot\b|kitchen party|pagne|\bwax\b|liputa|boubou|kente/.test(t)) return { id: 'traditionnel' };
+  if (/conference|seminaire|colloque|\bforum\b|business|formation|assemblee generale|lancement de produit|atelier de travail/.test(t)) return { id: 'business' };
+  // Couleurs annoncées comme thème : « thème rouge et or », « dress code bleu et blanc ».
+  const themed = t.match(/(theme|couleurs?|dress ?code|tenue|habille[es]* en)[^.,;:!?]{0,40}/g);
+  if (themed) {
+    const colors: string[] = [];
+    for (const found of themed) {
+      let chunk = found;
+      for (const [re, hex] of COLOR_WORDS) {
+        if (!re.test(chunk)) continue;
+        // « bleu roi » ne compte pas une seconde fois comme « bleu ».
+        chunk = chunk.replace(re, ' ');
+        if (!colors.includes(hex)) colors.push(hex);
+      }
+    }
+    if (colors.length > 0) return { id: 'couleurs', colors: colors.slice(0, 4) };
+  }
+  if (/cocktail|afterwork|vernissage/.test(t)) return { id: 'cocktail' };
+  return null;
+}
+
 /** Hachage 32 bits (FNV-1a) d'une chaîne. */
 function hashString(s: string): number {
   let h = 2166136261;
@@ -149,16 +314,18 @@ function dressGuest(
   z: number,
   rotY: number,
   portrait?: GuestPortrait,
+  palette: DressCodePalette = DRESS_CODE_PALETTES.mixte,
 ): SimulatedGuest {
   const r = rng(`guest:${id}`);
   const roll = r();
-  const style: GuestStyle = portrait?.style ?? (roll < 0.42 ? 'suit' : roll < 0.82 ? 'dress' : 'boubou');
-  const randomOutfit = style === 'suit' ? pick(SUITS, r()) : pick(OUTFITS, r());
+  const [wSuit, wDress] = palette.weights;
+  const style: GuestStyle = portrait?.style ?? (roll < wSuit ? 'suit' : roll < wSuit + wDress ? 'dress' : 'boubou');
+  const randomOutfit = style === 'suit' ? pick(palette.suits, r()) : pick(palette.outfits, r());
   const outfit = portrait?.outfit || randomOutfit;
-  const bottom = style === 'suit' ? pick(TROUSERS, r()) : outfit;
+  const bottom = style === 'suit' ? pick(palette.trousers, r()) : outfit;
   const headwrapRoll = r();
   // La photo montre déjà la coiffure de la personne : pas de foulard ajouté.
-  const headwrap = !portrait && style !== 'suit' && headwrapRoll < 0.38 ? pick(HEADWRAPS, r()) : null;
+  const headwrap = !portrait && style !== 'suit' && headwrapRoll < palette.headwrapChance ? pick(palette.headwraps, r()) : null;
   const extra = portrait ? { photoUrl: portrait.photoUrl, name: portrait.name, portraitId: portrait.id } : {};
   return {
     ...extra,
@@ -189,6 +356,8 @@ export interface GuestSimulationOptions extends Partial<GuestSimulationSettings>
   maxGuests?: number;
   /** Invités personnalisés (par défaut ceux du plan). Toujours présents, quel que soit le remplissage. */
   portraits?: GuestPortrait[] | null;
+  /** Thème de la soirée (par défaut celui du plan). */
+  dressCode?: GuestDressCodeSetting | null;
 }
 
 export interface GuestSimulationResult {
@@ -224,13 +393,14 @@ export function buildGuestSimulation(blueprint: RoomLayoutBlueprint, options: Gu
     if (p?.seatKey && p.photoUrl && !portraitsBySeat.has(p.seatKey)) portraitsBySeat.set(p.seatKey, p);
   }
   let portraits = 0;
+  const palette = dressCodePalette(options.dressCode ?? blueprint.metadata?.guestDressCode);
   const occupied = (key: string) => portraitsBySeat.has(key) || rng(`seat:${key}`)() < fill;
   // Les invités personnalisés passent même quand le plafond d'avatars est atteint.
   const full = (key?: string) => guests.length >= maxGuests && !(key && portraitsBySeat.has(key));
   const dress = (key: string, pose: GuestPose, x: number, y: number, z: number, rotY: number) => {
     const portrait = portraitsBySeat.get(key);
     if (portrait) portraits += 1;
-    return dressGuest(key, pose, x, y, z, rotY, portrait);
+    return dressGuest(key, pose, x, y, z, rotY, portrait, palette);
   };
 
   for (const item of blueprint.furniture ?? []) {
@@ -331,7 +501,7 @@ export function buildGuestSimulation(blueprint: RoomLayoutBlueprint, options: Gu
         const [dx, dz] = rotateY(lx, lz, rot);
         // Les danseurs se tournent vers le centre de la piste (ou au hasard s'ils y sont).
         const face = Math.hypot(lx, lz) > 0.6 ? Math.atan2(-dx, -dz) : r() * Math.PI * 2;
-        guests.push(dressGuest(`${item.id}:d${i}`, 'dancing', cx + dx, floorY + 0.03, cz + dz, face));
+        guests.push(dressGuest(`${item.id}:d${i}`, 'dancing', cx + dx, floorY + 0.03, cz + dz, face, undefined, palette));
         dancers += 1;
       }
     }

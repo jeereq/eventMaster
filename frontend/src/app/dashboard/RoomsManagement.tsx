@@ -640,8 +640,18 @@ export default function RoomsManagement() {
     resetWizard();
     setRoomType(type);
     setLayoutParams(defaultParams[type]);
+    // Thème de la soirée et invités avec photo choisis dans le simulateur (photos selon le forfait).
+    const importedPortraits = planFeatures.guestPhotoAvatars === true ? stored.guestPortraits : undefined;
+    const withGuests = {
+      ...applied.blueprint,
+      metadata: {
+        ...applied.blueprint.metadata,
+        ...(stored.guestDressCode ? { guestDressCode: stored.guestDressCode } : {}),
+        ...(importedPortraits?.length ? { guestPortraits: importedPortraits } : {}),
+      },
+    };
     setBlueprintDraft(stampLayoutAction(
-      refreshBlueprintMetadata(applied.blueprint),
+      refreshBlueprintMetadata(withGuests),
       importedCount > 0
         ? `Plan IA importé (${importedCount} éléments)`
         : 'Plan IA importé — aucun mobilier déduit',

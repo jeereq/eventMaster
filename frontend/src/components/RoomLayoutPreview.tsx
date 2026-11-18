@@ -21,6 +21,7 @@ import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import Room3DErrorBoundary from '@/components/Room3DErrorBoundary';
 import { cn } from '@/lib/cn';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
+import type { GuestSimulationSettings } from '@/lib/roomGuestSimulation';
 
 const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
   ssr: false,
@@ -104,6 +105,8 @@ interface RoomLayoutPreviewProps {
   blockedSeats?: Array<{ tableId: string; seatIndex: number }>;
   /** Clic sur une chaise attachée à une table. */
   onSelectSeat?: (tableId: string, seatIndex: number) => void;
+  /** Invités simulés en 3D (simulateur) : remplissage et danse. */
+  guestSimulation?: GuestSimulationSettings | null;
 }
 
 type WebGLPreviewProps = {
@@ -121,6 +124,7 @@ type WebGLPreviewProps = {
   walkthroughActive?: boolean;
   onWalkthroughProgress?: (label: string) => void;
   onWalkthroughComplete?: () => void;
+  guestSimulation?: GuestSimulationSettings | null;
 };
 
 function WebGLPreviewCanvas({
@@ -138,6 +142,7 @@ function WebGLPreviewCanvas({
   walkthroughActive = false,
   onWalkthroughProgress,
   onWalkthroughComplete,
+  guestSimulation = null,
 }: WebGLPreviewProps) {
   const selected = useMemo(() => {
     return mapTicketSelectionsToWebGL(
@@ -174,6 +179,7 @@ function WebGLPreviewCanvas({
       onWalkthroughComplete={onWalkthroughComplete}
       renderQuality={quality === 'showcase' ? 'showcase' : 'standard'}
       lightingPreset={lightingPreset}
+      guestSimulation={guestSimulation}
       className={cn('absolute inset-0 h-full w-full shadow-[var(--shadow-soft)] touch-none', className)}
     />
   );
@@ -249,6 +255,7 @@ export default function RoomLayoutPreview({
   selectedSeats,
   blockedSeats,
   onSelectSeat,
+  guestSimulation = null,
 }: RoomLayoutPreviewProps) {
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
@@ -376,6 +383,7 @@ export default function RoomLayoutPreview({
                 selectedSeats={selectedSeats}
                 blockedSeats={blockedSeats}
                 onSelectSeat={onSelectSeat}
+                guestSimulation={guestSimulation}
                 walkthroughActive={fill && walkthroughActive}
                 onWalkthroughProgress={setWalkthroughLabel}
                 onWalkthroughComplete={stopWalkthrough}
@@ -484,6 +492,7 @@ export default function RoomLayoutPreview({
                   selectedSeats={selectedSeats}
                   blockedSeats={blockedSeats}
                   onSelectSeat={onSelectSeat}
+                  guestSimulation={guestSimulation}
                   walkthroughActive={walkthroughActive}
                   onWalkthroughProgress={setWalkthroughLabel}
                   onWalkthroughComplete={stopWalkthrough}
