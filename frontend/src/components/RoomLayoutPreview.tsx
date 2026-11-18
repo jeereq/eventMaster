@@ -12,6 +12,7 @@ import {
   applyPlanSceneVisibility
 } from '@/lib/roomLayoutUtils';
 import { PlanSceneControls, usePlanFullscreen } from '@/components/PlanViewChrome';
+import { isOpenSpace } from '@/lib/roomPlots';
 import PlanViewModeToggle from '@/components/PlanViewModeToggle';
 import { mapTicketSelectionsToWebGL, resolveTicketSeatPick } from '@/lib/seatSelectionLayout';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
@@ -264,6 +265,7 @@ export default function RoomLayoutPreview({
   const [localForce2d, setLocalForce2d] = useState(false);
   // Les réceptions à ciel ouvert (murs masqués dans le plan) s’ouvrent sans murs.
   const blueprintShowsWalls = rawBlueprint ? isBlueprintWallsVisible(rawBlueprint.metadata) : true;
+  const openSpace = rawBlueprint ? isOpenSpace(rawBlueprint.metadata) : false;
   const [showWalls, setShowWalls] = useState(blueprintShowsWalls);
   const [wallsDefault, setWallsDefault] = useState(blueprintShowsWalls);
   if (wallsDefault !== blueprintShowsWalls) {
@@ -407,7 +409,8 @@ export default function RoomLayoutPreview({
             showRoof={showRoof}
             onToggleWalls={() => setShowWalls((current) => !current)}
             onToggleRoof={() => setShowRoof((current) => !current)}
-            showRoofControl={useWebGL}
+            showRoofControl={useWebGL && !openSpace}
+            showWallsControl={!openSpace}
             onToggleFullscreen={canExpand ? () => setExpanded(true) : undefined}
             variant="overlay"
             className="absolute bottom-2 left-2 z-20 max-w-[calc(100%-5.5rem)]"
@@ -464,7 +467,8 @@ export default function RoomLayoutPreview({
                 showRoof={showRoof}
                 onToggleWalls={() => setShowWalls((current) => !current)}
                 onToggleRoof={() => setShowRoof((current) => !current)}
-                showRoofControl={useWebGL}
+                showRoofControl={useWebGL && !openSpace}
+                showWallsControl={!openSpace}
                 onToggleFullscreen={() => {
                   setWalkthroughActive(false);
                   setWalkthroughLabel('');

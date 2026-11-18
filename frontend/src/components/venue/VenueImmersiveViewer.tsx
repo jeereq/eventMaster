@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Box, Images, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, Send } from 'lucide-react';
+import { Box, Images, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, Send, Users } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
 import { cn } from '@/lib/cn';
 import { sizedMediaUrl, type PublicVenue } from '@/lib/marketplace';
@@ -12,6 +12,13 @@ import VenueGalleryDialog from './VenueGalleryDialog';
 import VenueViewerPanel from './VenueViewerPanel';
 import { useElementFullscreen } from './useElementFullscreen';
 import { useVenueLayoutBlueprint } from './useVenueLayoutBlueprint';
+import GuestDressCodePicker from '@/components/room/GuestDressCodePicker';
+import {
+  DEFAULT_GUEST_SIMULATION,
+  GUEST_FILL_CHOICES,
+  type GuestDressCodeSetting,
+  type GuestSimulationSettings,
+} from '@/lib/roomGuestSimulation';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   ssr: false,
@@ -60,6 +67,10 @@ export default function VenueImmersiveViewer({
   const [panelOpen, setPanelOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const { ref, isFullscreen, cssFullscreen, toggle, exit } = useElementFullscreen<HTMLElement>();
+  /** « Salle remplie » : invités simulés, si l'abonnement de la salle l'inclut. */
+  const crowdAllowed = venue.guestAvatars === true;
+  const [crowd, setCrowd] = useState<GuestSimulationSettings | null>(null);
+  const [dressCode, setDressCode] = useState<GuestDressCodeSetting | null>(null);
 
   const { blueprint, loading, error, prefetch } = useVenueLayoutBlueprint({
     venueSlug: venue.slug,
@@ -67,6 +78,23 @@ export default function VenueImmersiveViewer({
     mainBlueprint,
     enabled: started,
   });
+
+  // Visite remplie : thème choisi par le visiteur ; les photos de personnes du plan restent privées.
+  const shownBlueprint = useMemo(() => {
+    if (!blueprint || !crowd || !crowdAllowed) return blueprint;
+    return {
+      ...blueprint,
+      metadata: {
+        ...blueprint.metadata,
+        guestPortraits: undefined,
+        guestDressCode: dressCode ?? blueprint.metadata?.guestDressCode,
+      },
+    };
+  }, [blueprint, crowd, crowdAllowed, dressCode]);
+  const crowdOn = Boolean(crowd && crowdAllowed);
+  const toggleCrowd = () => {
+    setCrowd((current) => (current ? null : { ...DEFAULT_GUEST_SIMULATION, ...(blueprint?.metadata?.guestSimulation ?? {}) }));
+  };
 
   // Sur grand écran, le panneau s'ouvre dès que la visite démarre ; sur mobile il reste fermé.
   const startExperience = () => {
@@ -101,8 +129,15 @@ export default function VenueImmersiveViewer({
       )}
     >
       <div className="absolute inset-0">
-        {started && blueprint ? (
-          <RoomLayoutPreview blueprint={blueprint} quality="showcase" showMeta={false} fill allowExpand={false} />
+        {started && shownBlueprint ? (
+          <RoomLayoutPreview
+            blueprint={shownBlueprint}
+            quality="showcase"
+            showMeta={false}
+            fill
+            allowExpand={false}
+            guestSimulation={crowdOn ? crowd : null}
+          />
         ) : (
           <div className="absolute inset-0">
             {posterUrl ? (
@@ -156,6 +191,18 @@ export default function VenueImmersiveViewer({
             <span>{hasLayoutChoice(layouts) ? 'Dispositions' : 'Espaces'}</span>
           </button>
         ) : null}
+        {started && crowdAllowed ? (
+          <button
+            type="button"
+            onClick={toggleCrowd}
+            aria-pressed={crowdOn}
+            title={crowdOn ? 'Vider la salle' : 'Voir la salle remplie d’invités'}
+            className={cn(overlayButtonClass, crowdOn && 'border-primary bg-primary-solid text-primary-foreground hover:bg-primary-solid')}
+          >
+            <Users className="h-4 w-4" aria-hidden />
+            <span>{crowdOn ? 'Salle remplie ✓' : 'Salle remplie'}</span>
+          </button>
+        ) : null}
         {venue.photos.length > 0 ? (
           <button type="button" onClick={openGallery} className={overlayButtonClass}>
             <Images className="h-4 w-4" aria-hidden />
@@ -197,6 +244,33 @@ export default function VenueImmersiveViewer({
           )
         ) : null}
       </div>
+
+      {crowdOn && crowd ? (
+        <div
+          className="absolute bottom-2.5 right-2.5 z-30 flex max-w-[calc(100%-1.25rem)] flex-wrap items-center gap-1.5 rounded-xl border border-border/70 bg-background/95 p-1.5 text-foreground shadow-lg backdrop-blur-md"
+          role="group"
+          aria-label="Réglages de la salle remplie"
+        >
+          <label className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 text-xs font-bold text-muted">
+            <Users className="h-3.5 w-3.5" aria-hidden />
+            <span>Remplissage</span>
+            <select
+              value={String(crowd.fill)}
+              onChange={(e) => setCrowd({ ...crowd, fill: Number(e.target.value) })}
+              className="bg-transparent text-xs font-bold text-foreground outline-none"
+              aria-label="Part des places occupées"
+            >
+              {GUEST_FILL_CHOICES.map((f) => (
+                <option key={f} value={String(f)}>{Math.round(f * 100)} %</option>
+              ))}
+            </select>
+          </label>
+          <GuestDressCodePicker
+            value={dressCode ?? shownBlueprint?.metadata?.guestDressCode ?? { id: 'mixte' }}
+            onChange={setDressCode}
+          />
+        </div>
+      ) : null}
 
       <div className="pointer-events-none absolute inset-x-0 top-14 z-20 flex justify-center px-3" aria-live="polite">
         {loading ? (

@@ -31,6 +31,7 @@ import {
   writePendingTicketPayment,
 } from '@/lib/pendingTicketPayment';
 import type { FlexPayChargeCurrency } from '@/lib/flexPayCurrency';
+import { isOpenSpace } from '@/lib/roomPlots';
 import type { FlexPayMobileOperatorId } from '@/lib/flexPayOperators';
 
 type SeatRow = {
@@ -122,6 +123,8 @@ export default function EventTicketCheckoutForm({
 
   const planWalls = useMemo(() => {
     if (planMeta?.roomLayoutBlueprint) {
+      // Espace ouvert (plein air) : pas de murs sur le plan.
+      if (isOpenSpace(planMeta.roomLayoutBlueprint.metadata)) return [];
       return resolveBlueprintWalls(planMeta.roomLayoutBlueprint);
     }
     return [];

@@ -4,6 +4,7 @@ import { isStudioJobAccepted, type StudioJobAccepted } from '@/lib/studioJobs';
 import { applyServerAllowance, getOrCreateDeviceId, AI_ROOM_PLAN_TOKEN_COST, type AiAllowance } from '@/lib/aiTokens';
 import { roomEditorCapabilities, type RoomEditorCapabilities } from '@/lib/roomEditorAccess';
 import { normalizeDoorOrthogonal } from '@/lib/roomLayoutClearance';
+import { isOpenSpace } from '@/lib/roomPlots';
 import { tidyImportedFloorLayout, type LayoutSelectionItem } from '@/lib/roomSelectionUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import {
@@ -1165,6 +1166,9 @@ function applyFixtureLook(
   return next;
 }
 
+/** Éléments qui n'existent que sur un mur : écartés pour un espace ouvert. */
+const WALL_BOUND_FIXTURES = new Set<string>(['door', 'balcony']);
+
 type ImportedWall = RoomPlanVisionDraft['walls'][number];
 
 /** Reporte les ouvertures de murs partiels sur le mur du contour le plus proche et parallèle. */
@@ -1598,7 +1602,19 @@ export function applyRoomPlanVisionDraft(
   const wallColor = appearance?.wallColor;
   const existingWalls = current.walls ?? [];
   let walls = existingWalls;
-  if (scaledDraft.walls && scaledDraft.walls.length > 0 && scaledDraft.walls.length < 3) {
+  // Espace ouvert (plein air) : on ne reproduit ni murs, ni portes, ni balcons ; seuls les éléments sont importés.
+  const openSpace = isOpenSpace(current.metadata);
+  if (openSpace) {
+    const before = fixtures.length;
+    for (let i = fixtures.length - 1; i >= 0; i -= 1) {
+      if (WALL_BOUND_FIXTURES.has(fixtures[i].kind)) fixtures.splice(i, 1);
+    }
+    if (fixtures.length < before) warnings.push('Espace ouvert : portes et balcons vus sur la photo non importés.');
+    for (let i = selection.length - 1; i >= 0; i -= 1) {
+      const sel = selection[i];
+      if (sel.kind === 'fixture' && !fixtures.some((f) => f.id === sel.id)) selection.splice(i, 1);
+    }
+  } else if (scaledDraft.walls && scaledDraft.walls.length > 0 && scaledDraft.walls.length < 3) {
     // Un ou deux murs seulement (« only VISIBLE walls ») : on ferme la salle avec le contour
     // et on reporte leurs portes et fenêtres sur le mur du contour correspondant.
     walls = mergeOpeningsOntoOutlineWalls(
@@ -1670,9 +1686,10 @@ export function applyRoomPlanVisionDraft(
       floorType: observedFloor ?? current.metadata.floorType,
       floorImageFit: keepExistingFloor ? current.metadata.floorImageFit : undefined,
       roofStyle: roof.roofStyle,
-      showRoof: roof.showRoof,
+      showRoof: openSpace ? false : roof.showRoof,
       // Tente vue par l’IA : parois en toile et éclairage de tente, sans changer le type de salle.
       tentVenue: current.roomType !== 'TENT'
+        && !openSpace
         && roof.showRoof === true
         && (roof.roofStyle === 'tentSwag' || roof.roofStyle === 'pagoda')
         ? true
