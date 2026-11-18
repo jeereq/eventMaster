@@ -436,8 +436,8 @@ export default function RoomWallEditorPanel({
               <p className="text-xs text-muted">Aucune ouverture sur ce mur.</p>
             )}
 
-            {(selected.openings ?? []).map((op) => (
-              <div key={op.id} className="p-3 rounded-[var(--radius-card)] border border-border bg-surface space-y-3">
+            {(selected.openings ?? []).map((op, opIndex, list) => (
+              <div key={op.id} data-tour={opIndex === list.length - 1 ? 'opening-last' : undefined} className="p-3 rounded-[var(--radius-card)] border border-border bg-surface space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-bold">{op.kind === 'door' ? 'Porte' : 'Fenêtre'}</span>
                   <button

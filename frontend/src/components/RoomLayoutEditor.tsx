@@ -1131,6 +1131,46 @@ export default function RoomLayoutEditor({
   /** Assistant (chat d’aide sur les actions de l’éditeur). */
   const [assistantOpen, setAssistantOpen] = useState(false);
   const closeAssistant = useCallback(() => setAssistantOpen(false), []);
+  /** Sélection lue par les guides pas à pas : « table », « row », « fixture:door »… */
+  const guideSelection = useMemo(
+    () => selection.map((s) => (s.kind === 'fixture' ? `fixture:${blueprint.fixtures.find((f) => f.id === s.id)?.kind ?? ''}` : s.kind)),
+    [selection, blueprint.fixtures],
+  );
+  // Outil de vérification des guides (développement) : sélectionne le premier élément d'un type.
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    const w = window as unknown as { __emEditorTest?: unknown };
+    w.__emEditorTest = {
+      select: (want: string) => {
+        if (want === 'none') {
+          setSelection([]);
+          return true;
+        }
+        if (want === 'wall') {
+          const wall = blueprint.walls?.[0];
+          if (!wall) return false;
+          setWallEditMode(true);
+          setSelection([{ kind: 'wall', id: wall.id }]);
+          return true;
+        }
+        if (want.startsWith('fixture')) {
+          const fk = want.split(':')[1];
+          const f = blueprint.fixtures.find((x) => !fk || x.kind === fk);
+          if (!f) return false;
+          setSelection([{ kind: 'fixture', id: f.id }]);
+          return true;
+        }
+        const pool = want === 'any' || want === 'many' ? blueprint.furniture : blueprint.furniture.filter((x) => x.kind === want);
+        const picked = pool.slice(0, want === 'many' ? 3 : 1);
+        if (!picked.length || (want === 'many' && picked.length < 2)) return false;
+        setSelection(picked.map((x) => ({ kind: x.kind, id: x.id })));
+        return true;
+      },
+    };
+    return () => {
+      delete w.__emEditorTest;
+    };
+  }, [blueprint.walls, blueprint.fixtures, blueprint.furniture]);
   const [tourOffer, setTourOffer] = useState(() => !readOnly && !readGuideParam() && !tourAlreadySeen());
   const startTour = useCallback(() => {
     markTourSeen();
@@ -3064,6 +3104,8 @@ export default function RoomLayoutEditor({
             elementsOpen ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50',
           )}
           onClick={() => setElementsOpen((v) => !v)}
+          data-tour="inventory"
+          aria-expanded={elementsOpen}
         >
           <span className="flex items-center gap-2">
             <ListTree className="w-4 h-4" />
@@ -3273,6 +3315,7 @@ export default function RoomLayoutEditor({
       {selection.length > 0 && !readOnly && (
         <Toolbar
           label="Actions sur la sélection"
+          tourId="selection-bar"
           className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 p-1 rounded-full bg-surface/95 dark:bg-surface-elevated/95 border border-border shadow-xl text-foreground animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="px-3 min-h-11 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center gap-1.5 select-none">
@@ -4183,6 +4226,7 @@ export default function RoomLayoutEditor({
                 type="button"
                 aria-expanded={accordion === 'murs-sols'}
                 aria-controls="editor-panel-murs-sols"
+                data-tour="acc-ambience"
                 className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'murs-sols' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
                 onClick={() => setAccordion(accordion === 'murs-sols' ? '' : 'murs-sols')}
               >
@@ -4666,7 +4710,7 @@ export default function RoomLayoutEditor({
                         </button>
                       ))}
                     </div>
-                <div className="space-y-2 pt-2">
+                <div className="space-y-2 pt-2" data-tour="floor-tint">
                   <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Teinte / couleur du sol</p>
                   <div className="flex flex-wrap gap-1.5 items-center">
                     {['#ffffff', '#f5f0e8', '#e8d5a3', '#d4a574', '#a16207', '#78716c', '#1e3a5f', '#166534', '#7f1d1d', '#312e81'].map((c) => (
@@ -4689,11 +4733,12 @@ export default function RoomLayoutEditor({
                         ...blueprint,
                         metadata: { ...blueprint.metadata, floorColor: e.target.value },
                       }, { message: 'Couleur de sol personnalisée', kind: 'settings' })}
+                      aria-label="Couleur de sol personnalisée"
                       className="min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
                     />
                   </div>
                 </div>
-                <div className="space-y-2 pt-3 border-t border-border/50">
+                <div className="space-y-2 pt-3 border-t border-border/50" data-tour="wall-paint">
                   <p className={EDITOR_HEADING}><BrickWall className="w-3 h-3" /> Peinture murs (globale)</p>
                   <div className="flex flex-wrap gap-1.5 items-center">
                     {['#e8e4df', '#f8fafc', '#d6d3d1', '#b4533c', '#8b6914', '#78716c', '#1e3a5f', '#fef3c7'].map((c) => (
@@ -4717,6 +4762,7 @@ export default function RoomLayoutEditor({
                         metadata: { ...blueprint.metadata, wallPaintColor: e.target.value },
                         walls: (blueprint.walls ?? []).map((w) => ({ ...w, color: e.target.value })),
                       }, { message: 'Couleur mur personnalisée', kind: 'settings' })}
+                      aria-label="Couleur des murs personnalisée"
                       className="min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
                     />
                   </div>
@@ -5049,6 +5095,7 @@ export default function RoomLayoutEditor({
               type="button"
               aria-expanded={accordion === 'batiment'}
               aria-controls="editor-panel-batiment"
+                data-tour="acc-building"
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'batiment' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => setAccordion(accordion === 'batiment' ? '' : 'batiment')}
             >
@@ -5341,6 +5388,7 @@ export default function RoomLayoutEditor({
               type="button"
               aria-expanded={accordion === 'outils'}
               aria-controls="editor-panel-outils"
+                data-tour="acc-arrange"
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'outils' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => setAccordion(accordion === 'outils' ? '' : 'outils')}
             >
@@ -5481,6 +5529,7 @@ export default function RoomLayoutEditor({
               type="button"
               aria-expanded={accordion === 'config'}
               aria-controls="editor-panel-config"
+                data-tour="acc-config"
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'config' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => setAccordion(accordion === 'config' ? '' : 'config')}
             >
@@ -5526,6 +5575,7 @@ export default function RoomLayoutEditor({
                 type="color"
                 value={blueprint.metadata.defaultTableColor ?? '#ffffff'}
                 onChange={(e) => setDefaultTableColor(e.target.value)}
+                aria-label="Couleur des tables"
                 className="min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border cursor-pointer shrink-0"
               />
               <button
@@ -8938,10 +8988,10 @@ export default function RoomLayoutEditor({
   const toolbar = !readOnly && (
     <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-4 lg:gap-y-2" role="toolbar" aria-label="Outils du plan">
       <ToolbarCluster label="Ajouter">
-      <button type="button" onClick={openQuickAdd} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Rechercher un élément à ajouter">
+      <button type="button" onClick={openQuickAdd} data-tour="quick-add" className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Rechercher un élément à ajouter">
         <Search className="w-3.5 h-3.5" aria-hidden /> Rechercher
       </button>
-      <button type="button" onClick={startTour} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Visite guidée de l’éditeur">
+      <button type="button" onClick={startTour} data-tour="tour" className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Visite guidée de l’éditeur">
         <GraduationCap className="w-3.5 h-3.5" aria-hidden /> Guide
       </button>
       <button type="button" onClick={() => setAssistantOpen(true)} data-tour="assistant" className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Poser une question sur l’éditeur">
@@ -9769,7 +9819,7 @@ export default function RoomLayoutEditor({
   );
 
   const quickCreatePanel = quickCreate ? (
-    <div className="flex flex-wrap items-end gap-3 p-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/60">
+    <div data-tour="quick-create" className="flex flex-wrap items-end gap-3 p-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/60">
       {/* ───────── GÉNÉRATEUR D’AMPHITHÉÂTRE & GRADINS (PINTEREST) ───────── */}
       {quickCreate === 'amphitheater' && (
         <div className="w-full space-y-3">
@@ -10651,6 +10701,7 @@ export default function RoomLayoutEditor({
             <button
               type="button"
               onClick={startTour}
+              data-tour="tour"
               className={cn(EDITOR_TOOL, tourOpen ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
               title="Visite guidée de l’éditeur, adaptée à votre forfait"
             >
@@ -10756,16 +10807,33 @@ export default function RoomLayoutEditor({
         className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5"
         role="toolbar"
         aria-label="Caméra et actions du plan"
+        data-tour="view-toggle"
       >
-        <button
-          type="button"
-          onClick={() => setLockOrbit((v) => !v)}
-          className={cn(EDITOR_TOOL, 'shrink-0', lockOrbit ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-          title="Déplacer le mobilier ou tourner la vue"
-        >
-          {lockOrbit ? <MoveHorizontal className="w-3.5 h-3.5" aria-hidden /> : <Video className="w-3.5 h-3.5" aria-hidden />}
-          {lockOrbit ? 'Déplacer' : 'Regarder'}
-        </button>
+        <div role="group" aria-label="Effet du glisser sur le plan" className="flex items-center gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted shrink-0">
+          {([
+            { move: true, label: 'Déplacer', title: 'Déplacer les objets', icon: MoveHorizontal },
+            { move: false, label: 'Regarder', title: 'Tourner la vue', icon: Video },
+          ] as const).map((mode) => {
+            const active = lockOrbit === mode.move;
+            const Icon = mode.icon;
+            return (
+              <button
+                key={mode.label}
+                type="button"
+                title={mode.title}
+                aria-pressed={active}
+                onClick={() => setLockOrbit(mode.move)}
+                className={cn(
+                  'inline-flex items-center gap-1 min-h-10 px-2.5 rounded-[var(--radius-button)] text-xs font-bold transition-colors',
+                  active ? 'bg-primary-solid text-primary-foreground' : 'text-muted',
+                )}
+              >
+                <Icon className="w-3.5 h-3.5" aria-hidden />
+                {mode.label}
+              </button>
+            );
+          })}
+        </div>
         <button
           type="button"
           onClick={() => {
@@ -10782,8 +10850,8 @@ export default function RoomLayoutEditor({
         </button>
         <div role="group" aria-label="Mode d’affichage" className="flex items-center gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted shrink-0">
           {([
-            { amount: 0, label: '2D', icon: LayoutGrid },
-            { amount: 60, label: '3D', icon: Box },
+            { amount: 0, label: '2D', title: 'Afficher le plan 2D', icon: LayoutGrid },
+            { amount: 60, label: '3D', title: 'Afficher la perspective 3D', icon: Box },
           ] as const).map((mode) => {
             const active = mode.amount === 0 ? depthAmount === 0 : depthAmount > 0;
             const Icon = mode.icon;
@@ -10791,6 +10859,7 @@ export default function RoomLayoutEditor({
               <button
                 key={mode.label}
                 type="button"
+                title={mode.title}
                 aria-pressed={active}
                 onClick={() => {
                   if (!active) setDepthAmount(mode.amount);
@@ -10867,7 +10936,7 @@ export default function RoomLayoutEditor({
       />
     ) : null}
     {!readOnly ? (
-      <EditorAssistant open={assistantOpen} onClose={closeAssistant} caps={caps} upgradeHref={user ? '/dashboard/billing' : '/tarifs'} />
+      <EditorAssistant open={assistantOpen} onClose={closeAssistant} caps={caps} upgradeHref={user ? '/dashboard/billing' : '/tarifs'} selection={guideSelection} />
     ) : null}
     {!readOnly && tourOffer && !tourOpen ? (
       <div
@@ -11407,7 +11476,7 @@ export default function RoomLayoutEditor({
                 'md:flex-1 md:min-w-[240px] md:max-w-[320px] overflow-y-auto shrink-0 space-y-3 contain-layout contain-paint',
                 mobilePane === 'edit' ? 'flex-1 min-h-0 max-lg:max-h-none' : 'max-h-[34dvh] md:max-h-none',
                 mobilePane !== 'edit' && 'max-lg:hidden',
-              )}>
+              )} data-tour="sidebar">
                 {renderCanvasInventory()}
                 {renderEditPanel()}
               </div>
@@ -11417,6 +11486,7 @@ export default function RoomLayoutEditor({
               safeArea
               value={mobilePane}
               onChange={setMobilePane}
+              tourPrefix="pane-"
               panes={[
                 { id: 'plan', label: 'Plan', icon: LayoutGrid, hint: 'Voir et déplacer le plan' },
                 { id: 'tools', label: 'Ajouter', icon: Plus, hint: 'Modèles et outils' },
@@ -11515,7 +11585,7 @@ export default function RoomLayoutEditor({
           <div className={cn(
             'max-lg:max-h-[min(70dvh,32rem)] lg:max-h-[min(72vh,42rem)] overflow-y-auto space-y-3 contain-layout contain-paint pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]',
             mobilePane !== 'edit' && 'max-lg:hidden',
-          )}>
+          )} data-tour="sidebar">
             {renderCanvasInventory()}
             {renderEditPanel()}
           </div>
@@ -11525,6 +11595,7 @@ export default function RoomLayoutEditor({
           safeArea={mobileDockOffset !== 'dashboard'}
           value={mobilePane}
           onChange={setMobilePane}
+          tourPrefix="pane-"
           panes={[
             { id: 'plan', label: 'Plan', icon: LayoutGrid, hint: 'Voir et déplacer le plan' },
             { id: 'tools', label: 'Ajouter', icon: Plus, hint: 'Modèles et outils' },
