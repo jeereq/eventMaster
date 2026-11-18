@@ -86,6 +86,10 @@ export interface PlanCapabilities {
   customRsvpFields: boolean;
   mockupOcr: boolean;
   roomThemesFixtures: boolean;
+  /** Photo de la personne sur les avatars d’invités simulés. */
+  guestPhotoAvatars?: boolean;
+  /** Invités simulés (avatars) dans l’éditeur de salle. */
+  guestAvatars?: boolean;
   commercialNetwork: boolean;
   adminReports: boolean;
   roomEditorLevel: string;

@@ -1273,6 +1273,10 @@ model SubscriptionPlan {
   protocolQr          Boolean  @default(false)
   seatNotifications   Boolean  @default(false)
   roomThemesFixtures  Boolean  @default(false)
+  /** Avatars d’invités simulés avec la photo de la personne. */
+  guestPhotoAvatars   Boolean  @default(false)
+  /** Invités simulés (avatars) dans l’éditeur de salle. */
+  guestAvatars        Boolean  @default(true)
   adminReports        Boolean  @default(false)
   customRsvpFields    Boolean  @default(true)
   roomEditorLevel     String   @default("basic")

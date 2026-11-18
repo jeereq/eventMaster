@@ -34,6 +34,8 @@ interface GuestRoomPlanCanvasProps {
   roomOutline?: GuestRoomOutline | null;
   pricingZones?: PricingZone[] | null;
   walls?: RoomWallSegment[] | null;
+  /** Espace ouvert (plein air) : ni murs, ni bouton pour les afficher. */
+  openSpace?: boolean;
   canvasWidthM?: number;
   canvasHeightM?: number;
   roomThemeId?: string | null;
@@ -179,6 +181,7 @@ export default function GuestRoomPlanCanvas({
   roomOutline,
   pricingZones,
   walls,
+  openSpace = false,
   canvasWidthM,
   canvasHeightM,
   roomThemeId,
@@ -211,10 +214,11 @@ export default function GuestRoomPlanCanvas({
   const clipPath = outline ? getRoomOutlineClipPath(outline.shape) : undefined;
 
   const effectiveWalls = useMemo(() => {
+    if (openSpace) return [];
     if (walls && walls.length > 0) return walls;
     if (outline) return wallsFromRoomOutline(outline, { withEntrance: true });
     return [];
-  }, [walls, outline]);
+  }, [walls, outline, openSpace]);
 
   const displayPositions = useMemo(
     () => resolveGuestTablePositions(tables.map((t) => ({ id: t.id, x: t.x, y: t.y }))),
@@ -320,6 +324,7 @@ export default function GuestRoomPlanCanvas({
             showWalls={showWalls}
             onToggleWalls={() => setShowWalls((current) => !current)}
             showRoofControl={false}
+            showWallsControl={effectiveWalls.length > 0}
           />
           <PlanZoomControls
             zoom={zoom}

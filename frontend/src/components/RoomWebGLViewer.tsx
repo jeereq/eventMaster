@@ -128,6 +128,8 @@ import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
 import { detectLayoutClearanceConflicts } from '@/lib/roomLayoutClearance';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import { entranceViewPose } from '@/lib/roomWalkthrough';
+import { buildGuestSimulation, type GuestSimulationSettings } from '@/lib/roomGuestSimulation';
+import { GuestAvatars } from '@/components/room/GuestAvatarMeshes';
 import {
   DOLLHOUSE_WALL_CUT_M,
   dollhouseOverviewPose,
@@ -222,6 +224,9 @@ interface RoomWebGLViewerProps {
   onSelect: (sel: WebGLSelection | null, opts?: { additive?: boolean }) => void;
   onMoveItem?: (kind: WebGLSelectableKind, id: string, xPct: number, yPct: number) => void;
   onMoveEnd?: () => void;
+  /** Redimensionnement d’une zone ou d’un élément fixe par ses poignées (rectangle en %, coin haut-gauche). */
+  onResizeItem?: (kind: 'fixture' | 'zone', id: string, rect: { x: number; y: number; w: number; h: number }) => void;
+  onResizeEnd?: () => void;
   readOnly?: boolean;
   className?: string;
   wallEditMode?: boolean;
@@ -251,6 +256,8 @@ interface RoomWebGLViewerProps {
   introView?: RoomIntroView;
   /** Change de valeur pour rejouer l’arrivée (aperçu depuis l’éditeur). */
   introReplayKey?: number;
+  /** Invités simulés (avatars assis, debout et danseurs) ; null ou absent = salle vide. */
+  guestSimulation?: GuestSimulationSettings | null;
 }
 
 const SPACE_ICONS: Record<RoomSpaceIcon, React.ComponentType<{ className?: string }>> = {
@@ -2631,6 +2638,212 @@ type DragSession = {
 
 const DRAG_THRESHOLD_PX = 8;
 
+const RESIZE_MIN_M = 0.2;
+const RESIZE_SNAP_M = 0.05;
+
+/**
+ * Poignées de redimensionnement (coins et milieux des côtés) de la zone ou de
+ * l'élément fixe sélectionné. Le côté opposé reste en place ; Maj garde les
+ * proportions. Les poignées sont détectées à l'écran (avant les clics 3D), pour
+ * rester attrapables même devant un meuble.
+ */
+function ResizeHandles({
+  blueprint,
+  selection,
+  widthM,
+  heightM,
+  onResize,
+  onEnd,
+  orbitControlsRef,
+}: {
+  blueprint: RoomLayoutBlueprint;
+  selection: WebGLSelection;
+  widthM: number;
+  heightM: number;
+  onResize: (kind: 'fixture' | 'zone', id: string, rect: { x: number; y: number; w: number; h: number }) => void;
+  onEnd: () => void;
+  orbitControlsRef?: React.MutableRefObject<{ enabled?: boolean } | null>;
+}) {
+  const { camera, gl } = useThree();
+  const onResizeRef = useRef(onResize);
+  const onEndRef = useRef(onEnd);
+  useEffect(() => {
+    onResizeRef.current = onResize;
+    onEndRef.current = onEnd;
+  });
+  const kind = selection.kind === 'fixture' ? 'fixture' : selection.kind === 'zone' ? 'zone' : null;
+  const item = kind === 'fixture'
+    ? blueprint.fixtures.find((f) => f.id === selection.id)
+    : kind === 'zone'
+      ? blueprint.furniture.find((f) => f.kind === 'zone' && f.id === selection.id) as Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'zone' }> | undefined
+      : undefined;
+  const locked = Boolean(item && 'locked' in item && (item as { locked?: boolean }).locked);
+  const geom = useMemo(() => {
+    if (!item || !kind) return null;
+    const w = (item.w / 100) * widthM;
+    const d = (item.h / 100) * heightM;
+    const [cx, cz] = pctToWorld(item.x + item.w / 2, item.y + item.h / 2, widthM, heightM);
+    const rot = ((item.rotation ?? 0) * Math.PI) / 180;
+    const top = kind === 'fixture' ? Math.min(1.2, Math.max(0.05, (item as { heightM?: number }).heightM ?? 0.05)) : 0.06;
+    const y = worldElevationForStory(blueprint, item.storyId) + top + 0.02;
+    const handles: Array<{ sx: number; sz: number; x: number; z: number }> = [];
+    for (const sx of [-1, 0, 1]) {
+      for (const sz of [-1, 0, 1]) {
+        if (sx === 0 && sz === 0) continue;
+        const lx = (sx * w) / 2;
+        const lz = (sz * d) / 2;
+        handles.push({ sx, sz, x: cx + lx * Math.cos(rot) + lz * Math.sin(rot), z: cz - lx * Math.sin(rot) + lz * Math.cos(rot) });
+      }
+    }
+    return { w, d, cx, cz, rot, y, handles };
+  }, [item, kind, widthM, heightM, blueprint]);
+
+  const [active, setActive] = useState<{ sx: number; sz: number } | null>(null);
+  const geomRef = useRef(geom);
+  useEffect(() => {
+    if (!active) geomRef.current = geom;
+  }, [geom, active]);
+
+  // Détection des poignées à l'écran, avant les gestes 3D (déplacement, orbite).
+  useEffect(() => {
+    if (!geom || !kind || !item || locked) return;
+    const el = gl.domElement;
+    const v = new THREE.Vector3();
+    const pick = (e: PointerEvent) => {
+      const g = geomRef.current;
+      if (!g) return null;
+      const rect = el.getBoundingClientRect();
+      let best: { sx: number; sz: number } | null = null;
+      let bestDist = 16;
+      for (const h of g.handles) {
+        v.set(h.x, g.y, h.z).project(camera);
+        if (v.z > 1) continue;
+        const px = rect.left + ((v.x + 1) / 2) * rect.width;
+        const py = rect.top + ((1 - v.y) / 2) * rect.height;
+        const dist = Math.hypot(px - e.clientX, py - e.clientY);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = { sx: h.sx, sz: h.sz };
+        }
+      }
+      return best;
+    };
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      const hit = pick(e);
+      if (!hit) return;
+      e.stopPropagation();
+      e.preventDefault();
+      const ctrl = orbitControlsRef?.current;
+      if (ctrl) ctrl.enabled = false;
+      setActive(hit);
+    };
+    const onHover = (e: PointerEvent) => {
+      if (active) return;
+      const hit = pick(e);
+      if (hit) el.style.cursor = hit.sx !== 0 && hit.sz !== 0 ? 'nwse-resize' : hit.sx !== 0 ? 'ew-resize' : 'ns-resize';
+      else if (el.style.cursor.endsWith('-resize')) el.style.cursor = '';
+    };
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onHover);
+    return () => {
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onHover);
+    };
+  }, [geom, kind, item, locked, gl, camera, orbitControlsRef, active]);
+
+  // Glissé d'une poignée : projection sur le plan du sol, côté opposé fixe.
+  useEffect(() => {
+    if (!active || !kind || !item) return;
+    const g = geomRef.current;
+    if (!g) return;
+    const id = item.id;
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -g.y);
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const hit = new THREE.Vector3();
+    const cos = Math.cos(g.rot);
+    const sin = Math.sin(g.rot);
+    const anchorX = (-active.sx * g.w) / 2;
+    const anchorZ = (-active.sz * g.d) / 2;
+    const snapM = (m: number) => Math.max(RESIZE_MIN_M, Math.round(m / RESIZE_SNAP_M) * RESIZE_SNAP_M);
+    const onMove = (e: PointerEvent) => {
+      e.preventDefault();
+      const rect = gl.domElement.getBoundingClientRect();
+      ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(ndc, camera);
+      if (!raycaster.ray.intersectPlane(plane, hit)) return;
+      const dx = hit.x - g.cx;
+      const dz = hit.z - g.cz;
+      const lx = dx * cos - dz * sin;
+      const lz = dx * sin + dz * cos;
+      let w = active.sx !== 0 ? snapM(active.sx * (lx - anchorX)) : g.w;
+      let d = active.sz !== 0 ? snapM(active.sz * (lz - anchorZ)) : g.d;
+      if (e.shiftKey && active.sx !== 0 && active.sz !== 0) {
+        const k = Math.max(w / g.w, d / g.d);
+        w = Math.max(RESIZE_MIN_M, g.w * k);
+        d = Math.max(RESIZE_MIN_M, g.d * k);
+      }
+      w = Math.min(w, widthM);
+      d = Math.min(d, heightM);
+      const lcx = active.sx !== 0 ? anchorX + (active.sx * w) / 2 : 0;
+      const lcz = active.sz !== 0 ? anchorZ + (active.sz * d) / 2 : 0;
+      const wx = g.cx + lcx * cos + lcz * sin;
+      const wz = g.cz - lcx * sin + lcz * cos;
+      const wPct = (w / widthM) * 100;
+      const hPct = (d / heightM) * 100;
+      const centre = { x: ((wx / widthM) + 0.5) * 100, y: ((wz / heightM) + 0.5) * 100 };
+      onResizeRef.current(kind, id, {
+        x: Math.round((centre.x - wPct / 2) * 100) / 100,
+        y: Math.round((centre.y - hPct / 2) * 100) / 100,
+        w: Math.round(wPct * 100) / 100,
+        h: Math.round(hPct * 100) / 100,
+      });
+    };
+    const finish = () => {
+      const ctrl = orbitControlsRef?.current;
+      if (ctrl) ctrl.enabled = true;
+      gl.domElement.style.cursor = '';
+      setActive(null);
+      onEndRef.current();
+    };
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', finish);
+    window.addEventListener('pointercancel', finish);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', finish);
+      window.removeEventListener('pointercancel', finish);
+    };
+    // La session garde la géométrie de départ : pas de relance pendant le glissé.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+
+  if (!geom || locked) return null;
+  const size = Math.min(0.3, Math.max(0.12, Math.max(widthM, heightM) * 0.011));
+  return (
+    <group name="resize-handles">
+      {geom.handles.map((h) => {
+        const corner = h.sx !== 0 && h.sz !== 0;
+        const on = active && active.sx === h.sx && active.sz === h.sz;
+        return (
+          <group key={`${h.sx}:${h.sz}`} position={[h.x, geom.y, h.z]} rotation={[0, geom.rot, 0]}>
+            <mesh renderOrder={1000} raycast={() => null}>
+              <boxGeometry args={[size * 1.35, size * 0.3, size * 1.35]} />
+              <meshBasicMaterial color={on ? '#facc15' : '#166534'} depthTest={false} transparent opacity={0.95} />
+            </mesh>
+            <mesh renderOrder={1001} position={[0, size * 0.02, 0]} raycast={() => null}>
+              <boxGeometry args={[corner ? size : size * 0.8, size * 0.32, corner ? size : size * 0.8]} />
+              <meshBasicMaterial color="#ffffff" depthTest={false} transparent opacity={0.98} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 function DragPlane({
   session,
   widthM,
@@ -3570,6 +3783,8 @@ function SceneContent({
   onSelect,
   onMoveItem,
   onMoveEnd,
+  onResizeItem,
+  onResizeEnd,
   readOnly,
   wallEditMode,
   lockOrbit = false,
@@ -3595,6 +3810,7 @@ function SceneContent({
   introGlide = false,
   filmActive = false,
   frameTrackRef,
+  guestSimulation = null,
 }: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode' | 'introFlyIn' | 'introView' | 'introReplayKey'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
@@ -3882,6 +4098,15 @@ function SceneContent({
     return map;
   }, [blockedSeats]);
   const surfacePickable = !lockOrbit && !dragSession;
+  const simulatedGuests = useMemo(() => {
+    if (!guestSimulation) return [];
+    return buildGuestSimulation(blueprint, {
+      ...guestSimulation,
+      surfaceElevationAt: (x, y, id) => resolveFurnitureSurfaceAt(blueprint, x, y, { allowTable: false, ignoreId: id })?.elevationM ?? 0,
+      storyElevation: (storyId) => worldElevationForStory(blueprint, storyId),
+      storyVisible: (storyId) => isStoryVisible(blueprint, storyId),
+    }).guests;
+  }, [blueprint, guestSimulation]);
   const outdoorSurroundings = resolveOutdoorSurroundings(blueprint.metadata.outdoorSurroundings);
 
   return (
@@ -4461,7 +4686,26 @@ function SceneContent({
         }}
       />
 
+      {onResizeItem && !readOnly && !wallEditMode && !dragSession && selected.length === 1 ? (
+        <ResizeHandles
+          blueprint={blueprint}
+          selection={selected[0]}
+          widthM={widthM}
+          heightM={heightM}
+          onResize={onResizeItem}
+          onEnd={() => onResizeEnd?.()}
+          orbitControlsRef={orbitControlsRef as React.MutableRefObject<{ enabled?: boolean } | null>}
+        />
+      ) : null}
+
       {highlightSpace ? <SpaceHighlight space={highlightSpace} reduceMotion={reduceMotion} /> : null}
+      {simulatedGuests.length > 0 ? (
+        <GuestAvatars
+          guests={simulatedGuests}
+          animate={!reduceMotion}
+          castShadow={qualitySettings.quality !== 'draft'}
+        />
+      ) : null}
       <IntroFlyIn
         pendingRef={pendingIntroRef}
         orbitControlsRef={orbitControlsRef}
@@ -4504,6 +4748,8 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   onSelect,
   onMoveItem,
   onMoveEnd,
+  onResizeItem,
+  onResizeEnd,
   readOnly = false,
   className,
   wallEditMode = false,
@@ -4521,6 +4767,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   introFlyIn = false,
   introView: introViewProp,
   introReplayKey = 0,
+  guestSimulation = null,
 }, ref) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
   const touchScreen = useCoarsePointer();
@@ -5223,6 +5470,8 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             onSelect={onSelect}
             onMoveItem={onMoveItem}
             onMoveEnd={onMoveEnd}
+            onResizeItem={onResizeItem}
+            onResizeEnd={onResizeEnd}
             readOnly={readOnly || previewMode}
             wallEditMode={wallEditMode}
             lockOrbit={orbitLocked}
@@ -5252,6 +5501,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             introReplayKey={introReplayKey}
             onIntroPreset={handleIntroPreset}
             introGlide={introGlide}
+            guestSimulation={guestSimulation}
             filmActive={film !== null}
             frameTrackRef={frameTrackRef}
           />

@@ -11,15 +11,25 @@ import { cn } from '@/lib/cn';
 import type { LayoutActionEntry } from '@/lib/layoutActionLog';
 import { wallLengthMeters, type RoomLayoutBlueprint, type RoomWallSegment } from '@/lib/roomLayoutUtils';
 import {
+  GRAFFITI_BACKDROP_LABELS,
+  GRAFFITI_EFFECT_LABELS,
+  GRAFFITI_FONT_LABELS,
   GRAFFITI_PALETTES,
   GRAFFITI_STYLE_LABELS,
+  WALL_ART_FACE_LABELS,
   WALL_ART_FRAME_LABELS,
   clampWallArt,
   createWallArt,
   graffitiAspect,
+  graffitiEffects,
   sanitizeGraffitiText,
+  wallArtFace,
+  type GraffitiBackdrop,
+  type GraffitiEffects,
+  type GraffitiFont,
   type GraffitiStyle,
   type RoomWallArt,
+  type WallArtFace,
   type WallArtFrame,
 } from '@/lib/roomWallArt';
 
@@ -104,7 +114,7 @@ export default function WallArtPanel({
     <section className="space-y-3 border-t border-border pt-3" aria-labelledby="wall-art-title">
       <div>
         <p id="wall-art-title" className="text-sm font-semibold text-foreground">Images et graffitis</p>
-        <p className="text-xs text-muted">Photos, affiches, logos ou lettrage graffiti sur la face intérieure de ce mur ({lengthM.toFixed(1)} m).</p>
+        <p className="text-xs text-muted">Photos, affiches, logos ou lettrage graffiti sur ce mur ({lengthM.toFixed(1)} m), côté salle ou côté extérieur.</p>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <button
@@ -145,7 +155,8 @@ export default function WallArtPanel({
         <ul className="space-y-2">
           {art.map((a, i) => {
             const open = activeId === a.id;
-            const label = a.kind === 'graffiti' ? `Graffiti « ${a.text ?? ''} »` : `Image ${i + 1}`;
+            const face = wallArtFace(a);
+            const label = `${a.kind === 'graffiti' ? `Graffiti « ${a.text ?? ''} »` : `Image ${i + 1}`}${face === 'outside' ? ' · extérieur' : ''}`;
             return (
               <li key={a.id} className={cn('rounded-[var(--radius-button)] border bg-surface', open ? 'border-primary/50' : 'border-border')}>
                 <div className="flex items-center gap-2 pl-3">
@@ -163,6 +174,26 @@ export default function WallArtPanel({
                 </div>
                 {open ? (
                   <div className="space-y-3 border-t border-border p-3">
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold text-muted">Face du mur</span>
+                      <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Face du mur">
+                        {(Object.keys(WALL_ART_FACE_LABELS) as WallArtFace[]).map((f) => (
+                          <button
+                            key={f}
+                            type="button"
+                            role="radio"
+                            aria-checked={face === f}
+                            onClick={() => face !== f && patch(a.id, { face: f }, f === 'outside' ? 'Décor passé côté extérieur' : 'Décor passé côté salle')}
+                            className={cn(
+                              'min-h-11 rounded-[var(--radius-button)] border px-2 text-xs font-semibold',
+                              face === f ? 'border-primary bg-primary/10 text-foreground' : 'border-border bg-surface text-muted hover:bg-surface-muted',
+                            )}
+                          >
+                            {WALL_ART_FACE_LABELS[f]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     {a.kind === 'graffiti' ? (
                       <>
                         <label className="block space-y-1 text-xs">
@@ -182,7 +213,7 @@ export default function WallArtPanel({
                         </label>
                         <label className="block space-y-1 text-xs">
                           <span className="font-semibold text-muted">Style</span>
-                          <select className={FIELD} value={a.graffitiStyle ?? 'bubble'} onChange={(e) => patch(a.id, { graffitiStyle: e.target.value as GraffitiStyle }, 'Style du graffiti modifié')}>
+                          <select className={FIELD} value={a.graffitiStyle ?? 'bubble'} onChange={(e) => patch(a.id, { graffitiStyle: e.target.value as GraffitiStyle, effects: undefined }, 'Style du graffiti modifié')}>
                             {(Object.keys(GRAFFITI_STYLE_LABELS) as GraffitiStyle[]).map((s) => (
                               <option key={s} value={s}>{GRAFFITI_STYLE_LABELS[s]}</option>
                             ))}
@@ -218,7 +249,65 @@ export default function WallArtPanel({
                               Contour
                             </label>
                           </div>
+                          <label className="flex min-h-11 items-center gap-2 text-xs text-muted">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(a.fillColor2)}
+                              onChange={(e) => patch(a.id, { fillColor2: e.target.checked ? '#ffd200' : undefined }, e.target.checked ? 'Dégradé ajouté' : 'Dégradé retiré')}
+                              className="size-4 rounded border-border"
+                            />
+                            Dégradé
+                            {a.fillColor2 ? (
+                              <input type="color" value={a.fillColor2} onChange={(e) => patch(a.id, { fillColor2: e.target.value }, 'Dégradé modifié')} className="ml-auto h-8 w-10 rounded border border-border" aria-label="Couleur du bas des lettres" />
+                            ) : null}
+                          </label>
                         </div>
+                        <label className="block space-y-1 text-xs">
+                          <span className="font-semibold text-muted">Police</span>
+                          <select className={FIELD} value={a.graffitiFont ?? 'auto'} onChange={(e) => patch(a.id, { graffitiFont: e.target.value as GraffitiFont }, 'Police du graffiti modifiée')}>
+                            {(Object.keys(GRAFFITI_FONT_LABELS) as GraffitiFont[]).map((f) => (
+                              <option key={f} value={f}>{GRAFFITI_FONT_LABELS[f]}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <Slider label="Inclinaison" value={a.tiltDeg ?? 0} min={-25} max={25} step={1} display={`${Math.round(a.tiltDeg ?? 0)}°`} onChange={(v) => patch(a.id, { tiltDeg: v })} />
+                        <Slider label="Courbure" value={a.curve ?? 0} min={-1} max={1} step={0.05} display={(a.curve ?? 0) === 0 ? 'Droit' : (a.curve ?? 0) > 0 ? 'En arc' : 'En creux'} onChange={(v) => patch(a.id, { curve: Math.abs(v) < 0.04 ? 0 : v })} />
+                        <Slider label="Épaisseur du contour" value={a.outlineScale ?? 1} min={0.3} max={2} step={0.05} display={`× ${(a.outlineScale ?? 1).toFixed(2)}`} onChange={(v) => patch(a.id, { outlineScale: v })} />
+                        <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+                          <label className="block space-y-1 text-xs">
+                            <span className="font-semibold text-muted">Fond</span>
+                            <select className={FIELD} value={a.backdrop ?? 'none'} onChange={(e) => patch(a.id, { backdrop: e.target.value as GraffitiBackdrop }, 'Fond du graffiti modifié')}>
+                              {(Object.keys(GRAFFITI_BACKDROP_LABELS) as GraffitiBackdrop[]).map((b) => (
+                                <option key={b} value={b}>{GRAFFITI_BACKDROP_LABELS[b]}</option>
+                              ))}
+                            </select>
+                          </label>
+                          {(a.backdrop ?? 'none') !== 'none' ? (
+                            <input type="color" value={a.backdropColor ?? '#f5f0e6'} onChange={(e) => patch(a.id, { backdropColor: e.target.value }, 'Couleur du fond modifiée')} className="mb-1.5 h-8 w-10 rounded border border-border" aria-label="Couleur du fond" />
+                          ) : null}
+                        </div>
+                        <fieldset className="space-y-1">
+                          <legend className="text-xs font-semibold text-muted">Effets</legend>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {(Object.keys(GRAFFITI_EFFECT_LABELS) as Array<keyof GraffitiEffects>).map((k) => {
+                              const on = graffitiEffects(a)[k];
+                              return (
+                                <button
+                                  key={k}
+                                  type="button"
+                                  aria-pressed={on}
+                                  onClick={() => patch(a.id, { effects: { ...(a.effects ?? {}), [k]: !on } }, `${GRAFFITI_EFFECT_LABELS[k]} ${on ? 'retiré' : 'ajouté'}`)}
+                                  className={cn(
+                                    'min-h-11 rounded-[var(--radius-button)] border px-2 text-xs font-semibold',
+                                    on ? 'border-primary bg-primary/10 text-foreground' : 'border-border bg-surface text-muted hover:bg-surface-muted',
+                                  )}
+                                >
+                                  {GRAFFITI_EFFECT_LABELS[k]}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </fieldset>
                       </>
                     ) : (
                       <label className="block space-y-1 text-xs">

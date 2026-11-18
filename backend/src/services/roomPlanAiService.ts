@@ -638,11 +638,39 @@ export interface RoomPlanVisionItem {
   anchor?: 'box' | 'center';
 }
 
+/** Porte ou fenêtre avec ses vraies dimensions (mètres), quand elles sont visibles. */
+export interface RoomPlanVisionOpening {
+  kind: 'door' | 'window';
+  t: number;
+  widthM?: number;
+  heightM?: number;
+  sillM?: number;
+}
+
+export const WALL_ART_GRAFFITI_STYLES = new Set([
+  'bubble', 'drip', 'neon', 'stencil', 'wild', 'chrome', 'retro', 'tag', 'throwup', 'comic',
+]);
+
+/** Image ou graffiti vu sur un mur, côté salle ou côté extérieur (façade). */
+export interface RoomPlanVisionWallArt {
+  kind: 'image' | 'graffiti';
+  t: number;
+  yM?: number;
+  widthM?: number;
+  face: 'inside' | 'outside';
+  text?: string;
+  style?: string;
+  fillColor?: string;
+  outlineColor?: string;
+}
+
 export interface RoomPlanVisionWall {
   start: { x: number; y: number };
   end: { x: number; y: number };
   doors: number[];
   windows: number[];
+  openings?: RoomPlanVisionOpening[];
+  art?: RoomPlanVisionWallArt[];
 }
 
 export interface RoomPlanVisionAppearance {
@@ -983,6 +1011,64 @@ function parseAppearance(raw: unknown, view: RoomPlanVisionView): RoomPlanVision
   return appearance;
 }
 
+function optionalMeters(value: unknown, min: number, max: number): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return Math.round(clamp(value, min, max) * 100) / 100;
+}
+
+/** Portes et fenêtres détaillées (position 0–1 et tailles en mètres). */
+export function parseWallOpenings(value: unknown): RoomPlanVisionOpening[] {
+  if (!Array.isArray(value)) return [];
+  const out: RoomPlanVisionOpening[] = [];
+  for (const entry of value.slice(0, 8)) {
+    if (!entry || typeof entry !== 'object') continue;
+    const row = entry as Record<string, unknown>;
+    const kind = row.kind === 'window' ? 'window' : row.kind === 'door' ? 'door' : null;
+    if (!kind || typeof row.t !== 'number' || !Number.isFinite(row.t)) continue;
+    const opening: RoomPlanVisionOpening = { kind, t: Math.round(clamp(row.t, 0.05, 0.95) * 100) / 100 };
+    const widthM = optionalMeters(row.widthM, 0.5, 6);
+    const heightM = optionalMeters(row.heightM, 0.4, 4);
+    const sillM = optionalMeters(row.sillM, 0, 2.5);
+    if (widthM !== undefined) opening.widthM = widthM;
+    if (heightM !== undefined) opening.heightM = heightM;
+    if (sillM !== undefined) opening.sillM = kind === 'door' ? 0 : sillM;
+    out.push(opening);
+  }
+  return out;
+}
+
+/** Images et graffitis vus sur un mur (texte lisible, style, couleurs, face). */
+export function parseWallArt(value: unknown): RoomPlanVisionWallArt[] {
+  if (!Array.isArray(value)) return [];
+  const out: RoomPlanVisionWallArt[] = [];
+  for (const entry of value.slice(0, 6)) {
+    if (!entry || typeof entry !== 'object') continue;
+    const row = entry as Record<string, unknown>;
+    const kind = row.kind === 'graffiti' ? 'graffiti' : row.kind === 'image' ? 'image' : null;
+    if (!kind || typeof row.t !== 'number' || !Number.isFinite(row.t)) continue;
+    const art: RoomPlanVisionWallArt = {
+      kind,
+      t: Math.round(clamp(row.t, 0.05, 0.95) * 100) / 100,
+      face: row.face === 'outside' ? 'outside' : 'inside',
+    };
+    const yM = optionalMeters(row.yM, 0.3, 6);
+    const widthM = optionalMeters(row.widthM, 0.2, 12);
+    if (yM !== undefined) art.yM = yM;
+    if (widthM !== undefined) art.widthM = widthM;
+    if (kind === 'graffiti') {
+      const text = typeof row.text === 'string' ? row.text.replace(/\s+/g, ' ').trim().slice(0, 24) : '';
+      if (text) art.text = text;
+      if (typeof row.style === 'string' && WALL_ART_GRAFFITI_STYLES.has(row.style)) art.style = row.style;
+      const fill = parseHexColor(row.fillColor);
+      const outline = parseHexColor(row.outlineColor);
+      if (fill) art.fillColor = fill;
+      if (outline) art.outlineColor = outline;
+    }
+    out.push(art);
+  }
+  return out;
+}
+
 function asRatioList(value: unknown, max = 4): number[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -1130,11 +1216,22 @@ export function parseRoomPlanVisionDraft(
     const start = row.start && typeof row.start === 'object' ? row.start as Record<string, unknown> : null;
     const end = row.end && typeof row.end === 'object' ? row.end as Record<string, unknown> : null;
     if (!start || !end) continue;
+    const openings = parseWallOpenings(row.openings);
+    const art = parseWallArt(row.art);
+    let doors = asRatioList(row.doors, 3);
+    let windows = asRatioList(row.windows, 4);
+    // Ouvertures détaillées : elles font foi (les listes simples restent pour les anciens clients).
+    if (openings.length > 0) {
+      doors = openings.filter((o) => o.kind === 'door').map((o) => o.t).slice(0, 3);
+      windows = openings.filter((o) => o.kind === 'window').map((o) => o.t).slice(0, 4);
+    }
     walls.push({
       start: { x: clampPctMaybeUnit(start.x, 8, scaleMode), y: clampPctMaybeUnit(start.y, 8, scaleMode) },
       end: { x: clampPctMaybeUnit(end.x, 92, scaleMode), y: clampPctMaybeUnit(end.y, 8, scaleMode) },
-      doors: asRatioList(row.doors, 3),
-      windows: asRatioList(row.windows, 4),
+      doors,
+      windows,
+      ...(openings.length ? { openings } : {}),
+      ...(art.length ? { art } : {}),
     });
   }
 
@@ -1228,7 +1325,11 @@ Required JSON fields:
     "poolShape": "rectangle"|"rounded"|"oval"|"round"|"kidney"|"lShape"|"freeform",
     "tier": 0-30
   }],
-  "walls": [{ "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1] }],
+  "walls": [{
+    "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1],
+    "openings": [{ "kind": "door"|"window", "t": 0-1, "widthM": m, "heightM": m, "sillM": m }],
+    "art": [{ "kind": "image"|"graffiti", "t": 0-1, "yM": m, "widthM": m, "face": "inside"|"outside", "text": "...", "style": "bubble"|"drip"|"neon"|"stencil"|"wild"|"chrome"|"retro"|"tag"|"throwup"|"comic", "fillColor": "#rrggbb", "outlineColor": "#rrggbb" }]
+  }],
   "confidence": 0-1,
   "warnings": ["..."]
 }
@@ -1244,6 +1345,8 @@ Appearance rules:
 - Stepped / raked seating (amphitheater, gradins, auditorium): one "row" item per step with tier = 0 for the row nearest the stage, then +1 per step going up.
 - Table w/h = real floor footprint converted to % (cocktail ≈ 0.8 m, round 8 seats ≈ 1.8 m, long banquet ≈ 2.4–3.6 m × 0.9 m).
 - Walls: return every wall of the room outline when you can see them (a closed perimeter), with doors/windows as 0–1 positions along each segment.
+- Wall openings: also list them in walls[].openings with their real size in meters when you can estimate it (single door ≈ 0.9 × 2.1 m, double door ≈ 1.6 × 2.2 m, window sillM ≈ 0.9 m above the floor). t = centre of the opening along the wall.
+- Wall art: murals, graffiti, posters, framed pictures or logos clearly painted / hung on a wall go in walls[].art (t = centre along the wall, yM = height of its centre, widthM in meters). face = "inside" when it is on the room side, "outside" when it is on the facade / exterior side of the wall. Graffiti: copy the legible text (max 24 characters), pick the closest style and its colors. Never invent art that is not visible.
 
 Item rules (inference allowed):
 - ZERO OVERLAP / ZERO STACKING: Never place multiple chairs or tables at the same or overlapping coordinates. Each chair must have its own distinct physical floor location. Maintain realistic real-world clearances: minimum 0.7m center-to-center between chairs, minimum 1.4m edge-to-edge between tables for pulled-back chairs, minimum 1.2m along perimeter walls.
@@ -1285,7 +1388,7 @@ Placement forbidden:
 - Inventing an amphitheater or tent if the brief does not ask for one.
 
 Composition logic (in this order):
-1) Walls + doors. At least one main entrance (kind=door + entrance) on a short side, clear, often facing the honor table or stage. A service exit (buffet / kitchen) on another wall for banquets. Fill walls[] with doors at correct positions (0–1 along the segment).
+1) Walls + doors. At least one main entrance (kind=door + entrance) on a short side, clear, often facing the honor table or stage. A service exit (buffet / kitchen) on another wall for banquets. Fill walls[] with doors at correct positions (0–1 along the segment), and walls[].openings with real sizes (double entrance door ≈ 1.6 × 2.2 m, windows with sillM ≈ 0.9 m). Only when the brief asks for a mural, graffiti, logo wall or photo wall: add it in walls[].art (face "inside" for the room, "outside" for the facade).
 2) Ceremonial axis. Aisle from the main door toward the focal point (honor table, altar, stage). Slightly curved or off-center is fine — not a default centerline.
 3) Focal point. Stage and/or podium at the far end, facing guests; stageShape adapted (rect banquet, semiCircle ceremony). podiumStyle from the brief (speaker / lectern, couple wedding, runway, bandRiser concert, honor). Podium sits IN FRONT of the stage — never randomly in a corner. Concert: instruments (piano, drums, mics) ON the podium. Cocktail / gala: a bar (barStyle cocktail|wine|champagne|beer|coffee|whiskey) on one side, not in the aisle middle.
 4) Tables. Banquet / wedding: ROUND tables (shape=round, seats 8–10) in staggered / honeycomb clusters — not school rows. Oval or rectangular honor table at the far end, wider, facing the door. Cocktail: highTop / cocktail in islands of 3–4, not a file. Boardroom: one long table. hasCenterpiece=true on every banquet round.
@@ -1340,7 +1443,11 @@ JSON schema:
     "poolShape": "rectangle"|"rounded"|"oval"|"round"|"kidney"|"lShape"|"freeform",
     "tier": 0-30
   }],
-  "walls": [{ "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1] }],
+  "walls": [{
+    "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1],
+    "openings": [{ "kind": "door"|"window", "t": 0-1, "widthM": m, "heightM": m, "sillM": m }],
+    "art": [{ "kind": "image"|"graffiti", "t": 0-1, "yM": m, "widthM": m, "face": "inside"|"outside", "text": "...", "style": "bubble"|"drip"|"neon"|"stencil"|"wild"|"chrome"|"retro"|"tag"|"throwup"|"comic", "fillColor": "#rrggbb", "outlineColor": "#rrggbb" }]
+  }],
   "confidence": 0-1,
   "warnings": ["..."]
 }

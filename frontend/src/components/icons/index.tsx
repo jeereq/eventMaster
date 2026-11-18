@@ -11,6 +11,7 @@ import type { ComponentType, SVGProps } from 'react';
 import type { Icon as PhosphorIcon, IconWeight } from '@phosphor-icons/react';
 import {
   AlignBottom as PhAlignBottom,
+  AlignCenterHorizontal as PhAlignCenterHorizontal,
   AlignCenterVertical as PhAlignCenterVertical,
   AlignTop as PhAlignTop,
   CalendarX as PhCalendarX,
@@ -423,6 +424,7 @@ export const XCircle = make(PhXCircle, 'duotone', 'XCircle');
 export const Zap = make(PhLightning, 'duotone', 'Zap');
 export const Accessibility = make(PhPersonArmsSpread, 'duotone', 'Accessibility');
 export const AlertTriangle = make(PhWarning, 'duotone', 'AlertTriangle');
+export const AlignCenterHorizontal = make(PhAlignCenterHorizontal, 'bold', 'AlignCenterHorizontal');
 export const AlignCenterVertical = make(PhAlignCenterVertical, 'bold', 'AlignCenterVertical');
 export const AlignEndVertical = make(PhAlignBottom, 'bold', 'AlignEndVertical');
 export const AlignStartVertical = make(PhAlignTop, 'bold', 'AlignStartVertical');

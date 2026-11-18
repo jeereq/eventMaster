@@ -1,5 +1,6 @@
 'use client';
 
+import { isOpenSpace } from '@/lib/roomPlots';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   getSeatCoordinates,
@@ -462,6 +463,7 @@ export default function GuestTablePlanView({
             roomOutline={roomOutline}
             pricingZones={pricingZones}
             walls={previewBlueprint?.walls}
+            openSpace={isOpenSpace(previewBlueprint?.metadata)}
             canvasWidthM={previewBlueprint?.canvas.widthM}
             canvasHeightM={previewBlueprint?.canvas.heightM}
             roomThemeId={roomThemeId}

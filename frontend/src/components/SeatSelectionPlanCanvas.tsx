@@ -186,6 +186,7 @@ export default function SeatSelectionPlanCanvas({
             showWalls={showWalls}
             onToggleWalls={() => setShowWalls((current) => !current)}
             showRoofControl={false}
+            showWallsControl={Boolean(walls && walls.length > 0)}
             onToggleFullscreen={() => setExpanded((current) => !current)}
             isFullscreen={expanded}
           />

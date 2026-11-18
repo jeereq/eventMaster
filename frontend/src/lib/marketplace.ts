@@ -76,6 +76,8 @@ export interface PublicVenue {
   layoutPreview?: unknown | null;
   /** Dispositions publiques : la principale d'abord (fiche détail uniquement). */
   layouts?: VenueLayoutSummary[];
+  /** L'abonnement du propriétaire inclut les invités simulés : la visite propose « Salle remplie ». */
+  guestAvatars?: boolean;
   blockedDates?: string[];
   bookedDates?: string[];
   unavailableDates?: string[];

@@ -882,6 +882,12 @@ export interface RoomLayoutBlueprint {
     presentationMode?: boolean;
     /** Ouvrir la 3D en vue maquette (murs coupés à mi-hauteur). */
     dollhouseView?: boolean;
+    /** Invités personnalisés (photo de la personne sur son avatar), à une place précise. */
+    guestPortraits?: import('@/lib/roomGuestSimulation').GuestPortrait[];
+    /** Thème de la soirée : habille les invités simulés (soirée blanche, gala, couleurs de la fête…). */
+    guestDressCode?: import('@/lib/roomGuestSimulation').GuestDressCodeSetting;
+    /** Invités simulés affichés dans l’éditeur (remplissage, danse) ; absent = masqués. Jamais montrés aux visiteurs. */
+    guestSimulation?: import('@/lib/roomGuestSimulation').GuestSimulationSettings;
     /** Découverte du plan : perspective d’arrivée de la caméra (survol, vue de dessus, depuis l’entrée…). */
     introView?: import('@/lib/roomIntroView').RoomIntroView;
     /** Modèle de structure multi-étages appliqué. */
@@ -2976,10 +2982,10 @@ export function wallLengthPct(wall: RoomWallSegment): number {
 }
 
 export function wallLengthMeters(wall: RoomWallSegment, canvas: { widthM: number; heightM: number }): number {
-  const pct = wallLengthPct(wall);
-  // Approximation : moyenne des axes canvas
-  const avgM = (canvas.widthM + canvas.heightM) / 2;
-  return (pct / 100) * avgM;
+  // Longueur réelle, identique à celle du mur dessiné en 3D (chaque axe à sa propre échelle).
+  const dx = ((wall.end.x - wall.start.x) / 100) * canvas.widthM;
+  const dy = ((wall.end.y - wall.start.y) / 100) * canvas.heightM;
+  return Math.hypot(dx, dy);
 }
 
 export function ensureBlueprintDefaults(blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {

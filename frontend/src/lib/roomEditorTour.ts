@@ -70,6 +70,35 @@ const STEPS: EditorTourStepDef[] = [
     needLabel: 'Rangées de chaises',
   },
   {
+    id: 'resize',
+    target: 'canvas',
+    title: 'Taille et position au centimètre',
+    body: 'Sélectionnez une scène, un bar ou une zone : des poignées apparaissent aux coins et sur les côtés pour l’étirer (Maj garde les proportions). Le panneau de droite donne longueur, largeur et position en mètres, avec des boutons pour centrer.',
+  },
+  {
+    id: 'walls',
+    target: 'walls',
+    title: 'Portes, fenêtres et décor sur les murs',
+    body: 'Ouvrez « Murs, portes & fenêtres » puis choisissez un mur : sa vue de face « Placer sur le mur » s’affiche. Glissez une porte, une fenêtre, une image ou un graffiti, tirez le coin pour la taille, ou tapez les cotes exactes. Flèches du clavier : 5 cm.',
+  },
+  {
+    id: 'wallArt',
+    target: 'walls',
+    title: 'Graffitis et images, dedans ou dehors',
+    body: 'Chaque image ou graffiti se pose côté salle ou côté extérieur (façade). Les graffitis se stylisent : chrome, rétro, tag, throw-up, BD, néon… avec police, dégradé, inclinaison, texte en arc, fond peint et effets (relief, coulures, étincelles).',
+  },
+  {
+    id: 'crowd',
+    target: 'tool-display',
+    title: 'Voir la salle remplie',
+    body: 'Dans Affichage, « Invités simulés » assoit des invités sur les chaises et fait danser la piste, en 3D comme sur le plan 2D. Choisissez le taux de remplissage et le thème de la soirée.',
+  },
+  {
+    id: 'openSpace',
+    title: 'Espace en plein air',
+    body: 'Pour un jardin, une plage ou une cour, passez la salle en plein air : murs, toit, portes et fenêtres disparaissent des options. « Plein air · ajouter des murs » les remet si besoin.',
+  },
+  {
     id: 'templates',
     target: 'templates',
     title: 'Partir d’un modèle',
@@ -98,7 +127,7 @@ const STEPS: EditorTourStepDef[] = [
     id: 'ai',
     target: 'studio-ai',
     title: 'Le Studio IA compose pour vous',
-    body: 'Décrivez l’événement ou importez une photo du plan existant : l’IA pose tables, scène et décor. Chaque composition est annulable.',
+    body: 'Décrivez l’événement ou importez une photo du plan existant : l’IA pose tables, scène et décor, reprend les portes et fenêtres à leur taille réelle et les graffitis vus sur les murs (côté salle ou extérieur). Chaque composition est annulable.',
     need: { feature: 'canPlanFromPhoto' },
     needLabel: 'Studio IA',
     action: { kind: 'openStudio', label: 'Ouvrir le Studio IA' },
@@ -168,4 +197,5 @@ function nextLevelLabel(level: RoomEditorLevel): string | null {
 }
 
 /** Clé de stockage local : le guide n’est proposé d’office qu’une fois par navigateur. */
-export const EDITOR_TOUR_SEEN_KEY = 'em-editor-tour-seen-v1';
+// v2 : le guide a de nouvelles étapes (tailles, murs, décor, salle remplie) ; il est reproposé une fois.
+export const EDITOR_TOUR_SEEN_KEY = 'em-editor-tour-seen-v2';

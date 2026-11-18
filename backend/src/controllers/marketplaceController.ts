@@ -57,6 +57,7 @@ import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from 
 import { listTenantOperatorIds, notifyTenantOperators, notifyUsers } from '../services/platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import { listPublicLayouts } from '../services/venueLayoutService';
+import { getPlanLimitsForTenant } from '../config/plansConfig';
 import {
   allowedCityPrismaFilter,
   normalizeAllowedCity,
@@ -564,7 +565,7 @@ export async function getPublicVenue(req: Request, res: Response) {
       return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
     }
 
-    const [relatedVenues, relatedOfferings] = await Promise.all([
+    const [relatedVenues, relatedOfferings, ownerPlan] = await Promise.all([
       prisma.venueListing.findMany({
         where: {
           tenantId: listing.tenantId,
@@ -586,10 +587,18 @@ export async function getPublicVenue(req: Request, res: Response) {
         orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
         take: 12,
       }),
+      prisma.tenant.findUnique({
+        where: { id: listing.tenantId },
+        select: { plan: true, accountKind: true, pendingPlan: true },
+      }),
     ]);
 
     return res.json({
       ...toPublicVenue(listing),
+      // La visite propose « Salle remplie » (invités simulés) si l'abonnement du propriétaire l'inclut.
+      guestAvatars: ownerPlan
+        ? getPlanLimitsForTenant(ownerPlan.plan, ownerPlan.accountKind, ownerPlan.pendingPlan).guestAvatars !== false
+        : false,
       isPublic: listing.isPublic,
       isBlockedByAdmin: listing.isBlockedByAdmin,
       layouts: await listPublicLayouts(listing.roomId, listing.room.layoutBlueprint),

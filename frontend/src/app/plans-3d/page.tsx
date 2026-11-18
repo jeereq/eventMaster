@@ -35,6 +35,8 @@ import PlanViewModeToggle from '@/components/PlanViewModeToggle';
 import { StudioHowTo } from '@/components/StudioAiTabs';
 import { api } from '@/lib/api';
 import type { ShowcasePlanData } from '@/components/showcase/ShowcasePlanEditorModal';
+import CrowdSimulationControls from '@/components/room/CrowdSimulationControls';
+import { buildGuestSimulation, type GuestDressCodeSetting, type GuestSimulationSettings } from '@/lib/roomGuestSimulation';
 
 const ShowcasePlanEditorModal = dynamic(
   () => import('@/components/showcase/ShowcasePlanEditorModal'),
@@ -156,6 +158,9 @@ export default function Plans3DPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string>('banquet-honor');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [force2d, setForce2d] = useState(true);
+  /** « Salle remplie » : le visiteur voit le modèle occupé par des invités simulés (2D et 3D). */
+  const [crowd, setCrowd] = useState<GuestSimulationSettings | null>(null);
+  const [dressCode, setDressCode] = useState<GuestDressCodeSetting | null>(null);
   const [studioBlueprint, setStudioBlueprint] = useState<RoomLayoutBlueprint | null>(null);
   const [previewReady, setPreviewReady] = useState(false);
   const [studioOpen, setStudioOpen] = useState(false);
@@ -226,7 +231,19 @@ export default function Plans3DPage() {
     return resolvePlanBlueprint(activePlan);
   }, [activePlan]);
 
-  const activeBlueprint = studioBlueprint ?? templateBlueprint;
+  const baseBlueprint = studioBlueprint ?? templateBlueprint;
+  // Salle remplie : thème choisi par le visiteur ; les photos de personnes du modèle restent privées.
+  const activeBlueprint = useMemo<RoomLayoutBlueprint | null>(() => {
+    if (!baseBlueprint || !crowd) return baseBlueprint;
+    return {
+      ...baseBlueprint,
+      metadata: {
+        ...baseBlueprint.metadata,
+        guestPortraits: undefined,
+        guestDressCode: dressCode ?? baseBlueprint.metadata?.guestDressCode,
+      },
+    };
+  }, [baseBlueprint, crowd, dressCode]);
 
   // Filtrage selon les droits et la catégorie sélectionnée
   const filteredPlans = useMemo(() => {
@@ -250,7 +267,7 @@ export default function Plans3DPage() {
 
   // Statistiques du blueprint actif
   const stats = useMemo(() => {
-    if (!activeBlueprint) return { seats: 0, tables: 0, fixtures: 0 };
+    if (!activeBlueprint) return { seats: 0, tables: 0, fixtures: 0, guests: 0, dancers: 0 };
     let seats = 0;
     let tables = 0;
     for (const f of activeBlueprint.furniture || []) {
@@ -260,8 +277,9 @@ export default function Plans3DPage() {
       }
     }
     const fixtures = activeBlueprint.fixtures?.length || 0;
-    return { seats, tables, fixtures };
-  }, [activeBlueprint]);
+    const sim = crowd ? buildGuestSimulation(activeBlueprint, crowd) : null;
+    return { seats, tables, fixtures, guests: sim ? sim.guests.length : 0, dancers: sim?.dancing ?? 0 };
+  }, [activeBlueprint, crowd]);
 
   // Callback après enregistrement dans l'éditeur de modèle
   const handlePlanSaved = (savedPlan: ShowcasePlanData) => {
@@ -400,13 +418,27 @@ export default function Plans3DPage() {
               steps={[
                 'Choisissez un modèle ci-dessous',
                 'Basculez Plan 2D ou Vue 3D',
+                'Remplissez la salle pour la voir occupée',
                 'Personnalisez dans l’éditeur',
               ]}
             />
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <PlanViewModeToggle force2d={force2d} onChange={setForce2d} />
+            <div className="flex flex-wrap items-center gap-2">
+              <PlanViewModeToggle force2d={force2d} onChange={setForce2d} />
+              <CrowdSimulationControls
+                crowd={crowd}
+                onCrowdChange={(next) => {
+                  setCrowd(next);
+                  // Les invités se voient mieux en 3D : on y bascule à l'activation.
+                  if (next && !crowd) setForce2d(false);
+                }}
+                dressCode={dressCode ?? baseBlueprint?.metadata?.guestDressCode ?? null}
+                onDressCodeChange={setDressCode}
+                seeded={baseBlueprint?.metadata?.guestSimulation}
+              />
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               {canManageShowcase && (
                 <Button
@@ -434,6 +466,7 @@ export default function Plans3DPage() {
                 <RoomLayoutPreview
                   blueprint={activeBlueprint}
                   quality="showcase"
+                  guestSimulation={crowd}
                   force2d={force2d}
                   onForce2dChange={setForce2d}
                   showDepthControls={false}
@@ -464,6 +497,11 @@ export default function Plans3DPage() {
                     <span>{stats.tables} tables</span>
                   </span>
                 )}
+                {crowd ? (
+                  <span className="flex items-center gap-1 font-semibold text-festive-on-stage tabular-nums" aria-live="polite">
+                    {stats.guests} invités simulés{stats.dancers > 0 ? ` · ${stats.dancers} sur la piste` : ''}
+                  </span>
+                ) : null}
               </div>
               <p className="text-stage-foreground/80">
                 {force2d ? 'Plan coté vu du dessus' : 'Glissez pour tourner à 360°'}

@@ -422,3 +422,63 @@ describe('parseHexColor', () => {
     assert.equal(parseHexColor('not-a-color'), undefined);
   });
 });
+
+describe('murs importés : ouvertures dimensionnées et décor mural', () => {
+  it('garde les tailles réelles des portes et fenêtres et les graffitis avec leur face', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'perspective',
+      canvas: { widthM: 12, heightM: 10 },
+      outline: { shape: 'rectangle', x: 5, y: 5, w: 90, h: 90 },
+      items: [],
+      walls: [{
+        start: { x: 5, y: 5 },
+        end: { x: 95, y: 5 },
+        doors: [0.2],
+        windows: [],
+        openings: [
+          { kind: 'door', t: 0.5, widthM: 1.6, heightM: 2.2, sillM: 0.4 },
+          { kind: 'window', t: 0.8, widthM: 1.2, heightM: 1.4, sillM: 0.9 },
+          { kind: 'skylight', t: 0.3 },
+        ],
+        art: [
+          { kind: 'graffiti', t: 0.3, yM: 1.6, widthM: 3, face: 'outside', text: '  WELCOME   HOME ', style: 'chrome', fillColor: '#FF00AA' },
+          { kind: 'graffiti', t: 0.6, style: 'unknown' },
+          { kind: 'image', t: 0.7, face: 'inside' },
+          { kind: 'sticker', t: 0.1 },
+        ],
+      }],
+      confidence: 0.7,
+      warnings: [],
+    }, { widthM: 12, heightM: 10 });
+
+    const wall = draft.walls[0]!;
+    assert.equal(wall.openings?.length, 2);
+    assert.deepEqual(wall.doors, [0.5], 'les ouvertures détaillées font foi');
+    assert.deepEqual(wall.windows, [0.8]);
+    assert.equal(wall.openings?.[0]?.sillM, 0, 'une porte part du sol');
+    assert.equal(wall.openings?.[0]?.widthM, 1.6);
+    assert.equal(wall.art?.length, 3);
+    assert.equal(wall.art?.[0]?.face, 'outside');
+    assert.equal(wall.art?.[0]?.text, 'WELCOME HOME');
+    assert.equal(wall.art?.[0]?.style, 'chrome');
+    assert.equal(wall.art?.[0]?.fillColor?.toLowerCase(), '#ff00aa');
+    assert.equal(wall.art?.[1]?.style, undefined, 'style inconnu ignoré');
+    assert.equal(wall.art?.[1]?.face, 'inside');
+    assert.equal(wall.art?.[2]?.kind, 'image');
+  });
+
+  it('reste compatible avec les murs sans détails', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'top',
+      canvas: { widthM: 12, heightM: 10 },
+      outline: { shape: 'rectangle', x: 5, y: 5, w: 90, h: 90 },
+      items: [],
+      walls: [{ start: { x: 5, y: 5 }, end: { x: 95, y: 5 }, doors: [0.5], windows: [0.25] }],
+      confidence: 0.7,
+      warnings: [],
+    }, { widthM: 12, heightM: 10 });
+    assert.equal(draft.walls[0]?.openings, undefined);
+    assert.equal(draft.walls[0]?.art, undefined);
+    assert.deepEqual(draft.walls[0]?.doors, [0.5]);
+  });
+});

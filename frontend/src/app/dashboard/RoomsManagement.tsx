@@ -66,6 +66,8 @@ import { prependLayoutAction, sanitizeLayoutActions } from '@/lib/layoutActionLo
 import PlanCreationPath from '@/components/PlanCreationPath';
 import RoomLayoutsPanel from '@/components/room/RoomLayoutsPanel';
 import { LockedSectionCard } from '@/components/room/EditorLocks';
+import GuestDressCodePicker from '@/components/room/GuestDressCodePicker';
+import { DEFAULT_GUEST_SIMULATION, GUEST_FILL_CHOICES } from '@/lib/roomGuestSimulation';
 import RoomPublicPublicationForm, { type RoomPublicationDraft } from '@/components/room/RoomPublicPublicationForm';
 import { calculateBlueprintCapacity } from '@/lib/roomLayoutUtils';
 import { roomEditorCapabilities } from '@/lib/roomEditorAccess';
@@ -640,8 +642,19 @@ export default function RoomsManagement() {
     resetWizard();
     setRoomType(type);
     setLayoutParams(defaultParams[type]);
+    // Thème de la soirée et invités avec photo choisis dans le simulateur (photos selon le forfait).
+    const importedPortraits = planFeatures.guestPhotoAvatars === true ? stored.guestPortraits : undefined;
+    const withGuests = {
+      ...applied.blueprint,
+      metadata: {
+        ...applied.blueprint.metadata,
+        ...(stored.guestDressCode ? { guestDressCode: stored.guestDressCode } : {}),
+        ...(importedPortraits?.length ? { guestPortraits: importedPortraits } : {}),
+        ...(stored.guestSimulation && planFeatures.guestAvatars !== false ? { guestSimulation: stored.guestSimulation } : {}),
+      },
+    };
     setBlueprintDraft(stampLayoutAction(
-      refreshBlueprintMetadata(applied.blueprint),
+      refreshBlueprintMetadata(withGuests),
       importedCount > 0
         ? `Plan IA importé (${importedCount} éléments)`
         : 'Plan IA importé — aucun mobilier déduit',
@@ -2171,6 +2184,73 @@ export default function RoomsManagement() {
                   <Button type="button" size="sm" variant="secondary" onClick={openManualPlan}>
                     Éditer à la main
                   </Button>
+                  {planFeatures?.guestAvatars !== false ? (
+                    <section className="space-y-2.5 rounded-[var(--radius-card)] border border-border bg-surface p-3" aria-labelledby="wizard-guests-title">
+                      <h3 id="wizard-guests-title" className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Users className="w-4 h-4 text-primary" aria-hidden />
+                        Invités simulés (avatars)
+                      </h3>
+                      <label className="flex items-start gap-2.5 min-h-11 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="mt-1 h-4 w-4 accent-[var(--color-primary)]"
+                          checked={Boolean(blueprintDraft.metadata.guestSimulation)}
+                          onChange={(e) => {
+                            const on = e.target.checked;
+                            setBlueprintDraft({
+                              ...blueprintDraft,
+                              metadata: {
+                                ...blueprintDraft.metadata,
+                                guestSimulation: on ? DEFAULT_GUEST_SIMULATION : undefined,
+                              },
+                            });
+                          }}
+                        />
+                        <span className="text-sm text-foreground">
+                          Remplir la salle d’invités en 3D
+                          <span className="block text-xs text-muted">
+                            Des avatars s’assoient aux tables et dansent sur la piste, dans l’éditeur seulement : les visiteurs et la billetterie ne les voient pas.
+                          </span>
+                        </span>
+                      </label>
+                      {blueprintDraft.metadata.guestSimulation ? (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <label className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 text-xs font-bold text-muted">
+                            <span>Remplissage</span>
+                            <select
+                              value={String(blueprintDraft.metadata.guestSimulation.fill)}
+                              onChange={(e) => {
+                                const sim = blueprintDraft.metadata.guestSimulation ?? DEFAULT_GUEST_SIMULATION;
+                                setBlueprintDraft({
+                                  ...blueprintDraft,
+                                  metadata: { ...blueprintDraft.metadata, guestSimulation: { ...sim, fill: Number(e.target.value) } },
+                                });
+                              }}
+                              className="bg-transparent text-xs font-bold text-foreground outline-none"
+                              aria-label="Remplissage de la salle"
+                            >
+                              {GUEST_FILL_CHOICES.map((f) => (
+                                <option key={f} value={String(f)}>{Math.round(f * 100)} %</option>
+                              ))}
+                            </select>
+                          </label>
+                          <GuestDressCodePicker
+                            value={blueprintDraft.metadata.guestDressCode ?? { id: 'mixte' }}
+                            onChange={(next) => setBlueprintDraft({
+                              ...blueprintDraft,
+                              metadata: { ...blueprintDraft.metadata, guestDressCode: next.id === 'mixte' ? undefined : next },
+                            })}
+                          />
+                        </div>
+                      ) : null}
+                    </section>
+                  ) : (
+                    <LockedSectionCard
+                      title="Invités simulés (avatars)"
+                      description="Remplissez la salle d’invités en 3D, habillés selon le thème de la soirée. Cette option n’est pas incluse dans votre forfait actuel."
+                      planLabel="Business"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -2252,6 +2332,8 @@ export default function RoomsManagement() {
                     onChange={setBlueprintDraft}
                     onRegenerate={regenerateBlueprint}
                     allowThemesFixtures={planFeatures?.roomThemesFixtures === true}
+                    allowGuestPhotos={planFeatures?.guestPhotoAvatars === true}
+                    allowGuestAvatars={planFeatures?.guestAvatars !== false}
                     editorLevel={planFeatures?.roomEditorLevel}
                     focusPlanImport={focusPlanImport}
                     seedPlanPhoto={pendingPlanPhoto}
@@ -3226,6 +3308,8 @@ export default function RoomsManagement() {
                 setEditBlueprint(next);
               }}
               allowThemesFixtures={planFeatures?.roomThemesFixtures === true}
+              allowGuestPhotos={planFeatures?.guestPhotoAvatars === true}
+              allowGuestAvatars={planFeatures?.guestAvatars !== false}
               editorLevel={planFeatures?.roomEditorLevel}
               paused={editPane !== 'elements'}
               onRegenerate={() => {

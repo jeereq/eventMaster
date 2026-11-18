@@ -12,6 +12,7 @@ import {
   applyPlanSceneVisibility
 } from '@/lib/roomLayoutUtils';
 import { PlanSceneControls, usePlanFullscreen } from '@/components/PlanViewChrome';
+import { isOpenSpace } from '@/lib/roomPlots';
 import PlanViewModeToggle from '@/components/PlanViewModeToggle';
 import { mapTicketSelectionsToWebGL, resolveTicketSeatPick } from '@/lib/seatSelectionLayout';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
@@ -21,6 +22,7 @@ import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import Room3DErrorBoundary from '@/components/Room3DErrorBoundary';
 import { cn } from '@/lib/cn';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
+import { buildGuestSimulation, type GuestSimulationSettings } from '@/lib/roomGuestSimulation';
 
 const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
   ssr: false,
@@ -104,6 +106,8 @@ interface RoomLayoutPreviewProps {
   blockedSeats?: Array<{ tableId: string; seatIndex: number }>;
   /** Clic sur une chaise attachée à une table. */
   onSelectSeat?: (tableId: string, seatIndex: number) => void;
+  /** Invités simulés en 3D (simulateur) : remplissage et danse. */
+  guestSimulation?: GuestSimulationSettings | null;
 }
 
 type WebGLPreviewProps = {
@@ -121,6 +125,7 @@ type WebGLPreviewProps = {
   walkthroughActive?: boolean;
   onWalkthroughProgress?: (label: string) => void;
   onWalkthroughComplete?: () => void;
+  guestSimulation?: GuestSimulationSettings | null;
 };
 
 function WebGLPreviewCanvas({
@@ -138,6 +143,7 @@ function WebGLPreviewCanvas({
   walkthroughActive = false,
   onWalkthroughProgress,
   onWalkthroughComplete,
+  guestSimulation = null,
 }: WebGLPreviewProps) {
   const selected = useMemo(() => {
     return mapTicketSelectionsToWebGL(
@@ -174,6 +180,7 @@ function WebGLPreviewCanvas({
       onWalkthroughComplete={onWalkthroughComplete}
       renderQuality={quality === 'showcase' ? 'showcase' : 'standard'}
       lightingPreset={lightingPreset}
+      guestSimulation={guestSimulation}
       className={cn('absolute inset-0 h-full w-full shadow-[var(--shadow-soft)] touch-none', className)}
     />
   );
@@ -210,17 +217,24 @@ function ThumbPreview({
 function FlatShowcasePreview({
   blueprint,
   className,
+  guestSimulation = null,
 }: {
   blueprint: RoomLayoutBlueprint;
   className?: string;
+  /** Salle remplie : mêmes invités qu'en 3D, vus du dessus. */
+  guestSimulation?: GuestSimulationSettings | null;
 }) {
+  const guests = useMemo(
+    () => (guestSimulation ? buildGuestSimulation(blueprint, guestSimulation).guests : null),
+    [blueprint, guestSimulation],
+  );
   return (
     <div
       role="img"
       aria-label={`Plan 2D ${roomTypeLabels[blueprint.roomType]}, ${blueprint.canvas.widthM} × ${blueprint.canvas.heightM} mètres${blueprint.metadata.totalSeats ? `, ${blueprint.metadata.totalSeats} places` : ''}`}
       className={cn('relative aspect-[16/10] min-h-[260px] sm:min-h-[340px] rounded-2xl border border-border overflow-hidden bg-stage', className)}
     >
-      <RoomPlanTopView blueprint={blueprint} />
+      <RoomPlanTopView blueprint={blueprint} guests={guests} />
       <Room2DScaleCompass
         widthM={blueprint.canvas.widthM}
         heightM={blueprint.canvas.heightM}
@@ -249,6 +263,7 @@ export default function RoomLayoutPreview({
   selectedSeats,
   blockedSeats,
   onSelectSeat,
+  guestSimulation = null,
 }: RoomLayoutPreviewProps) {
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
@@ -257,6 +272,7 @@ export default function RoomLayoutPreview({
   const [localForce2d, setLocalForce2d] = useState(false);
   // Les réceptions à ciel ouvert (murs masqués dans le plan) s’ouvrent sans murs.
   const blueprintShowsWalls = rawBlueprint ? isBlueprintWallsVisible(rawBlueprint.metadata) : true;
+  const openSpace = rawBlueprint ? isOpenSpace(rawBlueprint.metadata) : false;
   const [showWalls, setShowWalls] = useState(blueprintShowsWalls);
   const [wallsDefault, setWallsDefault] = useState(blueprintShowsWalls);
   if (wallsDefault !== blueprintShowsWalls) {
@@ -376,6 +392,7 @@ export default function RoomLayoutPreview({
                 selectedSeats={selectedSeats}
                 blockedSeats={blockedSeats}
                 onSelectSeat={onSelectSeat}
+                guestSimulation={guestSimulation}
                 walkthroughActive={fill && walkthroughActive}
                 onWalkthroughProgress={setWalkthroughLabel}
                 onWalkthroughComplete={stopWalkthrough}
@@ -385,6 +402,7 @@ export default function RoomLayoutPreview({
             <FlatShowcasePreview
               blueprint={viewBlueprint}
               className="absolute inset-0 h-full w-full rounded-2xl"
+              guestSimulation={guestSimulation}
             />
           )}
           {!mounted && !force2d ? (
@@ -399,7 +417,8 @@ export default function RoomLayoutPreview({
             showRoof={showRoof}
             onToggleWalls={() => setShowWalls((current) => !current)}
             onToggleRoof={() => setShowRoof((current) => !current)}
-            showRoofControl={useWebGL}
+            showRoofControl={useWebGL && !openSpace}
+            showWallsControl={!openSpace}
             onToggleFullscreen={canExpand ? () => setExpanded(true) : undefined}
             variant="overlay"
             className="absolute bottom-2 left-2 z-20 max-w-[calc(100%-5.5rem)]"
@@ -456,7 +475,8 @@ export default function RoomLayoutPreview({
                 showRoof={showRoof}
                 onToggleWalls={() => setShowWalls((current) => !current)}
                 onToggleRoof={() => setShowRoof((current) => !current)}
-                showRoofControl={useWebGL}
+                showRoofControl={useWebGL && !openSpace}
+                showWallsControl={!openSpace}
                 onToggleFullscreen={() => {
                   setWalkthroughActive(false);
                   setWalkthroughLabel('');
@@ -484,6 +504,7 @@ export default function RoomLayoutPreview({
                   selectedSeats={selectedSeats}
                   blockedSeats={blockedSeats}
                   onSelectSeat={onSelectSeat}
+                  guestSimulation={guestSimulation}
                   walkthroughActive={walkthroughActive}
                   onWalkthroughProgress={setWalkthroughLabel}
                   onWalkthroughComplete={stopWalkthrough}
@@ -494,6 +515,7 @@ export default function RoomLayoutPreview({
               <FlatShowcasePreview
                 blueprint={viewBlueprint}
                 className="absolute inset-0 h-full w-full rounded-none"
+                guestSimulation={guestSimulation}
               />
             )}
           </div>

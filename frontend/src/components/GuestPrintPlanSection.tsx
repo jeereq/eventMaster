@@ -1,5 +1,6 @@
 'use client';
 
+import { isOpenSpace } from '@/lib/roomPlots';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import GuestRoomPlanCanvas from '@/components/GuestRoomPlanCanvas';
@@ -235,6 +236,7 @@ export default function GuestPrintPlanSection({
           fixtures={fixtures}
           roomOutline={roomOutline}
           walls={previewBlueprint?.walls}
+            openSpace={isOpenSpace(previewBlueprint?.metadata)}
           canvasWidthM={previewBlueprint?.canvas.widthM}
           canvasHeightM={previewBlueprint?.canvas.heightM}
           roomThemeId={roomThemeId}

@@ -4,7 +4,9 @@ import { isStudioJobAccepted, type StudioJobAccepted } from '@/lib/studioJobs';
 import { applyServerAllowance, getOrCreateDeviceId, AI_ROOM_PLAN_TOKEN_COST, type AiAllowance } from '@/lib/aiTokens';
 import { roomEditorCapabilities, type RoomEditorCapabilities } from '@/lib/roomEditorAccess';
 import { normalizeDoorOrthogonal } from '@/lib/roomLayoutClearance';
+import { isOpenSpace } from '@/lib/roomPlots';
 import { tidyImportedFloorLayout, type LayoutSelectionItem } from '@/lib/roomSelectionUtils';
+import { GRAFFITI_STYLE_LABELS, clampWallArt, createWallArt, type GraffitiStyle, type RoomWallArt } from '@/lib/roomWallArt';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import {
   createBlueprintChair,
@@ -17,6 +19,7 @@ import {
   defaultRoomOutline,
   ensureBlueprintDefaults,
   refreshBlueprintMetadata,
+  wallLengthMeters,
   wallsFromRoomOutline,
   type AisleStyle,
   type ChairStyle,
@@ -25,6 +28,7 @@ import {
   type RoofStyle,
   type RoomLayoutBlueprint,
   type RoomOutlineShape,
+  type RoomWallOpening,
   type SeatMaterial,
   type TableShape,
   type TableSurfaceStyle,
@@ -136,6 +140,26 @@ export interface RoomPlanVisionItem {
   anchor?: 'box' | 'center';
 }
 
+export interface RoomPlanVisionOpening {
+  kind: 'door' | 'window';
+  t: number;
+  widthM?: number;
+  heightM?: number;
+  sillM?: number;
+}
+
+export interface RoomPlanVisionWallArt {
+  kind: 'image' | 'graffiti';
+  t: number;
+  yM?: number;
+  widthM?: number;
+  face?: 'inside' | 'outside';
+  text?: string;
+  style?: string;
+  fillColor?: string;
+  outlineColor?: string;
+}
+
 export interface RoomPlanVisionAppearance {
   imageRole: 'plan' | 'photo' | 'texture';
   floorType?: string;
@@ -159,6 +183,10 @@ export interface RoomPlanVisionDraft {
     end: { x: number; y: number };
     doors: number[];
     windows: number[];
+    /** Portes et fenêtres avec leurs vraies dimensions (mètres). */
+    openings?: RoomPlanVisionOpening[];
+    /** Images et graffitis vus sur le mur, côté salle ou extérieur. */
+    art?: RoomPlanVisionWallArt[];
   }>;
   confidence: number;
   warnings: string[];
@@ -179,6 +207,12 @@ export type RoomPlanAiDraft = {
   widthM?: number;
   heightM?: number;
   imageUrl?: string;
+  /** Thème de la soirée choisi dans le simulateur. */
+  guestDressCode?: import('@/lib/roomGuestSimulation').GuestDressCodeSetting;
+  /** Invités avec photo ajoutés dans le simulateur. */
+  guestPortraits?: import('@/lib/roomGuestSimulation').GuestPortrait[];
+  /** Invités simulés affichés dans le simulateur (remplissage, danse). */
+  guestSimulation?: import('@/lib/roomGuestSimulation').GuestSimulationSettings;
   savedAt: string;
 };
 
@@ -1159,14 +1193,79 @@ function applyFixtureLook(
   return next;
 }
 
+/** Éléments qui n'existent que sur un mur : écartés pour un espace ouvert. */
+const WALL_BOUND_FIXTURES = new Set<string>(['door', 'balcony']);
+
 type ImportedWall = RoomPlanVisionDraft['walls'][number];
+
+/**
+ * Portes et fenêtres d'un mur importé : tailles réelles quand l'IA les donne
+ * (porte de 1,4 m et plus = double), sinon positions seules avec les tailles par défaut.
+ */
+export function importedWallOpenings(wall: ImportedWall, project: (t: number) => number = (t) => t): RoomWallOpening[] {
+  if (wall.openings && wall.openings.length > 0) {
+    return wall.openings.map((o) => (o.kind === 'door'
+      ? createWallOpening('door', {
+          t: project(o.t),
+          style: (o.widthM ?? 0) >= 1.4 ? 'double' : 'single',
+          ...(o.widthM ? { widthM: o.widthM } : {}),
+          ...(o.heightM ? { heightM: o.heightM } : {}),
+        })
+      : createWallOpening('window', {
+          t: project(o.t),
+          ...(o.widthM ? { widthM: o.widthM } : {}),
+          ...(o.heightM ? { heightM: o.heightM } : {}),
+          ...(o.sillM !== undefined ? { sillM: o.sillM } : {}),
+        })));
+  }
+  return [
+    ...wall.doors.map((t) => createWallOpening('door', { t: project(t), style: 'single' })),
+    ...wall.windows.map((t) => createWallOpening('window', { t: project(t) })),
+  ];
+}
+
+const IMPORT_GRAFFITI_STYLES = new Set<string>(Object.keys(GRAFFITI_STYLE_LABELS));
+
+/**
+ * Graffitis vus par l'IA, posés à leur place et sur la bonne face. Les images (sans fichier)
+ * ne sont pas recréées : on les compte pour le signaler.
+ */
+export function importedWallArt(
+  wall: ImportedWall,
+  lengthM: number,
+  heightM: number,
+  project: (t: number) => number = (t) => t,
+): { art: RoomWallArt[]; skippedImages: number } {
+  const art: RoomWallArt[] = [];
+  let skippedImages = 0;
+  for (const a of wall.art ?? []) {
+    if (a.kind === 'image') {
+      skippedImages += 1;
+      continue;
+    }
+    const style = a.style && IMPORT_GRAFFITI_STYLES.has(a.style) ? (a.style as GraffitiStyle) : 'bubble';
+    const base = createWallArt('graffiti', { text: a.text, style, wallLengthM: lengthM, wallHeightM: heightM });
+    art.push(clampWallArt({
+      ...base,
+      t: project(a.t),
+      ...(a.yM ? { yM: a.yM } : {}),
+      ...(a.widthM ? { widthM: a.widthM } : {}),
+      ...(a.fillColor ? { fillColor: a.fillColor } : {}),
+      ...(a.outlineColor ? { outlineColor: a.outlineColor } : {}),
+      face: a.face === 'outside' ? 'outside' : 'inside',
+    }, lengthM, heightM));
+  }
+  return { art, skippedImages };
+}
 
 /** Reporte les ouvertures de murs partiels sur le mur du contour le plus proche et parallèle. */
 function mergeOpeningsOntoOutlineWalls(
   outlineWalls: RoomLayoutBlueprint['walls'],
   partial: ImportedWall[],
+  canvas: { widthM: number; heightM: number },
+  onSkippedImages?: (n: number) => void,
 ): NonNullable<RoomLayoutBlueprint['walls']> {
-  const result = (outlineWalls ?? []).map((wall) => ({ ...wall, openings: [...(wall.openings ?? [])] }));
+  const result = (outlineWalls ?? []).map((wall) => ({ ...wall, openings: [...(wall.openings ?? [])], art: [...(wall.art ?? [])] }));
   for (const wall of partial) {
     const dx = wall.end.x - wall.start.x;
     const dy = wall.end.y - wall.start.y;
@@ -1197,12 +1296,12 @@ function mergeOpeningsOntoOutlineWalls(
       const u = ((px - target.start.x) * tx + (py - target.start.y) * ty) / tLen2;
       return Math.round(Math.min(0.92, Math.max(0.08, u)) * 100) / 100;
     };
-    target.openings.push(
-      ...wall.doors.map((t) => createWallOpening('door', { t: project(t), style: 'single' })),
-      ...wall.windows.map((t) => createWallOpening('window', { t: project(t) })),
-    );
+    target.openings.push(...importedWallOpenings(wall, project));
+    const decor = importedWallArt(wall, wallLengthMeters(target, canvas), target.heightM, project);
+    target.art.push(...decor.art);
+    if (decor.skippedImages) onSkippedImages?.(decor.skippedImages);
   }
-  return result;
+  return result.map((wall) => (wall.art.length ? wall : { ...wall, art: undefined }));
 }
 
 export async function analyzeRoomPlanFromPhoto(input: {
@@ -1592,7 +1691,20 @@ export function applyRoomPlanVisionDraft(
   const wallColor = appearance?.wallColor;
   const existingWalls = current.walls ?? [];
   let walls = existingWalls;
-  if (scaledDraft.walls && scaledDraft.walls.length > 0 && scaledDraft.walls.length < 3) {
+  let skippedWallImages = 0;
+  // Espace ouvert (plein air) : on ne reproduit ni murs, ni portes, ni balcons ; seuls les éléments sont importés.
+  const openSpace = isOpenSpace(current.metadata);
+  if (openSpace) {
+    const before = fixtures.length;
+    for (let i = fixtures.length - 1; i >= 0; i -= 1) {
+      if (WALL_BOUND_FIXTURES.has(fixtures[i].kind)) fixtures.splice(i, 1);
+    }
+    if (fixtures.length < before) warnings.push('Espace ouvert : portes et balcons vus sur la photo non importés.');
+    for (let i = selection.length - 1; i >= 0; i -= 1) {
+      const sel = selection[i];
+      if (sel.kind === 'fixture' && !fixtures.some((f) => f.id === sel.id)) selection.splice(i, 1);
+    }
+  } else if (scaledDraft.walls && scaledDraft.walls.length > 0 && scaledDraft.walls.length < 3) {
     // Un ou deux murs seulement (« only VISIBLE walls ») : on ferme la salle avec le contour
     // et on reporte leurs portes et fenêtres sur le mur du contour correspondant.
     walls = mergeOpeningsOntoOutlineWalls(
@@ -1601,6 +1713,8 @@ export function applyRoomPlanVisionDraft(
         texture: wallTexture ?? existingWalls[0]?.texture ?? 'plaster',
       }),
       scaledDraft.walls,
+      canvas,
+      (n) => { skippedWallImages += n; },
     ).map((wall) => ({ ...wall, color: wallColor, storyId }));
     walls.forEach((wall) => selection.push({ kind: 'wall', id: wall.id }));
   } else if (scaledDraft.walls && scaledDraft.walls.length > 0) {
@@ -1610,12 +1724,11 @@ export function applyRoomPlanVisionDraft(
         end: wall.end,
         texture: wallTexture ?? existingWalls[0]?.texture ?? 'plaster',
         color: wallColor,
-        openings: [
-          ...wall.doors.map((t) => createWallOpening('door', { t, style: 'single' })),
-          ...wall.windows.map((t) => createWallOpening('window', { t })),
-        ],
+        openings: importedWallOpenings(wall),
       });
-      return { ...segment, storyId };
+      const decor = importedWallArt(wall, wallLengthMeters(segment, canvas), segment.heightM);
+      skippedWallImages += decor.skippedImages;
+      return { ...segment, ...(decor.art.length ? { art: decor.art } : {}), storyId };
     });
     walls.forEach((wall) => selection.push({ kind: 'wall', id: wall.id }));
   } else {
@@ -1626,6 +1739,10 @@ export function applyRoomPlanVisionDraft(
     if (!existingWalls.length) {
       warnings.push('Contour généré automatiquement d’après l’analyse IA.');
     }
+  }
+
+  if (skippedWallImages > 0) {
+    warnings.push(`${skippedWallImages} image${skippedWallImages > 1 ? 's' : ''} murale${skippedWallImages > 1 ? 's' : ''} repérée${skippedWallImages > 1 ? 's' : ''} : ajoutez vos photos depuis « Images et graffitis » du mur.`);
   }
 
   assignImportedTiers(furniture, fixtures, current.roomType);
@@ -1664,9 +1781,10 @@ export function applyRoomPlanVisionDraft(
       floorType: observedFloor ?? current.metadata.floorType,
       floorImageFit: keepExistingFloor ? current.metadata.floorImageFit : undefined,
       roofStyle: roof.roofStyle,
-      showRoof: roof.showRoof,
+      showRoof: openSpace ? false : roof.showRoof,
       // Tente vue par l’IA : parois en toile et éclairage de tente, sans changer le type de salle.
       tentVenue: current.roomType !== 'TENT'
+        && !openSpace
         && roof.showRoof === true
         && (roof.roofStyle === 'tentSwag' || roof.roofStyle === 'pagoda')
         ? true
