@@ -13,11 +13,14 @@ export default function Toolbar({
   orientation = 'horizontal',
   className,
   children,
+  tourId,
 }: {
   label: string;
   orientation?: 'horizontal' | 'vertical';
   className?: string;
   children: React.ReactNode;
+  /** Cible de la visite guidée (`data-tour`). */
+  tourId?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -72,6 +75,7 @@ export default function Toolbar({
       onKeyDown={onKeyDown}
       onFocus={onFocus}
       className={cn(className)}
+      data-tour={tourId}
     >
       {children}
     </div>

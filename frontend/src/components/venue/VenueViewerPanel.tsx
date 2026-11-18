@@ -2,7 +2,7 @@
 
 import React, { useId, useState } from 'react';
 import Link from 'next/link';
-import { Building2, LayoutGrid, Users, Ruler } from 'lucide-react';
+import { Building2, LayoutGrid, Users, Ruler } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { formatLocationLine, sizedMediaUrl, type PublicVenue } from '@/lib/marketplace';
 import { formatLayoutFacts, type VenueLayoutSummary } from '@/lib/venueLayouts';
@@ -73,7 +73,7 @@ export default function VenueViewerPanel({
   ].filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
   return (
-    <div className={cn('flex min-h-0 flex-col rounded-xl border border-border/70 bg-background/95 shadow-lg backdrop-blur-md', className)}>
+    <div className={cn('flex min-h-0 flex-col rounded-xl border border-border/70 bg-background/95 shadow-lg', className)}>
       <div role="tablist" aria-label="Choix de la visite" className="flex shrink-0 gap-1 border-b border-border/70 p-1.5">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button

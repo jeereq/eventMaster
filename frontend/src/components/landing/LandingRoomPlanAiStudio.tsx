@@ -73,7 +73,7 @@ import {
 import GuestDressCodePicker from '@/components/room/GuestDressCodePicker';
 import GuestPortraitsModal, { preparePortraitPhoto } from '@/components/room/GuestPortraitsModal';
 import { EditorUpsellDialog, type LockedUpsell } from '@/components/room/EditorLocks';
-import { Camera, Lock, Users } from 'lucide-react';
+import { Camera, Lock, Users } from '@/components/icons';
 
 const ROOM_TYPES: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
 /** Types proposés au choix dans le studio (le type libre reste accessible via l’éditeur). */

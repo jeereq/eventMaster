@@ -30,7 +30,7 @@ import {
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import { lightingPresetLabels } from '@/lib/roomRenderQuality';
 import { chandelierTypeLabels } from '@/lib/roomCeilingUtils';
-import { Eye } from 'lucide-react';
+import { Eye } from '@/components/icons';
 import type { FloorType } from '@/lib/roomThemeUtils';
 
 function texturePreviewStyle(tex: THREE.Texture | undefined | null): string | undefined {

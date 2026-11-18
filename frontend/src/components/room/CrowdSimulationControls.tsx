@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { Users } from 'lucide-react';
+import { Users } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import GuestDressCodePicker from '@/components/room/GuestDressCodePicker';
 import {

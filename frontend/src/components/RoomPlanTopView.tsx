@@ -255,7 +255,7 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
               }}
             >
               {item.zoneKind === 'plot' ? (
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold text-foreground/80 leading-none truncate px-0.5">
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-extrabold text-foreground/80 leading-none truncate px-0.5">
                   {item.label}
                 </span>
               ) : null}

@@ -180,7 +180,7 @@ export default function SeatSelectionPlanCanvas({
   const viewer = (
     <div className={cn('space-y-2', expanded && 'flex h-full min-h-0 flex-col p-3', className)}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-[10px] text-muted">Touchez un siège libre sur le plan</p>
+        <p className="text-xs text-muted">Touchez un siège libre sur le plan</p>
         <div className="flex flex-wrap items-center gap-2">
           <PlanSceneControls
             showWalls={showWalls}
@@ -202,7 +202,7 @@ export default function SeatSelectionPlanCanvas({
       {showZonePricing && pricingZones.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {pricingZones.map((z) => (
-            <span key={z.id} className="inline-flex items-center gap-1 text-[10px] text-muted">
+            <span key={z.id} className="inline-flex items-center gap-1 text-xs text-muted">
               <span className="w-2.5 h-2.5 rounded-full border border-border" style={{ backgroundColor: z.color || '#c4a35a' }} />
               {z.name} · {formatFc(z.priceFc)}
             </span>
@@ -366,7 +366,7 @@ export default function SeatSelectionPlanCanvas({
                   title={`${table.name} (${availableSeatsCount}/${table.capacity} places libres)`}
                 >
                   <div className={cn('px-1 relative z-10 pointer-events-none', isChair && 'hidden sm:block')} style={upright}>
-                    <div className="truncate max-w-[5.5rem] sm:max-w-[72px] font-semibold text-[11px] sm:text-[10px]">{table.name}</div>
+                    <div className="truncate max-w-[5.5rem] sm:max-w-[72px] font-semibold text-xs sm:text-xs">{table.name}</div>
                     {table.seats[0]?.pricingZoneName && (
                       <div
                         className="text-[7.5px] px-1 py-0.2 rounded font-semibold truncate max-w-[68px] mx-auto mt-0.5 shadow-2xs"
@@ -410,7 +410,7 @@ export default function SeatSelectionPlanCanvas({
                           ...(seatZoneColor && !isSelected ? { borderColor: seatZoneColor, boxShadow: `0 0 0 1px ${seatZoneColor}55` } : {}),
                         }}
                         className={cn(
-                          'absolute w-8 h-8 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center text-[10px] sm:text-[8px] font-bold transition z-20 touch-manipulation active:scale-95 before:content-[\'\'] before:absolute before:-inset-2.5 before:rounded-full',
+                          'absolute w-8 h-8 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center text-xs sm:text-[8px] font-bold transition z-20 touch-manipulation active:scale-95 before:content-[\'\'] before:absolute before:-inset-2.5 before:rounded-full',
                           !seat.available && 'opacity-35 cursor-not-allowed bg-muted text-muted border-border',
                           seat.available && !isSelected && 'bg-surface hover:bg-primary/10 hover:border-primary cursor-pointer border-border text-foreground',
                           isSelected && 'bg-primary-solid text-primary-foreground border-primary-solid scale-110 shadow-md font-extrabold ring-2 ring-primary-solid/40',

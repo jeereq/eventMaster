@@ -569,7 +569,7 @@ export default function GuestTablePlanView({
                 style={{ ...detailTableStyle, minWidth: seatRadius * 2.2, minHeight: seatRadius * 1.6 }}
               >
                 <div className="px-2 z-10">
-                  <div className="font-semibold text-[11px]">{tableDetails.tableName}</div>
+                  <div className="font-semibold text-xs">{tableDetails.tableName}</div>
                 </div>
                 {Array.from({ length: tableDetails.capacity }).map((_, index) => {
                   const coords = getSeatCoordinates(tableDetails.shape, tableDetails.capacity, index, seatRadius);
@@ -618,7 +618,7 @@ export default function GuestTablePlanView({
               <span>Voisins de table</span>
             </h4>
             {tableDetails.neighbors.length > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
                 {tableDetails.neighbors.length} convive{tableDetails.neighbors.length > 1 ? 's' : ''} à votre table
               </span>
             )}

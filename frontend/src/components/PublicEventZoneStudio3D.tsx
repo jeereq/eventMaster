@@ -25,7 +25,7 @@ import {
   Building2,
   Trash2,
   Plus,
-} from 'lucide-react';
+} from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 export interface PublicEventZoneStudio3DProps {
@@ -177,7 +177,7 @@ export default function PublicEventZoneStudio3D({
 
               {showAutoDistributeMenu && (
                 <div className="absolute right-0 top-full mt-1.5 z-30 w-64 rounded-xl border border-border bg-surface p-1.5 shadow-xl text-left space-y-1 animate-in fade-in zoom-in-95">
-                  <p className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-muted">
+                  <p className="px-2.5 py-1 text-xs font-bold text-muted">
                     Stratégie spatiale
                   </p>
                   <button
@@ -219,7 +219,7 @@ export default function PublicEventZoneStudio3D({
             <button
               type="button"
               onClick={() => onUpdatePricingZones([...pricingZones, createEmptyPricingZone(pricingZones.length)])}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
             >
               <Plus className="w-3.5 h-3.5" />
               Ajouter une zone
@@ -306,7 +306,7 @@ export default function PublicEventZoneStudio3D({
 
       {/* Barre d'outils pinceau de zone */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] font-semibold text-muted uppercase tracking-wider mr-1 flex items-center gap-1">
+        <span className="text-xs font-semibold text-muted mr-1 flex items-center gap-1">
           <Paintbrush className="w-3 h-3 text-primary" />
           Pinceau 3D :
         </span>
@@ -349,12 +349,12 @@ export default function PublicEventZoneStudio3D({
       {/* Rendu 3D de la salle avec les zones */}
       {previewBlueprint ? (
         <div className="relative rounded-2xl overflow-hidden border border-border bg-foreground shadow-[var(--shadow-soft)]">
-          <div className="absolute top-2 left-2 z-20 flex items-center gap-1 bg-foreground/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-background/20 text-xs font-semibold text-background">
+          <div className="absolute top-2 left-2 z-20 flex items-center gap-1 bg-foreground/80 px-2.5 py-1 rounded-full border border-background/20 text-xs font-semibold text-background">
             <Box className="w-3 h-3 text-primary" />
             <span>Vue 3D des zones · Cliquez sur une table pour l&apos;assigner</span>
           </div>
 
-          <div className="absolute top-2 right-2 z-20 flex shrink-0 gap-1 rounded-full border border-background/20 bg-foreground/80 p-0.5 backdrop-blur-md">
+          <div className="absolute top-2 right-2 z-20 flex shrink-0 gap-1 rounded-full border border-background/20 bg-foreground/80 p-0.5">
             {(
               [
                 { id: 'standard' as const, label: '3D Standard' },
@@ -389,12 +389,12 @@ export default function PublicEventZoneStudio3D({
 
           {/* Info table active sélectionnée */}
           {activeSelectedTable && (
-            <div className="absolute bottom-2 left-2 right-2 z-20 rounded-xl bg-background/95 backdrop-blur-md border border-border p-2.5 shadow-lg flex flex-wrap items-center justify-between gap-2">
+            <div className="absolute bottom-2 left-2 right-2 z-20 rounded-xl bg-background/95 border border-border p-2.5 shadow-lg flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-xs text-foreground">
                   {activeSelectedTable.name}
                 </span>
-                <span className="text-[11px] text-muted">
+                <span className="text-xs text-muted">
                   ({activeSelectedTable.capacity} places)
                 </span>
                 {activeSelectedTable.pricingZoneId && (
@@ -437,7 +437,7 @@ export default function PublicEventZoneStudio3D({
           <p className="text-xs font-semibold text-foreground">
             Liez une salle pour visualiser vos zones en 3D
           </p>
-          <p className="text-[11px] text-muted max-w-sm mx-auto">
+          <p className="text-xs text-muted max-w-sm mx-auto">
             Le plan 3D affiche vos estrades, podiums et tables avec la couleur exacte de chaque catégorie de billet.
           </p>
           {onOpenRoomPicker && (
@@ -457,7 +457,7 @@ export default function PublicEventZoneStudio3D({
               {formatFc(ticketingSummary.totalRevenueFc)}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-muted tabular-nums text-[11px]">
+          <div className="flex items-center gap-2 text-muted tabular-nums text-xs">
             <span>
               {ticketingSummary.totalSeats - ticketingSummary.unassigned.seatCount} /{' '}
               {ticketingSummary.totalSeats} places assignées

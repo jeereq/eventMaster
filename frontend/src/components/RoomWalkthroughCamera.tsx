@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
@@ -35,7 +35,17 @@ export default function RoomWalkthroughCamera({
   onComplete?: () => void;
 }) {
   const { camera } = useThree();
-  const waypoints = useMemo(() => buildRoomWalkthrough(blueprint), [blueprint]);
+  // Le parent recrée l’objet blueprint à chaque rendu (dont ceux déclenchés par onProgress) :
+  // le parcours est donc figé au démarrage, sinon le tour repartait sans cesse de la porte.
+  const blueprintRef = useRef(blueprint);
+  const onProgressRef = useRef(onProgress);
+  const onCompleteRef = useRef(onComplete);
+  useLayoutEffect(() => {
+    blueprintRef.current = blueprint;
+    onProgressRef.current = onProgress;
+    onCompleteRef.current = onComplete;
+  });
+  const waypointsRef = useRef<WalkthroughWaypoint[]>([]);
   const elapsedRef = useRef(0);
   const doneRef = useRef(false);
   const pos = useMemo(() => new THREE.Vector3(), []);
@@ -44,6 +54,8 @@ export default function RoomWalkthroughCamera({
 
   useEffect(() => {
     if (!active) return;
+    const waypoints = buildRoomWalkthrough(blueprintRef.current);
+    waypointsRef.current = waypoints;
     elapsedRef.current = 0;
     doneRef.current = false;
     lastLabelRef.current = '';
@@ -52,9 +64,10 @@ export default function RoomWalkthroughCamera({
       camera.position.set(...first.position);
       camera.lookAt(...first.lookAt);
     }
-  }, [active, waypoints, camera]);
+  }, [active, camera]);
 
   useFrame((_, delta) => {
+    const waypoints = waypointsRef.current;
     if (!active || doneRef.current || waypoints.length < 2) return;
     elapsedRef.current += delta;
     const t = elapsedRef.current;
@@ -84,8 +97,8 @@ export default function RoomWalkthroughCamera({
       camera.position.set(...last.position);
       camera.lookAt(...last.lookAt);
       doneRef.current = true;
-      onProgress?.(last.label ?? 'Fin', 1);
-      onComplete?.();
+      onProgressRef.current?.(last.label ?? 'Fin', 1);
+      onCompleteRef.current?.();
       return;
     }
 
@@ -100,7 +113,7 @@ export default function RoomWalkthroughCamera({
     const key = `${label}|${progressBucket}`;
     if (key !== lastLabelRef.current) {
       lastLabelRef.current = key;
-      onProgress?.(label, progress);
+      onProgressRef.current?.(label, progress);
     }
   });
 

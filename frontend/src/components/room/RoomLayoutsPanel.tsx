@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Copy, Download, Eye, EyeOff, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Copy, Download, Eye, EyeOff, Pencil, RefreshCw, Trash2 } from '@/components/icons';
 import { Alert, Button, ConfirmDialog } from '@/components/ui';
 import LayoutThumbnailCapture from '@/components/room/LayoutThumbnailCapture';
 import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';

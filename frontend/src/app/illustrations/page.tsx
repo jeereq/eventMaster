@@ -44,7 +44,7 @@ export default function IllustrationsPage() {
               <div className="mt-4">
                 <Button size="md">{item.action}</Button>
               </div>
-              <code className="mt-4 text-[11px] text-muted">{item.name}</code>
+              <code className="mt-4 text-xs text-muted">{item.name}</code>
             </article>
           ))}
         </div>

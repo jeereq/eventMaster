@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight } from '@/components/icons';
 import Modal from '@/components/ui/Modal';
 import { Button } from '@/components/ui';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';

@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Box, Images, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, Send, Users } from 'lucide-react';
+import { Box, Images, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, Send, Users } from '@/components/icons';
 import ShareButton from '@/components/ShareButton';
 import { cn } from '@/lib/cn';
 import { sizedMediaUrl, type PublicVenue } from '@/lib/marketplace';
@@ -33,7 +33,7 @@ const DESKTOP_MEDIA_QUERY = '(min-width: 1024px)';
 const POSTER_WIDTH = 1280;
 
 const overlayButtonClass =
-  'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-border/70 bg-background/90 px-3 text-xs font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 touch-manipulation';
+  'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-border/70 bg-background/90 px-3 text-xs font-semibold text-foreground shadow-sm transition hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 touch-manipulation';
 
 interface Props {
   venue: PublicVenue;

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from '@/components/icons';
 import Modal from '@/components/ui/Modal';
 import { isVideoUrl, listingSrcSet, sizedMediaUrl } from '@/lib/marketplace';
 
@@ -58,7 +58,7 @@ function GalleryContent({ photos, title, startIndex }: { photos: string[]; title
             type="button"
             onClick={() => step(-1)}
             aria-label="Photo précédente"
-            className="absolute left-2 top-1/2 -translate-y-1/2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-foreground/70 text-background backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="absolute left-2 top-1/2 -translate-y-1/2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-foreground/70 text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <ChevronLeft className="h-5 w-5" aria-hidden />
           </button>
@@ -66,7 +66,7 @@ function GalleryContent({ photos, title, startIndex }: { photos: string[]; title
             type="button"
             onClick={() => step(1)}
             aria-label="Photo suivante"
-            className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-foreground/70 text-background backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-foreground/70 text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <ChevronRight className="h-5 w-5" aria-hidden />
           </button>

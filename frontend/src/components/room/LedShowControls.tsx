@@ -3,7 +3,7 @@
 /** Réglages « Jeux de lumière LED » : mode, couleur, vitesse et où poser les LED. */
 
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { LED_COLOR_PRESETS, LED_SHOW_MODE_LABELS, isLedShowAnimated, resolveLedShow, type LedShowMode, type LedShowSettings } from '@/lib/roomLedShow';
 

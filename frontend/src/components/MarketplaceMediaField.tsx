@@ -320,7 +320,7 @@ export default function MarketplaceMediaField({
                 </span>
               ) : null}
               {i === 0 ? (
-                <span className="absolute top-1 left-1 inline-flex items-center gap-0.5 text-[10px] font-semibold bg-primary-solid text-primary-foreground px-1.5 py-0.5 rounded">
+                <span className="absolute top-1 left-1 inline-flex items-center gap-0.5 text-xs font-semibold bg-primary-solid text-primary-foreground px-1.5 py-0.5 rounded">
                   <Star className="w-2.5 h-2.5 fill-current" aria-hidden /> Couverture
                 </span>
               ) : null}
@@ -351,19 +351,19 @@ export default function MarketplaceMediaField({
                 />
               )}
               {item.status === 'uploading' ? (
-                <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/35 text-white text-[11px] font-semibold">
+                <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/35 text-white text-xs font-semibold">
                   <Loader2 className="w-5 h-5 animate-spin" aria-hidden />
                   Envoi…
                 </span>
               ) : (
                 <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/60 p-1.5 text-center text-white">
                   <AlertCircle className="w-4 h-4" aria-hidden />
-                  <span className="text-[10px] leading-tight line-clamp-3">{item.error}</span>
+                  <span className="text-xs leading-tight line-clamp-3">{item.error}</span>
                   <span className="flex gap-1">
                     <button
                       type="button"
                       onClick={() => retry(item.id)}
-                      className="inline-flex items-center gap-1 rounded bg-white/90 px-2 py-1 text-[11px] font-semibold text-black"
+                      className="inline-flex items-center gap-1 rounded bg-white/90 px-2 py-1 text-xs font-semibold text-black"
                     >
                       <RotateCcw className="w-3 h-3" aria-hidden /> Réessayer
                     </button>
@@ -407,7 +407,7 @@ export default function MarketplaceMediaField({
         <p className="text-xs text-muted">Touchez une photo pour la déplacer, la mettre en couverture ou la supprimer.</p>
       ) : null}
 
-      <p className="text-[11px] text-muted">
+      <p className="text-xs text-muted">
         Photos JPEG, PNG, WebP, HEIC (10 Mo max, réduites automatiquement) · Vidéos MP4, MOV, WebM (80 Mo, {MARKETPLACE_MAX_VIDEOS} max).
       </p>
       {notice ? <p className="text-xs text-danger" role="alert">{notice}</p> : null}

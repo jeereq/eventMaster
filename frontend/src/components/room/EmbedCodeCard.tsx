@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Code2, Copy } from 'lucide-react';
+import { Check, Code2, Copy } from '@/components/icons';
 import { Button } from '@/components/ui';
 import { appOrigin } from '@/lib/share';
 import { buildEmbedPath, buildEmbedSnippet } from '@/lib/venueEmbed';
@@ -63,9 +63,9 @@ export default function EmbedCodeCard({ slug, title }: Props) {
         value={snippet}
         rows={7}
         onFocus={(e) => e.currentTarget.select()}
-        className="mt-3 w-full resize-none rounded-lg border border-border bg-surface-muted p-3 font-mono text-[11px] leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className="mt-3 w-full resize-none rounded-lg border border-border bg-surface-muted p-3 font-mono text-xs leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       />
-      <p className="mt-2 text-[11px] text-muted" aria-live="polite">
+      <p className="mt-2 text-xs text-muted" aria-live="polite">
         {copyFailed
           ? 'Copie impossible : sélectionnez le code ci-dessus et copiez-le manuellement.'
           : (

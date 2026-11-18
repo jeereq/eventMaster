@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   SlidersHorizontal,
   LayoutGrid,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { api } from '@/lib/api';
@@ -128,7 +128,7 @@ export default function ShowcasePlanSelectionModal({
   const publishedCount = localPlans.filter((p) => p.isPublished !== false).length;
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-6 bg-black/60 animate-in fade-in duration-150">
       <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* En-tête */}
         <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-3 bg-surface-muted/40">
@@ -224,7 +224,7 @@ export default function ShowcasePlanSelectionModal({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h4 className="text-sm font-bold text-foreground truncate">{plan.name}</h4>
-                        <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-muted border border-border text-muted">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-surface-muted border border-border text-muted">
                           {plan.label || plan.category}
                         </span>
                         {isPub ? (

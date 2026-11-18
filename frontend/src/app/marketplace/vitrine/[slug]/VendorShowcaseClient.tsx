@@ -165,7 +165,7 @@ export default function VendorShowcaseClient() {
                       {initialsOf(vendor.displayName)}
                     </span>
                     <div className="min-w-0 space-y-1.5">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                      <p className="text-xs font-semibold text-primary">
                         {trades.length ? trades.slice(0, 3).join(' · ') : venues.length ? 'Salle de réception' : 'Prestataire'}
                       </p>
                       <h1 className="font-display text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
@@ -226,7 +226,7 @@ export default function VendorShowcaseClient() {
 
             <nav
               aria-label="Sections de la vitrine"
-              className="sticky top-[var(--em-site-header)] z-20 -mx-4 border-b border-border bg-background/90 px-4 backdrop-blur-md sm:-mx-6 sm:px-6"
+              className="sticky top-[var(--em-site-header)] z-20 -mx-4 border-b border-border bg-background/90 px-4 sm:-mx-6 sm:px-6"
             >
               <ul className="flex gap-1 overflow-x-auto py-2 [scrollbar-width:none]">
                 {sections.map((s) => (

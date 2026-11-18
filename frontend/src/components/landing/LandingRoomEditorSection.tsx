@@ -9,7 +9,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Box, Building2, CheckCircle2, GraduationCap, Keyboard, Ruler, Sparkles, Wine } from 'lucide-react';
+import { ArrowRight, Box, Building2, CheckCircle2, GraduationCap, Keyboard, Ruler, Sparkles, Wine } from '@/components/icons';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useAuth } from '@/context/AuthContext';
@@ -160,7 +160,7 @@ export default function LandingRoomEditorSection() {
                     level === 'complete' ? 'border-primary/50 bg-primary/5' : 'border-border bg-surface',
                   )}
                 >
-                  <p className="text-xs font-bold uppercase tracking-wide text-muted">Niveau {i + 1}</p>
+                  <p className="text-xs font-bold text-muted">Niveau {i + 1}</p>
                   <p className="font-display text-lg font-bold text-foreground">{caps.label}</p>
                   <ul className="mt-2 space-y-1.5 text-sm text-foreground">
                     {i > 0 ? <li className="text-xs text-muted">Tout le niveau {roomEditorCapabilities(LEVELS[i - 1], true).label}, plus :</li> : null}

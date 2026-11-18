@@ -150,9 +150,9 @@ export default function CommissionPayButton({
               onChange={(e) => setPhone(e.target.value)}
             />
           ) : (
-            <p className="text-[11px] text-muted">Vous serez redirigé vers la page de paiement sécurisée (Visa, Mastercard).</p>
+            <p className="text-xs text-muted">Vous serez redirigé vers la page de paiement sécurisée (Visa, Mastercard).</p>
           )}
-          <p className="text-[11px] text-muted leading-relaxed">
+          <p className="text-xs text-muted leading-relaxed">
             Dès que le paiement est confirmé, la commission de ces réservations est marquée payée automatiquement.
           </p>
           {error ? <Alert variant="error">{error}</Alert> : null}

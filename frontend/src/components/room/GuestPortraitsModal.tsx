@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ImagePlus, Trash2, UserRound } from 'lucide-react';
+import { ImagePlus, Trash2, UserRound } from '@/components/icons';
 import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { cropImageToDataUrl, readImageFile } from '@/lib/imageCropUtils';
