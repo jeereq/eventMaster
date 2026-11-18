@@ -183,6 +183,7 @@ export function PlanSceneControls({
   onToggleFullscreen,
   isFullscreen = false,
   showRoofControl = true,
+  showWallsControl = true,
   variant = 'surface',
   className,
 }: {
@@ -193,6 +194,8 @@ export function PlanSceneControls({
   onToggleFullscreen?: () => void;
   isFullscreen?: boolean;
   showRoofControl?: boolean;
+  /** Masqué pour un espace ouvert (plein air) : il n'y a pas de murs à afficher. */
+  showWallsControl?: boolean;
   variant?: 'surface' | 'overlay';
   className?: string;
 }) {
@@ -214,16 +217,18 @@ export function PlanSceneControls({
       role="toolbar"
       aria-label="Affichage du plan"
     >
-      <button
-        type="button"
-        aria-pressed={showWalls}
-        onClick={onToggleWalls}
-        className={cn(btn, showWalls && pressed)}
-        title={showWalls ? 'Masquer les murs' : 'Afficher les murs'}
-      >
-        <BrickWall className="w-3.5 h-3.5" aria-hidden />
-        <span>{showWalls ? 'Murs' : 'Sans murs'}</span>
-      </button>
+      {showWallsControl ? (
+        <button
+          type="button"
+          aria-pressed={showWalls}
+          onClick={onToggleWalls}
+          className={cn(btn, showWalls && pressed)}
+          title={showWalls ? 'Masquer les murs' : 'Afficher les murs'}
+        >
+          <BrickWall className="w-3.5 h-3.5" aria-hidden />
+          <span>{showWalls ? 'Murs' : 'Sans murs'}</span>
+        </button>
+      ) : null}
       {showRoofControl && onToggleRoof ? (
         <button
           type="button"

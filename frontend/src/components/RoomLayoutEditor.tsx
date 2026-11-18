@@ -1835,7 +1835,11 @@ export default function RoomLayoutEditor({
   const openSpace = isOpenSpace(blueprint.metadata);
   const toggleOpenSpace = () => {
     const next = !openSpace;
-    if (next) setWallEditMode(false);
+    if (next) {
+      setWallEditMode(false);
+      if (accordion === 'murs') setAccordion('');
+      if (quickCreate === 'doors' || quickCreate === 'balconies') setQuickCreate(null);
+    }
     updateBlueprint({
       ...blueprint,
       metadata: { ...blueprint.metadata, showWalls: !next, showRoof: !next },
@@ -2995,7 +2999,7 @@ export default function RoomLayoutEditor({
       { id: 'zone', label: 'Zones', n: counts.zone },
       { id: 'chair', label: 'Chaises', n: counts.chair },
       { id: 'fixture', label: 'Fixtures', n: counts.fixture },
-      { id: 'wall', label: 'Murs', n: counts.wall },
+      ...(openSpace ? [] : [{ id: 'wall' as const, label: 'Murs', n: counts.wall }]),
     ];
 
     return (
@@ -4699,6 +4703,16 @@ export default function RoomLayoutEditor({
                   </div>
                 </div>
                 <div className="space-y-3 pt-3 border-t border-border/50">
+                  {openSpace ? (
+                    <div>
+                      <p className={EDITOR_HEADING}>Plein air & éclairage</p>
+                      <p className={EDITOR_HINT}>
+                        Espace ouvert : pas de murs ni de toit, les réglages portent sur les éléments posés dans la salle.
+                        Pour ajouter des murs, utilisez « Plein air · ajouter des murs » dans Affichage.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
                   <div>
                     <p className={EDITOR_HEADING}>Toit, murs & éclairage</p>
                     <p className={EDITOR_HINT}>Masquez l’enveloppe pour placer le mobilier ; les murs restent enregistrés.</p>
@@ -4801,7 +4815,10 @@ export default function RoomLayoutEditor({
                       </label>
                     </div>
                   )}
+                    </>
+                  )}
 
+{!openSpace ? (
                   <div className="space-y-2 rounded-[var(--radius-button)] border border-border bg-surface-muted/40 p-2.5">
                     <label className="flex items-center gap-2 min-h-11 text-sm font-semibold text-foreground cursor-pointer">
                       <input
@@ -4882,6 +4899,7 @@ export default function RoomLayoutEditor({
                       <p className={EDITOR_HINT}>Activez pour choisir le style (classique, cristal, moderne…).</p>
                     )}
                   </div>
+                  ) : null}
 
                   <LedShowControls
                     value={blueprint.metadata.ledShow}
@@ -5375,7 +5393,8 @@ export default function RoomLayoutEditor({
           )}
           </div>
 
-          {/* Accordion murs */}
+          {/* Accordion murs : sans objet pour un espace ouvert (plein air). */}
+          {!openSpace ? (
           <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
             <button
               type="button"
@@ -5434,6 +5453,7 @@ export default function RoomLayoutEditor({
               </div>
             )}
           </div>
+          ) : null}
           
           {/* Accordion 3 : Configuration Globale */}
           <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
@@ -8810,7 +8830,7 @@ export default function RoomLayoutEditor({
     const push = (id: string, label: string, group: string, run: () => void, keywords?: string) => out.push({ id, label, group, run, keywords });
     push('table', 'Table', 'Mobilier', addTable, 'ronde banquet invités');
     push('free-chair', 'Fauteuil', 'Mobilier', addFreeChair, 'chaise siège');
-    push('wall-art', 'Image ou graffiti sur un mur', 'Murs', selectWallForArt, 'photo affiche logo tableau tag graffiti mural décor');
+    if (!openSpace) push('wall-art', 'Image ou graffiti sur un mur', 'Murs', selectWallForArt, 'photo affiche logo tableau tag graffiti mural décor');
     if (caps.tableShapes.includes('arc')) push('arc-ring', 'Anneau d’arcs', 'Mobilier', addArcRing, 'tables arc');
     if (caps.canAddRows) {
       push('row', 'Rangée de chaises', 'Mobilier', addRow, 'conférence théâtre');
@@ -8837,7 +8857,7 @@ export default function RoomLayoutEditor({
     if (can('chandelier')) {
       (Object.keys(chandelierFixtureStyleLabels) as ChandelierFixtureStyle[]).forEach((style) => push(`chandelier-${style}`, chandelierFixtureStyleLabels[style], 'Lustres', () => addChandelierFixture(style), 'lustre suspension lumière'));
     }
-    if (can('door')) {
+    if (can('door') && !openSpace) {
       (Object.keys(doorStyleLabels) as DoorStyle[]).forEach((style) => push(`door-${style}`, doorStyleLabels[style], 'Portes', () => addDoorFixture(style), 'porte entrée'));
     }
     if (can('aisle')) {
@@ -9125,14 +9145,15 @@ export default function RoomLayoutEditor({
           <Sparkles className="w-3.5 h-3.5" aria-hidden />
           {aiPlanReading ? 'Lecture IA…' : 'Lire avec l’IA'}
         </button></Gate>
-      <Gate allowed={caps.fixtureKinds.includes('door')} need={{ fixture: 'door' }}><button
+      {/* Portes et balcons se posent sur les murs : rien à proposer pour un espace ouvert. */}
+      {!openSpace ? <Gate allowed={caps.fixtureKinds.includes('door')} need={{ fixture: 'door' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'doors' ? null : 'doors')}
           className={cn(EDITOR_TOOL, quickCreate === 'doors' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Ajouter une porte ouvrante ou grand portail"
         >
           <DoorOpen className="w-3.5 h-3.5" aria-hidden /> Portes…
-        </button></Gate>
+        </button></Gate> : null}
       <Gate allowed={caps.fixtureKinds.includes('stairs')} need={{ fixture: 'stairs' }}><button
           type="button"
           onClick={openStairsQuickCreate}
@@ -9141,13 +9162,13 @@ export default function RoomLayoutEditor({
         >
           <StepForward className="w-3.5 h-3.5" aria-hidden /> Escalier vers…
         </button></Gate>
-      <Gate allowed={caps.fixtureKinds.includes('balcony')} need={{ fixture: 'balcony' }}><button
+      {!openSpace ? <Gate allowed={caps.fixtureKinds.includes('balcony')} need={{ fixture: 'balcony' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'balconies' ? null : 'balconies')}
           className={cn(EDITOR_TOOL, quickCreate === 'balconies' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
         >
           Balcons…
-        </button></Gate>
+        </button></Gate> : null}
       <Gate allowed={caps.fixtureKinds.includes('column')} need={{ fixture: 'column' }}><button type="button" onClick={() => addFixture('column')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           <Columns3 className="w-3.5 h-3.5" aria-hidden /> Colonne
         </button></Gate>
@@ -9432,6 +9453,19 @@ export default function RoomLayoutEditor({
           {guestPortraits.length > 0 ? `Photos : ${guestPortraits.length}` : 'Invités avec photo'}
         </button>
       ) : null}
+      {openSpace ? (
+        // Espace ouvert : pas de murs ni de toit à afficher ; un seul bouton pour en remettre.
+        <button
+          type="button"
+          onClick={toggleOpenSpace}
+          title="Espace ouvert (plein air) : réafficher les murs et le toit"
+          className={cn(EDITOR_TOOL, EDITOR_TOOL_ON)}
+        >
+          <Fence className="w-3.5 h-3.5" aria-hidden />
+          Plein air · ajouter des murs
+        </button>
+      ) : (
+        <>
       <button
         type="button"
         onClick={toggleRoofVisible}
@@ -9452,6 +9486,8 @@ export default function RoomLayoutEditor({
         <BrickWall className="w-3.5 h-3.5" aria-hidden />
         {wallsVisible ? 'Murs' : 'Murs masqués'}
       </button>
+        </>
+      )}
       <button
         type="button"
         onClick={() => {
