@@ -128,6 +128,8 @@ import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
 import { detectLayoutClearanceConflicts } from '@/lib/roomLayoutClearance';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import { entranceViewPose } from '@/lib/roomWalkthrough';
+import { buildGuestSimulation, type GuestSimulationSettings } from '@/lib/roomGuestSimulation';
+import { GuestAvatars } from '@/components/room/GuestAvatarMeshes';
 import {
   DOLLHOUSE_WALL_CUT_M,
   dollhouseOverviewPose,
@@ -251,6 +253,8 @@ interface RoomWebGLViewerProps {
   introView?: RoomIntroView;
   /** Change de valeur pour rejouer l’arrivée (aperçu depuis l’éditeur). */
   introReplayKey?: number;
+  /** Invités simulés (avatars assis, debout et danseurs) ; null ou absent = salle vide. */
+  guestSimulation?: GuestSimulationSettings | null;
 }
 
 const SPACE_ICONS: Record<RoomSpaceIcon, React.ComponentType<{ className?: string }>> = {
@@ -3595,6 +3599,7 @@ function SceneContent({
   introGlide = false,
   filmActive = false,
   frameTrackRef,
+  guestSimulation = null,
 }: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode' | 'introFlyIn' | 'introView' | 'introReplayKey'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
@@ -3882,6 +3887,15 @@ function SceneContent({
     return map;
   }, [blockedSeats]);
   const surfacePickable = !lockOrbit && !dragSession;
+  const simulatedGuests = useMemo(() => {
+    if (!guestSimulation) return [];
+    return buildGuestSimulation(blueprint, {
+      ...guestSimulation,
+      surfaceElevationAt: (x, y, id) => resolveFurnitureSurfaceAt(blueprint, x, y, { allowTable: false, ignoreId: id })?.elevationM ?? 0,
+      storyElevation: (storyId) => worldElevationForStory(blueprint, storyId),
+      storyVisible: (storyId) => isStoryVisible(blueprint, storyId),
+    }).guests;
+  }, [blueprint, guestSimulation]);
   const outdoorSurroundings = resolveOutdoorSurroundings(blueprint.metadata.outdoorSurroundings);
 
   return (
@@ -4462,6 +4476,13 @@ function SceneContent({
       />
 
       {highlightSpace ? <SpaceHighlight space={highlightSpace} reduceMotion={reduceMotion} /> : null}
+      {simulatedGuests.length > 0 ? (
+        <GuestAvatars
+          guests={simulatedGuests}
+          animate={!reduceMotion}
+          castShadow={qualitySettings.quality !== 'draft'}
+        />
+      ) : null}
       <IntroFlyIn
         pendingRef={pendingIntroRef}
         orbitControlsRef={orbitControlsRef}
@@ -4521,6 +4542,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   introFlyIn = false,
   introView: introViewProp,
   introReplayKey = 0,
+  guestSimulation = null,
 }, ref) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
   const touchScreen = useCoarsePointer();
@@ -5252,6 +5274,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             introReplayKey={introReplayKey}
             onIntroPreset={handleIntroPreset}
             introGlide={introGlide}
+            guestSimulation={guestSimulation}
             filmActive={film !== null}
             frameTrackRef={frameTrackRef}
           />
