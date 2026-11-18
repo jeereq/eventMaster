@@ -20,7 +20,7 @@ import GuestPortraitsModal, { preparePortraitPhoto } from '@/components/room/Gue
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
-  GraduationCap, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, Move, Rotate3d, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence, Users, Camera,
+  GraduationCap, MessageCircle, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, Move, Rotate3d, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence, Users, Camera,
 } from '@/components/icons';
 import { buildPlotGrid, buildSinglePlot, findFreePlotSpot, isOpenSpace, nextPlotLabel, normalizePlotGrid, plotGridFootprint, PLOT_COLORS, PLOT_GRID_DEFAULTS, type PlotGridOptions } from '@/lib/roomPlots';
 import {
@@ -195,6 +195,7 @@ import {
 } from '@/lib/roomLayoutUtils';
 import QuickAddPalette, { type QuickAddAction } from '@/components/room/QuickAddPalette';
 import EditorTour from '@/components/room/EditorTour';
+import EditorAssistant from '@/components/room/EditorAssistant';
 import WallArtPanel from '@/components/room/WallArtPanel';
 import WallElevationEditor from '@/components/room/WallElevationEditor';
 import { ItemPlacementFields } from '@/components/room/ItemPlacementFields';
@@ -1127,6 +1128,9 @@ export default function RoomLayoutEditor({
   const clipboardRef = useRef<LayoutClipboard | null>(null);
   /** Guide interactif : ouvert, ou proposé d’office à la première visite. */
   const [tourOpen, setTourOpen] = useState(() => !readOnly && readGuideParam());
+  /** Assistant (chat d’aide sur les actions de l’éditeur). */
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const closeAssistant = useCallback(() => setAssistantOpen(false), []);
   const [tourOffer, setTourOffer] = useState(() => !readOnly && !readGuideParam() && !tourAlreadySeen());
   const startTour = useCallback(() => {
     markTourSeen();
@@ -8940,6 +8944,9 @@ export default function RoomLayoutEditor({
       <button type="button" onClick={startTour} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Visite guidée de l’éditeur">
         <GraduationCap className="w-3.5 h-3.5" aria-hidden /> Guide
       </button>
+      <button type="button" onClick={() => setAssistantOpen(true)} data-tour="assistant" className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Poser une question sur l’éditeur">
+        <MessageCircle className="w-3.5 h-3.5" aria-hidden /> Assistant
+      </button>
       <EditorToolGroup
         id="furniture"
         closeOnPick
@@ -10651,6 +10658,16 @@ export default function RoomLayoutEditor({
             </button>
             <button
               type="button"
+              onClick={() => setAssistantOpen((v) => !v)}
+              aria-pressed={assistantOpen}
+              data-tour="assistant"
+              className={cn(EDITOR_TOOL, assistantOpen ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+              title="Poser une question sur l’éditeur : que faire, où cliquer"
+            >
+              <MessageCircle className="w-3.5 h-3.5" aria-hidden /> Assistant
+            </button>
+            <button
+              type="button"
               onClick={openQuickAdd}
               className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'gap-2')}
               title="Rechercher un élément à ajouter (Ctrl+K ou /)"
@@ -10848,6 +10865,9 @@ export default function RoomLayoutEditor({
         }}
         onAction={runTourAction}
       />
+    ) : null}
+    {!readOnly ? (
+      <EditorAssistant open={assistantOpen} onClose={closeAssistant} caps={caps} upgradeHref={user ? '/dashboard/billing' : '/tarifs'} />
     ) : null}
     {!readOnly && tourOffer && !tourOpen ? (
       <div

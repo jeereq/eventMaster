@@ -479,6 +479,10 @@ export interface RoomWallSegment {
   openings?: RoomWallOpening[];
   /** Images et graffitis posés sur la face intérieure. */
   art?: RoomWallArt[];
+  /** Menuiserie décorative côté salle (plinthe et corniche par défaut). */
+  trim?: import('./roomWallTrim.ts').WallTrimStyle;
+  /** Teinte des moulures (blanc cassé par défaut). */
+  trimColor?: string;
   /** Étage (maison multi-niveaux). */
   storyId?: string;
 }

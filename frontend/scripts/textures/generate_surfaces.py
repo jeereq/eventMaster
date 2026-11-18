@@ -1092,7 +1092,7 @@ JOBS = {
     # Minéraux
     'concrete': lambda: (concrete(591), 5),
     'epoxy-grey': lambda: (concrete(595, ('#bcc3cc', '#c9cfd6', '#d6dbe1'), joints=0), 1.2),
-    'herringbone-honey': lambda: (herringbone('herringbone-honey', ['#c8955a', '#b9864c', '#d3a26a', '#ad7a42', '#c08d52'], 181, figure=0.25), 6),
+    'herringbone-honey': lambda: (herringbone('herringbone-honey', ['#c8955a', '#b9864c', '#d3a26a', '#ad7a42', '#c08d52'], 181, rings=20, figure=0.2, figure_rings=(2.4, 3.6), bevel=0.35), 6),
     'concrete-polished': lambda: (concrete(601, ('#7f7c76', '#95928b', '#a9a59d'), polished=True, joints=1), 2.5),
     'terrazzo-classic': lambda: (terrazzo(611, 2600, ['#9a9690', '#c9c3b8', '#5d5a55', '#d8d2c6', '#b7a58c', '#7d7a74']), 2),
     'terrazzo-venetian': lambda: (terrazzo(621, 1100, ['#b3746a', '#e2ddd3', '#6e6a63', '#c9a77d', '#8e3d33', '#f0ece4', '#355e58'], ('#e2dcd0', '#ece7de'), (6, 18)), 2),

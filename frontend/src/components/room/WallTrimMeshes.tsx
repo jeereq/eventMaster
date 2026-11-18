@@ -9,14 +9,17 @@
  * Z perpendiculaire ; `side` = +1 ou −1 indique la face concernée.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
+import { WALL_TRIM_DEFAULT_COLOR, type WallTrimLayout } from '@/lib/roomWallTrim';
 
 type Profile = Array<[number, number]>;
 
 /** Teinte des boiseries peintes par défaut (blanc cassé satiné). */
-export const TRIM_DEFAULT_COLOR = '#efebe4';
+export const TRIM_DEFAULT_COLOR = WALL_TRIM_DEFAULT_COLOR;
 
 /** Plinthe de 10 cm : face plate, haut chanfreiné et arrondi (profil x = saillie, y = hauteur). */
 const PLINTH: Profile = [[0, 0], [0.014, 0], [0.014, 0.074], [0.011, 0.084], [0.007, 0.091], [0.004, 0.097], [0, 0.1]];
@@ -118,4 +121,59 @@ export function Architrave({ w, h, z, side, color = TRIM_DEFAULT_COLOR, bottom =
       {foot ? <Trim geometry={foot} position={[0, -h / 2, 0]} color={color} /> : null}
     </group>
   );
+}
+
+/** Cimaise de 6 cm : talon arrondi en bas, bec saillant, doucine en haut (x = saillie, y = hauteur). */
+const CHAIR_RAIL: Profile = [[0, -0.03], [0.012, -0.03], [0.018, -0.022], [0.02, -0.012], [0.026, -0.004], [0.028, 0.006], [0.022, 0.014], [0.014, 0.022], [0.008, 0.03], [0, 0.03]];
+
+/**
+ * Décor de menuiserie d'un mur (boiserie, cimaise, cadres moulurés, pilastres) :
+ * toutes les pièces sont fusionnées en une seule géométrie par mur pour rester léger.
+ * `y` = niveau du sol dans le repère du groupe, `z` = face du mur.
+ */
+export function WallDecorTrim({
+  layout,
+  y,
+  z,
+  side,
+  color = TRIM_DEFAULT_COLOR,
+}: {
+  layout: WallTrimLayout;
+  y: number;
+  z: number;
+  side: 1 | -1;
+  color?: string;
+}) {
+  const geometry = useMemo(() => {
+    const parts: THREE.BufferGeometry[] = [];
+    for (const b of layout.boxes) {
+      const r = Math.min(0.006, b.d * 0.45, b.w * 0.3, b.h * 0.3);
+      const g = new RoundedBoxGeometry(b.w, b.h, b.d, 1, Math.max(0.0005, r));
+      g.translate(b.x, b.y, (side * b.d) / 2);
+      parts.push(g);
+    }
+    for (const run of layout.rails) {
+      const len = run.x1 - run.x0;
+      if (len < 0.02) continue;
+      const g = extrudeProfile(CHAIR_RAIL.map(([px, py]) => [px * side, py]), len);
+      g.rotateY(-Math.PI / 2);
+      g.translate((run.x0 + run.x1) / 2, run.y, 0);
+      parts.push(g);
+    }
+    if (!parts.length) return null;
+    // Même format pour tous (non indexé, sans uv) : condition de mergeGeometries.
+    const flat = parts.map((g) => {
+      const n = g.index ? g.toNonIndexed() : g;
+      n.deleteAttribute('uv');
+      n.computeVertexNormals();
+      return n;
+    });
+    const merged = mergeGeometries(flat, false);
+    parts.forEach((g) => g.dispose());
+    flat.forEach((g) => g.dispose());
+    return merged;
+  }, [layout, side]);
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+  if (!geometry) return null;
+  return <Trim geometry={geometry} position={[0, y, z]} color={color} />;
 }
