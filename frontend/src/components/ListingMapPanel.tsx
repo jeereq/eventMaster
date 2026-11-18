@@ -3,7 +3,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui';
-import { ExternalLink, MapPin, Navigation } from 'lucide-react';
+import { ExternalLink, MapPin, Navigation } from '@/components/icons';
 import type { MarketplaceMapHandle, MarketplaceMapMarker } from '@/components/MarketplaceLocationsMap';
 
 const MarketplaceLocationsMap = dynamic(
@@ -49,7 +49,7 @@ export default function ListingMapPanel({
           {address ? (
             <p className="text-xs text-muted leading-relaxed">{address}</p>
           ) : null}
-          <p className="text-[11px] text-muted">
+          <p className="text-xs text-muted">
             Carte agrandie · autorisez la localisation, ou cliquez le point de départ sur la carte.
           </p>
         </div>

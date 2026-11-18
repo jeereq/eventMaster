@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Share2 } from 'lucide-react';
+import { Check, Share2 } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { canonicalShareUrl, shareOrCopy } from '@/lib/share';
 
@@ -69,7 +69,7 @@ export default function ShareButton({
         type="button"
         onClick={() => void onShare()}
         className={cn(
-          'relative h-11 w-11 shrink-0 rounded-[var(--radius-button)] border shadow-lg backdrop-blur-xl inline-flex items-center justify-center transition',
+          'relative h-11 w-11 shrink-0 rounded-[var(--radius-button)] border shadow-lg inline-flex items-center justify-center transition',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
           copied
             ? copiedClass

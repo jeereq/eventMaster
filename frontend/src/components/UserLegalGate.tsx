@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from '@/components/icons';
 import LegalAcceptanceModal from '@/components/LegalAcceptanceModal';
 import { useAuth } from '@/context/AuthContext';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Coins, X } from 'lucide-react';
+import { Coins, X } from '@/components/icons';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
@@ -54,7 +54,7 @@ export default function AiTokenShortageAlert() {
           <div
             role="alert"
             aria-live="assertive"
-            className="rounded-2xl border border-amber-500/35 bg-surface/95 shadow-xl backdrop-blur-sm px-3.5 py-3"
+            className="rounded-2xl border border-amber-500/35 bg-surface/95 shadow-xl px-3.5 py-3"
           >
             <div className="flex items-start gap-2.5">
               <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300">
@@ -62,14 +62,14 @@ export default function AiTokenShortageAlert() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-foreground">Jetons IA insuffisants</p>
-                <p className="mt-0.5 text-[11px] leading-snug text-muted">{message}</p>
+                <p className="mt-0.5 text-xs leading-snug text-muted">{message}</p>
                 <button
                   type="button"
                   onClick={() => {
                     setPurchaseOpen(true);
                     setOpen(false);
                   }}
-                  className="mt-2 inline-flex min-h-9 items-center rounded-xl bg-primary-solid px-3 text-[11px] font-bold text-primary-foreground"
+                  className="mt-2 inline-flex min-h-9 items-center rounded-xl bg-primary-solid px-3 text-xs font-bold text-primary-foreground"
                 >
                   Recharger des jetons
                 </button>

@@ -27,7 +27,7 @@ import {
   Plus,
   SlidersHorizontal,
   Clock,
-} from 'lucide-react';
+} from '@/components/icons';
 import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import LandingRoomPlanAiStudio from '@/components/landing/LandingRoomPlanAiStudio';
@@ -343,7 +343,7 @@ export default function Plans3DPage() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                  <span className="text-xs font-bold text-primary">
                     Administration Vitrine 2D / 3D
                   </span>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface border border-border text-foreground">

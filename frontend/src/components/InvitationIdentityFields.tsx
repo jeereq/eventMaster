@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useId } from 'react';
-import { Calendar, User } from 'lucide-react';
+import {  } from '@/components/icons';
 import { Input } from '@/components/ui';
 import type { InvitationIdentity } from '@/lib/invitationIdentity';
 
@@ -52,7 +52,6 @@ export default function InvitationIdentityFields({
         autoComplete="name"
         onChange={(e) => onChange({ ...value, honorees: e.target.value })}
         placeholder="ex. Amina & Jean-Marc"
-        leftIcon={<User className="h-4 w-4" aria-hidden />}
         hint="Nom affiché en grand sur le carton."
       />
       <Input
@@ -60,7 +59,6 @@ export default function InvitationIdentityFields({
         type="date"
         value={date}
         onChange={(e) => onChange({ ...value, date: e.target.value })}
-        leftIcon={<Calendar className="h-4 w-4" aria-hidden />}
         hint="Affichée en toutes lettres sur le faire-part."
       />
     </fieldset>

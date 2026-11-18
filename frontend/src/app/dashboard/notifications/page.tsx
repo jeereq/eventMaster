@@ -15,14 +15,13 @@ import {
   ChevronRight,
   Info,
   Sparkles,
-} from 'lucide-react';
+} from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useNotificationInbox } from '@/context/NotificationInboxContext';
 import useIsMobile from '@/hooks/useIsMobile';
 import {
   PageHeader,
-  Breadcrumbs,
   Button,
   EmptyState,
   Pagination,
@@ -246,9 +245,6 @@ function NotificationsContent() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title="Notifications"
-        description="Alertes et canaux."
-        breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Notifications' }]} />}
         action={
           activeTab === 'inbox' && (data?.unreadCount ?? 0) > 0 ? (
             <Button
@@ -290,7 +286,7 @@ function NotificationsContent() {
           <Bell className="w-4 h-4 text-primary" />
           <span>Boîte de réception</span>
           {(data?.unreadCount ?? 0) > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-primary text-primary-foreground">
+            <span className="px-1.5 py-0.5 rounded-full text-xs font-extrabold bg-primary text-primary-foreground">
               {data?.unreadCount}
             </span>
           )}
@@ -361,7 +357,7 @@ function NotificationsContent() {
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : !data?.items.length ? (
-            <EmptyState
+            <EmptyState illustration="notifications"
               icon={<Bell className="w-5 h-5" />}
               title={emptyCopy.title}
               description={emptyCopy.description}
@@ -382,11 +378,11 @@ function NotificationsContent() {
                       {!item.readAt && <span className="mt-1.5 w-2 h-2 rounded-full bg-primary shrink-0" />}
                       <div className={cn('min-w-0 space-y-1', item.readAt && 'pl-5')}>
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                          <span className="text-xs font-semibold text-primary">
                             {notificationTypeLabel(item.type)}
                           </span>
-                          <span className="text-[10px] text-muted">{notificationFamilyLabel(item.type)}</span>
-                          <span className="text-[10px] text-muted">{formatWhen(item.createdAt)}</span>
+                          <span className="text-xs text-muted">{notificationFamilyLabel(item.type)}</span>
+                          <span className="text-xs text-muted">{formatWhen(item.createdAt)}</span>
                         </div>
                         <p className="text-sm font-semibold text-foreground">{item.title}</p>
                         <p className="text-sm text-muted leading-relaxed">{item.message}</p>
@@ -424,10 +420,9 @@ function NotificationsContent() {
                 title={
                   <span className="inline-flex items-center gap-2">
                     <Shield className="w-4 h-4 text-primary" aria-hidden />
-                    Gouvernance Organisation · Billetterie & Dons
+                    Alertes billets et dons
                   </span>
                 }
-                description="Qui reçoit les alertes billets et dons."
                 action={
                   <Button
                     size="sm"
@@ -451,13 +446,13 @@ function NotificationsContent() {
                     {/* Statut Billets */}
                     <div className="p-3.5 rounded-xl border border-border bg-surface-muted/40 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-muted flex items-center gap-1.5">
                           <Ticket className="w-3.5 h-3.5 text-primary" />
-                          Ventes Billets
+                          Billets
                         </span>
                         <span
                           className={cn(
-                            'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                            'text-xs font-bold px-2 py-0.5 rounded-full',
                             orgSettings?.ticketsEnabled !== false
                               ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
                               : 'bg-surface-muted text-muted border border-border',
@@ -466,21 +461,18 @@ function NotificationsContent() {
                           {orgSettings?.ticketsEnabled !== false ? 'Activé' : 'Désactivé'}
                         </span>
                       </div>
-                      <p className="text-xs text-muted mt-1">
-                        Alertes instantanées lors des paiements de places.
-                      </p>
                     </div>
 
                     {/* Statut Dons */}
                     <div className="p-3.5 rounded-xl border border-border bg-surface-muted/40 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-muted flex items-center gap-1.5">
                           <Heart className="w-3.5 h-3.5 text-rose-500" />
-                          Dons Solidaires
+                          Dons
                         </span>
                         <span
                           className={cn(
-                            'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                            'text-xs font-bold px-2 py-0.5 rounded-full',
                             orgSettings?.donationsEnabled !== false
                               ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20'
                               : 'bg-surface-muted text-muted border border-border',
@@ -489,24 +481,14 @@ function NotificationsContent() {
                           {orgSettings?.donationsEnabled !== false ? 'Activé' : 'Désactivé'}
                         </span>
                       </div>
-                      <p className="text-xs text-muted mt-1">
-                        Alertes avec montant, mot de soutien et donateur.
-                      </p>
                     </div>
 
                     {/* Destinataires */}
                     <div className="p-3.5 rounded-xl border border-border bg-surface-muted/40 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-muted flex items-center gap-1.5">
                           <Users className="w-3.5 h-3.5 text-blue-500" />
                           Destinataires
-                        </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                          {orgSettings?.recipientMode === 'OWNER_ONLY'
-                            ? 'Direction'
-                            : orgSettings?.recipientMode === 'CUSTOM'
-                            ? `${orgSettings?.customUserIds?.length || 0} membre(s)`
-                            : 'Managers'}
                         </span>
                       </div>
                       <p className="text-xs text-foreground font-semibold truncate mt-1">
@@ -523,13 +505,9 @@ function NotificationsContent() {
           {!isOwner && isOrgMember && (
             <div className="p-4 rounded-2xl border border-border bg-surface-muted/50 flex items-start gap-3">
               <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <div className="space-y-0.5 text-xs text-muted leading-relaxed">
-                <p className="font-semibold text-foreground">Alertes d&apos;organisation</p>
-                <p>
-                  La distribution des alertes de vente de billets et de dons est gérée par le propriétaire.
-                  Personnalisez ci-dessous vos canaux personnels de réception.
-                </p>
-              </div>
+              <p className="text-xs text-muted leading-relaxed">
+                Les alertes billets et dons sont réglées par le propriétaire.
+              </p>
             </div>
           )}
 

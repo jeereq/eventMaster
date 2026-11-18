@@ -136,11 +136,11 @@ function applyDensityAndFont(density: DensityId, fontScale: FontScaleId) {
   root.style.fontSize = fontMap[fontScale];
 
   if (density === 'compact') {
-    root.style.setProperty('--radius-card', '0.375rem');
-    root.style.setProperty('--radius-button', '0.375rem');
+    root.style.setProperty('--radius-card', '1rem');
+    root.style.setProperty('--radius-button', '0.75rem');
   } else {
-    root.style.setProperty('--radius-card', '0.5rem');
-    root.style.setProperty('--radius-button', '0.5rem');
+    root.style.setProperty('--radius-card', '1.25rem');
+    root.style.setProperty('--radius-button', '0.875rem');
   }
 }
 

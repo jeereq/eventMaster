@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { Check, Clock, Coins, Sparkles, Wand2, type LucideIcon } from 'lucide-react';
+import { Check, Clock, Coins, Sparkles, Wand2, type LucideIcon } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { aiTokenBalanceLabel, type AiAllowance } from '@/lib/aiTokens';
 
@@ -306,7 +306,7 @@ export function StudioStepHeading({
         <span
           aria-hidden
           className={cn(
-            'w-7 h-7 rounded-full text-[13px] font-semibold inline-flex items-center justify-center shrink-0 transition-colors',
+            'w-7 h-7 rounded-full text-sm font-semibold inline-flex items-center justify-center shrink-0 transition-colors',
             done ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-muted',
           )}
         >
@@ -314,7 +314,7 @@ export function StudioStepHeading({
         </span>
         <span className="font-display text-lg font-semibold text-foreground">{title}</span>
       </p>
-      {aside ? <span className="text-[13px] text-muted shrink-0">{aside}</span> : null}
+      {aside ? <span className="text-sm text-muted shrink-0">{aside}</span> : null}
     </div>
   );
 }

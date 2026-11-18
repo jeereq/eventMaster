@@ -77,7 +77,8 @@ export default function NavigationProgressBar() {
     const originalPush = history.pushState;
     history.pushState = function patchedPushState(...args) {
       const url = args[2];
-      if (typeof url === 'string' && !sameAppLocation(url)) start();
+      // Next appelle pushState pendant le rendu (effet d’insertion) : on diffère la mise à jour d’état.
+      if (typeof url === 'string' && !sameAppLocation(url)) window.setTimeout(start, 0);
       return originalPush.apply(this, args);
     };
 

@@ -9,7 +9,7 @@ import { indicativeDeliveryFc, LISTING_EVENT_TYPES } from '@/lib/listingDetails'
 import ClientAuthChoice from '@/components/ClientAuthChoice';
 import DeliveryCommuneField from '@/components/DeliveryCommuneField';
 import { formatFc } from '@/config/landingPricing';
-import { Calendar, Send } from 'lucide-react';
+import { Calendar, Send } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 const fieldClass =
@@ -208,7 +208,7 @@ export default function MarketplaceInquiryForm({
             />
           </div>
           {selectedDate && (
-            <p className="text-[11px] text-muted">
+            <p className="text-xs text-muted">
               Alignée sur le calendrier : {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('fr-FR')}
               {eventEndDate ? ` → ${new Date(`${eventEndDate}T12:00:00`).toLocaleDateString('fr-FR')}` : ''}
             </p>

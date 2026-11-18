@@ -22,7 +22,7 @@ import {
 } from '@/lib/marketplace';
 import { roomTypeLabels, type RoomType } from '@/lib/roomLayoutUtils';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { Building2 } from 'lucide-react';
+import { Building2 } from '@/components/icons';
 import MarketplaceActivityFeed from '@/components/marketplace/MarketplaceActivityFeed';
 import ListingReviews from '@/components/marketplace/ListingReviews';
 import { trackListingView } from '@/lib/marketplaceReviews';

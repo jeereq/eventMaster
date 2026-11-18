@@ -2,7 +2,7 @@
 import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useId, useState } from 'react';
-import { Users } from 'lucide-react';
+import { Users } from '@/components/icons';
 import { Alert, Button, Input, Modal, PhoneInput } from '@/components/ui';
 
 const SELECT_CLASS =

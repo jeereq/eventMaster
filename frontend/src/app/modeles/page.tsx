@@ -11,7 +11,7 @@ import type { LandingTemplate } from '@/config/landingTemplates';
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import { Button, Modal, Pagination, usePaginateItems, Skeleton, usePageSize } from '@/components/ui';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import { Sparkles, Eye, ArrowRight, CheckCircle2, Wand2, Mail, ScanLine, Clock, Heart } from 'lucide-react';
+import { Sparkles, Eye, ArrowRight, CheckCircle2, Wand2, Mail, ScanLine, Clock, Heart } from '@/components/icons';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
@@ -395,7 +395,7 @@ export default function ModelesPage() {
                           <span>Aperçu grand format</span>
                         </div>
                       </button>
-                      <span className="absolute top-2 left-2 z-10 text-xs font-bold uppercase tracking-wider text-foreground px-2 py-0.5 rounded-full bg-surface/90 border border-border pointer-events-none">
+                      <span className="absolute top-2 left-2 z-10 text-xs font-bold text-foreground px-2 py-0.5 rounded-full bg-surface/90 border border-border pointer-events-none">
                         {categoryLabel(template.category)}
                       </span>
                       <button
@@ -589,7 +589,7 @@ export default function ModelesPage() {
               />
             </div>
             <aside className="space-y-3 lg:sticky lg:top-2">
-              <span className="inline-flex text-xs font-semibold uppercase tracking-wide text-muted px-2.5 py-1 rounded-full border border-border bg-surface">
+              <span className="inline-flex text-xs font-semibold text-muted px-2.5 py-1 rounded-full border border-border bg-surface">
                 {categoryLabel(modalTemplate.category)}
               </span>
               <p className="text-sm text-muted leading-relaxed">

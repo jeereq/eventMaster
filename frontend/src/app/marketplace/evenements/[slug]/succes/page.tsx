@@ -9,7 +9,7 @@ import PaymentPendingView from '@/components/PaymentPendingView';
 import { Alert, Button } from '@/components/ui';
 import { eventPublicHref, eventPublicListHref } from '@/lib/safeAppPath';
 import { clearPendingTicketPayment } from '@/lib/pendingTicketPayment';
-import { CheckCircle2, ArrowLeft, QrCode, Ticket, HelpCircle } from 'lucide-react';
+import { CheckCircle2, ArrowLeft, QrCode, Ticket, HelpCircle } from '@/components/icons';
 
 type SuccessGuestItem = {
   id: string;
@@ -167,7 +167,7 @@ function SuccessInner() {
 
             {guestsList.length > 1 ? (
               <div className="space-y-2 pt-2 border-t border-border">
-                <p className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Ticket className="w-3.5 h-3.5 text-primary" />
                   Vos {guestsList.length} billets réservés
                 </p>
@@ -181,7 +181,7 @@ function SuccessInner() {
                         <p className="text-xs font-bold text-foreground truncate">
                           {idx === 0 ? `Billet 1 (Principal) · ${g.firstName}` : `Billet ${idx + 1} · ${g.firstName}`}
                         </p>
-                        <p className="text-[11px] text-muted truncate">{g.email}</p>
+                        <p className="text-xs text-muted truncate">{g.email}</p>
                       </div>
                       <a href={g.rsvpUrl} className="shrink-0 inline-flex">
                         <Button size="sm" className="inline-flex items-center gap-1 text-xs">

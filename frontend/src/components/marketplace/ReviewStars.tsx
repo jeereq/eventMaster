@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Star } from 'lucide-react';
+import { Star } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 /** Étoiles en lecture seule ; la note est aussi écrite en texte pour les lecteurs d'écran. */

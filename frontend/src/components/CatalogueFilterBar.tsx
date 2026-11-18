@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { Search, SlidersHorizontal, X } from '@/components/icons';
 import { Button, Input, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
@@ -328,7 +328,7 @@ export default function CatalogueFilterBar({
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
               aria-label={searchLabel || searchPlaceholder}
-              className="w-full min-h-11 pl-9 pr-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full min-h-11 pl-9 pr-3 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
           {hasFilters && (
@@ -336,7 +336,7 @@ export default function CatalogueFilterBar({
               type="button"
               onClick={openModal}
               className={cn(
-                'relative min-h-11 shrink-0 px-3 rounded-[var(--radius-button)] border shadow-lg backdrop-blur-xl inline-flex items-center justify-center gap-1.5 text-xs font-bold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                'relative min-h-11 shrink-0 px-3 rounded-[var(--radius-button)] border shadow-lg inline-flex items-center justify-center gap-1.5 text-xs font-bold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                 count
                   ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                   : 'bg-surface/95 text-foreground border-white/25 dark:border-white/10',
@@ -369,7 +369,7 @@ export default function CatalogueFilterBar({
               onChange={onViewChange}
               compact={compactToggle}
               hideMap={hideMap}
-              className="inline-flex w-full justify-between bg-surface/95 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
+              className="inline-flex w-full justify-between bg-surface/95 border-white/25 dark:border-white/10 shadow-lg"
             />
         ) : null}
         {view === 'grid' && gridCols && onGridColsChange ? (
@@ -379,7 +379,7 @@ export default function CatalogueFilterBar({
               value={gridCols}
               onChange={onGridColsChange}
               options={gridColOptions}
-              className="bg-surface/95 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
+              className="bg-surface/95 border-white/25 dark:border-white/10 shadow-lg"
             />
           </div>
         ) : null}

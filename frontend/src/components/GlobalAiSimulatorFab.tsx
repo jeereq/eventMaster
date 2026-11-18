@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Building2, Mail, Sparkles, Wand2 } from 'lucide-react';
+import { Building2, Mail, Sparkles, Wand2 } from '@/components/icons';
 import { Modal } from '@/components/ui';
 
 const EventPrepAiSimulator = dynamic(() => import('@/components/EventPrepAiSimulator'), {

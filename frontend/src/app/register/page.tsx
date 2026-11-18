@@ -9,10 +9,6 @@ import {
   Calendar,
   Compass,
   Mail,
-  Lock,
-  User,
-  Building,
-  Building2,
   MessageSquare,
   Smartphone,
   ScanLine,
@@ -21,9 +17,12 @@ import {
   CalendarCheck,
   Store,
   ArrowRight,
-} from 'lucide-react';
-import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
-import { Button, Alert, Input, PasswordInput, Card, PhoneInput } from '@/components/ui';
+  CheckCircle2,
+  Scale,
+} from '@/components/icons';
+import { MethodToggle } from '@/components/AuthSplitLayout';
+import { AuthPhotoLayout } from '@/components/AuthPhotoLayout';
+import { Button, Alert, Input, PasswordInput, PhoneInput } from '@/components/ui';
 import { TERMS_VERSION, PRIVACY_VERSION, REFUND_VERSION } from '@/config/legalConfig';
 import LegalConsentChecklist from '@/components/LegalConsentChecklist';
 import { parseReferralFromSearchParams } from '@/lib/referralLink';
@@ -127,34 +126,15 @@ const REGISTRATION_KIND_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
 };
 
-const KIND_STEP_FEATURES = [
-  { step: 1, icon: Calendar, title: 'Choisissez l’usage', desc: 'Organiser, chercher, ou publier une salle / un métier.' },
-  { step: 2, icon: User, title: 'Vos coordonnées', desc: 'Nom, e-mail, mot de passe. Sans carte bancaire.' },
-  { step: 3, icon: Mail, title: 'Un code, puis l’accès', desc: 'Confirmation par e-mail ou WhatsApp, ensuite votre espace s’ouvre.' },
-];
-
-const VENDOR_TRACK_FEATURES = [
-  { step: 1, icon: Building2, title: 'Salle ou métier', desc: 'Un lieu à réserver, ou un service qui se déplace.' },
-  { step: 2, icon: User, title: 'Le compte', desc: 'Nom de la salle ou de l’enseigne, puis e-mail et mot de passe.' },
-  { step: 3, icon: CalendarCheck, title: 'Votre fiche', desc: 'Après le code, vous publiez vitrine, tarifs et disponibilités.' },
-];
-
 export default function RegisterPage() {
  return (
  <Suspense
  fallback={
-        <AuthSplitLayout
-          title="Chargement…"
-          description=""
-          features={REGISTRATION_KIND_CONFIGS.ORGANIZER.features}
-          backHref="/"
-          backLabel="Retour au site"
-          maxWidthClassName="max-w-xl"
-        >
-          <Card padding="md" className="shadow-xl animate-pulse h-96">
- <span className="sr-only">Chargement du formulaire d&apos;inscription</span>
- </Card>
- </AuthSplitLayout>
+        <AuthPhotoLayout title="Créez votre compte." description="" cardTitle="Créer un compte" cardWidthClassName="lg:max-w-xl">
+          <div className="h-96 rounded-2xl bg-surface-muted animate-pulse">
+            <span className="sr-only">Chargement du formulaire d&apos;inscription</span>
+          </div>
+        </AuthPhotoLayout>
  }
  >
  <RegisterPageContent />
@@ -474,30 +454,17 @@ function RegisterPageContent() {
       ? 'Une salle est un lieu. Un métier se déplace ou loue du matériel. Choisissez pour commencer.'
       : interpolateRates(config.heroDescription, site);
 
-  const layoutFeatures = useMemo(() => {
-    const source = showKindChooser
-      ? KIND_STEP_FEATURES
-      : showVendorChooser
-        ? VENDOR_TRACK_FEATURES
-        : config.features;
-    return source.map((item) => ({
-      ...item,
-      desc: interpolateRates(item.desc, site),
-    }));
-  }, [showKindChooser, showVendorChooser, config.features, site]);
 
   const loginHref = targetNextPath ? `/login?next=${encodeURIComponent(targetNextPath)}` : '/login';
 
  return (
- <AuthSplitLayout
+ <AuthPhotoLayout
       title={layoutTitle}
       description={layoutDescription}
-      features={layoutFeatures}
- backHref="/"
- backLabel="Retour au site"
-      maxWidthClassName="max-w-xl"
+      cardTitle="Créer un compte"
+      cardWidthClassName="lg:max-w-xl"
  >
-      <Card padding="md" className="border-border shadow-sm p-4 sm:p-5">
+      <div>
  {ready && !site.allowRegistration ? (
  <div className="text-center space-y-4 py-6">
             <h2 className="text-xl font-semibold text-foreground">Inscriptions temporairement fermées</h2>
@@ -590,7 +557,7 @@ function RegisterPageContent() {
                   )}
                 </span>
                 <span className="min-w-0 flex flex-col">
-                  <span className="text-[13px] text-muted">Étape 2 sur 3 · Vos coordonnées</span>
+                  <span className="text-sm text-muted">Étape 2 sur 3 · Vos coordonnées</span>
                   <h2 className="font-display text-lg sm:text-xl font-semibold text-foreground tracking-tight leading-tight">
                     {registerAccountShortLabel(accountKind, vendorTrack)}
                   </h2>
@@ -652,7 +619,6 @@ function RegisterPageContent() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Jean Dupont"
-                  leftIcon={<User className="w-4 h-4" aria-hidden />}
                 />
                 {accountKind !== 'CLIENT' && (
                   <Input
@@ -665,7 +631,6 @@ function RegisterPageContent() {
                       if (orgError) setOrgError('');
                     }}
                     placeholder={config.orgPlaceholder || 'Dupont Événements'}
-                    leftIcon={<Building className="w-4 h-4" aria-hidden />}
                     error={orgError || undefined}
                   />
                 )}
@@ -684,7 +649,6 @@ function RegisterPageContent() {
                     if (emailError) setEmailError('');
                   }}
                   placeholder="jean@exemple.com"
-                  leftIcon={<Mail className="w-4 h-4" aria-hidden />}
                   error={emailError || undefined}
                 />
 
@@ -718,7 +682,6 @@ function RegisterPageContent() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                leftIcon={<Lock className="w-4 h-4" aria-hidden />}
                 hint="Au moins 8 caractères."
               />
 
@@ -803,7 +766,7 @@ function RegisterPageContent() {
             )}
  </>
  )}
- </Card>
+ </div>
 
       {/* ─── MODALE DE PRÉVISUALISATION ET VALIDATION LÉGALE FORCÉE ─── */}
       {legalModalOpen ? (
@@ -822,6 +785,6 @@ function RegisterPageContent() {
         }}
       />
       ) : null}
- </AuthSplitLayout>
+ </AuthPhotoLayout>
  );
 }

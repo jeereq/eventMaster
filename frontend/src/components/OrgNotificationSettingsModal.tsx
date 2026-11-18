@@ -13,7 +13,7 @@ import {
   Lock,
   UserCheck,
   AlertTriangle,
-} from 'lucide-react';
+} from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import Modal from '@/components/ui/Modal';
@@ -45,11 +45,38 @@ interface OrgNotificationSettingsModalProps {
   onSaved?: (settings: TenantNotificationSettings) => void;
 }
 
+/** Fenêtre « Alertes billetterie et dons » : enveloppe le formulaire réutilisé dans Paramètres. */
 export default function OrgNotificationSettingsModal({
   isOpen,
   onClose,
   onSaved,
 }: OrgNotificationSettingsModalProps) {
+  return (
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title="Alertes billets et dons"
+      size="lg"
+    >
+      <OrgNotificationSettingsForm active={isOpen} onSaved={onSaved} onClose={onClose} />
+    </Modal>
+  );
+}
+
+/**
+ * Formulaire des alertes de paiement (billets, dons) et de leurs destinataires.
+ * `onClose` : bouton « Fermer » et fermeture après enregistrement (absent dans la page Paramètres).
+ */
+export function OrgNotificationSettingsForm({
+  active = true,
+  onSaved,
+  onClose,
+}: {
+  active?: boolean;
+  onSaved?: (settings: TenantNotificationSettings) => void;
+  onClose?: () => void;
+}) {
+  const isOpen = active;
   const { user, access, tenant } = useAuth();
   const isOwner = Boolean(access?.isOwner) || (Boolean(user?.id) && user?.id === tenant?.managerId);
 
@@ -119,9 +146,11 @@ export default function OrgNotificationSettingsModal({
       if (onSaved && res.settings) {
         onSaved(res.settings);
       }
-      setTimeout(() => {
-        onClose();
-      }, 1200);
+      if (onClose) {
+        setTimeout(() => {
+          onClose();
+        }, 1200);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde.');
     } finally {
@@ -130,13 +159,6 @@ export default function OrgNotificationSettingsModal({
   };
 
   return (
-    <Modal
-      open={isOpen}
-      onClose={onClose}
-      title="Alertes & Notifications Billetterie et Dons"
-      description="Configurez les alertes d'encaissement et définissez précisément qui a le droit de les recevoir."
-      size="lg"
-    >
       <form onSubmit={handleSave} className="space-y-6">
         {error && (
           <div className="p-3.5 rounded-xl bg-danger/10 border border-danger/25 text-danger text-xs flex items-center gap-2">
@@ -170,9 +192,9 @@ export default function OrgNotificationSettingsModal({
           <div className="space-y-6">
             {/* Section 1 : Types de notifications activées */}
             <div className="space-y-3">
-              <h3 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
+              <h3 className="text-xs font-bold text-muted flex items-center gap-1.5">
                 <Bell className="w-3.5 h-3.5 text-primary" />
-                1. Types d&apos;alertes de paiement
+                Types d&apos;alertes
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -268,9 +290,9 @@ export default function OrgNotificationSettingsModal({
 
             {/* Section 2 : Qui a le droit de recevoir les notifications ? */}
             <div className="space-y-3">
-              <h3 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
+              <h3 className="text-xs font-bold text-muted flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-primary" />
-                2. Destinataires autorisés
+                Destinataires
               </h3>
 
               <div className="space-y-2">
@@ -297,7 +319,7 @@ export default function OrgNotificationSettingsModal({
                       <span className="text-xs font-bold text-foreground">
                         Propriétaire du compte uniquement (Direction)
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-surface-muted text-muted">
+                      <span className="text-xs font-bold px-2 py-0.2 rounded-full bg-surface-muted text-muted">
                         Confidentiel
                       </span>
                     </div>
@@ -332,7 +354,7 @@ export default function OrgNotificationSettingsModal({
                       <span className="text-xs font-bold text-foreground">
                         Propriétaire + Tous les Managers de l&apos;organisation
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-primary/10 text-primary">
+                      <span className="text-xs font-bold px-2 py-0.2 rounded-full bg-primary/10 text-primary">
                         Recommandé
                       </span>
                     </div>
@@ -365,7 +387,7 @@ export default function OrgNotificationSettingsModal({
                       <span className="text-xs font-bold text-foreground">
                         Membres spécifiques sélectionnés
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                      <span className="text-xs font-bold px-2 py-0.2 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
                         Sur-mesure
                       </span>
                     </div>
@@ -381,7 +403,7 @@ export default function OrgNotificationSettingsModal({
                 <div className="mt-3 p-3.5 rounded-2xl border border-border bg-surface-muted/50 space-y-2.5 animate-in fade-in">
                   <p className="text-xs font-semibold text-foreground flex items-center justify-between">
                     <span>Sélectionnez les membres autorisés :</span>
-                    <span className="text-[11px] text-muted">
+                    <span className="text-xs text-muted">
                       {settings.customUserIds.length} sélectionné{settings.customUserIds.length > 1 ? 's' : ''}
                     </span>
                   </p>
@@ -404,12 +426,12 @@ export default function OrgNotificationSettingsModal({
                             )}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-7 h-7 rounded-full bg-surface-muted border border-border flex items-center justify-center font-bold text-[10px] text-foreground shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-surface-muted border border-border flex items-center justify-center font-bold text-xs text-foreground shrink-0">
                                 {m.name ? m.name.charAt(0).toUpperCase() : m.email.charAt(0).toUpperCase()}
                               </div>
                               <div className="truncate">
                                 <p className="font-bold text-foreground truncate">{m.name || m.email}</p>
-                                <p className="text-[10px] text-muted truncate">{m.email} · {m.orgRole || 'Membre'}</p>
+                                <p className="text-xs text-muted truncate">{m.email} · {m.orgRole || 'Membre'}</p>
                               </div>
                             </div>
 
@@ -446,7 +468,7 @@ export default function OrgNotificationSettingsModal({
                       Inclure également l’équipe assignée à l’événement (Staff Jour J)
                     </span>
                   </div>
-                  <p className="text-[11px] text-muted">
+                  <p className="text-xs text-muted">
                     Notifie automatiquement les collaborateurs affectés spécifiquement à cet événement.
                   </p>
                 </div>
@@ -465,9 +487,11 @@ export default function OrgNotificationSettingsModal({
         )}
 
         <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
-            Fermer
-          </Button>
+          {onClose ? (
+            <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+              Fermer
+            </Button>
+          ) : null}
           {isOwner && (
             <Button
               type="submit"
@@ -480,6 +504,5 @@ export default function OrgNotificationSettingsModal({
           )}
         </div>
       </form>
-    </Modal>
   );
 }

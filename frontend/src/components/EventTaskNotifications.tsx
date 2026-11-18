@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell } from '@/components/icons';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { notificationFamilyLabel } from '@/config/platformNotifications';
@@ -48,12 +48,12 @@ export default function EventTaskNotifications({
       <p className="text-sm font-semibold inline-flex items-center gap-2">
         <Bell className="w-4 h-4 text-primary" />
         Notifications de tâches
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted">{items.length}</span>
+        <span className="text-xs font-semibold text-muted">{items.length}</span>
       </p>
       <ul className="space-y-1.5">
         {items.map((item) => (
           <li key={item.id} className={cn('text-sm', !item.readAt && 'font-medium')}>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+            <p className="text-xs font-semibold text-muted">
               {notificationFamilyLabel(item.type)}
               {' · '}
               {new Date(item.createdAt).toLocaleString('fr-FR', {

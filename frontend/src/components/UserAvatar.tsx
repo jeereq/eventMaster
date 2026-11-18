@@ -25,7 +25,7 @@ export default function UserAvatar({
   className?: string;
 }) {
   const sizes = {
-    sm: 'h-7 w-7 text-[10px]',
+    sm: 'h-7 w-7 text-xs',
     md: 'h-8 w-8 text-xs',
     lg: 'w-12 h-12 text-sm',
     xl: 'w-20 h-20 text-lg',

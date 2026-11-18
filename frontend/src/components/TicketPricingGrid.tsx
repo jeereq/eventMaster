@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Check, Crown, Sparkles, Star, Ticket, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Check, Crown, Sparkles, Star, Ticket, ArrowRight, ShieldCheck } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import {
@@ -71,7 +71,7 @@ export default function TicketPricingGrid({
               <Ticket className="w-3.5 h-3.5 text-primary" />
               Catégorie de place
             </p>
-            <span className="text-[11px] text-muted">Classé par prix croissant</span>
+            <span className="text-xs text-muted">Classé par prix croissant</span>
           </div>
         )}
 
@@ -98,7 +98,7 @@ export default function TicketPricingGrid({
                 <div className="flex items-center justify-between gap-2 w-full">
                   <span
                     className={cn(
-                      'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border',
+                      'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border',
                       meta.badgeClass,
                     )}
                   >
@@ -122,18 +122,18 @@ export default function TicketPricingGrid({
                     <span className="text-base font-black text-primary font-mono tabular-nums">
                       {formatFc(zone.priceFc)}
                     </span>
-                    <span className="text-[11px] text-muted font-normal">/ place</span>
+                    <span className="text-xs text-muted font-normal">/ place</span>
                   </div>
                 </div>
 
                 {/* État de sélection */}
-                <div className="pt-1.5 border-t border-border/60 flex items-center justify-between text-[11px] w-full">
+                <div className="pt-1.5 border-t border-border/60 flex items-center justify-between text-xs w-full">
                   {zone.maxSeats != null && zone.maxSeats > 0 ? (
-                    <span className="text-[10px] text-muted">
+                    <span className="text-xs text-muted">
                       Capacité : {zone.maxSeats} places
                     </span>
                   ) : (
-                    <span className="text-[10px] text-muted flex items-center gap-1">
+                    <span className="text-xs text-muted flex items-center gap-1">
                       <ShieldCheck className="w-3 h-3 text-muted/70" />
                       Place garantie
                     </span>
@@ -211,7 +211,7 @@ export default function TicketPricingGrid({
             >
               {meta.isPopular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-primary text-primary-foreground shadow-xs">
+                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-black bg-primary text-primary-foreground shadow-xs">
                     <Star className="w-3 h-3 fill-current" />
                     Le plus populaire
                   </span>
@@ -224,7 +224,7 @@ export default function TicketPricingGrid({
                   <div className="space-y-1">
                     <span
                       className={cn(
-                        'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border',
+                        'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border',
                         meta.badgeClass,
                       )}
                     >
@@ -252,7 +252,7 @@ export default function TicketPricingGrid({
                     <span className="text-xs text-muted font-medium">/ personne</span>
                   </div>
                   {zone.maxSeats != null && zone.maxSeats > 0 && (
-                    <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-1">
+                    <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
                       Places limitées : {zone.maxSeats} places au total
                     </p>
                   )}

@@ -2,7 +2,6 @@
 
 import React, { Suspense, useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -12,13 +11,14 @@ import {
   Sparkles, CheckCircle2, XCircle, AlertCircle, Loader2,
   Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
   ClipboardList, Eye, Utensils, FileSpreadsheet, Download, LayoutGrid,
-  Building2, ScanLine, Shirt, Globe, GlobeLock, Heart,
-} from 'lucide-react';
+  Building2, ScanLine, Shirt, Globe, GlobeLock,
+} from '@/components/icons';
 import dynamic from 'next/dynamic';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
 import EventWorkflowPanel from '@/components/EventWorkflowPanel';
 import {
   computeEventWorkflowState,
+  countAssignedGuests,
   type EventWorkflowTab,
 } from '@/lib/eventWorkflow';
 import { normalizeEventProgram } from '@/lib/eventProgram';
@@ -30,13 +30,13 @@ import {
   applyInvitationGuidelineVariables,
   formatGuestGuidelinesBlock,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, Breadcrumbs, Modal, Input, Pagination, usePaginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, CardHeader, EmptyState, Alert, ConfirmDialog } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, IconButton, Modal, Input, Pagination, usePaginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, CardHeader, EmptyState, Alert, ConfirmDialog } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import { EVENT_ENTRY_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { cn } from '@/lib/cn';
+import Illustration from '@/components/illustrations/Illustration';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
-import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import { canonicalShareUrl, guestRsvpUrl } from '@/lib/share';
 import {
   getFeatureLockMessage,
@@ -372,28 +372,28 @@ function SendAudienceStats({
   return (
     <div className="grid grid-cols-2 gap-2 text-xs">
       <div className="rounded-xl border border-border bg-surface-muted/60 px-3 py-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted">Destinataires</p>
+        <p className="text-xs font-semibold text-muted">Destinataires</p>
         <p className="text-sm font-bold text-foreground mt-0.5">{stats.total}</p>
       </div>
       <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Prêts à recevoir</p>
+        <p className="text-xs font-semibold text-emerald-700">Prêts à recevoir</p>
         <p className="text-sm font-bold text-emerald-800 mt-0.5">{stats.reachable}</p>
       </div>
       {stats.alreadySent > 0 && (
         <div className="rounded-xl border border-border bg-surface-muted px-3 py-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Déjà invités</p>
+          <p className="text-xs font-semibold text-muted">Déjà invités</p>
           <p className="text-sm font-bold text-foreground mt-0.5">{stats.alreadySent} — seront renvoyés</p>
         </div>
       )}
       {stats.missingEmail > 0 && (
         <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-rose-700">Sans e-mail</p>
+          <p className="text-xs font-semibold text-rose-700">Sans e-mail</p>
           <p className="text-sm font-bold text-rose-800 mt-0.5">{stats.missingEmail}</p>
         </div>
       )}
       {stats.missingPhone > 0 && (
         <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-rose-700">{missingPhoneLabel}</p>
+          <p className="text-xs font-semibold text-rose-700">{missingPhoneLabel}</p>
           <p className="text-sm font-bold text-rose-800 mt-0.5">{stats.missingPhone}</p>
         </div>
       )}
@@ -681,6 +681,19 @@ function EventsPageFallback() {
   return <SkeletonEventsView mode="grid" />;
 }
 
+/** Le Super Admin n’a pas d’événements propres : il supervise ceux de toutes les organisations. */
+function SuperAdminEventsRedirect() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace('/dashboard/admin/events');
+  }, [router]);
+  return (
+    <div className="flex justify-center py-16">
+      <Loader2 className="w-6 h-6 animate-spin text-muted" aria-label="Redirection vers la supervision des événements" />
+    </div>
+  );
+}
+
 export default function EventsPage() {
   return (
     <Suspense fallback={<EventsPageFallback />}>
@@ -780,7 +793,11 @@ function EventsPageInner() {
 
   // Guest filtering states
   const [searchQuery, setSearchQuery] = useState('');
-  const [rsvpFilter, setRsvpFilter] = useState<'ALL' | 'ACCEPTED' | 'DECLINED' | 'PENDING'>('ALL');
+  const [rsvpFilter, setRsvpFilter] = useState<'ALL' | 'ACCEPTED' | 'DECLINED' | 'PENDING'>(() => {
+    // Lien profond depuis le tableau de bord, ex. ?tab=guests&rsvp=PENDING pour relancer les sans-réponse.
+    const rsvp = searchParams.get('rsvp');
+    return rsvp === 'ACCEPTED' || rsvp === 'DECLINED' || rsvp === 'PENDING' ? rsvp : 'ALL';
+  });
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [dietFilter, setDietFilter] = useState<string>('ALL');
   const [checkinFilter, setCheckinFilter] = useState<'ALL' | 'in' | 'out'>('ALL');
@@ -1042,78 +1059,28 @@ function EventsPageInner() {
     !isPersonalOrganizer && (selectedEvent?.isPublic || selectedEvent?.ticketingEnabled),
   );
 
-  const eventKpis = useMemo(() => {
-    if (!selectedEvent) return [];
-    const accepted = guests.filter((g) => g.rsvp === 'ACCEPTED').length;
-    const declined = guests.filter((g) => g.rsvp === 'DECLINED').length;
-    const pending = guests.length - accepted - declined;
-    const kpis: Array<{
-      id: string;
-      label: string;
-      value: string;
-      hint?: string;
-      hintTone?: 'warn';
-      tab: EventWorkflowTab;
-      tone?: 'rose';
-    }> = [
-      {
-        id: 'guests',
-        label: 'Invités',
-        value: String(guests.length),
-        hint: guests.length
-          ? `${accepted} présent${accepted > 1 ? 's' : ''} · ${pending} en attente`
-          : 'Ajoutez votre liste',
-        hintTone: guests.length ? undefined : 'warn',
-        tab: 'guests',
-      },
-      {
-        id: 'invitations',
-        label: 'Invitation',
-        value: invitations.length ? `${invitations.length} prête${invitations.length > 1 ? 's' : ''}` : 'À rédiger',
-        hint: invitations.length && messaging.any ? `Envoi ${messaging.via()}` : 'Message et lien de réponse',
-        hintTone: invitations.length ? undefined : 'warn',
-        tab: 'invitations',
-      },
-      {
-        id: 'tablePlan',
-        label: 'Plan de table',
-        value: selectedEvent.room ? selectedEvent.room.name : 'Aucune salle',
-        hint: selectedEvent.room ? 'Placer les invités' : 'Choisir une salle',
-        hintTone: selectedEvent.room ? undefined : 'warn',
-        tab: 'tablePlan',
-      },
-    ];
-    if (ticketingRelevant) {
-      kpis.push({
-        id: 'ticketing',
-        label: 'Billetterie',
-        value: selectedEvent.ticketingEnabled
-          ? `${selectedEvent.ticketsSold ?? 0}${selectedEvent.ticketsTotal ? ` / ${selectedEvent.ticketsTotal}` : ''}`
-          : 'Non activée',
-        hint: selectedEvent.ticketingEnabled ? 'billets vendus' : 'Entrée libre',
-        tab: 'ticketing',
-      });
-    } else {
-      const timing = eventTimingLabel(selectedEvent.date);
-      kpis.push({
-        id: 'dayJ',
-        label: 'Jour J',
-        value: timing || '—',
-        hint: timing === 'Terminé' ? 'Bilan et souvenirs' : 'Accueil par QR à l’entrée',
-        tab: 'protocol',
-      });
+  /** Compteurs affichés dans les onglets de l’événement (seul endroit où ces chiffres apparaissent en en-tête). */
+  const eventTabBadges = useMemo(() => {
+    if (!selectedEvent) return {};
+    const badges: Partial<Record<EventWorkflowTab, string | number>> = {};
+    if (guests.length > 0) {
+      badges.guests = guests.length;
+      const seatable = guests.filter((g) => g.rsvp !== 'DECLINED').length;
+      badges.tablePlan = `${countAssignedGuests(selectedEvent.tablePlan)}/${seatable}`;
     }
-    if (protocolDesk) {
-      // Desk d’accueil : seules les infos utiles à l’entrée, sans alerte de préparation.
-      return kpis
-        .filter((kpi) => kpi.id !== 'invitations' && kpi.id !== 'tablePlan')
-        .map((kpi) => ({ ...kpi, hintTone: undefined }));
+    if (ticketingRelevant && selectedEvent.ticketingEnabled) {
+      badges.ticketing = `${selectedEvent.ticketsSold ?? 0}${selectedEvent.ticketsTotal ? `/${selectedEvent.ticketsTotal}` : ''}`;
     }
-    if (selectedEvent.donations?.enabled) {
-      kpis.push({ id: 'donations', label: 'Dons', value: 'Rapport', hint: 'Contributions reçues', tab: 'donations', tone: 'rose' });
-    }
-    return kpis;
-  }, [selectedEvent, guests, invitations, ticketingRelevant, protocolDesk]);
+    return badges;
+  }, [selectedEvent, guests, ticketingRelevant]);
+
+  /** Onglets sans objet pour cet événement. */
+  const eventHiddenTabs = useMemo(() => {
+    const hidden: EventWorkflowTab[] = [];
+    if (!ticketingRelevant) hidden.push('ticketing');
+    if (!selectedEvent?.donations?.enabled) hidden.push('donations');
+    return hidden;
+  }, [ticketingRelevant, selectedEvent?.donations?.enabled]);
 
   /** Sans onglet demandé dans l’URL, l’événement s’ouvre sur l’étape à faire (pas sur la préparation optionnelle). */
   const autoTabEventIdRef = useRef<string | null>(null);
@@ -2238,37 +2205,8 @@ Merci de confirmer votre présence :
     return canonicalShareUrl();
   };
 
-  const getReminderFrequencyLabel = (freq?: string) => {
-    switch (freq) {
-      case 'DAILY': return 'Rappel : Quotidien';
-      case 'EVERY_3_DAYS': return 'Rappel : Tous les 3 jours';
-      case 'EVERY_5_DAYS': return 'Rappel : Tous les 5 jours';
-      case 'WEEKLY': return 'Rappel : Hebdomadaire';
-      default: return 'Pas de rappel automatique';
-    }
-  };
-
   if (user?.role === 'SUPER_ADMIN') {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-surface border border-border rounded-3xl p-8 text-center max-w-2xl mx-auto">
-        <div className="bg-primary/10 text-primary p-4 rounded-full mb-6">
-          <Calendar className="w-12 h-12" />
-        </div>
-        <h1 className="text-2xl font-black text-foreground">Gestion des Événements (Super Admin)</h1>
-        <p className="text-muted mt-3 leading-relaxed">
-          En tant que Super Administrateur de la plateforme SaaS, vous n'êtes pas rattaché à une organisation spécifique et ne gérez pas d'événements en nom propre.
-        </p>
-        <p className="text-muted mt-2 leading-relaxed">
-          Veuillez utiliser le <strong className="text-primary">Tableau de bord Admin</strong> pour superviser l'ensemble des organisations, leurs membres et leurs statistiques d'utilisation.
-        </p>
-        <Link
-          href="/dashboard"
-          className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold rounded-xl transition shadow-lg shadow-primary-solid/10"
-        >
-          Retour au Tableau de Bord Admin
-        </Link>
-      </div>
-    );
+    return <SuperAdminEventsRedirect />;
   }
 
   if (loading && eventIdFromRoute && !selectedEvent) {
@@ -2285,15 +2223,6 @@ Merci de confirmer votre présence :
       {!selectedEvent ? (
         <>
           <PageHeader
-            title={protocolDesk ? 'Accueil jour J' : 'Vos événements'}
-            description={
-              protocolDesk
-                ? 'Événements à accueillir, et leurs tâches.'
-                : 'Réceptions privées ou publiques.'
-            }
-            breadcrumbs={
-              <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: protocolDesk ? 'Protocole' : 'Événements' }]} />
-            }
             action={
               <div className="flex flex-wrap items-center gap-2">
                 {protocolDesk && !isProtocolOnly ? (
@@ -2315,22 +2244,15 @@ Merci de confirmer votre présence :
                     onColumnsChange={setEventsColumns}
                   />
                 )}
-                {access?.canCreateEvents && !protocolDesk && listView === 'events' ? (
-                  <div className="flex flex-col items-end gap-1">
-                    <Button
-                      onClick={openCreateEventModal}
-                      disabled={eventsAtLimit}
-                      title={eventsQuotaMsg || undefined}
-                      leftIcon={<PlusCircle className="w-4 h-4" />}
-                    >
-                      Créer un événement
-                    </Button>
-                    {eventsAtLimit && (
-                      <Link href="/dashboard/billing" className="text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline">
-                        Quota atteint — voir les forfaits
-                      </Link>
-                    )}
-                  </div>
+                {access?.canCreateEvents && !protocolDesk && listView === 'events' && events.length > 0 ? (
+                  <Button
+                    onClick={openCreateEventModal}
+                    disabled={eventsAtLimit}
+                    title={eventsQuotaMsg || undefined}
+                    leftIcon={<PlusCircle className="w-4 h-4" />}
+                  >
+                    Créer un événement
+                  </Button>
                 ) : null}
               </div>
             }
@@ -2374,9 +2296,6 @@ Merci de confirmer votre présence :
             </div>
           ) : (
             <>
-              {events.length === 0 && !protocolDesk && (
-                <GettingStartedChecklist hasEvents={false} onCreateEvent={openCreateEventModal} />
-              )}
               {events.length > 0 && (
                 <CatalogueFilterBar
                   search={eventSearch}
@@ -2446,13 +2365,6 @@ Merci de confirmer votre présence :
         </>
       ) : (
         <div className="space-y-3">
-          <Breadcrumbs
-            items={[
-              { label: 'Accueil', href: '/dashboard' },
-              { label: protocolDesk ? 'Protocole' : 'Événements', href: eventsListHref(protocolDesk) },
-              { label: selectedEvent.title },
-            ]}
-          />
           <button
             type="button"
             onClick={() => router.push(eventsListHref(protocolDesk))}
@@ -2484,26 +2396,12 @@ Merci de confirmer votre présence :
                   {selectedEvent.isPublic ? <Globe className="w-3.5 h-3.5" aria-hidden /> : <GlobeLock className="w-3.5 h-3.5" aria-hidden />}
                   {selectedEvent.isPublic ? 'Public' : 'Privé'}
                 </StatusPill>
-                {selectedEvent.donations?.enabled && (
-                  <StatusPill tone="rose" className="gap-1.5">
-                    <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500/20" aria-hidden />
-                    <span>Dons solidaires</span>
-                  </StatusPill>
-                )}
                 {selectedEvent.room && (
                   <StatusPill tone="slate" className="gap-1.5 max-w-[16rem] truncate">
                     <Building2 className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
                     <span className="truncate">{selectedEvent.room.name}</span>
                   </StatusPill>
                 )}
-                {selectedEvent.isPublic && selectedEvent.ticketingEnabled && selectedEvent.ticketPriceFc ? (
-                  <span className="text-xs text-muted tabular-nums">
-                    {selectedEvent.ticketsSold ?? 0} billet{(selectedEvent.ticketsSold ?? 0) > 1 ? 's' : ''}
-                  </span>
-                ) : null}
-                <span className="text-xs text-muted">
-                  {getReminderFrequencyLabel(selectedEvent.reminderFrequency)}
-                </span>
                 {selectedEvent.isPublic && selectedEvent.slug && (
                   <>
                     <a
@@ -2548,17 +2446,12 @@ Merci de confirmer votre présence :
                   Vue complète
                 </Button>
               ) : null}
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
+              <IconButton
+                label="Actualiser"
+                icon={RefreshCw}
                 onClick={() => handleManageEvent(selectedEvent)}
                 disabled={loadingEventDetail}
-                leftIcon={<RefreshCw className={cn('w-4 h-4', loadingEventDetail && 'animate-spin')} />}
-                className="flex-1 sm:flex-initial"
-              >
-                Actualiser
-              </Button>
+              />
               {!protocolDesk && (
                 <Button
                   type="button"
@@ -2584,42 +2477,6 @@ Merci de confirmer votre présence :
                 </Button>
               )}
             </div>
-          </div>
-          {/* Synthèse : chaque carte ouvre l’étape concernée */}
-          <div
-            className={cn(
-              'grid grid-cols-2 gap-2',
-              eventKpis.length > 4 ? 'sm:grid-cols-5' : eventKpis.length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3',
-            )}
-          >
-            {eventKpis.map((kpi) => (
-              <button
-                key={kpi.id}
-                type="button"
-                onClick={() => handleWorkflowNavigate(kpi.tab)}
-                disabled={protocolDesk && kpi.tab !== 'protocol' && kpi.tab !== 'ticketing' && kpi.tab !== 'tasks'}
-                aria-label={`${kpi.label} : ${kpi.value}${kpi.hint ? `, ${kpi.hint}` : ''}`}
-                className={cn(
-                  'group rounded-xl border px-3 py-2.5 text-left transition touch-manipulation min-h-11 disabled:cursor-default',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                  deskTab === kpi.tab
-                    ? 'border-primary/40 bg-primary/5'
-                    : kpi.tone === 'rose'
-                      ? 'border-rose-500/25 bg-rose-500/5 hover:bg-rose-500/10'
-                      : 'border-border bg-surface hover:bg-surface-muted enabled:hover:border-primary/30',
-                )}
-              >
-                <span className={cn('block text-xs font-semibold', kpi.tone === 'rose' ? 'text-rose-700 dark:text-rose-300' : 'text-muted')}>
-                  {kpi.label}
-                </span>
-                <span className="block text-base font-bold text-foreground mt-0.5 truncate tabular-nums">{kpi.value}</span>
-                {kpi.hint ? (
-                  <span className={cn('block text-xs mt-0.5 truncate', kpi.hintTone === 'warn' ? 'text-amber-700 dark:text-amber-400' : 'text-muted')}>
-                    {kpi.hint}
-                  </span>
-                ) : null}
-              </button>
-            ))}
           </div>
         </div>
       )}
@@ -2654,30 +2511,17 @@ Merci de confirmer votre présence :
               ) : (
                 <>
                   <Calendar className="w-12 h-12 text-muted mx-auto mb-4 opacity-50" />
-                  <h3 className="text-lg font-semibold text-foreground">Votre premier événement vous attend</h3>
-                  <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">
-                    Ajoutez un titre, une date et lancez vos invitations.
-                  </p>
-                  <ol className="mt-5 inline-flex flex-col sm:flex-row gap-2 sm:gap-3 text-left text-xs text-muted">
-                    <li className="px-3 py-2 rounded-lg bg-surface-muted border border-border">1. Événement</li>
-                    <li className="px-3 py-2 rounded-lg bg-surface-muted border border-border">2. Invités</li>
-                    <li className="px-3 py-2 rounded-lg bg-surface-muted border border-border">3. Invitation</li>
-                  </ol>
+                  <h3 className="text-lg font-semibold text-foreground">Aucun événement</h3>
                   {access?.canCreateEvents && (
-                    <div className="mt-6 flex flex-col items-center gap-2">
+                    <div className="mt-6 flex justify-center">
                       <Button
                         onClick={openCreateEventModal}
                         disabled={eventsAtLimit}
                         title={eventsQuotaMsg || undefined}
                         leftIcon={<PlusCircle className="w-4 h-4" />}
                       >
-                        Créer mon premier événement
+                        Créer un événement
                       </Button>
-                      {eventsAtLimit && (
-                        <Link href="/dashboard/billing" className="text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline">
-                          Quota atteint — voir les forfaits
-                        </Link>
-                      )}
                     </div>
                   )}
                 </>
@@ -2685,7 +2529,7 @@ Merci de confirmer votre présence :
             </div>
           ) : filteredEventsList.length === 0 ? (
             <div className="col-span-full text-center py-14 px-6 bg-surface border border-border rounded-[var(--radius-card)]">
-              <Search className="w-10 h-10 text-muted mx-auto mb-3 opacity-60" />
+              <Illustration name="search" className="mx-auto mb-2 w-44" />
               <h3 className="font-semibold text-foreground">Aucun événement ne correspond</h3>
               <p className="text-sm text-muted mt-1">Modifiez la recherche ou les filtres.</p>
               <Button
@@ -2718,7 +2562,7 @@ Merci de confirmer votre présence :
                   <span className="flex items-center gap-1.5">
                     <span className="font-medium text-primary">{dateLabel}</span>
                     {timing ? (
-                      <span className={cn('rounded-full px-1.5 py-px text-[10px] font-semibold', isPast ? 'bg-surface-muted text-muted' : 'bg-primary/10 text-primary')}>
+                      <span className={cn('rounded-full px-1.5 py-px text-xs font-semibold', isPast ? 'bg-surface-muted text-muted' : 'bg-primary/10 text-primary')}>
                         {timing}
                       </span>
                     ) : null}
@@ -2833,6 +2677,8 @@ Merci de confirmer votre présence :
             compact={false}
             protocolDesk={protocolDesk}
             personal={isPersonalOrganizer}
+            badges={eventTabBadges}
+            hiddenTabs={eventHiddenTabs}
           />
 
           {loadingEventDetail && GUEST_DATA_TABS.has(deskTab) ? (
@@ -2885,11 +2731,7 @@ Merci de confirmer votre présence :
               {/* Tab Content: Guests */}
               {deskTab === 'guests' && !protocolDesk && (
                 <div className="space-y-5">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                    <div className="space-y-1">
-                      <h2 className="text-lg font-semibold text-foreground tracking-tight">Invités</h2>
-                      <p className="text-muted text-sm">Ajoutez, importez ou filtrez votre liste d&apos;invités.</p>
-                    </div>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-end gap-4">
                     <div className="flex flex-wrap gap-2">
                       {selectedGuestIds.length > 0 && (
                         <Button
@@ -2959,7 +2801,7 @@ Merci de confirmer votre présence :
                         <dd className="text-lg font-semibold text-foreground tabular-nums">{guests.length}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-xs text-muted">Présences confirmées</dt>
+                        <dt className="text-xs text-muted">Confirmés</dt>
                         <dd className="text-lg font-semibold text-foreground tabular-nums">
                           {guests.filter(g => g.rsvp === 'ACCEPTED').length}
                           <span className="text-xs font-medium text-muted ml-1.5">
@@ -2974,7 +2816,7 @@ Merci de confirmer votre présence :
                         </dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-xs text-muted">Check-in jour J</dt>
+                        <dt className="text-xs text-muted">Entrées</dt>
                         <dd className="text-lg font-semibold text-foreground tabular-nums">
                           {guests.filter(g => g.checkedInAt).length}
                           <span className="text-xs font-medium text-muted ml-1.5">
@@ -3008,14 +2850,14 @@ Merci de confirmer votre présence :
                             className={GUEST_FILTER_CONTROL}
                           >
                             <option value="ALL">Tous les statuts</option>
-                            <option value="ACCEPTED">Présent uniquement</option>
-                            <option value="DECLINED">Absent uniquement</option>
-                            <option value="PENDING">Sans réponse uniquement</option>
+                            <option value="ACCEPTED">Confirmés uniquement</option>
+                            <option value="DECLINED">Déclinés uniquement</option>
+                            <option value="PENDING">En attente uniquement</option>
                           </select>
                         </div>
 
                         <div className="w-full lg:w-44">
-                          <label htmlFor="guest-filter-checkin" className="block text-xs font-semibold text-muted mb-1.5">Présence jour J</label>
+                          <label htmlFor="guest-filter-checkin" className="block text-xs font-semibold text-muted mb-1.5">Entrée jour J</label>
                           <select
                             id="guest-filter-checkin"
                             value={checkinFilter}
@@ -3023,8 +2865,8 @@ Merci de confirmer votre présence :
                             className={GUEST_FILTER_CONTROL}
                           >
                             <option value="ALL">Tous</option>
-                            <option value="in">Enregistrés</option>
-                            <option value="out">Non enregistrés</option>
+                            <option value="in">Entrés</option>
+                            <option value="out">Pas encore entrés</option>
                           </select>
                         </div>
 
@@ -3091,7 +2933,7 @@ Merci de confirmer votre présence :
                       {showAdvancedFilters && (
                         <div className="pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 animate-fade-in">
                           <div className="space-y-1">
-                            <label className="text-xs font-semibold text-muted uppercase tracking-wider">Régime alimentaire</label>
+                            <label className="text-xs font-semibold text-muted ">Régime alimentaire</label>
                             <select
                               value={dietFilter}
                               onChange={(e) => setDietFilter(e.target.value)}
@@ -3110,7 +2952,7 @@ Merci de confirmer votre présence :
                             const currentValue = customFilters[field.label] || 'ALL';
                             return (
                               <div key={field.id} className="space-y-1">
-                                <label className="text-xs font-semibold text-muted uppercase tracking-wider truncate block max-w-full" title={field.label}>
+                                <label className="text-xs font-semibold text-muted truncate block max-w-full"title={field.label}>
                                   {field.label}
                                 </label>
                                 {isBooleanFieldType(field.type) ? (
@@ -3234,7 +3076,7 @@ Merci de confirmer votre présence :
                         {paginatedGuestsList.map((g) => {
                           const isSelected = selectedGuestIds.includes(g.id);
                           const rsvpTone = (g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber') as 'emerald' | 'rose' | 'amber';
-                          const rsvpLabel = g.rsvp === 'ACCEPTED' ? 'Présent' : g.rsvp === 'DECLINED' ? 'Absent' : 'En attente';
+                          const rsvpLabel = g.rsvp === 'ACCEPTED' ? 'Confirmé' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
                           const rsvpChip = <StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>;
                           const categoryChip = <StatusPill tone="slate">{g.category || 'Général'}</StatusPill>;
 
@@ -3401,14 +3243,11 @@ Merci de confirmer votre présence :
               {deskTab === 'invitations' && !protocolDesk && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                    <div className="space-y-1">
-                      <h2 className="text-lg font-semibold text-foreground tracking-tight">Invitations</h2>
-                      <p className="text-sm text-muted">
-                        {messaging.any
-                          ? `Envoi ${messaging.via()} avec un lien de réponse personnel.`
-                          : 'Chaque invité reçoit un lien de réponse personnel.'}
-                      </p>
-                    </div>
+                    <p className="text-sm text-muted sm:pt-2">
+                      {messaging.any
+                        ? `Envoi ${messaging.via()} avec un lien de réponse personnel.`
+                        : 'Chaque invité reçoit un lien de réponse personnel.'}
+                    </p>
                     <div className="flex flex-col items-stretch sm:items-end gap-1.5 shrink-0">
                       <Button
                         onClick={() => {
@@ -3479,7 +3318,7 @@ Merci de confirmer votre présence :
                   </Card>
 
                   {invitations.length === 0 ? (
-                    <EmptyState
+                    <EmptyState illustration="inbox"
                       icon={<Mail className="w-5 h-5" />}
                       title="Invitations à configurer"
                       description="Faire-part et confirmations de présence."
@@ -3506,7 +3345,7 @@ Merci de confirmer votre présence :
                               >
                                 {getChannelLabel(effectiveInviteChannel(invite.channel))}
                               </StatusPill>
-                              <span className="text-xs font-semibold uppercase tracking-wider text-muted truncate">
+                              <span className="text-xs font-semibold text-muted truncate">
                                 {invite.template?.name || 'Sans modèle'}
                               </span>
                             </div>
@@ -3561,10 +3400,6 @@ Merci de confirmer votre présence :
               {/* Tab Content: Table Plan */}
               {deskTab === 'guestInfo' && selectedEvent && !protocolDesk && (
                 <div className="space-y-4 animate-fade-in">
-                  <div className="space-y-1">
-                    <h2 className="text-lg font-semibold text-foreground tracking-tight">Infos invités</h2>
-                    <p className="text-sm text-muted">Dress code, avantages (parking, cadeaux, extras) et notes visibles sur le portail invité et dans l’invitation.</p>
-                  </div>
                   <EventGuestGuidelinesEditor
                     value={guestGuidelines}
                     onChange={setGuestGuidelines}
@@ -3576,23 +3411,8 @@ Merci de confirmer votre présence :
 
               {deskTab === 'tablePlan' && !protocolDesk && (
                 <div className="space-y-4">
-                  <div className="space-y-1">
-                    <h2 className="text-lg font-semibold text-foreground tracking-tight">Plan de table</h2>
-                    <p className="text-sm text-muted">
-                      Vous pouvez placer dès maintenant, même avant les réponses. Le PDF, le plan et le GPS partent quand la personne dit oui — si une place est assignée.
-                    </p>
-                  </div>
                   {seatNotificationsLocked && (
-                    <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground shadow-2xs">
-                      <p className="font-semibold text-foreground">Notifications PDF / GPS non incluses</p>
-                      <p className="text-xs mt-1 text-muted">
-                        Vous pouvez placer les invités. L’envoi automatique du PDF, du plan et du GPS dès que l’invité confirme
-                        n’est pas dans votre forfait actuel{planLabel ? ` (${planLabel})` : ''}.
-                      </p>
-                      <Link href="/dashboard/billing" className="inline-block mt-2 text-xs font-medium text-primary hover:underline">
-                        Voir les forfaits →
-                      </Link>
-                    </div>
+                    <PlanLimitCallout feature="seatNotifications" planName={planLabel} compact />
                   )}
                   <TablePlanner
                     key={`${selectedEvent.id}_${selectedEvent.tablePlan?.importedAt ?? 'empty'}`}
@@ -3849,7 +3669,7 @@ Merci de confirmer votre présence :
           {guestModalError ? <Alert variant="error">{guestModalError}</Alert> : null}
           <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted uppercase tracking-wider">Prénom</label>
+              <label className="text-xs font-bold text-muted ">Prénom</label>
               <input
                 type="text"
                 value={guestFirstName}
@@ -3862,7 +3682,7 @@ Merci de confirmer votre présence :
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted uppercase tracking-wider">Nom de famille</label>
+              <label className="text-xs font-bold text-muted ">Nom de famille</label>
               <input
                 type="text"
                 value={guestLastName}
@@ -3876,7 +3696,7 @@ Merci de confirmer votre présence :
           </div>
           <div className="grid grid-cols-1 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted uppercase tracking-wider">Email (optionnel)</label>
+              <label className="text-xs font-bold text-muted ">Email (optionnel)</label>
               <input
                 type="email"
                 inputMode="email"
@@ -3899,7 +3719,7 @@ Merci de confirmer votre présence :
           </div>
           <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted uppercase tracking-wider">Catégorie</label>
+              <label className="text-xs font-bold text-muted ">Catégorie</label>
               <select
                 value={guestCategory}
                 onChange={(e) => setGuestCategory(e.target.value)}
@@ -3913,21 +3733,21 @@ Merci de confirmer votre présence :
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted uppercase tracking-wider">Réponse</label>
+              <label className="text-xs font-bold text-muted ">Réponse</label>
               <select
                 value={guestRsvp}
                 onChange={(e) => setGuestRsvp(e.target.value as 'PENDING' | 'ACCEPTED' | 'DECLINED')}
                 className="w-full min-h-11 px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
               >
                 <option value="PENDING">En attente</option>
-                <option value="ACCEPTED">Accepté</option>
+                <option value="ACCEPTED">Confirmé</option>
                 <option value="DECLINED">Décliné</option>
               </select>
             </div>
           </div>
 
           <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 p-3 space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+            <p className="text-xs font-semibold text-muted">
               Reporting restauration
             </p>
             <div className="grid grid-cols-1 gap-3">
@@ -4106,7 +3926,7 @@ Merci de confirmer votre présence :
                     </pre>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-muted uppercase tracking-wider">Données CSV</label>
+                    <label className="text-xs font-bold text-muted ">Données CSV</label>
                     <textarea
                       value={importText}
                       onChange={(e) => setImportText(e.target.value)}
@@ -4122,7 +3942,7 @@ Merci de confirmer votre présence :
               {parsedPreview && parsedPreview.length > 0 && (
                 <div className="space-y-2 border-t border-border pt-4">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-muted uppercase tracking-wider">
+                    <label className="text-xs font-bold text-muted ">
                       Aperçu des données ({parsedPreview.length} invités détectés)
                     </label>
                     <button
@@ -4236,7 +4056,7 @@ Merci de confirmer votre présence :
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted uppercase tracking-wider">Sélectionner l'invitation précise</label>
+                <label className="text-xs font-bold text-muted ">Sélectionner l'invitation précise</label>
                 <select
                   value={bulkSelectedInviteId}
                   onChange={(e) => {
@@ -4256,7 +4076,7 @@ Merci de confirmer votre présence :
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted uppercase tracking-wider">Moyen de diffusion (Canal)</label>
+                <label className="text-xs font-bold text-muted ">Moyen de diffusion (Canal)</label>
                 <select
                   value={effectiveInviteChannel(bulkSelectedChannel)}
                   onChange={(e) => setBulkSelectedChannel(e.target.value)}
@@ -4381,7 +4201,7 @@ Merci de confirmer votre présence :
             {BROADCAST_WIZARD_STEPS.map((step) => (
               <div key={step.id} className="flex-1 space-y-1">
                 <div className={cn('h-1 rounded-full', broadcastWizardStep >= step.id ? 'bg-primary' : 'bg-surface-muted')} />
-                <p className={cn('text-xs font-semibold uppercase tracking-wider', broadcastWizardStep === step.id ? 'text-primary' : 'text-muted')}>
+                <p className={cn('text-xs font-semibold ', broadcastWizardStep === step.id ? 'text-primary': 'text-muted')}>
                   {step.id}. {step.label}
                 </p>
               </div>
@@ -4532,19 +4352,19 @@ Merci de confirmer votre présence :
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="bg-surface-muted border border-border rounded-xl p-3 text-center">
                     <div className="text-xl font-black text-foreground">{broadcastSummary.total}</div>
-                    <div className="text-xs font-bold text-muted uppercase tracking-wider">Total</div>
+                    <div className="text-xs font-bold text-muted ">Total</div>
                   </div>
                   <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-3 text-center">
                     <div className="text-xl font-black text-emerald-700 dark:text-emerald-300">{broadcastSummary.sent}</div>
-                    <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Envoyés</div>
+                    <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 ">Envoyés</div>
                   </div>
                   <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl p-3 text-center">
                     <div className="text-xl font-black text-amber-700 dark:text-amber-300">{broadcastSummary.simulated}</div>
-                    <div className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Simulés</div>
+                    <div className="text-xs font-bold text-amber-600 dark:text-amber-400 ">Simulés</div>
                   </div>
                   <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 rounded-xl p-3 text-center">
                     <div className="text-xl font-black text-rose-700 dark:text-rose-300">{broadcastSummary.failed}</div>
-                    <div className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Échecs</div>
+                    <div className="text-xs font-bold text-rose-600 dark:text-rose-400 ">Échecs</div>
                   </div>
                 </div>
                 {broadcastSummary.failed > 0 && broadcastSummary.failureReasons && (
@@ -4595,7 +4415,7 @@ Merci de confirmer votre présence :
                   : ''}
               </p>
               <div className="p-4 bg-surface-muted border border-border rounded-2xl space-y-3 max-h-96 overflow-y-auto">
-                <div className="text-xs font-bold text-muted uppercase tracking-wider border-b border-border pb-2 mb-2">
+                <div className="text-xs font-bold text-muted border-b border-border pb-2 mb-2">
                   Résultats d&apos;envoi et options de partage manuel :
                 </div>
                 {broadcastResults.map((res, index) => {
@@ -4714,7 +4534,7 @@ Merci de confirmer votre présence :
                         <button
                           type="button"
                           onClick={() => handleCopyLink(res.guestId || index.toString(), publicRsvpLink(res.rsvpLink, res.guestId))}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-tr from-yellow-500 via-red-500 to-purple-600 hover:opacity-90 text-white rounded-xl text-xs font-bold transition shadow-sm"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-foreground hover:opacity-90 text-background rounded-xl text-xs font-bold transition shadow-sm"
                           title="Copier pour Instagram DM"
                         >
                           <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
@@ -4782,13 +4602,13 @@ Merci de confirmer votre présence :
             </div>
             <div className="space-y-4">
               <div className="p-4 bg-surface-muted border border-border rounded-2xl space-y-1">
-                <div className="text-xs font-bold text-muted uppercase tracking-wider">Destinataire :</div>
+                <div className="text-xs font-bold text-muted ">Destinataire :</div>
                 <div className="font-bold text-foreground text-sm">{sharingGuest.firstName} {sharingGuest.lastName}</div>
                 <div className="text-muted text-xs">{sharingGuest.email}</div>
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-bold text-muted uppercase tracking-wider">Options de partage direct :</div>
+                <div className="text-xs font-bold text-muted ">Options de partage direct :</div>
                 <div className="grid grid-cols-2 gap-3">
                   {/* Copy Link */}
                   <button
@@ -4844,7 +4664,7 @@ Merci de confirmer votre présence :
                   <button
                     type="button"
                     onClick={() => handleCopyLink(sharingGuest.id, getGuestRsvpLink(sharingGuest.id))}
-                    className="flex items-center justify-center gap-2 p-3 bg-gradient-to-tr from-yellow-500 via-red-500 to-purple-600 hover:opacity-90 text-white rounded-xl text-sm font-bold transition shadow-sm"
+                    className="flex items-center justify-center gap-2 p-3 bg-foreground hover:opacity-90 text-background rounded-xl text-sm font-bold transition shadow-sm"
                   >
                     <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                       <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 2.191 4.919 5.4c.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 5.271-4.919 5.418-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-2.199-4.919-5.42-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-5.271 4.919-5.419 1.265-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
@@ -4934,25 +4754,25 @@ Merci de confirmer votre présence :
             <div className="space-y-4">
               <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3 rounded-[var(--radius-card)] border border-border bg-surface-muted p-3.5">
                 <div>
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wider">Nom</p>
+                  <p className="text-xs font-semibold text-muted ">Nom</p>
                   <p className="font-semibold text-foreground text-sm mt-0.5 break-words">
                     {selectedGuestDetails.firstName} {selectedGuestDetails.lastName}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wider">Catégorie</p>
+                  <p className="text-xs font-semibold text-muted ">Catégorie</p>
                   <p className="font-semibold text-foreground text-sm mt-0.5">
                     {selectedGuestDetails.category || 'Général'}
                   </p>
                 </div>
                 <div className="min-[420px]:col-span-2">
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wider">E-mail</p>
+                  <p className="text-xs font-semibold text-muted ">E-mail</p>
                   <p className="font-semibold text-foreground text-sm mt-0.5 break-all">
                     {guestEmail || <span className="italic text-muted font-medium">Non renseigné</span>}
                   </p>
                 </div>
                 <div className="min-[420px]:col-span-2">
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wider">{messaging.whatsapp ? 'WhatsApp / téléphone' : 'Téléphone'}</p>
+                  <p className="text-xs font-semibold text-muted ">{messaging.whatsapp ? 'WhatsApp / téléphone': 'Téléphone'}</p>
                   <p className="font-semibold text-foreground text-sm mt-0.5 break-all">
                     {guestPhone || <span className="italic text-muted font-medium">Non renseigné</span>}
                   </p>
@@ -4960,7 +4780,7 @@ Merci de confirmer votre présence :
               </div>
 
               <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between gap-2 p-3.5 bg-surface border border-border rounded-[var(--radius-card)]">
-                <span className="text-xs font-semibold text-muted uppercase tracking-wider">
+                <span className="text-xs font-semibold text-muted ">
                   Réponse
                 </span>
                 <StatusPill
@@ -4973,16 +4793,16 @@ Merci de confirmer votre présence :
                   }
                 >
                   {selectedGuestDetails.rsvp === 'ACCEPTED'
-                    ? 'Présent'
+                    ? 'Confirmé'
                     : selectedGuestDetails.rsvp === 'DECLINED'
-                      ? 'Absent'
+                      ? 'Décliné'
                       : 'En attente'}
                 </StatusPill>
               </div>
 
               <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
                 <div className="p-3.5 border border-border rounded-[var(--radius-card)]">
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wider">Invitation</p>
+                  <p className="text-xs font-semibold text-muted ">Invitation</p>
                   <p className="text-sm font-medium mt-1">
                     {invitationFailed ? (
                       <span className="text-rose-600 dark:text-rose-400">Envoi échoué</span>
@@ -4994,29 +4814,29 @@ Merci de confirmer votre présence :
                   </p>
                 </div>
                 <div className="p-3.5 border border-border rounded-[var(--radius-card)]">
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wider">Pointage</p>
+                  <p className="text-xs font-semibold text-muted ">Entrée</p>
                   <p className="text-sm font-medium mt-1">
                     {selectedGuestDetails.checkedInAt
-                      ? `Présent le ${new Date(selectedGuestDetails.checkedInAt).toLocaleString('fr-FR')}`
-                      : 'Pas encore pointé'}
+                      ? `Entré le ${new Date(selectedGuestDetails.checkedInAt).toLocaleString('fr-FR')}`
+                      : 'Pas encore entré'}
                   </p>
                 </div>
               </div>
 
               <div className="p-3.5 border border-border rounded-[var(--radius-card)] space-y-3 bg-surface">
-                <div className="text-xs font-semibold text-muted uppercase tracking-wider border-b border-border pb-2 flex items-center gap-1.5">
+                <div className="text-xs font-semibold text-muted border-b border-border pb-2 flex items-center gap-1.5">
                   <Utensils className="w-3.5 h-3.5 text-primary" />
                   <span>Repas et notes</span>
                 </div>
                 <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs font-semibold text-muted uppercase tracking-wider">Menu</p>
+                    <p className="text-xs font-semibold text-muted ">Menu</p>
                     <p className="font-medium text-foreground text-sm mt-1">
                       {specialMealLabel(selectedGuestDetails.preferences?.specialMeal)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-muted uppercase tracking-wider">Allergies</p>
+                    <p className="text-xs font-semibold text-muted ">Allergies</p>
                     <p className="font-medium text-foreground text-sm mt-1 break-words">
                       {selectedGuestDetails.preferences?.allergies || (
                         <span className="italic text-muted">Aucune</span>
@@ -5024,7 +4844,7 @@ Merci de confirmer votre présence :
                     </p>
                   </div>
                   <div className="min-[420px]:col-span-2">
-                    <p className="text-xs font-semibold text-muted uppercase tracking-wider">Notes</p>
+                    <p className="text-xs font-semibold text-muted ">Notes</p>
                     <p className="font-medium text-foreground text-sm mt-1 break-words">
                       {selectedGuestDetails.preferences?.notes || (
                         <span className="italic text-muted">Aucune note</span>
@@ -5046,7 +4866,7 @@ Merci de confirmer votre présence :
               ) : null}
 
               <div className="p-3.5 border border-border rounded-[var(--radius-card)] space-y-3 bg-surface">
-                <div className="text-xs font-semibold text-muted uppercase tracking-wider border-b border-border pb-2 flex items-center gap-1.5">
+                <div className="text-xs font-semibold text-muted border-b border-border pb-2 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-primary" />
                   <span>Champs personnalisés</span>
                   {customFieldDetails.length > 0 && (
@@ -5072,7 +4892,7 @@ Merci de confirmer votre présence :
                             {field.label}
                           </p>
                           {field.typeLabel && (
-                            <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted px-1.5 py-0.5 rounded bg-surface border border-border">
+                            <span className="shrink-0 text-xs font-semibold text-muted px-1.5 py-0.5 rounded bg-surface border border-border">
                               {field.typeLabel}
                             </span>
                           )}

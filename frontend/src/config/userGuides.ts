@@ -229,7 +229,8 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Mes salles', href: '/dashboard/rooms' },
       { label: 'Mes offres', href: '/dashboard/marketplace' },
       { label: 'Réalisations', href: '/dashboard/publications' },
-      { label: 'Abonnement & forfait', href: '/dashboard/billing' },
+      { label: 'Statistiques & revenus', href: '/dashboard/analytics' },
+      { label: 'Forfait', href: '/dashboard/billing' },
       { label: 'Guide', href: '/dashboard/guide' },
     ],
     workflows: [
@@ -307,7 +308,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Billetterie', href: '/dashboard/tickets' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Modèles', href: '/dashboard/templates' },
-      { label: 'Facturation & plan', href: '/dashboard/billing' },
+      { label: 'Forfait', href: '/dashboard/billing' },
       { label: 'Factures', href: '/dashboard/invoices' },
       { label: 'Salles', href: '/dashboard/rooms' },
       { label: 'Explorer', href: '/dashboard/catalogue' },
@@ -370,8 +371,8 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'upgrade-plan',
         title: 'Changer de forfait',
         content:
-          '1. Facturation & plan → onglet Forfaits.\n2. Comparez quotas (Aperçu) et le tableau des fonctionnalités.\n3. Période de base ou annuel (−10 %).\n4. Demande + preuve si requis ; suivi dans Demandes, puis Factures.',
-        links: [{ label: 'Facturation & plan', href: '/dashboard/billing' }],
+          '1. Forfait → onglet Forfaits.\n2. Comparez quotas (Aperçu) et le tableau des fonctionnalités.\n3. Période de base ou annuel (−10 %).\n4. Demande + preuve si requis ; suivi dans Demandes, puis Factures.',
+        links: [{ label: 'Forfait', href: '/dashboard/billing' }],
       },
       {
         id: 'account-kind',
@@ -452,7 +453,7 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     cannotDo: [
       'Changer le type de compte de l’organisation',
-      'Accéder à Facturation & plan ni changer de forfait',
+      'Accéder à la page Forfait ni changer de forfait',
       'Supprimer l\'organisation ou transférer la propriété',
       'Voir les autres organisations',
     ],

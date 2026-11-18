@@ -10,7 +10,9 @@ import {
   ChevronDown,
   Info,
   MapPin,
-} from 'lucide-react';
+  ShieldCheck,
+  Tag,
+} from '@/components/icons';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {

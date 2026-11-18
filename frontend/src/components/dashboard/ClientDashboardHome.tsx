@@ -3,7 +3,6 @@ import { ChannelText } from '@/components/ChannelText';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import UserAvatar from '@/components/UserAvatar';
 import { useRouter } from 'next/navigation';
 import {
   Building2,
@@ -32,7 +31,7 @@ import {
   Clock,
   Music,
   Store,
-} from 'lucide-react';
+} from '@/components/icons';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { api } from '@/lib/api';
@@ -258,17 +257,14 @@ const QUICK_SEARCHES = [
 const FIRST_STEPS = [
   {
     title: 'Explorez le catalogue',
-    detail: 'Salles, prestataires et matériel, avec photos, prix et visite 3D.',
     href: '/dashboard/catalogue',
   },
   {
     title: 'Demandez un devis gratuit',
-    detail: 'Le prestataire vous répond ici, sans engagement.',
     href: '/dashboard/catalogue?kind=service',
   },
   {
     title: 'Confirmez et réservez',
-    detail: 'Acceptez le devis qui vous convient, puis suivez votre réservation.',
     href: '/dashboard/quotes',
   },
 ];
@@ -715,37 +711,14 @@ export default function ClientDashboardHome() {
     router.push(`/dashboard/catalogue?q=${encodeURIComponent(searchQuery.trim())}`);
   };
 
-  const userName = user?.name ? user.name.split(' ')[0] : '';
-
   return (
     <div className="space-y-8 pb-12 animate-fade-in max-w-7xl mx-auto">
       {/* ─── 1. EN-TÊTE ─── */}
       <section className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <UserAvatar name={user?.name} src={user?.avatarUrl} size="lg" className="w-12 h-12 text-base" />
-            <div className="min-w-0">
-              <p className="text-sm text-muted truncate">Bonjour{userName ? `, ${userName}` : ''}</p>
-              <h1 className="font-display text-2xl sm:text-[1.75rem] font-semibold leading-tight text-foreground">
-                Mon espace
-              </h1>
-            </div>
-          </div>
-          <span className="inline-flex w-fit items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-primary/15 dark:text-primary">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Compte gratuit · sans abonnement
-          </span>
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           {/* Recherche + raccourcis */}
           <div className="lg:col-span-3 rounded-3xl border border-border bg-surface p-4 sm:p-5 flex flex-col gap-4 shadow-2xs">
-            <div className="space-y-1">
-              <h2 className="text-base font-semibold text-foreground">Que préparez-vous ?</h2>
-              <p className="text-sm text-muted">
-                Trouvez une salle, un prestataire ou du matériel, puis demandez un devis gratuit.
-              </p>
-            </div>
+            <h2 className="text-base font-semibold text-foreground">Que préparez-vous ?</h2>
             <form onSubmit={handleSearchSubmit} role="search">
               <div className="relative flex items-center rounded-2xl bg-background border border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition">
                 <Search className="w-5 h-5 text-muted absolute left-4 pointer-events-none" />
@@ -851,7 +824,6 @@ export default function ClientDashboardHome() {
                           <QrCode className="w-5 h-5" aria-hidden />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block text-xs font-semibold text-primary">Prochain événement</span>
                           <span className="block text-sm font-semibold text-foreground truncate">{followUp.nextTicket.event.title}</span>
                           <span className="block text-xs text-muted truncate">
                             {formatShortDate(followUp.nextTicket.event.date)}
@@ -916,21 +888,16 @@ export default function ClientDashboardHome() {
             ) : (
               <>
                 <h2 className="text-base font-semibold text-foreground">Comment ça marche</h2>
-                <ol className="mt-3 space-y-3">
-                  {FIRST_STEPS.map((step, index) => (
+                <ul className="mt-3 space-y-1">
+                  {FIRST_STEPS.map((step) => (
                     <li key={step.title}>
-                      <Link href={step.href} className="group flex items-start gap-3 rounded-2xl p-2 -m-2 hover:bg-surface-muted/60 transition">
-                        <span className="w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0 tabular-nums">
-                          {index + 1}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-semibold text-foreground group-hover:text-primary transition">{step.title}</span>
-                          <span className="block text-xs text-muted leading-relaxed">{step.detail}</span>
-                        </span>
+                      <Link href={step.href} className="group flex min-h-11 items-center gap-2 rounded-2xl px-2 -mx-2 hover:bg-surface-muted/60 transition">
+                        <span className="text-sm font-semibold text-foreground group-hover:text-primary transition">{step.title}</span>
+                        <ChevronRight className="w-4 h-4 text-muted" aria-hidden />
                       </Link>
                     </li>
                   ))}
-                </ol>
+                </ul>
               </>
             )}
           </div>
@@ -1215,7 +1182,7 @@ export default function ClientDashboardHome() {
           </div>
 
           <div className="space-y-2.5">
-            <p className="text-xs font-bold text-muted uppercase tracking-wider">
+            <p className="text-xs font-bold text-muted ">
               {upgradeCategory === 'b2c'
                 ? 'Sélectionnez votre formule Particulier (90 jours)'
                 : upgradeCategory === 'b2b'
@@ -1536,7 +1503,7 @@ export default function ClientDashboardHome() {
 
       {/* ─── FEEDBACK VISUEL DE CONFIRMATION D'UPGRADE ─── */}
       {upgradeSuccess && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-surface border border-border p-6 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-xl animate-fade-in">
             <div className="w-16 h-16 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-9 h-9" />

@@ -123,9 +123,9 @@ export default function Tooltip({
  style={{ top: coords.top, left: coords.left, transform }}
  className={cn(
  'pointer-events-none fixed z-[10050]',
- 'max-w-[15rem] rounded-md bg-background px-2.5 py-1.5',
- 'text-[11px] font-medium text-white shadow-xl ring-1 ring-white/10',
- 'dark:bg-surface-muted dark:text-foreground dark:ring-border',
+ 'max-w-[15rem] rounded-md bg-foreground px-2.5 py-1.5',
+ 'text-xs font-medium text-background shadow-lg',
+ 'dark:bg-surface-muted dark:text-foreground dark:ring-1 dark:ring-border',
  )}
  >
  {content}

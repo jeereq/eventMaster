@@ -4,11 +4,18 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Building2, Clock, CreditCard, FileText, Loader2, LogIn, Store, Users, Wallet, Download,
-} from 'lucide-react';
+} from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Button, Badge, Modal, StatusPill, usePageSize,
+  Alert,
+  EmptyState,
+  Pagination,
+  Button,
+  Badge,
+  Modal,
+  StatusPill,
+  usePageSize,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import CatalogueFilterBar, {
@@ -46,6 +53,7 @@ import { useRememberListReturn } from '@/lib/catalogueQuery';
 import AdminBeverageBrands from '@/components/admin/AdminBeverageBrands';
 import AdminMarketplaceReviews from '@/components/admin/AdminMarketplaceReviews';
 import AdminMarketplaceDeposits from '@/components/admin/AdminMarketplaceDeposits';
+import { confirmSupportSession } from '@/lib/confirmSupportSession';
 
 type CatalogTab = 'venues' | 'offerings' | 'rentals' | 'inquiries' | 'bookings' | 'commissions' | 'deposits' | 'reviews' | 'brands';
 
@@ -427,6 +435,7 @@ export default function AdminCataloguePage() {
   };
 
   const openWorkspace = async (tenantId: string) => {
+    if (!confirmSupportSession()) return;
     try {
       setOpeningId(tenantId);
       const payload = await api.post(`/admin/tenants/${tenantId}/impersonate`);
@@ -618,13 +627,6 @@ export default function AdminCataloguePage() {
 
   return (
     <div className="space-y-6 w-full">
-      <PageHeader
-        title="Catalogue"
-        description={`Fiches, devis, réservations. Commission ${commissionPct} %.`}
-        breadcrumbs={
-          <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard?tab=overview' }, { label: 'Catalogue' }]} />
-        }
-      />
 
       {error && <Alert variant="error">{error}</Alert>}
 
@@ -851,7 +853,7 @@ export default function AdminCataloguePage() {
       ) : tab === 'venues' || tab === 'offerings' || tab === 'rentals' ? (
         mapMode ? (
           catalogMarkers.length === 0 ? (
-            <EmptyState icon={<Store className="w-5 h-5" />} title="Aucune position" description="Aucune fiche géolocalisée ne correspond aux filtres." />
+            <EmptyState illustration="search" icon={<Store className="w-5 h-5" />} title="Aucune position" description="Aucune fiche géolocalisée ne correspond aux filtres." />
           ) : (
             <div className="space-y-3">
               <MarketplaceLocationsMap
@@ -894,11 +896,11 @@ export default function AdminCataloguePage() {
           />
         )
       ) : tab === 'inquiries' && !inquiries?.items.length ? (
-        <EmptyState icon={<FileText className="w-5 h-5" />} title="Aucune demande" description="Les devis marketplace apparaîtront ici." />
+        <EmptyState illustration="inbox" icon={<FileText className="w-5 h-5" />} title="Aucune demande" description="Les devis marketplace apparaîtront ici." />
       ) : tab === 'bookings' && !bookings?.items.length ? (
-        <EmptyState icon={<Clock className="w-5 h-5" />} title="Aucune réservation" description="Les demandes de dates apparaîtront ici." />
+        <EmptyState illustration="events" icon={<Clock className="w-5 h-5" />} title="Aucune réservation" description="Les demandes de dates apparaîtront ici." />
       ) : tab === 'commissions' && !commissions?.items.length ? (
-        <EmptyState
+        <EmptyState illustration="payments"
           icon={<Wallet className="w-5 h-5" />}
           title={settlement === 'paid' ? 'Aucune commission encaissée' : 'Aucune commission due'}
           description={`Commission ${commissionPct} % sur les réservations confirmées.`}
@@ -912,8 +914,8 @@ export default function AdminCataloguePage() {
                   <Badge variant={row.status === 'NEW' ? 'warning' : 'default'}>
                     {row.status === 'NEW' ? 'Nouveau' : 'Contacté'}
                   </Badge>
-                  <span className="text-[10px] text-muted">{formatWhen(row.createdAt)}</span>
-                  <span className="text-[10px] text-muted">{row.kind === 'offering' ? 'Prestation' : 'Salle'}</span>
+                  <span className="text-xs text-muted">{formatWhen(row.createdAt)}</span>
+                  <span className="text-xs text-muted">{row.kind === 'offering' ? 'Prestation' : 'Salle'}</span>
                 </div>
                 <p className="text-sm font-semibold text-foreground">{row.title}</p>
                 <p className="text-xs text-muted">
@@ -945,7 +947,7 @@ export default function AdminCataloguePage() {
                     <Badge variant={row.status === 'CANCELLED' ? 'danger' : row.status === 'CONFIRMED' ? 'success' : 'warning'}>
                       {BOOKING_STATUS_LABELS[row.status] || row.status}
                     </Badge>
-                    <span className="text-[10px] text-muted">{formatDate(row.eventDate)}</span>
+                    <span className="text-xs text-muted">{formatDate(row.eventDate)}</span>
                   </div>
                   <p className="text-sm font-semibold text-foreground truncate">{row.title}</p>
                   <p className="text-xs text-muted">
@@ -974,8 +976,8 @@ export default function AdminCataloguePage() {
                     <Badge variant={row.commissionSettledAt ? 'success' : 'warning'}>
                       {row.commissionSettledAt ? 'Payée' : 'Due'}
                     </Badge>
-                    <span className="text-[10px] text-muted">{formatDate(row.eventDate)}</span>
-                    <span className="text-[10px] text-muted">{BOOKING_STATUS_LABELS[row.status] || row.status}</span>
+                    <span className="text-xs text-muted">{formatDate(row.eventDate)}</span>
+                    <span className="text-xs text-muted">{BOOKING_STATUS_LABELS[row.status] || row.status}</span>
                   </div>
                   <p className="text-sm font-semibold text-foreground truncate">{row.title}</p>
                   <p className="text-xs text-muted">
@@ -1096,7 +1098,7 @@ export default function AdminCataloguePage() {
                 <div key={item.label} className="border border-border px-3 py-2.5 text-center">
                   <item.icon className="w-3.5 h-3.5 text-muted mx-auto mb-1" />
                   <div className="text-lg font-semibold text-foreground">{item.value}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted">{item.label}</div>
+                  <div className="text-xs text-muted">{item.label}</div>
                 </div>
               ))}
             </div>
@@ -1168,7 +1170,7 @@ export default function AdminCataloguePage() {
             className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
           {!moderation?.publish && (
-            <span className="text-[11px] text-muted">{moderationReason.trim().length}/8 caractères min.</span>
+            <span className="text-xs text-muted">{moderationReason.trim().length}/8 caractères min.</span>
           )}
         </label>
       </Modal>

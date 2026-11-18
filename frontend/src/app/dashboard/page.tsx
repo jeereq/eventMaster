@@ -1,5 +1,4 @@
 'use client';
-import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useState, useRef, Suspense, useMemo, useCallback } from 'react';
 import Link from 'next/link';
@@ -9,10 +8,10 @@ import { useAuth } from '@/context/AuthContext';
 import { 
  Calendar, Users, Mail, CreditCard, 
  PlusCircle, AlertCircle, Award, CheckCircle, Shield,
- Building2, Activity, TrendingUp, Clock, Trash2, Edit2, Key,
+ Building2, Activity, TrendingUp, Clock, Trash2, Edit2,
   Globe, Search, Filter, Check, X, FileText, Plus, Loader2, Copy, Eye,
-  BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet, LogIn, Ticket, ClipboardList, ScanLine, Heart, Lightbulb
-} from 'lucide-react';
+  BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, History, Briefcase, Wallet, LogIn, Ticket, ClipboardList, ScanLine, Heart
+} from '@/components/icons';
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
 import { cn } from '@/lib/cn';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
@@ -21,7 +20,7 @@ import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/c
 import SubscriptionRequestListPanel, { type AdminSubscriptionRequestItem } from '@/components/SubscriptionRequestListPanel';
 import { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
-import { PageHeader, Alert, Button, ConfirmDialog, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, usePaginateItems, usePageSize, Card, EmptyState } from '@/components/ui';
+import { PageHeader, Alert, Button, ConfirmDialog, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Pagination, usePaginateItems, usePageSize, Card, EmptyState } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
@@ -30,7 +29,6 @@ import ClientDashboardHome from '@/components/dashboard/ClientDashboardHome';
 import OrganizerDashboardHome from '@/components/dashboard/OrganizerDashboardHome';
 import VendorDashboardHome from '@/components/dashboard/VendorDashboardHome';
 import PersonalOrganizerHome, { isPersonalOrganizerPlan } from '@/components/dashboard/PersonalOrganizerHome';
-import { useViewPreferencesOptional } from '@/context/ViewPreferencesContext';
 import { PLAN_IDS, planAudienceLabel, isB2cPlanId, durationDaysForPlan, durationPresetsForPlan, ANNUAL_DISCOUNT_PERCENT, formatFc, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
@@ -54,6 +52,7 @@ import {
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { commercialPercent, renewalPercent } from '@/lib/platformRates';
 import type { AuthOtpMethod } from '@/lib/authOtpChannels';
+import { confirmSupportSession } from '@/lib/confirmSupportSession';
 
 function isPlatformStaff(role?: string) {
  return role === 'SUPER_ADMIN' || role === 'COMMERCIAL';
@@ -337,67 +336,6 @@ interface PlatformInsights {
  team?: { protocolUsers: number; managerUsers: number };
 }
 
-type AdminTabId =
- | 'overview' | 'tenants' | 'users' | 'templates' | 'message-templates' | 'events'
- | 'analytics' | 'guests' | 'settings' | 'subscription-requests'
- | 'subscription-plans' | 'invoices';
-
-const ADMIN_TAB_META: Record<AdminTabId, { title: string; description: string; tip?: string }> = {
- overview: {
- title: 'Accueil',
- description: 'Ce qu’il faut traiter aujourd’hui : demandes, licences, factures et organisations récentes.',
- },
- tenants: {
- title: 'Organisations',
- description: 'Comptes clients SaaS : licence, forfait, gérant et quotas.',
- tip: 'Créer une organisation génère aussi le compte manager associé.',
- },
- users: {
- title: 'Utilisateurs plateforme',
- description: 'Tous les comptes (Super Admin, Commercial, membres d’organisations).',
- tip: 'Les Super Admins n’appartiennent à aucune organisation.',
- },
- templates: {
- title: 'Modèles d’invitation',
- description: 'Supervision globale : modèles publics EventMaster + modèles privés des organisations. Activez « Vitrine landing » ici.',
- tip: 'Créer / Modifier ouvre le concepteur visuel, puis vous revient automatiquement sur ce catalogue.',
- },
- 'message-templates': {
- title: 'Messages automatiques',
- description: 'Textes WhatsApp / e-mail envoyés aux invités (invitation, rappel, confirmation…).',
- tip: 'Utilisez les variables {{firstName}}, {{rsvpLink}}, etc. dans le corps du message.',
- },
- events: {
- title: 'Événements (supervision)',
- description: 'Vue transversale : privé / public, billets, GPS et organisations.',
- },
- guests: {
- title: 'Invités (supervision)',
-    description: 'Liste globale, funnel des réponses, PDF non livré et présence jour J.',
- },
- analytics: {
- title: 'Analyses & statistiques',
-    description: 'Adoption des forfaits, check-in, tâches, événements publics, billets et funnel des réponses.',
- },
- settings: {
- title: 'Réglages plateforme',
- description: 'Identité, contact public, taux marketplace, maintenance, inscriptions, UltraMsg et SendGrid — appliqués au site et à l’API.',
- tip: 'Après sauvegarde, landing, contact, footer et inscriptions se mettent à jour immédiatement. Les forfaits sont dans l’onglet dédié.',
- },
- 'subscription-requests': {
- title: 'Demandes d’abonnement',
- description: 'Validez ou refusez les demandes d’upgrade / renouvellement avec preuve de paiement.',
- },
- 'subscription-plans': {
- title: 'Forfaits & tarifs',
- description: 'Prix, quotas et fonctionnalités affichés sur la landing et appliqués à la facturation.',
- tip: 'Ces forfaits alimentent directement la section tarifs de la page d’accueil.',
- },
- invoices: {
- title: 'Factures plateforme',
- description: 'Factures générées après approbation, paiement ou renouvellement.',
- },
-};
 
 interface TenantSubscriptionHistoryEntry {
  id: string;
@@ -515,13 +453,10 @@ function filterAdminDashboardGuests<T extends {
 }
 
 function DashboardPageContent() {
-  const messaging = useMessagingChannels();
  const { user, tenant, access, planQuota, planFeatures, enterSupportSession } = useAuth();
  const { site } = usePlatformSite();
  const commercialPct = commercialPercent(site);
  const renewalPct = renewalPercent(site);
- const viewPrefs = useViewPreferencesOptional();
- const widgets = viewPrefs?.prefs.widgets;
  const {
  mode: homeEventsMode,
  setViewMode: setHomeEventsMode,
@@ -2060,6 +1995,7 @@ function DashboardPageContent() {
  };
 
  const handleOpenWorkspace = async (tenantId: string) => {
+ if (!confirmSupportSession()) return;
  try {
  setOpeningWorkspaceId(tenantId);
  const payload = await api.post(`/admin/tenants/${tenantId}/impersonate`);
@@ -2134,23 +2070,6 @@ function DashboardPageContent() {
       'bg-surface-muted dark:bg-background border border-border rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition min-h-11 shrink-0 max-w-[170px] sm:max-w-none';
 
  const activeLicensesCount = adminData?.stats.licensesActive ?? 0;
- const paidPlansCount = Object.entries(adminData?.planCounts || {}).reduce(
- (sum, [plan, count]) => (plan === 'FREE' ? sum : sum + count),
- 0,
- );
-
- const tabMeta = ADMIN_TAB_META[activeTab as AdminTabId] || ADMIN_TAB_META.tenants;
- const commercialOverrides: Partial<Record<AdminTabId, { description: string }>> = {
- tenants: { description: 'Organisations liées à votre code de parrainage (plan, licence, gérant).' },
- 'subscription-requests': { description: 'Approuvez ou refusez les demandes de vos organisations parrainées.' },
- invoices: { description: 'Factures de vos organisations parrainées et commissions associées.' },
- };
- const panelDescription = messaging.adapt(
- isCommercialPlatform && commercialOverrides[activeTab as AdminTabId]
- ? commercialOverrides[activeTab as AdminTabId]!.description
- : tabMeta.description,
- );
-
  const statCardClass = 'bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3';
 
  // Actions principales de l’onglet : dans l’en-tête de page (Super Admin) ou du panneau (Commercial).
@@ -2209,74 +2128,17 @@ function DashboardPageContent() {
  <>
  <div className="space-y-6">
  <PageHeader
- title={
- isCommercialPlatform
- ? 'Espace commercial'
- : tabMeta.title
- }
- description={
- isCommercialPlatform
-                ? 'Parrainage et commissions.'
-                : activeTab === 'overview'
-                  ? `Bonjour${user?.name ? ` ${user.name}` : ''}, voici ce qui attend une action sur la plateforme.`
-                  : panelDescription
- }
  action={isSuperAdmin && activeTab !== 'overview' ? panelActions : undefined}
- breadcrumbs={
- <Breadcrumbs
- items={[
- { label: isCommercialPlatform ? 'Commercial' : 'Super Admin' },
- { label: tabMeta.title },
- ]}
- />
- }
- />
+/>
 
  {error && <Alert variant="error">{error}</Alert>}
           {notice && <Alert variant="success">{notice}</Alert>}
-
- {adminData && activeTab !== 'overview' && isSuperAdmin && (
- <nav aria-label="Chiffres clés de la plateforme" className="-mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none]">
- <ul className="flex sm:flex-wrap gap-2 w-max sm:w-auto">
- {[
- { label: 'organisations', value: adminData.stats.tenants, hint: `${activeLicensesCount} licence${activeLicensesCount !== 1 ? 's' : ''} active${activeLicensesCount !== 1 ? 's' : ''}`, href: '/dashboard?tab=tenants', icon: Building2, tab: 'tenants' },
- { label: 'utilisateurs', value: adminData.stats.users, hint: `${paidPlansCount} org. payante${paidPlansCount !== 1 ? 's' : ''}`, href: '/dashboard?tab=users', icon: Users, tab: 'users' },
- { label: 'événements', value: adminData.stats.events, href: '/dashboard/admin/events', icon: Calendar },
- { label: 'invités', value: adminData.stats.guests, href: '/dashboard/admin/guests', icon: Mail },
- ].map((chip) => {
- const ChipIcon = chip.icon;
- const current = chip.tab === activeTab;
- return (
- <li key={chip.label}>
- <Link
- href={chip.href}
- aria-current={current ? 'page' : undefined}
- className={cn(
- 'inline-flex items-center gap-2 min-h-11 pl-2 pr-3.5 rounded-full border text-sm transition whitespace-nowrap touch-manipulation',
- current
- ? 'border-primary/30 bg-primary/10 text-foreground'
- : 'border-border bg-surface text-foreground hover:bg-surface-muted',
- )}
- >
- <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
- <ChipIcon className="w-3.5 h-3.5" aria-hidden />
- </span>
- <span className="font-semibold tabular-nums">{chip.value.toLocaleString('fr-FR')}</span>
- <span className="text-muted">{chip.label}</span>
- {chip.hint ? <span className="hidden lg:inline text-xs text-muted">· {chip.hint}</span> : null}
- </Link>
- </li>
- );
- })}
- </ul>
- </nav>
- )}
 
  {adminData && activeTab !== 'overview' && isCommercialPlatform && (
  <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
  <div className={statCardClass}>
  <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-muted uppercase tracking-wider">
+                  <span className="text-xs font-semibold text-muted ">
  {isCommercialPlatform ? 'Parrainées' : 'Organisations'}
  </span>
  <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
@@ -2297,7 +2159,7 @@ function DashboardPageContent() {
  <>
  <div className={statCardClass}>
  <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted uppercase tracking-wider">Membres liés</span>
+                      <span className="text-xs font-semibold text-muted ">Membres liés</span>
  <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
  <Users className="w-4 h-4" />
  </div>
@@ -2311,7 +2173,7 @@ function DashboardPageContent() {
  </div>
  <div className={statCardClass}>
  <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted uppercase tracking-wider">En attente</span>
+                      <span className="text-xs font-semibold text-muted ">En attente</span>
                       <div className="bg-festive-accent-soft text-festive-accent p-1.5 rounded-[var(--radius-button)]">
  <Clock className="w-4 h-4" />
  </div>
@@ -2323,7 +2185,7 @@ function DashboardPageContent() {
  </div>
  <div className={statCardClass}>
  <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted uppercase tracking-wider">Commission</span>
+                      <span className="text-xs font-semibold text-muted ">Commission</span>
                       <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
  <Wallet className="w-4 h-4" />
  </div>
@@ -2349,43 +2211,11 @@ function DashboardPageContent() {
 
  {activeTab !== 'overview' && (
  <div className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
- {isSuperAdmin ? (
- tabMeta.tip ? (
- <p className="border-b border-border bg-surface-muted/50 px-4 sm:px-5 py-2.5 flex items-start gap-2 text-xs text-muted leading-relaxed">
- <Lightbulb className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" aria-hidden />
- {tabMeta.tip}
- </p>
- ) : null
- ) : (
- <div className="border-b border-border bg-surface-muted/50 px-5 py-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
- <div className="min-w-0">
- <h2 className="text-base font-semibold text-foreground tracking-tight flex items-center gap-2">
- {activeTab === 'tenants' && <Building2 className="w-4.5 h-4.5 text-primary shrink-0" />}
- {activeTab === 'users' && <Users className="w-4.5 h-4.5 text-primary shrink-0" />}
- {activeTab === 'templates' && <FileText className="w-4.5 h-4.5 text-primary shrink-0" />}
- {activeTab === 'message-templates' && <MessageSquare className="w-4.5 h-4.5 text-primary shrink-0" />}
- {activeTab === 'events' && <Calendar className="w-4.5 h-4.5 text-primary shrink-0" />}
- {activeTab === 'guests' && <Users className="w-4.5 h-4.5 text-primary shrink-0" />}
- {activeTab === 'analytics' && <BarChart3 className="w-4.5 h-4.5 text-primary shrink-0" />}
- {activeTab === 'settings' && <Key className="w-4.5 h-4.5 text-primary shrink-0" />}
- {activeTab === 'subscription-requests' && <Clock className="w-4.5 h-4.5 text-primary shrink-0" />}
- {activeTab === 'subscription-plans' && <CreditCard className="w-4.5 h-4.5 text-primary shrink-0" />}
- {activeTab === 'invoices' && <FileText className="w-4.5 h-4.5 text-primary shrink-0" />}
- {tabMeta.title}
- </h2>
- <p className="text-xs text-muted mt-1 leading-relaxed max-w-2xl">{panelDescription}</p>
- {!isCommercialPlatform && tabMeta.tip && (
-                    <p className="text-xs text-primary mt-2 font-medium">{tabMeta.tip}</p>
- )}
- </div>
-
- {!isSuperAdmin && (
- <div className="flex flex-wrap items-center gap-2 shrink-0">
+ {!isSuperAdmin && panelActions ? (
+ <div className="border-b border-border bg-surface-muted/50 px-5 py-3 flex flex-wrap items-center justify-end gap-2">
  {panelActions}
  </div>
- )}
- </div>
- )}
+ ) : null}
 
  {activeTab === 'analytics' && user?.role === 'SUPER_ADMIN' && (
  <div className="px-5 py-3 border-b border-border bg-surface">
@@ -2583,13 +2413,13 @@ function DashboardPageContent() {
                       <select value={filterRsvp} onChange={(e) => setFilterRsvp(e.target.value)} className={filterSelectClass} aria-label="Filtrer par réponse">
                         <option value="ALL">Toutes les réponses</option>
  <option value="PENDING">En attente</option>
- <option value="ACCEPTED">Accepté</option>
+ <option value="ACCEPTED">Confirmé</option>
  <option value="DECLINED">Décliné</option>
  </select>
                       <select value={filterGuestCheckin} onChange={(e) => setFilterGuestCheckin(e.target.value)} className={filterSelectClass} aria-label="Filtrer par présence">
  <option value="ALL">Présence</option>
- <option value="in">Enregistrés</option>
- <option value="out">Non enregistrés</option>
+ <option value="in">Entrés</option>
+ <option value="out">Pas encore entrés</option>
  </select>
                       <select value={filterGuestPdf} onChange={(e) => setFilterGuestPdf(e.target.value)} className={filterSelectClass} aria-label="Filtrer par PDF">
  <option value="ALL">PDF invitation</option>
@@ -2638,7 +2468,7 @@ function DashboardPageContent() {
  {tenantsLoading ? (
  <SkeletonTabContent mode={tenantsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
  ) : filteredTenants.length === 0 ? (
-              <EmptyState 
+              <EmptyState illustration="rooms" 
                 icon={<Building2 className="w-5 h-5" />} 
                 title="Aucune organisation active" 
                         description="Aucune organisation."
@@ -2823,7 +2653,7 @@ function DashboardPageContent() {
  {usersLoading ? (
  <SkeletonTabContent mode={usersViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
  ) : filteredUsers.length === 0 ? (
-              <EmptyState 
+              <EmptyState illustration="guests" 
                 icon={<Users className="w-5 h-5" />} 
                 title="Aucun utilisateur" 
                         description="Ajoutez un collaborateur."
@@ -3043,19 +2873,19 @@ function DashboardPageContent() {
  )}
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
  <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
-                        <p className="text-xs font-bold text-primary uppercase tracking-wider">Modèles globaux</p>
+                        <p className="text-xs font-bold text-primary ">Modèles globaux</p>
  <p className="text-2xl font-extrabold text-primary mt-1">{templateCounts.global}</p>
  </div>
                       <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
-                        <p className="text-xs font-bold text-primary uppercase tracking-wider">Sur la landing</p>
+                        <p className="text-xs font-bold text-primary ">Sur la landing</p>
                         <p className="text-2xl font-extrabold text-primary mt-1">{templateCounts.landing}</p>
  </div>
  <div className="bg-surface-muted dark:bg-background/50 border border-border dark:border-border rounded-xl p-4">
-                        <p className="text-xs font-bold text-muted dark:text-muted uppercase tracking-wider">Organisations</p>
+                        <p className="text-xs font-bold text-muted dark:text-muted ">Organisations</p>
  <p className="text-2xl font-extrabold text-foreground dark:text-foreground mt-1">{templateCounts.tenant}</p>
  </div>
  <div className="bg-surface-muted dark:bg-background/50 border border-border dark:border-border rounded-xl p-4">
-                        <p className="text-xs font-bold text-muted dark:text-muted uppercase tracking-wider">Affichés (filtre)</p>
+                        <p className="text-xs font-bold text-muted dark:text-muted ">Affichés (filtre)</p>
  <p className="text-2xl font-extrabold text-foreground dark:text-foreground mt-1">{templatesTotal}</p>
  </div>
  </div>
@@ -3118,7 +2948,7 @@ function DashboardPageContent() {
  {adminEventsLoading ? (
  <SkeletonTabContent mode={adminEventsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
  ) : filteredEvents.length === 0 ? (
-              <EmptyState 
+              <EmptyState illustration="events" 
                 icon={<Calendar className="w-5 h-5" />} 
                 title="Votre calendrier est libre" 
                         description="Aucun événement."
@@ -3265,7 +3095,7 @@ function DashboardPageContent() {
  {adminGuestsLoading ? (
  <SkeletonTabContent mode={guestsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
  ) : filteredGuests.length === 0 ? (
-              <EmptyState 
+              <EmptyState illustration="guests" 
                 icon={<Users className="w-5 h-5" />} 
                 title="Liste d'invités vide" 
                         description="Ajoutez vos invités."
@@ -3277,7 +3107,7 @@ function DashboardPageContent() {
  const rsvpTone =
  g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber';
  const rsvpLabel =
- g.rsvp === 'ACCEPTED' ? 'Accepté' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
+ g.rsvp === 'ACCEPTED' ? 'Confirmé' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
  const rsvpChip = <StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>;
  const categoryChip = <StatusPill tone="slate">{g.category || 'Général'}</StatusPill>;
  const pdfChip = g.rsvp === 'ACCEPTED' ? (
@@ -3285,7 +3115,7 @@ function DashboardPageContent() {
  {g.seatingInvitationPdfUrl ? 'PDF livré' : 'PDF manquant'}
  </StatusPill>
  ) : null;
- const checkinChip = g.checkedInAt ? <StatusPill tone="primary">Présent</StatusPill> : null;
+ const checkinChip = g.checkedInAt ? <StatusPill tone="primary">Entré</StatusPill> : null;
  const actions = (
  <>
  {guestsViewMode === 'list' ? (
@@ -3484,9 +3314,9 @@ function DashboardPageContent() {
  }
  >
  <div className={`flex items-center justify-between ${plansViewMode === 'list' ? 'md:col-span-full' : ''}`}>
- <span className="text-xs font-extrabold text-primary uppercase tracking-wider">{planKey}</span>
+ <span className="text-xs font-extrabold text-primary ">{planKey}</span>
  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-border bg-surface">
+                                    <span className="text-xs font-bold px-2 py-0.5 rounded-full border border-border bg-surface">
  {planAudienceLabel(plan.audience || planKey)}
  </span>
  <span className="text-xs bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
@@ -3497,7 +3327,7 @@ function DashboardPageContent() {
 
  <div className={plansViewMode === 'list' ? 'contents' : 'space-y-3'}>
  <div className="space-y-1">
-                                    <label className="text-xs font-bold text-muted uppercase tracking-wider">Nom du Plan</label>
+                                    <label className="text-xs font-bold text-muted ">Nom du Plan</label>
  <input
  type="text"
  value={plan.name}
@@ -3512,7 +3342,7 @@ function DashboardPageContent() {
  </div>
 
  <div className="space-y-1">
-                                    <label className="text-xs font-bold text-muted uppercase tracking-wider">Description</label>
+                                    <label className="text-xs font-bold text-muted ">Description</label>
  <textarea
  value={plan.description || ''}
  onChange={(e) => {
@@ -3526,7 +3356,7 @@ function DashboardPageContent() {
  </div>
 
  <div className="space-y-1">
-                                    <label className="text-xs font-bold text-muted uppercase tracking-wider">
+                                    <label className="text-xs font-bold text-muted ">
  {isB2cPlanId(planKey) ? 'Prix trimestriel (90 j) — annuel −10 %' : 'Prix mensuel — annuel −10 %'}
  </label>
  <input
@@ -3560,14 +3390,14 @@ function DashboardPageContent() {
  }}
                                           className="w-4 h-4 text-festive-accent border-border rounded focus:ring-festive-accent"
  />
-                                        <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">
+                                        <span className="text-xs font-bold text-festive-accent ">
  Promotion active
  </span>
  </label>
  {plan.promoActive && (
  <>
  <div className="space-y-1">
-                                            <label className="text-xs font-bold text-muted uppercase tracking-wider">Prix promo (mensuel)</label>
+                                            <label className="text-xs font-bold text-muted ">Prix promo (mensuel)</label>
  <input
  type="text"
  value={plan.promoPrice || ''}
@@ -3586,7 +3416,7 @@ function DashboardPageContent() {
  />
  </div>
  <div className="space-y-1">
-                                            <label className="text-xs font-bold text-muted uppercase tracking-wider">Libellé promo</label>
+                                            <label className="text-xs font-bold text-muted ">Libellé promo</label>
  <input
  type="text"
  value={plan.promoLabel || ''}
@@ -3606,7 +3436,7 @@ function DashboardPageContent() {
 
  <div className="grid grid-cols-2 gap-2">
  <div className="space-y-1">
-                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Événements</label>
+                                      <label className="text-xs font-bold text-muted ">Max Événements</label>
  <input
  type="number"
  value={plan.maxEvents}
@@ -3621,7 +3451,7 @@ function DashboardPageContent() {
  </div>
 
  <div className="space-y-1">
-                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Invités</label>
+                                      <label className="text-xs font-bold text-muted ">Max Invités</label>
  <input
  type="number"
  value={plan.maxGuests}
@@ -3638,7 +3468,7 @@ function DashboardPageContent() {
 
  <div className="grid grid-cols-2 gap-2">
  <div className="space-y-1">
-                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Modèles</label>
+                                      <label className="text-xs font-bold text-muted ">Max Modèles</label>
  <input
  type="number"
  value={plan.maxTemplates}
@@ -3655,7 +3485,7 @@ function DashboardPageContent() {
 
  <div className="grid grid-cols-2 gap-2">
  <div className="space-y-1">
-                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Salles</label>
+                                      <label className="text-xs font-bold text-muted ">Max Salles</label>
  <input
  type="number"
  value={plan.maxRooms ?? 0}
@@ -3669,7 +3499,7 @@ function DashboardPageContent() {
  />
  </div>
  <div className="space-y-1">
-                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Prestations</label>
+                                      <label className="text-xs font-bold text-muted ">Max Prestations</label>
  <input
  type="number"
  value={plan.maxServices ?? 0}
@@ -3686,7 +3516,7 @@ function DashboardPageContent() {
 
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-1">
-                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Managers org.</label>
+                                      <label className="text-xs font-bold text-muted ">Managers org.</label>
                                       <input
                                         type="number"
                                         value={plan.maxOrgManagers ?? 1}
@@ -3699,7 +3529,7 @@ function DashboardPageContent() {
                                       />
                                     </div>
                                     <div className="space-y-1">
-                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Éditeur salle</label>
+                                      <label className="text-xs font-bold text-muted ">Éditeur salle</label>
                                       <select
                                         value={plan.roomEditorLevel || 'basic'}
                                         onChange={(e) => {
@@ -3730,7 +3560,7 @@ function DashboardPageContent() {
  }}
  className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
  />
-                                      <label htmlFor={`custom-templates-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`custom-templates-${planKey}`} className="text-xs font-bold text-muted cursor-pointer">
  Modèles Perso.
  </label>
  </div>
@@ -3746,7 +3576,7 @@ function DashboardPageContent() {
  }}
  className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
  />
-                                      <label htmlFor={`custom-rsvp-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`custom-rsvp-${planKey}`} className="text-xs font-bold text-muted cursor-pointer">
                                         Champs de réponse à l’invitation
  </label>
  </div>
@@ -3762,7 +3592,7 @@ function DashboardPageContent() {
                                         }}
                                         className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                                       />
-                                      <label htmlFor={`protocol-qr-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`protocol-qr-${planKey}`} className="text-xs font-bold text-muted cursor-pointer">
                                         QR protocole
                                       </label>
  </div>
@@ -3778,7 +3608,7 @@ function DashboardPageContent() {
                                         }}
                                         className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                                       />
-                                      <label htmlFor={`mockup-ocr-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`mockup-ocr-${planKey}`} className="text-xs font-bold text-muted cursor-pointer">
                                         OCR maquette
                                       </label>
                                     </div>
@@ -3794,7 +3624,7 @@ function DashboardPageContent() {
                                         }}
                                         className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                                       />
-                                      <label htmlFor={`themes-fixtures-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`themes-fixtures-${planKey}`} className="text-xs font-bold text-muted cursor-pointer">
                                         Thèmes & décors
                                       </label>
                                     </div>
@@ -3810,7 +3640,7 @@ function DashboardPageContent() {
                                         }}
                                         className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                                       />
-                                      <label htmlFor={`admin-reports-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`admin-reports-${planKey}`} className="text-xs font-bold text-muted cursor-pointer">
                                         Rapports admin
                                       </label>
                                     </div>
@@ -4011,7 +3841,7 @@ function DashboardPageContent() {
  </div>
  <div>
  <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.checkedIn ?? 0}</span>
- <span className="text-xs text-muted dark:text-muted font-bold">Check-in (scan)</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Entrées</span>
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
@@ -4082,7 +3912,7 @@ function DashboardPageContent() {
  </div>
  <div>
  <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.guests.accepted}</span>
-                                <span className="text-xs text-muted dark:text-muted font-bold">Présences confirmées</span>
+                                <span className="text-xs text-muted dark:text-muted font-bold">Confirmés</span>
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
@@ -4101,33 +3931,6 @@ function DashboardPageContent() {
 
  {platformInsights && (
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
- <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
-                              <div className="p-3 bg-primary/10 text-primary rounded-xl">
- <ScanLine className="w-6 h-6" />
- </div>
- <div>
- <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.guests.checkedIn}</span>
- <span className="text-xs text-muted dark:text-muted font-bold">Invités scannés</span>
- </div>
- </div>
- <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
-                              <div className="p-3 bg-festive-accent-soft text-festive-accent rounded-xl">
- <ClipboardList className="w-6 h-6" />
- </div>
- <div>
- <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.tasks?.open ?? 0}</span>
- <span className="text-xs text-muted dark:text-muted font-bold">Actions en cours</span>
- </div>
- </div>
- <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
- <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl">
- <AlertCircle className="w-6 h-6" />
- </div>
- <div>
- <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.tasks?.overdue ?? 0}</span>
- <span className="text-xs text-muted dark:text-muted font-bold">Urgences</span>
- </div>
- </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
  <div className="p-3 bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 rounded-xl">
  <Users className="w-6 h-6" />
@@ -4178,7 +3981,7 @@ function DashboardPageContent() {
                         {/* KPIs Abonnements */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                           <div className="bg-surface-muted border border-border rounded-xl p-3.5 sm:p-4">
-                            <p className="text-xs font-bold uppercase tracking-wider text-muted">MRR Estimé</p>
+                            <p className="text-xs font-bold text-muted">MRR Estimé</p>
                             <p className="text-lg sm:text-xl font-extrabold text-foreground mt-1">
                               {subscriptionReport?.kpis?.estimatedMrrFc ? formatFc(subscriptionReport.kpis.estimatedMrrFc) : '0 FC'}
                             </p>
@@ -4186,7 +3989,7 @@ function DashboardPageContent() {
                           </div>
 
                           <div className="bg-primary/10 border border-primary/20 rounded-xl p-3.5 sm:p-4">
-                            <p className="text-xs font-bold uppercase tracking-wider text-primary">ARR Estimé</p>
+                            <p className="text-xs font-bold text-primary">ARR Estimé</p>
                             <p className="text-lg sm:text-xl font-extrabold text-primary mt-1">
                               {subscriptionReport?.kpis?.estimatedArrFc ? formatFc(subscriptionReport.kpis.estimatedArrFc) : '0 FC'}
                             </p>
@@ -4194,7 +3997,7 @@ function DashboardPageContent() {
                           </div>
 
                           <div className="bg-primary/10 border border-primary/20 rounded-xl p-3.5 sm:p-4">
-                            <p className="text-xs font-bold uppercase tracking-wider text-primary">Taux de Conversion</p>
+                            <p className="text-xs font-bold text-primary">Taux de Conversion</p>
                             <p className="text-lg sm:text-xl font-extrabold text-primary mt-1">
                               {subscriptionReport?.kpis?.conversionRatePercent ?? 0} %
                             </p>
@@ -4202,7 +4005,7 @@ function DashboardPageContent() {
                           </div>
 
                           <div className="bg-festive-accent-soft border border-festive-accent/25 rounded-xl p-3.5 sm:p-4">
-                            <p className="text-xs font-bold uppercase tracking-wider text-festive-accent">Expirations &lt; 30j</p>
+                            <p className="text-xs font-bold text-festive-accent">Expirations &lt; 30j</p>
                             <p className="text-lg sm:text-xl font-extrabold text-festive-accent mt-1">
                               {subscriptionReport?.kpis?.imminentExpirationsCount ?? 0}
                             </p>
@@ -4215,7 +4018,7 @@ function DashboardPageContent() {
                           <div className="p-4 bg-festive-accent-soft border border-festive-accent/25 rounded-xl space-y-3">
                             <div className="flex items-center gap-2">
                               <Clock className="w-4 h-4 text-festive-accent shrink-0" />
-                              <h4 className="text-xs font-bold uppercase tracking-wider text-festive-accent">
+                              <h4 className="text-xs font-bold text-festive-accent">
                                 Expirations imminentes à traiter ({subscriptionReport.imminentExpirations.length})
                               </h4>
                             </div>
@@ -4224,12 +4027,12 @@ function DashboardPageContent() {
                                 <div key={exp.id} className="py-2.5 flex items-center justify-between first:pt-0 last:pb-0">
                                   <div>
                                     <span className="font-bold text-foreground block">{exp.name}</span>
-                                    <span className="text-muted block text-[11px]">
+                                    <span className="text-muted block text-xs">
                                       {exp.targetType === 'ORGANIZATION' ? 'Organisation' : 'Utilisateur'} · Forfait {exp.planName} · Échéance : {exp.licenseExpiresAt.slice(0, 10)}
                                     </span>
                                   </div>
                                   <span className={cn(
-                                    "px-2 py-1 rounded-full font-bold text-[11px]",
+                                    "px-2 py-1 rounded-full font-bold text-xs",
                                     exp.daysRemaining <= 7
                                       ? "bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300"
                                       : "bg-festive-accent-soft text-festive-accent"
@@ -4682,7 +4485,7 @@ function DashboardPageContent() {
  { label: 'Invités', value: platformInsights?.guests.total ?? 0 },
  { label: 'Invitations envoyées', value: platformInsights?.guests.invitations ?? 0 },
  { label: 'En attente', value: platformInsights?.guests.pending ?? 0 },
- { label: 'Acceptés', value: platformInsights?.guests.accepted ?? 0 },
+ { label: 'Confirmés', value: platformInsights?.guests.accepted ?? 0 },
  { label: 'Déclinés', value: platformInsights?.guests.declined ?? 0 },
  { label: 'PDF livrés', value: platformInsights?.guests.pdfDelivered ?? 0 },
  { label: 'PDF non livrés (acceptés)', value: platformInsights?.guests.pdfMissing ?? 0 },

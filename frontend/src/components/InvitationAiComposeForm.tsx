@@ -16,7 +16,7 @@ import {
   X,
   XCircle,
   type LucideIcon,
-} from 'lucide-react';
+} from '@/components/icons';
 import InvitationStructuredBriefFields from '@/components/InvitationStructuredBriefFields';
 import InvitationCardInfoFields from '@/components/InvitationCardInfoFields';
 import InvitationModelPhotoPicker from '@/components/InvitationModelPhotoPicker';
@@ -109,7 +109,7 @@ export function invitationComposeIntro(mode: InvitationComposeMode): string {
   if (mode === 'modify') {
     return 'Partez d’un modèle ou d’une photo de carte, puis changez les textes ou l’ambiance.';
   }
-  return 'Décrivez la fête : l’IA crée le fond, vos textes restent modifiables dans l’éditeur.';
+  return 'Décrivez la fête : l’IA crée le fond de la carte.';
 }
 
 export default function InvitationAiComposeForm({
@@ -120,6 +120,7 @@ export default function InvitationAiComposeForm({
   busy,
   stage,
   busyHint = 'L’intelligence artificielle traite la composition. Vous pouvez patienter ici ou fermer la fenêtre : le travail continuera en tâche de fond et s’ouvrira dans l’éditeur dès qu’il sera prêt.',
+  hideRepeatedHints = false,
   error,
   onDismissError,
   onRetry,
@@ -163,6 +164,8 @@ export default function InvitationAiComposeForm({
   busy: boolean;
   stage?: string | null;
   busyHint?: string;
+  /** Espace connecté : l’intro de la fenêtre explique déjà le mode, on ne le répète pas dans le formulaire. */
+  hideRepeatedHints?: boolean;
   error?: string;
   onDismissError: () => void;
   onRetry: () => void;
@@ -294,7 +297,7 @@ export default function InvitationAiComposeForm({
          disabled={busy}
          onClick={() => { if (option.id !== mode) onModeChange(option.id); }}
          className={cn(
-           'min-w-0 min-h-11 px-2 py-1.5 rounded-lg text-[13px] leading-tight font-semibold text-center transition inline-flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
+           'min-w-0 min-h-11 px-2 py-1.5 rounded-lg text-sm leading-tight font-semibold text-center transition inline-flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
            active
              ? 'bg-surface text-foreground shadow-[0_1px_3px_rgba(23,22,20,0.12)]'
              : 'text-muted hover:text-foreground',
@@ -306,9 +309,11 @@ export default function InvitationAiComposeForm({
      );
    })}
  </div>
- <p className="mt-2 text-xs text-muted leading-relaxed">
-   {INVITATION_COMPOSE_MODES.find((option) => option.id === mode)?.hint}
- </p>
+ {!hideRepeatedHints ? (
+   <p className="mt-2 text-xs text-muted leading-relaxed">
+     {INVITATION_COMPOSE_MODES.find((option) => option.id === mode)?.hint}
+   </p>
+ ) : null}
  </div>
 
  {isFaces ? (
@@ -356,9 +361,11 @@ export default function InvitationAiComposeForm({
                  ? 'Carton actuel du studio'
                  : 'Choisir une invitation'}
          </span>
-         <span className="block text-xs text-muted mt-0.5">
-           Les visages de cette image seront remplacés. Pose du corps, décor et expressions du carton restent ; vos photos fournissent seulement l’identité.
-         </span>
+         {!hideRepeatedHints ? (
+           <span className="block text-xs text-muted mt-0.5">
+             Les visages de cette image seront remplacés. Pose du corps, décor et expressions du carton restent ; vos photos fournissent seulement l’identité.
+           </span>
+         ) : null}
        </span>
      </button>
      <div className="mt-3">
@@ -560,7 +567,7 @@ export default function InvitationAiComposeForm({
 
  <div className="space-y-4">
  <div>
- <StudioStepHeading step={3} title={sectionTitles[2]} done={hasTexts || Boolean(prompt.trim())} aside="Modifiables après la création" className="mb-3" />
+ <StudioStepHeading step={3} title={sectionTitles[2]} done={hasTexts || Boolean(prompt.trim())} aside={hideRepeatedHints ? undefined : 'Modifiables après la création'} className="mb-3" />
 
  <div
    className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-lg border border-border mb-3"
@@ -684,11 +691,13 @@ export default function InvitationAiComposeForm({
  <div className="mt-3 flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-surface">
    <div>
      <span className="block text-xs font-bold text-foreground">Textes modifiables après la création</span>
-     <span className="block text-xs text-muted">
-       {embedText
-         ? 'Non : l’IA dessine les textes dans l’image, ils ne se modifient plus.'
-         : 'Oui : l’image reste sans texte, noms et date restent modifiables dans l’éditeur.'}
-     </span>
+     {!hideRepeatedHints || embedText ? (
+       <span className="block text-xs text-muted">
+         {embedText
+           ? 'Non : l’IA dessine les textes dans l’image, ils ne se modifient plus.'
+           : 'Oui : l’image reste sans texte, noms et date restent modifiables dans l’éditeur.'}
+       </span>
+     ) : null}
    </div>
    <button
      type="button"
@@ -707,7 +716,7 @@ export default function InvitationAiComposeForm({
  </div>
 
  <p className="mt-2 text-xs text-muted">
- Besoin d’une idée ? Ouvrez <button type="button" className="font-bold text-primary hover:underline" onClick={() => onShowExamples}>Exemples</button> : des descriptions prêtes à lancer.
+ Besoin d’une idée ? Ouvrez <button type="button" className="font-bold text-primary hover:underline" onClick={onShowExamples}>Exemples</button> : des descriptions prêtes à lancer.
  </p>
 
  <button
@@ -801,7 +810,7 @@ export default function InvitationAiComposeForm({
        <Loader2 className="w-5 h-5 animate-spin text-primary relative" />
      </div>
      <div className="min-w-0 flex-1">
-       <p className="text-xs font-extrabold text-foreground tracking-wide uppercase flex items-center gap-1.5">
+       <p className="text-xs font-extrabold text-foreground flex items-center gap-1.5">
          <Sparkles className="w-3.5 h-3.5 text-primary" />
          {stage || 'Génération de l’invitation IA…'}
        </p>

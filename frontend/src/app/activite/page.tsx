@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import MarketplaceGlobalActivityFeed from '@/components/marketplace/MarketplaceGlobalActivityFeed';
-import { PlusCircle, ArrowRight } from 'lucide-react';
+import { PlusCircle, ArrowRight } from '@/components/icons';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ActivitePage() {

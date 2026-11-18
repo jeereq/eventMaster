@@ -14,7 +14,7 @@ import {
   ExternalLink,
   Search,
   Play,
-} from 'lucide-react';
+} from '@/components/icons';
 import { getUserGuide, type UserGuideId } from '@/config/userGuides';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
@@ -75,7 +75,7 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
         <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 sm:p-6 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-2 min-w-0">
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-xs font-semibold ">
                 <BookOpen className="w-3.5 h-3.5" />
                 {guide.badge}
               </span>

@@ -9,14 +9,20 @@ import { uploadMarketplaceMedia } from '@/lib/cloudinaryUpload';
 import { isVideoUrl, sizedMediaUrl } from '@/lib/marketplace';
 import { cn } from '@/lib/cn';
 import {
-  PageHeader, Breadcrumbs, Alert, Button, EmptyState, Modal, ConfirmDialog, Badge,
+  PageHeader,
+  Alert,
+  Button,
+  EmptyState,
+  Modal,
+  ConfirmDialog,
+  Badge,
 } from '@/components/ui';
 import MarketplaceGlobalActivityFeed from '@/components/marketplace/MarketplaceGlobalActivityFeed';
 import {
   ArrowLeft, ArrowRight, Building2, Check, ChevronLeft, ChevronRight, Eye, Heart, Images,
   LayoutGrid, Loader2, MessageCircle, Pencil, Play, Plus, Rss, Search, Send, Sparkles,
   Star, Trash2, UploadCloud, X, Image as ImageIcon,
-} from 'lucide-react';
+} from '@/components/icons';
 
 function formatRelativeDate(dateStr: string) {
   const date = new Date(dateStr);
@@ -169,20 +175,6 @@ function DashboardPublicationsPageInner() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title="Réalisations"
-        description={
-          canPublish
-            ? 'Montrez vos plus beaux événements : photos et vidéos liées à vos salles et prestations.'
-            : 'Photos et actualités des salles et prestataires.'
-        }
-        breadcrumbs={
-          <Breadcrumbs
-            items={[
-              { label: 'Réalisations', href: '/dashboard/publications' },
-              { label: crumb },
-            ]}
-          />
-        }
         action={
           canPublish && tab !== 'create' ? (
             <Button onClick={() => go('create')} leftIcon={<Plus className="w-4 h-4" />}>
@@ -263,7 +255,7 @@ function DashboardPublicationsPageInner() {
             <Loader2 className="w-7 h-7 text-primary animate-spin" aria-label="Chargement" />
           </div>
         ) : editId && !editing ? (
-          <EmptyState
+          <EmptyState illustration="notFound"
             icon={<Pencil className="w-5 h-5" />}
             title="Réalisation introuvable"
             description="Elle a peut-être déjà été supprimée."
@@ -415,7 +407,7 @@ function PublicationsGrid({
           ))}
         </div>
       ) : tiles.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="media"
           icon={<Rss className="w-5 h-5" />}
           title="Aucune réalisation"
           description="Dès que des salles ou prestations partagent une actualité, elle apparaîtra ici."
@@ -773,7 +765,7 @@ function MyPublicationsPanel({
 
   if (posts.length === 0) {
     return (
-      <EmptyState
+      <EmptyState illustration="media"
         icon={<Images className="w-5 h-5" />}
         title="Vous n’avez encore aucune réalisation"
         description={
@@ -844,7 +836,7 @@ function MyPublicationsPanel({
       </p>
 
       {filtered.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="search"
           icon={<Search className="w-5 h-5" />}
           title="Aucun résultat"
           description="Essayez un autre mot-clé ou retirez le filtre."
@@ -982,7 +974,7 @@ function MyPublicationsPanel({
   );
 }
 
-function StepTitle({ n, title, hint, done }: { n: number; title: string; hint?: string; done: boolean }) {
+function StepTitle({ title, hint, done }: { title: string; hint?: string; done: boolean }) {
 return (
   <div className="flex items-start gap-3">
     <span
@@ -992,7 +984,7 @@ return (
       )}
       aria-hidden
     >
-      {done ? <Check className="w-4 h-4" /> : n}
+      {done ? <Check className="w-4 h-4" /> : null}
     </span>
     <div className="min-w-0">
       <h2 className="text-sm font-semibold text-foreground">{title}</h2>
@@ -1149,7 +1141,7 @@ function PublicationComposer({
 
   if (!isEdit && allTargets.length === 0) {
     return (
-      <EmptyState
+      <EmptyState illustration="search"
         icon={<Plus className="w-5 h-5" />}
         title="Aucune fiche à lier"
         description="Une réalisation se rattache à une salle ou une prestation publiée. Créez-en une d’abord."
@@ -1180,11 +1172,9 @@ function PublicationComposer({
           <h2 className="text-lg font-semibold text-foreground">
             {isEdit ? 'Modifier la réalisation' : 'Nouvelle réalisation'}
           </h2>
-          <p className="text-xs text-muted">
-            {isEdit
-              ? 'Mettez à jour les photos ou le texte. Les j’aime et commentaires sont conservés.'
-              : 'Trois étapes : la fiche, les médias, puis quelques mots.'}
-          </p>
+          {isEdit ? (
+            <p className="text-xs text-muted">Les j’aime et commentaires sont conservés.</p>
+          ) : null}
         </div>
       </div>
 
@@ -1196,7 +1186,6 @@ function PublicationComposer({
           <section className={stepClass} aria-labelledby="step-target">
             <div id="step-target">
               <StepTitle
-                n={1}
                 title="Fiche liée"
                 hint={isEdit ? 'La fiche d’une réalisation existante ne peut pas être changée.' : 'Où cette réalisation sera-t-elle affichée ?'}
                 done={Boolean(targetId)}
@@ -1318,7 +1307,6 @@ function PublicationComposer({
           <section className={stepClass} aria-labelledby="step-media">
             <div id="step-media">
               <StepTitle
-                n={2}
                 title="Photos et vidéos"
                 hint={`Jusqu’à ${MAX_MEDIA} médias. Le premier sert de couverture.`}
                 done={media.length > 0}
@@ -1381,7 +1369,7 @@ function PublicationComposer({
                       <img src={sizedMediaUrl(m.url, 320)} alt={`Média ${i + 1}`} className="h-full w-full object-cover" />
                     )}
                     {i === 0 ? (
-                      <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-full bg-primary-solid px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
+                      <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-full bg-primary-solid px-2 py-0.5 text-xs font-semibold text-primary-foreground">
                         <Star className="w-3 h-3 fill-current" aria-hidden /> Couverture
                       </span>
                     ) : null}
@@ -1432,7 +1420,7 @@ function PublicationComposer({
                     className="aspect-square rounded-xl border border-dashed border-primary/50 bg-primary/5 flex flex-col items-center justify-center gap-1 p-2 text-center"
                   >
                     <Loader2 className="w-5 h-5 text-primary animate-spin" aria-hidden />
-                    <span className="text-[11px] text-muted line-clamp-2 break-all">{u.name}</span>
+                    <span className="text-xs text-muted line-clamp-2 break-all">{u.name}</span>
                   </li>
                 ))}
               </ul>
@@ -1443,7 +1431,6 @@ function PublicationComposer({
           <section className={stepClass} aria-labelledby="step-text">
             <div id="step-text">
               <StepTitle
-                n={3}
                 title="Description"
                 hint="Facultatif si vous ajoutez des médias. Racontez l’événement, le décor, l’ambiance…"
                 done={Boolean(content.trim())}
@@ -1477,7 +1464,7 @@ function PublicationComposer({
 
         {/* Aperçu en direct */}
         <aside className="lg:col-span-2 lg:sticky lg:top-4 space-y-3" aria-label="Aperçu">
-          <div className="flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wide">
+          <div className="flex items-center gap-2 text-xs font-semibold text-muted ">
             <Eye className="w-3.5 h-3.5" aria-hidden /> Aperçu dans le fil
           </div>
           <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-2xs">
@@ -1535,7 +1522,7 @@ function PublicationComposer({
       </div>
 
       {/* Barre d'action mobile */}
-      <div className="lg:hidden sticky bottom-[calc(5.5rem+var(--em-site-install-bar,0px)+env(safe-area-inset-bottom,0px))] md:bottom-3 z-20 rounded-2xl border border-border bg-surface/95 backdrop-blur p-3 space-y-1.5 shadow-lg">
+      <div className="lg:hidden sticky bottom-[calc(5.5rem+var(--em-site-install-bar,0px)+env(safe-area-inset-bottom,0px))] md:bottom-3 z-20 rounded-2xl border border-border bg-surface/95 p-3 space-y-1.5 shadow-lg">
         <SubmitHint targetId={isEdit ? 'locked' : targetId} hasBody={hasBody} uploading={uploading} isEdit={isEdit} dirty={dirty} />
         <div className="flex gap-2">
           <Button variant="secondary" onClick={requestCancel} disabled={submitting}>

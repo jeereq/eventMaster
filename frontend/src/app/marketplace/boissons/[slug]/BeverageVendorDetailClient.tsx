@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import Link, { useLinkStatus } from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Loader2, Wine } from 'lucide-react';
+import { ArrowLeft, Loader2, Wine } from '@/components/icons';
 import { api } from '@/lib/api';
 import { formatFc } from '@/config/landingPricing';
 import { useAuth } from '@/context/AuthContext';

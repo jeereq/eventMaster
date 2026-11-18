@@ -19,7 +19,7 @@ import ImageLightbox from '@/components/marketplace/ImageLightbox';
 import {
   Building2, Heart, Loader2, MessageCircle, Rss, Send, Sparkles,
   X, MapPin, Share2, Check, ArrowUpRight, Search, Plus, Maximize2,
-} from 'lucide-react';
+} from '@/components/icons';
 
 export type GlobalFeedKind = 'all' | 'venue' | 'vendor';
 
@@ -229,7 +229,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                       ? 'bg-white shadow-xs'
                       : idx < activeSnapIndex
                         ? 'bg-white/80'
-                        : 'bg-white/30 backdrop-blur-xs',
+                        : 'bg-white/30',
                   )}
                 />
               ))}
@@ -242,7 +242,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
             media.length > 1 ? 'top-6' : 'top-3 sm:top-4',
           )}>
             {/* Pilule Auteur translucide */}
-            <div className="pointer-events-auto inline-flex items-center gap-2 p-1 pr-3 sm:pr-3.5 rounded-full bg-black/55 backdrop-blur-md border border-white/20 text-white shadow-lg transition-transform hover:scale-[1.02]">
+            <div className="pointer-events-auto inline-flex items-center gap-2 p-1 pr-3 sm:pr-3.5 rounded-full bg-black/55 border border-white/20 text-white shadow-lg transition-transform hover:scale-[1.02]">
               <div className={cn(
                 'w-8 h-8 rounded-full p-[1.5px] overflow-hidden shrink-0 flex items-center justify-center',
                 isVendor
@@ -268,17 +268,17 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                   {href ? (
                     <Link
                       href={href}
-                      className="text-xs sm:text-[13px] font-bold tracking-tight text-white hover:text-white/80 truncate max-w-[130px] sm:max-w-[180px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                      className="text-xs sm:text-sm font-bold tracking-tight text-white hover:text-white/80 truncate max-w-[130px] sm:max-w-[180px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
                     >
                       {author?.name || 'Partenaire'}
                     </Link>
                   ) : (
-                    <span className="text-xs sm:text-[13px] font-bold tracking-tight text-white truncate max-w-[130px] sm:max-w-[180px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                    <span className="text-xs sm:text-sm font-bold tracking-tight text-white truncate max-w-[130px] sm:max-w-[180px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                       {author?.name || 'Partenaire'}
                     </span>
                   )}
                   <span className={cn(
-                    'text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border',
+                    'text-xs font-bold px-1.5 py-0.5 rounded-full border',
                     isVendor
                       ? 'bg-amber-500/20 text-amber-300 border-amber-400/30'
                       : 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30',
@@ -296,7 +296,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
             {href && (
               <Link
                 href={href}
-                className="pointer-events-auto shrink-0 inline-flex items-center gap-1 min-h-8 px-3 rounded-full bg-white/95 hover:bg-white text-slate-950 font-bold text-xs shadow-md backdrop-blur-xs transition active:scale-95 hover:scale-105"
+                className="pointer-events-auto shrink-0 inline-flex items-center gap-1 min-h-8 px-3 rounded-full bg-white/95 hover:bg-white text-slate-950 font-bold text-xs shadow-md transition active:scale-95 hover:scale-105"
               >
                 <span>Fiche</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -357,7 +357,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
               onClick={() => onToggleLike(post.id)}
               disabled={isLikeBusy}
               className={cn(
-                'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
+                'w-11 h-11 rounded-full bg-black/50 border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
                 liked && 'border-rose-500/40 bg-black/60 shadow-rose-500/20',
               )}
               aria-pressed={liked}
@@ -378,7 +378,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
               type="button"
               onClick={() => setCommentsExpanded((prev) => !prev)}
               className={cn(
-                'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
+                'w-11 h-11 rounded-full bg-black/50 border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
                 commentsExpanded && 'border-primary/60 bg-black/70',
               )}
               aria-expanded={commentsExpanded}
@@ -397,7 +397,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
               type="button"
               onClick={() => onShare(post.id)}
               className={cn(
-                'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
+                'w-11 h-11 rounded-full bg-black/50 border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
                 isCopied && 'border-emerald-400/60 bg-emerald-950/60 text-emerald-300',
               )}
               aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette réalisation ou copier le lien"}
@@ -421,7 +421,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                   const idx = images.indexOf(currentMedia.url);
                   onOpenLightbox(images, Math.max(0, idx));
                 }}
-                className="w-11 h-11 sm:w-10 sm:h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white hover:bg-black/60 hover:scale-105 active:scale-90 transition shadow-md touch-manipulation"
+                className="w-11 h-11 sm:w-10 sm:h-10 rounded-full bg-black/40 border border-white/15 flex items-center justify-center text-white/90 hover:text-white hover:bg-black/60 hover:scale-105 active:scale-90 transition shadow-md touch-manipulation"
                 aria-label="Ouvrir la story en plein écran"
                 title="Ouvrir la story en plein écran"
               >
@@ -435,7 +435,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
             {/* Badge indicateur de snap si multi-snaps */}
             {media.length > 1 && (
               <div className="flex items-center gap-2 pointer-events-auto">
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/10 tabular-nums">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-black/50 text-white tabular-nums">
                   Snap {activeSnapIndex + 1} / {media.length}
                 </span>
                 <span className="hidden sm:inline text-xs text-white/85 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">Touchez les côtés ou glissez</span>
@@ -477,7 +477,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
           {/* En-tête auteur */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full p-[1.5px] bg-white/30 backdrop-blur-xs flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full p-[1.5px] bg-white/30 flex items-center justify-center">
                 {author?.coverUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={sizedMediaUrl(author.coverUrl, 120)} alt="" className="w-full h-full object-cover rounded-full" />
@@ -522,7 +522,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                 type="button"
                 onClick={() => onToggleLike(post.id)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold',
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 text-white hover:bg-black/60 transition text-xs font-bold',
                   liked && 'bg-rose-500/80 text-white',
                 )}
                 aria-pressed={liked}
@@ -534,7 +534,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
               <button
                 type="button"
                 onClick={() => setCommentsExpanded((prev) => !prev)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 text-white hover:bg-black/60 transition text-xs font-bold"
                 aria-expanded={commentsExpanded}
                 aria-controls={`post-comments-${post.id}`}
                 aria-label={commentsExpanded ? "Masquer les commentaires" : `Afficher les commentaires (${commentCount})`}
@@ -546,7 +546,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
             <button
               type="button"
               onClick={() => onShare(post.id)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 text-white hover:bg-black/60 transition text-xs font-bold"
               aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette réalisation ou copier le lien"}
             >
               {isCopied ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
@@ -640,7 +640,7 @@ export function GlobalFeedSkeleton() {
           <div className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-lg sm:rounded-xl overflow-hidden bg-slate-900/90 dark:bg-slate-950 flex flex-col justify-between p-3.5 sm:p-4">
             {/* Header flottant */}
             <div className="flex items-center justify-between">
-              <div className="inline-flex items-center gap-2 p-1 pr-3 rounded-full bg-white/10 backdrop-blur-md">
+              <div className="inline-flex items-center gap-2 p-1 pr-3 rounded-full bg-black/40">
                 <div className="w-8 h-8 rounded-full bg-white/20" />
                 <div className="space-y-1">
                   <div className="h-3 w-24 bg-white/25 rounded" />
@@ -653,7 +653,7 @@ export function GlobalFeedSkeleton() {
             {/* Dock latéral droit */}
             <div className="absolute right-3 bottom-14 sm:bottom-16 flex flex-col items-center gap-2.5">
               {[...Array(3)].map((_, j) => (
-                <div key={j} className="w-11 h-11 rounded-full bg-white/15 backdrop-blur-sm" />
+                <div key={j} className="w-11 h-11 rounded-full bg-white/15" />
               ))}
             </div>
 
@@ -877,7 +877,7 @@ export default function MarketplaceGlobalActivityFeed({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
             </span>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted">Stories & Réalisations</h2>
+            <h2 className="text-xs font-bold text-muted">Stories & Réalisations</h2>
           </div>
           {search.trim() ? (
             <button
@@ -980,7 +980,7 @@ export default function MarketplaceGlobalActivityFeed({
       </div>
 
       {/* Barre d'outils / Filtres & Recherche (Toujours visible lors du défilement) */}
-      <div className="md:sticky md:top-[var(--em-site-header)] z-30 flex flex-col md:flex-row gap-1.5 md:gap-3 md:items-center justify-between bg-surface/95 backdrop-blur-xl p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border border-border/80 shadow-md">
+      <div className="md:sticky md:top-[var(--em-site-header)] z-30 flex flex-col md:flex-row gap-1.5 md:gap-3 md:items-center justify-between bg-surface/95 p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border border-border/80 shadow-md">
         <div className="inline-flex gap-1 p-0.5 sm:p-1 rounded-lg sm:rounded-xl bg-surface-muted/80 border border-border/50 max-w-full overflow-x-auto [scrollbar-width:none]">
           {kindTabs.map((tab) => {
             const Icon = tab.icon;

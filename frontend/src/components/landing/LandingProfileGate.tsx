@@ -10,7 +10,7 @@ import {
 } from '@/lib/landingProfiles';
 import { Button, Modal } from '@/components/ui';
 import LandingHeroPreview from '@/components/landing/LandingHeroPreview';
-import { ArrowRight, Check, ShieldCheck, Layers } from 'lucide-react';
+import { ArrowRight, Check, ShieldCheck, Layers } from '@/components/icons';
 
 export default function LandingProfileGate({
   selectedId,
@@ -151,14 +151,6 @@ export default function LandingProfileGate({
               >
                 <div
                   className={cn(
-                    'absolute -inset-10 bg-radial from-primary/20 to-transparent blur-2xl pointer-events-none transition-opacity duration-300 -z-10',
-                    selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-60',
-                  )}
-                  aria-hidden
-                />
-
-                <div
-                  className={cn(
                     'absolute top-0 left-0 right-0 h-1 transition-all',
                     selected ? 'bg-primary' : 'bg-transparent group-hover:bg-primary/40',
                   )}
@@ -182,7 +174,7 @@ export default function LandingProfileGate({
                     >
                       <Icon className="w-4 h-4" />
                     </div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border/80">
+                    <span className="text-xs font-bold text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border/80">
                       {profile.eyebrow}
                     </span>
                   </div>
@@ -259,7 +251,7 @@ export default function LandingProfileGate({
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+            <p className="text-xs font-bold text-muted inline-flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-primary" />
               Vos outils
             </p>

@@ -3,7 +3,8 @@ import { ChannelText } from '@/components/ChannelText';
 
 import React from 'react';
 import Link from 'next/link';
-import { Sparkles, ArrowRight, Zap, Crown, Info } from 'lucide-react';
+import { ArrowRight, Zap, Crown, Info } from '@/components/icons';
+import { Tooltip } from '@/components/ui';
 import {
   FEATURE_GUIDES,
   QUOTA_GUIDES,
@@ -43,7 +44,6 @@ export default function PlanLimitCallout({
   // Calcul du quota si kind est présent
   let usage: number | null = null;
   let limit: number | null = null;
-  let percent: number | null = null;
 
   if (kind && planQuota) {
     const map = {
@@ -58,159 +58,52 @@ export default function PlanLimitCallout({
     if (row && !isUnlimitedQuota(row.l)) {
       usage = row.u;
       limit = row.l;
-      percent = limit > 0 ? Math.min(100, Math.round((usage / limit) * 100)) : 100;
     }
   }
 
   const isFeatureCallout = Boolean(feature && !kind);
-  const headline = isFeatureCallout
-    ? featureMsg || guide.title
-    : quotaMsg || guide.title;
+  const Icon = isFeatureCallout ? Crown : Zap;
 
-  if (compact) {
-    return (
-      <div
-        className={cn(
-          'rounded-xl border border-border bg-surface p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition text-foreground shadow-2xs',
-          className,
-        )}
-        role="status"
-      >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div
-            className={cn(
-              'p-1.5 rounded-lg shrink-0',
-              isFeatureCallout
-                ? 'bg-primary/10 text-primary'
-                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-            )}
-          >
-            {isFeatureCallout ? (
-              <Sparkles className="w-4 h-4" aria-hidden />
-            ) : (
-              <Zap className="w-4 h-4" aria-hidden />
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-foreground truncate">{headline}</p>
-            {usage !== null && limit !== null && (
-              <p className="text-[11px] text-muted">
-                {usage} / {limit} utilisé{usage > 1 ? 's' : ''} ({percent}%)
-              </p>
-            )}
-          </div>
-        </div>
-
-        <Link
-          href={guide.href}
-          className="inline-flex min-h-9 items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground transition shrink-0 active:scale-[0.98] motion-reduce:active:scale-100"
-        >
-          <span>Augmenter</span>
-          <ArrowRight className="w-3.5 h-3.5 text-muted" aria-hidden />
-        </Link>
-      </div>
-    );
-  }
-
+  // Une ligne : ce qui bloque, le chiffre, une action. Le « comment débloquer » est au survol de l’icône info.
   return (
     <div
       className={cn(
-        'relative rounded-2xl border border-border bg-surface p-4 sm:p-5 transition shadow-2xs space-y-3.5 text-foreground',
+        'flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-border bg-surface text-foreground shadow-2xs',
+        compact ? 'px-3 py-2' : 'px-3.5 py-2.5',
         className,
       )}
       role="status"
     >
-      {/* En-tête : Badge sobre & titre clair */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <div
-            className={cn(
-              'p-2 rounded-xl shrink-0 border border-border/60',
-              isFeatureCallout
-                ? 'bg-primary/10 text-primary'
-                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-            )}
-          >
-            {isFeatureCallout ? (
-              <Crown className="w-4 h-4" aria-hidden />
-            ) : (
-              <Zap className="w-4 h-4" aria-hidden />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span
-                className={cn(
-                  'px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider',
-                  isFeatureCallout
-                    ? 'bg-primary/10 text-primary border border-primary/20'
-                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20',
-                )}
-              >
-                {isFeatureCallout ? 'Fonctionnalité Premium' : 'Limite de forfait'}
-              </span>
-              {planName && (
-                <span className="text-[11px] text-muted">
-                  Formule actuelle : <strong className="font-semibold text-foreground">{planName}</strong>
-                </span>
-              )}
-            </div>
-            <h3 className="text-sm font-semibold text-foreground mt-0.5">{headline}</h3>
-          </div>
-        </div>
-
-        {/* Jauge si limite chiffrée - sobre et lisible */}
-        {usage !== null && limit !== null && (
-          <div className="sm:text-right shrink-0">
-            <span className="text-xs font-semibold text-foreground">
-              {usage} / {limit} utilisé{usage > 1 ? 's' : ''}
-            </span>
-            <div
-              role="progressbar"
-              aria-valuenow={percent ?? 0}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label={`Quota consommé : ${usage} sur ${limit}`}
-              className="w-32 sm:w-28 h-2 bg-surface-muted border border-border/60 rounded-full overflow-hidden mt-1"
+      <div className="flex min-w-0 items-center gap-2.5">
+        <Icon
+          className={cn('h-4 w-4 shrink-0', isFeatureCallout ? 'text-primary' : 'text-amber-600 dark:text-amber-400')}
+          aria-hidden
+        />
+        <p className="min-w-0 text-sm font-semibold text-foreground">
+          {guide.title}
+          {usage !== null && limit !== null ? (
+            <span className="font-normal text-muted tabular-nums"> · {usage} / {limit}</span>
+          ) : null}
+        </p>
+        {guide.how ? (
+          <Tooltip side="top" content={<span className="block max-w-[16rem] whitespace-normal"><ChannelText text={guide.how} /></span>}>
+            <button
+              type="button"
+              aria-label={`Comment débloquer : ${guide.how}`}
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
-              <div
-                className={cn(
-                  'h-full transition-all duration-500 rounded-full',
-                  percent && percent >= 100
-                    ? 'bg-amber-600 dark:bg-amber-500'
-                    : 'bg-primary',
-                )}
-                style={{ width: `${percent}%` }}
-              />
-            </div>
-          </div>
-        )}
+              <Info className="h-4 w-4" aria-hidden />
+            </button>
+          </Tooltip>
+        ) : null}
       </div>
-
-      {/* Description sobre et lisible */}
-      <div className="space-y-1 text-xs text-muted leading-relaxed">
-        <p className="flex items-start gap-1.5">
-          <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-muted" aria-hidden />
-          <span>{guide.what}</span>
-        </p>
-        <p className="pl-5 text-muted/90"><ChannelText text={guide.why} /></p>
-      </div>
-
-      {/* Action concrète et incitation d'upgrade */}
-      <div className="pt-2.5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <p className="text-xs text-muted">
-          <span className="font-semibold text-foreground">Pour débloquer :</span> {guide.how}
-        </p>
-
-        <Link
-          href={guide.href}
-          className="inline-flex min-h-11 items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground shadow-2xs transition active:scale-[0.98] motion-reduce:active:scale-100 shrink-0"
-        >
-          <Sparkles className="w-3.5 h-3.5" aria-hidden />
-          <span>Passer au forfait supérieur</span>
-          <ArrowRight className="w-3.5 h-3.5" aria-hidden />
-        </Link>
-      </div>
+      <Link
+        href={guide.href}
+        className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-primary-solid px-4 py-2 text-xs font-semibold text-primary-foreground shadow-2xs transition hover:bg-primary-solid-hover"
+      >
+        Changer de forfait
+        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+      </Link>
     </div>
   );
 }

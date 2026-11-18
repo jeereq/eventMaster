@@ -4,14 +4,14 @@ import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Breadcrumbs, Button } from '@/components/ui';
+import { PageHeader, Button } from '@/components/ui';
 import UserGuideView from '@/components/guide/UserGuideView';
 import GuideTourPanel from '@/components/guide/GuideTourPanel';
 import { DASHBOARD_GUIDE_IDS, type UserGuideId } from '@/config/userGuides';
 import { getGuideLabel, resolveUserGuideRole } from '@/lib/resolveUserGuideRole';
 import { useTour } from '@/context/TourContext';
 import { buildNavTourOptions } from '@/lib/buildNavProductTour';
-import { BookOpen, HelpCircle, Map, Play } from 'lucide-react';
+import { BookOpen, HelpCircle, Map, Play } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 type GuideViewTab = 'doc' | 'tour';
@@ -76,16 +76,6 @@ function DashboardGuidePageContent() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title="Guide utilisateur"
-        description={`Visite guidée · ${resolved.label}.`}
-        breadcrumbs={
-          <Breadcrumbs
-            items={[
-              { label: 'Accueil', href: '/dashboard' },
-              { label: 'Guide utilisateur' },
-            ]}
-          />
-        }
         action={
           activeTab === 'doc' ? (
             <Button
@@ -139,7 +129,7 @@ function DashboardGuidePageContent() {
           </div>
 
           <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Votre profil</p>
+            <p className="text-xs font-semibold text-muted">Votre profil</p>
             <p className="text-sm font-semibold text-foreground leading-snug">{resolved.label}</p>
             {isSuperAdmin && (
               <div className="pt-2 border-t border-border space-y-1.5">

@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { CheckCircle, XCircle, Loader2, Sparkles, Calendar, Table, MessageSquare } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Sparkles, Calendar, Table, MessageSquare } from '@/components/icons';
 import { AuthSplitLayout } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card } from '@/components/ui';
 import { setAuthToken } from '@/lib/authSession';

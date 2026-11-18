@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2, MapPin, Search } from 'lucide-react';
+import { Loader2, MapPin, Search } from '@/components/icons';
 import { loadLeaflet, leafletBasemap, documentMapTheme, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/leafletLoader';
 import {
   findRdcCity,
@@ -311,7 +311,7 @@ export default function LocationPickerMap({
           </div>
         ) : null}
       </div>
-      <p className={cn('text-[11px] flex items-start gap-1.5', required && !hasPoint ? 'text-rose-600' : 'text-muted')}>
+      <p className={cn('text-xs flex items-start gap-1.5', required && !hasPoint ? 'text-rose-600' : 'text-muted')}>
         <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         {!cityMeta
           ? `Choisissez d’abord la ville (${cityList}) pour cadrer la carte.`

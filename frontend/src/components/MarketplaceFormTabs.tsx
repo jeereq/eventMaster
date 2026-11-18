@@ -3,7 +3,7 @@
 import React, { useRef } from 'react';
 import { cn } from '@/lib/cn';
 import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
-import { Images, Map, AlignLeft, Rss, Sparkles, Building2 } from 'lucide-react';
+import { Images, Map, AlignLeft, Rss, Sparkles, Building2 } from '@/components/icons';
 
 export type MarketplaceFormTab = 'details' | 'services' | 'venues' | 'activity' | 'map' | 'medias';
 

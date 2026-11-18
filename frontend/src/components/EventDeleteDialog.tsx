@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AlertTriangle, Calendar, MapPin, Ticket, Trash2 } from 'lucide-react';
+import { AlertTriangle, Calendar, MapPin, Ticket, Trash2 } from '@/components/icons';
 import { Button, Input, Modal } from '@/components/ui';
 
 export type EventDeleteTarget = {

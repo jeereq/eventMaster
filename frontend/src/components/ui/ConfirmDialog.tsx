@@ -34,7 +34,14 @@ export default function ConfirmDialog({
       dismissible={!loading}
       footer={
         <>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
+          {/* Action destructive : le focus part sur Annuler, pour qu'Entrée ne supprime pas par réflexe. */}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={loading}
+            data-modal-initial-focus={tone === 'danger' ? true : undefined}
+          >
             {cancelLabel}
           </Button>
           <Button
@@ -42,7 +49,7 @@ export default function ConfirmDialog({
             variant={tone === 'danger' ? 'danger' : 'primary'}
             loading={loading}
             onClick={() => void onConfirm()}
-            data-modal-initial-focus
+            data-modal-initial-focus={tone === 'danger' ? undefined : true}
           >
             {confirmLabel}
           </Button>

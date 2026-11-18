@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Check, CheckCircle2, ChevronRight, Eye, Scale } from 'lucide-react';
+import { Check, CheckCircle2, ChevronRight, Eye, Scale } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 export type LegalConsentItem = {

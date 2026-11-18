@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { LayoutGrid, List, Map, Maximize2 } from 'lucide-react';
+import { LayoutGrid, List, Map, Maximize2 } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import useIsMobile from '@/hooks/useIsMobile';
 import type { CatalogueViewMode } from '@/lib/marketplace';
@@ -125,7 +125,7 @@ export function CatalogueGridColsToggle({
           aria-pressed={value === cols}
           title={`${cols} colonnes`}
           className={cn(
-            'min-h-11 min-w-11 px-2.5 rounded-[var(--radius-button)] text-[11px] font-semibold transition',
+            'min-h-11 min-w-11 px-2.5 rounded-[var(--radius-button)] text-xs font-semibold transition',
             value === cols
               ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
               : 'text-muted hover:text-foreground',

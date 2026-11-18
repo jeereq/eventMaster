@@ -8,7 +8,7 @@ import {
 } from '@/context/ViewPreferencesContext';
 import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { Palette, Check } from 'lucide-react';
+import { Palette, Check } from '@/components/icons';
 
 /**
  * Sélecteur de couleur d’accent pour landing / contact / auth.
@@ -76,12 +76,12 @@ export default function PublicAccentPicker({ className }: { className?: string }
           )}
         >
           <div className="flex items-center justify-between gap-2 mb-2.5 px-0.5">
-            <p className="text-[11px] font-semibold text-foreground">Accent personnel</p>
-            <span className="text-[10px] text-muted truncate">
+            <p className="text-xs font-semibold text-foreground">Accent personnel</p>
+            <span className="text-xs text-muted truncate">
               {accentCustomized ? accentPreset.label : 'Thème par défaut'}
             </span>
           </div>
-          <p className="text-[10px] text-muted leading-relaxed mb-2.5 px-0.5">
+          <p className="text-xs text-muted leading-relaxed mb-2.5 px-0.5">
             Préférence sur cet appareil uniquement. Dans le tableau de bord connecté, la marque de l&apos;organisation reste la référence (Profil).
           </p>
           <div className="grid grid-cols-3 gap-1.5">
@@ -109,7 +109,7 @@ export default function PublicAccentPicker({ className }: { className?: string }
                       <span key={c} style={{ backgroundColor: c }} />
                     ))}
                   </span>
-                  <span className="text-[10px] font-semibold text-foreground">{preset.label}</span>
+                  <span className="text-xs font-semibold text-foreground">{preset.label}</span>
                   {selected && (
                     <span className="absolute top-1 right-1 text-primary">
                       <Check className="w-3 h-3" />

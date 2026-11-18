@@ -2,7 +2,7 @@
 import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useId, useState } from 'react';
-import { CreditCard, Mail, Shield, Users } from 'lucide-react';
+import { CreditCard, Mail, Shield, Users } from '@/components/icons';
 import { Alert, Button, Input, Modal, PasswordInput, PhoneInput } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { AuthOtpMethod } from '@/lib/authOtpChannels';

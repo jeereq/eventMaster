@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { eachDateKey, parseBlockedDates } from '@/lib/marketplace';
 

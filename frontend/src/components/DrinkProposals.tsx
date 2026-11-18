@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Wine } from 'lucide-react';
+import { Wine } from '@/components/icons';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { BEVERAGE_SALE_UNIT_LABELS, formatBeverageSale, type PublicBeverageOffer } from '@/lib/beverageBrands';

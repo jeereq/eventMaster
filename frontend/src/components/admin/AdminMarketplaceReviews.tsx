@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Eye, EyeOff, Loader2, MessageSquareQuote, Star } from 'lucide-react';
+import { Eye, EyeOff, Loader2, MessageSquareQuote, Star } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Alert, Badge, Button, EmptyState, Input, Pagination } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -120,7 +120,7 @@ export default function AdminMarketplaceReviews() {
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : data.items.length === 0 ? (
-        <EmptyState icon={<Star className="w-5 h-5" />} title="Aucun avis" description="Les avis des clients apparaîtront ici." />
+        <EmptyState illustration="favorites" icon={<Star className="w-5 h-5" />} title="Aucun avis" description="Les avis des clients apparaîtront ici." />
       ) : (
         <ul className="space-y-3">
           {data.items.map((row) => (

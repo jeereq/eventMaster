@@ -27,7 +27,7 @@ import {
   Loader2,
   Store,
   Trash2,
-} from 'lucide-react';
+} from '@/components/icons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { depositPercent } from '@/lib/platformRates';
 import { useListingFavorites } from '@/lib/listingFavorites';
@@ -234,56 +234,9 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
   const showSubTabs = section === 'bookings' && role === 'organizer' && !isProtocol;
   const crossHref = `${SECTION_PATH[section === 'quotes' ? 'bookings' : 'quotes']}${role === 'vendor' ? '?role=vendor' : ''}`;
 
-  const pageTitle =
-    role === 'vendor'
-      ? tab === 'bookings'
-        ? 'Réservations reçues'
-        : 'Devis reçus'
-      : tab === 'bookings'
-        ? 'Réservations'
-        : tab === 'quotes'
-          ? 'Devis'
-          : tab === 'packs'
-            ? 'Mes packs'
-            : tab === 'favorites'
-              ? 'Favoris'
-              : 'Devis & réservations';
-
-  const pageDescription =
-    role === 'vendor'
-      ? tab === 'bookings'
-        ? 'Acceptez les demandes, suivez les acomptes et gérez vos disponibilités.'
-        : 'Répondez aux clients, chiffrez vos devis et transformez-les en réservations.'
-      : isProtocol
-        ? tab === 'bookings'
-          ? 'Dates des événements accompagnés.'
-          : 'Devis du protocole.'
-        : tab === 'bookings'
-          ? 'Vos dates réservées et les acomptes à verser.'
-          : tab === 'quotes'
-            ? 'Vos demandes de devis et les réponses des professionnels.'
-            : tab === 'packs'
-              ? 'Sélections enregistrées.'
-              : tab === 'favorites'
-                ? 'Fiches enregistrées.'
-                : 'Devis et réservations.';
-
   return (
     <div className="space-y-5 w-full">
       <PageHeader
-        title={pageTitle}
-        description={pageDescription}
-        breadcrumbs={
-          <Breadcrumbs
-            items={[
-              {
-                label: isProtocol ? 'Protocole' : isClient ? 'Marketplace' : 'Accueil',
-                href: isProtocol ? '/dashboard' : isClient ? '/dashboard/catalogue' : '/dashboard',
-              },
-              { label: section === 'quotes' ? 'Devis' : 'Réservations' },
-            ]}
-          />
-        }
         action={
           isProtocol ? null : role === 'vendor' ? (
             <Link href={crossHref} className="inline-flex">

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Check, ClipboardList, Clock, Flag, Loader2, Pencil, Plus, Sparkles, Trash2, UserRound } from 'lucide-react';
+import { AlertCircle, Check, ClipboardList, Clock, Flag, Loader2, Pencil, Plus, Sparkles, Trash2, UserRound } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Alert, Button, ConfirmDialog, EmptyState, StatusPill, ViewModeToggle, useViewMode, listStackClass } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -303,7 +303,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
       ) : null}
 
       {visible.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="tasks"
           icon={<ClipboardList className="w-5 h-5" />}
           title={
             personFilter !== 'all'

@@ -2,7 +2,7 @@
 
 import React, { useId, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ImagePlus, Pencil } from 'lucide-react';
+import { ImagePlus, Pencil } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { AI_ROOM_PLAN_TOKEN_COST } from '@/lib/aiTokens';
 import { ROOM_PLAN_PHOTO_ACCEPT, roomPlanPhotoError } from '@/lib/roomPlanAi';

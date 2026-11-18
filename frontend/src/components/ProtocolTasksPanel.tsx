@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Check, ClipboardList, Loader2, Play, ScanLine } from 'lucide-react';
+import { Check, ClipboardList, Loader2, Play, ScanLine } from '@/components/icons';
 import { api } from '@/lib/api';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import {
@@ -147,7 +147,7 @@ export default function ProtocolTasksPanel({
       {error ? <Alert variant="error">{error}</Alert> : null}
 
       {visible.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="tasks"
           icon={<ClipboardList className="w-8 h-8" />}
           title="Aucune tâche ouverte"
           description={

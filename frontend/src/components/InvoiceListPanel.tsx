@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileText, Mail, Eye } from 'lucide-react';
+import { FileText, Eye } from '@/components/icons';
+import Illustration from '@/components/illustrations/Illustration';
 import InvoiceDetailModal, { type PlatformInvoiceItem } from '@/components/InvoiceDetailModal';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
@@ -42,7 +43,7 @@ export default function InvoiceListPanel({
   invoices,
   showOrganization = false,
   showCommissions = false,
-  emptyMessage = 'Aucune facture pour le moment.',
+  emptyMessage = 'Aucune facture pour l’instant',
   apiPrefix = 'billing',
   layout = 'list',
   gridClassName = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4',
@@ -133,12 +134,8 @@ export default function InvoiceListPanel({
   if (invoices.length === 0) {
     return (
       <div className="text-center py-10 text-muted">
-        <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
+        <Illustration name="invoices" className="mx-auto mb-2 w-44" />
         <p className="text-sm text-foreground/80">{emptyMessage}</p>
-        <p className="text-xs mt-2 flex items-center justify-center gap-1">
-          <Mail className="w-3.5 h-3.5" />
-          Une copie est aussi envoyée par e-mail (SendGrid) après validation.
-        </p>
       </div>
     );
   }
@@ -226,7 +223,7 @@ export default function InvoiceListPanel({
 
       {filtered.length === 0 ? (
         <div className="text-center py-10 text-muted">
-          <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
+          <Illustration name="search" className="mx-auto mb-2 w-44" />
           <p className="text-sm text-foreground/80">Aucune facture pour ces filtres.</p>
         </div>
       ) : (
@@ -298,12 +295,12 @@ export default function InvoiceListPanel({
                         {isAnnualInvoice(inv) ? ' · annuel' : ''}
                       </p>
                       {showCommissions && inv.hasCommission && inv.totalCommissionFormatted && (
-                        <p className="text-[11px] text-amber-700 font-semibold">
+                        <p className="text-xs text-amber-700 font-semibold">
                           Comm. {inv.totalCommissionFormatted}
                         </p>
                       )}
-                      <p className="truncate text-[11px] text-muted">{periodLabel(inv)}</p>
-                      <p className="text-[11px] text-muted">
+                      <p className="truncate text-xs text-muted">{periodLabel(inv)}</p>
+                      <p className="text-xs text-muted">
                         {new Date(inv.createdAt).toLocaleDateString('fr-FR')}
                       </p>
                     </div>

@@ -5,16 +5,20 @@ import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  CreditCard, Check, Sparkles,
+  CreditCard, Check,
   ShieldCheck, FileText, ArrowRight, Inbox, LayoutDashboard, Minus,
-} from 'lucide-react';
+} from '@/components/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Alert, SkeletonBillingView, Button, StatusPill, PageHeader, Breadcrumbs, EmptyState,
+  Alert,
+  SkeletonBillingView,
+  Button,
+  StatusPill,
+  EmptyState,
 } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
-import QuotaUsagePanel, { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
+import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import SubscriptionFlexPayModal from '@/components/SubscriptionFlexPayModal';
 import SubscriptionDiscountRequestModal from '@/components/SubscriptionDiscountRequestModal';
 import { formatQuotaRemaining } from '@/lib/quotaDisplay';
@@ -36,7 +40,6 @@ import {
   durationDaysForPlan,
   planPricePeriodSuffix,
   isB2cPlanId,
-  CURRENCY_NAME,
   type BillingCycle,
   type PlanId,
 } from '@/config/landingPricing';
@@ -49,6 +52,7 @@ import {
   supportLevelLabel,
   type DbPlanCatalogEntry,
 } from '@/lib/planCatalogDb';
+import PlanPricingRow, { planRowButtonClass } from '@/components/PlanPricingRow';
 
 interface BillingStatus {
   plan: PlanId;
@@ -105,6 +109,21 @@ function capabilityLabels(commercialPct: number): Array<{
     { key: 'commercialNetwork', label: `Réseau commercial (${commercialPct} %)` },
     { key: 'adminReports', label: 'Rapports avancés' },
   ];
+}
+
+/** Segment de puce déjà chiffré dans le tableau des quotas (événements, invités, salles, prestations…). */
+const QUOTA_SEGMENT =
+  /^(\d[\d\s\u00a0\u202f.]*\s(événements?|invités?|salles?|prestations?|modèles?|managers?)\b|(quotas?|événements?|invités?|salles?|prestations?)\b.*illimit)/i;
+
+/** Retire des puces ce que le tableau des quotas affiche déjà ; null si rien d'autre ne reste. */
+function highlightBeyondQuotas(text: string): string | null {
+  const rest = text
+    .split('·')
+    .map((part) => part.trim())
+    .filter((part) => part && !QUOTA_SEGMENT.test(part));
+  if (rest.length === 0) return null;
+  const joined = rest.join(' · ');
+  return joined.charAt(0).toUpperCase() + joined.slice(1);
 }
 
 function formatQuotaSummary(u: number, m: number, guests = false) {
@@ -541,8 +560,8 @@ function BillingPageInner() {
       });
       setSuccessMsg(
         isRenew
-          ? `Demande de renouvellement ${plan} soumise (${durationDays === 90 ? '90 jours / trimestre' : billingCycle === 'annual' ? '12 mois' : '30 jours'}${billingCycle === 'annual' ? `, −${ANNUAL_DISCOUNT_PERCENT} %` : ''}).`
-          : `Demande ${plan} soumise (${durationDays === 90 ? '90 jours / trimestre' : billingCycle === 'annual' ? '12 mois' : '30 jours'}${billingCycle === 'annual' ? `, −${ANNUAL_DISCOUNT_PERCENT} %` : ''}). Facture SendGrid après validation.`,
+          ? `Demande de renouvellement envoyée : ${plans.find((p) => p.id === plan)?.displayName || plan}.`
+          : `Demande envoyée : ${plans.find((p) => p.id === plan)?.displayName || plan}.`,
       );
       await loadBillingStatus();
       setBillingTab('requests');
@@ -555,7 +574,7 @@ function BillingPageInner() {
 
   const openRetryCheckout = (req: SubscriptionRequest) => {
     setFlexPayCheckout({
-      planName: req.requestedPlan,
+      planName: planLabel(req.requestedPlan),
       priceLabel: req.approvedAmount ? formatFc(req.approvedAmount) : '',
       retryRequestId: req.id,
       initialMethod: req.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card',
@@ -570,29 +589,9 @@ function BillingPageInner() {
 
   const pendingRequestCount = requests.filter((r) => r.status === 'PENDING' || r.status === 'QUOTED').length;
   const currentPlanName = plans.find((p) => p.id === billing?.plan)?.displayName || billing?.plan || '—';
+  const planLabel = (id?: string | null) => plans.find((p) => p.id === id)?.displayName || id || '—';
+  const expiresAt = tenant?.licenseExpiresAt ? new Date(tenant.licenseExpiresAt) : null;
 
-  const tabMeta: Record<BillingTab, { title: string; description: string }> = {
-    overview: {
-      title: isClientAccount ? 'Votre compte client' : `Forfait de ${tenant?.name || 'votre organisation'}`,
-      description: isClientAccount
-        ? 'Catalogue, devis, billets. Un forfait change le type de compte.'
-        : 'Forfait, quotas, tarifs en FC.',
-    },
-    plans: {
-      title: 'Choisir un forfait',
-      description: `Annuel −${ANNUAL_DISCOUNT_PERCENT} %.`,
-    },
-    invoices: {
-      title: 'Factures',
-      description: 'Reçus d’abonnement.',
-    },
-    requests: {
-      title: 'Demandes d’abonnement',
-      description: saasPaymentMode === 'flexpay'
-        ? 'Demandes, rabais, paiements à relancer.'
-        : 'Demandes et rabais en examen.',
-    },
-  };
 
   const tabCounts: Partial<Record<BillingTab, number>> = {
     invoices: invoices.length,
@@ -601,19 +600,6 @@ function BillingPageInner() {
 
   return (
     <div className="space-y-5 w-full">
-      <PageHeader
-        title={tabMeta[tab].title}
-        description={tabMeta[tab].description}
-        breadcrumbs={
-          <Breadcrumbs
-            items={[
-              { label: 'Accueil', href: '/dashboard' },
-              { label: 'Facturation & plan', href: '/dashboard/billing' },
-              { label: BILLING_TABS.find((item) => item.id === tab)?.label || 'Aperçu' },
-            ]}
-          />
-        }
-      />
 
       {error && <Alert variant="error">{error}</Alert>}
       {successMsg && <Alert variant="success">{successMsg}</Alert>}
@@ -624,13 +610,8 @@ function BillingPageInner() {
       )}
       {pendingSignupPlan && (
         <Alert variant="info">
-          Forfait choisi à l’inscription : <strong>{pendingSignupPlan}</strong>. Votre espace reste
+          Forfait choisi à l’inscription : <strong>{planLabel(pendingSignupPlan)}</strong>. Votre espace reste
           en gratuit tant que l’abonnement n’est pas activé.
-          <span className="mt-2 block">
-            <Button type="button" size="md" variant="secondary" onClick={() => setBillingTab('plans')}>
-              Ouvrir l’onglet Forfaits
-            </Button>
-          </span>
         </Alert>
       )}
 
@@ -690,38 +671,15 @@ function BillingPageInner() {
                     Compte client · gratuit
                   </span>
                 </StatusPill>
-                <h2 className="text-lg sm:text-xl font-semibold text-foreground">
-                  Recherche, devis et billets — sans abonnement SaaS
-                </h2>
-                <p className="text-sm text-muted leading-relaxed max-w-3xl">
-                  Ce compte permet d&apos;explorer le catalogue, de simuler un budget, de demander des devis et d&apos;acheter des billets.
-                  Pour organiser un événement ou publier des offres, payez directement un forfait : le type de compte bascule après paiement
-                  (Particulier / Entreprise → organisateur ; Salle, Prestataire ou Salle & presta → catalogue).
-                </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border">
                 <Button type="button" size="md" onClick={() => setBillingTab('plans')} rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Choisir un forfait &amp; payer
-                </Button>
-                <Button href="/dashboard" size="md" variant="ghost">
-                  Tableau de bord
+                  Choisir un forfait
                 </Button>
               </div>
             </div>
           )}
 
-          {(!billing || billing.plan === 'FREE') && !isClientAccount && (
-            <Alert variant="info">
-              Aucun abonnement payant n&apos;est actif. Les forfaits correspondent à votre type de compte
-              ({tenant?.accountKind === 'VENDOR'
-                ? 'marketplace'
-                : 'organisation'}),
-              exclusivement en {CURRENCY_NAME} (FC).
-              {tenant?.accountKind === 'ORGANIZER' || tenant?.accountKind === 'BOTH'
-                ? ' Après activation d’un forfait payant, seuls les forfaits du même genre restent proposés. Les forfaits Business incluent déjà salle et prestations.'
-                : ''}
-            </Alert>
-          )}
 
           {billing && (
             <div className="bg-surface rounded-[var(--radius-card)] border border-border p-5 md:p-6 space-y-5">
@@ -738,6 +696,11 @@ function BillingPageInner() {
                     {billing.plan !== 'FREE' && billing.billingCycle === 'annual' && (
                       <StatusPill tone="primary">Cycle annuel</StatusPill>
                     )}
+                    {billing.plan !== 'FREE' && expiresAt ? (
+                      <span className="text-sm text-muted">
+                        Expire le {expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
                 {!isClientAccount && (
@@ -832,12 +795,6 @@ function BillingPageInner() {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-muted text-center max-w-lg">
-              Période de base : mois (organisations et marketplace) ou trimestre 90 jours (particuliers).
-              {billingCycle === 'annual'
-                ? ` L’annuel facture 12 mois (ou 4 trimestres) d’un coup, avec −${ANNUAL_DISCOUNT_PERCENT} % sur ce total.`
-                : ` L’annuel facture 12 mois ou 4 trimestres d’un coup, avec −${ANNUAL_DISCOUNT_PERCENT} %.`}
-            </p>
           </div>
 
           {saasPaymentMode === 'flexpay' && (
@@ -860,149 +817,104 @@ function BillingPageInner() {
             </Alert>
           )}
 
-          {visibleTiers.map(({ label, ids }) => (
-            <div key={label} className="space-y-3">
-              <h2 className="text-sm font-semibold text-foreground">{label}</h2>
-              <div
-                className={cn(
-                  'grid gap-4',
-                  ids.length === 2 ? 'md:grid-cols-2' : ids.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
-                )}
-              >
-                {plans
-                  .filter((p) => ids.includes(p.id))
-                  .map((plan) => {
-                    const isCurrent = billing?.plan === plan.id;
-                    const isFocused = pendingSignupPlan === plan.id;
-                    const db = dynamicPlans?.[plan.id];
-                    const planDisabled =
-                      (isCurrent && plan.id === 'FREE') ||
-                      plan.id === 'FREE' ||
-                      actionLoading !== null ||
-                      !allowedPaidIds.includes(plan.id);
-                    return (
-                      <div
-                        key={plan.id}
-                        id={`plan-${plan.id}`}
-                        className={cn(
-                          'relative flex flex-col rounded-[var(--radius-card)] border bg-surface p-5 sm:p-6',
-                          isCurrent || isFocused
-                            ? 'border-primary ring-2 ring-primary/30'
-                            : plan.highlighted
-                              ? 'border-primary'
-                              : 'border-border',
-                        )}
-                      >
-                        {plan.badge && (
-                          <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
-                            <Sparkles className="w-3 h-3" aria-hidden /> {plan.badge}
-                          </span>
-                        )}
-                        <h3 className="text-lg font-semibold">{plan.displayName}</h3>
-                        <p className="text-xs text-muted mt-1">{plan.description}</p>
-                        <div className="mt-4 mb-4">
-                          {plan.promoActive && plan.catalogPrice && (
-                            <p className="text-xs font-semibold text-festive-accent mb-1">
-                              {plan.promoLabel} · <span className="line-through text-muted">{plan.catalogPrice}</span>
-                            </p>
-                          )}
-                          <span className="text-3xl font-extrabold tabular-nums">{plan.price}</span>
-                          {plan.id !== 'FREE' && (
-                            <span className="text-sm text-muted ml-1">{planPricePeriodSuffix(plan.id, billingCycle)}</span>
-                          )}
-                          {billingCycle === 'annual' && plan.id !== 'FREE' && (
-                            <>
-                              <p className="text-xs text-muted mt-1">
-                                {isB2cPlanId(plan.id) ? 'Soit le trimestre déjà réduit' : 'Soit le mois déjà réduit'}
-                              </p>
-                              <p className="text-xs text-primary font-semibold mt-0.5">
-                                {plan.promoActive
-                                  ? `Facturé ${isB2cPlanId(plan.id) ? '4 trimestres' : '12 mois'} · meilleur tarif (promo ou −${ANNUAL_DISCOUNT_PERCENT} % annuel)`
-                                  : `Facturé ${isB2cPlanId(plan.id) ? '4 trimestres' : '12 mois'} d’un coup · −${ANNUAL_DISCOUNT_PERCENT} % vs période de base`}
-                              </p>
-                            </>
-                          )}
-                        </div>
-                        <ul className="space-y-1.5 text-xs text-muted flex-1 border-t border-border pt-3">
-                          {plan.highlights.map((h) => (
-                            <li key={h} className="flex gap-2">
-                              <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden /> <ChannelText text={h} />
-                            </li>
-                          ))}
-                        </ul>
-                        {db && (
-                          <PlanQuotaLimits
-                            compact
-                            maxEvents={db.maxEvents}
-                            maxGuests={db.maxGuests}
-                            maxTemplates={db.maxTemplates}
-                            maxRooms={db.maxRooms}
-                            maxServices={db.maxServices}
-                            maxOrgManagers={db.maxOrgManagers}
-                          />
-                        )}
-                        {isCurrent && billing && (
-                          <p className="text-xs font-semibold text-primary bg-primary/10 rounded-[var(--radius-button)] px-2 py-1.5 mt-2">
-                            Événements : {formatQuotaSummary(billing.usage.events, billing.limits.maxEvents)}
-                            {' · '}
-                            Modèles : {formatQuotaSummary(billing.usage.templates, billing.limits.maxTemplates)}
-                          </p>
-                        )}
-                        {plan.id !== 'FREE' && !allowedPaidIds.includes(plan.id) && (
-                          <p className="text-xs text-muted mt-2 leading-relaxed">
-                            Ce forfait ne correspond pas à votre type de compte ou à votre genre d’abonnement actuel.
-                          </p>
-                        )}
-                        <Button
-                          type="button"
-                          size="md"
-                          variant={plan.highlighted || isFocused || (isCurrent && plan.id !== 'FREE') ? 'primary' : 'secondary'}
-                          className="w-full mt-5"
-                          disabled={planDisabled}
-                          loading={actionLoading === plan.id}
-                          onClick={() => handleUpgrade(plan.id)}
-                        >
-                          {isCurrent && plan.id === 'FREE'
-                            ? 'Forfait actuel (gratuit)'
-                            : isCurrent
-                              ? saasPaymentMode === 'flexpay' ? 'Renouveler maintenant' : 'Demander un renouvellement'
-                              : plan.id === 'FREE'
-                                ? 'Gratuit'
+          <div className="space-y-8 rounded-[var(--radius-card)] bg-[#10291c] p-4 sm:p-8">
+            {visibleTiers.map(({ label, ids }) => (
+              <div key={label} className="space-y-4">
+                <h2 className="text-lg font-semibold text-white">{label}</h2>
+                <div className="space-y-4">
+                  {plans
+                    .filter((p) => ids.includes(p.id))
+                    .map((plan) => {
+                      const isCurrent = billing?.plan === plan.id;
+                      const isFocused = pendingSignupPlan === plan.id;
+                      const db = dynamicPlans?.[plan.id];
+                      const planDisabled =
+                        (isCurrent && plan.id === 'FREE') ||
+                        plan.id === 'FREE' ||
+                        actionLoading !== null ||
+                        !allowedPaidIds.includes(plan.id);
+                      const notes: React.ReactNode[] = [];
+                      if (billingCycle === 'annual' && plan.id !== 'FREE') {
+                        notes.push(`Facturé ${isB2cPlanId(plan.id) ? '4 trimestres' : '12 mois'} d’un coup`);
+                      }
+                      if (isCurrent && billing) {
+                        notes.push(
+                          `Utilisé : ${formatQuotaSummary(billing.usage.events, billing.limits.maxEvents)} événements · ${formatQuotaSummary(billing.usage.templates, billing.limits.maxTemplates)} modèles`,
+                        );
+                      }
+                      const mainLabel =
+                        isCurrent && plan.id === 'FREE'
+                          ? 'Forfait actuel (gratuit)'
+                          : isCurrent
+                            ? saasPaymentMode === 'flexpay' ? 'Renouveler maintenant' : 'Demander un renouvellement'
+                            : plan.id === 'FREE'
+                              ? 'Gratuit'
+                              : !allowedPaidIds.includes(plan.id)
+                                ? 'Non disponible pour ce compte'
                                 : saasPaymentMode === 'flexpay'
                                   ? `Payer ${plan.displayName}`
-                                  : `Demander ${plan.displayName}`}
-                        </Button>
-                        {plan.id !== 'FREE' && allowedPaidIds.includes(plan.id) && discountRequestsAllowed && (
-                          <Button
-                            type="button"
-                            size="md"
-                            variant="ghost"
-                            className="w-full mt-2"
-                            disabled={actionLoading !== null}
-                            onClick={() => {
-                              const durationDays = durationDaysForPlan(plan.id, billingCycle);
-                              const periodFc = Number(db?.monthlyPriceFc);
-                              const catalogAmount = getPlanBaseAmountFc(
-                                Number.isFinite(periodFc) && periodFc > 0 ? periodFc : plan.monthlyPriceFc,
-                                plan.id,
-                                durationDays,
-                              );
-                              setDiscountTarget({
-                                planId: plan.id,
-                                planName: plan.displayName,
-                                catalogAmount,
-                              });
-                            }}
-                          >
-                            Demander un rabais
-                          </Button>
-                        )}
-                      </div>
-                    );
-                  })}
+                                  : `Demander ${plan.displayName}`;
+                      return (
+                        <div key={plan.id} id={`plan-${plan.id}`} className="scroll-mt-24">
+                          <PlanPricingRow
+                            name={plan.displayName}
+                            badge={isCurrent ? 'Forfait actuel' : plan.badge}
+                            accent={plan.highlighted || isFocused || (isCurrent && plan.id !== 'FREE')}
+                            price={plan.price}
+                            periodSuffix={plan.id !== 'FREE' ? planPricePeriodSuffix(plan.id, billingCycle) : undefined}
+                            notes={notes}
+                            promo={
+                              plan.promoActive && plan.catalogPrice
+                                ? { label: plan.promoLabel, catalogPrice: plan.catalogPrice }
+                                : undefined
+                            }
+                            highlights={plan.highlights
+                              .map((h) => (db ? highlightBeyondQuotas(h) : h))
+                              .filter((h): h is string => Boolean(h))
+                              .map((h) => <ChannelText key={h} text={h} />)}
+                            cta={
+                              <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  className={planRowButtonClass(plan.highlighted || isFocused || (isCurrent && plan.id !== 'FREE') ? 'solid' : 'outline')}
+                                  disabled={planDisabled}
+                                  onClick={() => handleUpgrade(plan.id)}
+                                >
+                                  {actionLoading === plan.id ? 'Patientez…' : mainLabel}
+                                </button>
+                                {plan.id !== 'FREE' && allowedPaidIds.includes(plan.id) && discountRequestsAllowed ? (
+                                  <button
+                                    type="button"
+                                    className="min-h-11 rounded-full px-3 text-sm font-medium underline-offset-2 hover:underline disabled:opacity-50"
+                                    disabled={actionLoading !== null}
+                                    onClick={() => {
+                                      const durationDays = durationDaysForPlan(plan.id, billingCycle);
+                                      const periodFc = Number(db?.monthlyPriceFc);
+                                      const catalogAmount = getPlanBaseAmountFc(
+                                        Number.isFinite(periodFc) && periodFc > 0 ? periodFc : plan.monthlyPriceFc,
+                                        plan.id,
+                                        durationDays,
+                                      );
+                                      setDiscountTarget({
+                                        planId: plan.id,
+                                        planName: plan.displayName,
+                                        catalogAmount,
+                                      });
+                                    }}
+                                  >
+                                    Demander un rabais
+                                  </button>
+                                ) : null}
+                              </div>
+                            }
+                          />
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
           <div className="border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">
             <button
@@ -1086,22 +998,16 @@ function BillingPageInner() {
             </Button>
           </div>
           {invoices.length === 0 ? (
-            <EmptyState
+            <EmptyState illustration="invoices"
               icon={<FileText className="w-5 h-5" />}
               title="Aucune facture pour l’instant"
               description="Après approbation ou paiement."
-              action={
-                <Button size="md" variant="secondary" onClick={() => setBillingTab('plans')}>
-                  Voir les forfaits
-                </Button>
-              }
             />
           ) : (
             <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 sm:p-6">
               <InvoiceListPanel
                 invoices={invoices.slice(0, 5)}
                 showFilters={false}
-                emptyMessage="Les factures apparaissent ici après approbation de votre demande d'abonnement."
               />
             </div>
           )}
@@ -1111,15 +1017,9 @@ function BillingPageInner() {
       {tab === 'requests' && (
         <div id="billing-panel-requests" role="tabpanel" aria-labelledby="billing-tab-requests" tabIndex={0}>
           {requests.length === 0 ? (
-            <EmptyState
+            <EmptyState illustration="inbox"
               icon={<Inbox className="w-5 h-5" />}
               title="Aucune demande"
-              description="Quand vous demandez un forfait ou un rabais, le suivi s’affiche ici."
-              action={
-                <Button size="md" onClick={() => setBillingTab('plans')}>
-                  Choisir un forfait
-                </Button>
-              }
             />
           ) : (
             <>
@@ -1129,7 +1029,7 @@ function BillingPageInner() {
                   return (
                     <div key={req.id} className="rounded-[var(--radius-card)] border border-border p-4 space-y-2 bg-surface">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-sm">{req.requestedPlan}</span>
+                        <span className="font-semibold text-sm">{planLabel(req.requestedPlan)}</span>
                         <StatusPill tone={requestStatusTone(req)}>{requestStatusLabel(req)}</StatusPill>
                       </div>
                       <p className="text-xs text-muted">
@@ -1161,7 +1061,7 @@ function BillingPageInner() {
                       const canRetry = canRetryFlexPay(req, saasPaymentMode);
                       return (
                         <tr key={req.id} className="border-t border-border">
-                          <td className="px-5 py-3 font-semibold">{req.requestedPlan}</td>
+                          <td className="px-5 py-3 font-semibold">{planLabel(req.requestedPlan)}</td>
                           <td className="py-3 tabular-nums">{req.durationDays} j</td>
                           <td className="py-3">{new Date(req.createdAt).toLocaleDateString('fr-FR')}</td>
                           <td className="py-3">

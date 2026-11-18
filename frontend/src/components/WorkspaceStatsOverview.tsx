@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Calendar, CheckCircle, ClipboardList, ScanLine, Users } from 'lucide-react';
+import { Calendar, CheckCircle, ClipboardList, ScanLine, Users } from '@/components/icons';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 
 export type WorkspaceStatsView = 'org' | 'manager' | 'protocol';
@@ -56,20 +56,14 @@ function StatCard({
           : 'text-foreground';
   return (
     <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border shadow-xs flex flex-col justify-between">
-      <span className="text-xs font-bold text-muted uppercase tracking-wider">{label}</span>
+      <span className="text-xs font-bold text-muted ">{label}</span>
       <div className="flex items-baseline justify-between mt-3 gap-2">
         <span className={`text-3xl font-black ${valueClass}`}>{value}</span>
-        {hint ? <span className="text-[11px] text-muted font-semibold">{hint}</span> : null}
+        {hint ? <span className="text-xs text-muted font-semibold">{hint}</span> : null}
       </div>
     </div>
   );
 }
-
-const VIEW_LABELS: Record<WorkspaceStatsView, string> = {
-  org: 'Vue organisation',
-  manager: 'Vue manager — événements assignés',
-  protocol: 'Vue protocole — accueil et tâches',
-};
 
 export function WorkspaceStatsOverview({
   stats,
@@ -81,15 +75,12 @@ export function WorkspaceStatsOverview({
   const isProtocol = stats.view === 'protocol' || protocol;
   return (
     <div className="space-y-6">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-        {VIEW_LABELS[stats.view] || (isProtocol ? VIEW_LABELS.protocol : VIEW_LABELS.org)}
-      </p>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {isProtocol ? (
           <>
             <StatCard label="Événements aujourd’hui" value={stats.events.today} hint={`${stats.events.upcoming} à venir`} />
             <StatCard label="À scanner" value={stats.guests.toCheckIn} hint={`${stats.guests.accepted} attendus`} tone="amber" />
-            <StatCard label="Check-in" value={stats.guests.checkedIn} hint={`${stats.guests.checkInRate} %`} tone="emerald" />
+            <StatCard label="Entrées" value={stats.guests.checkedIn} hint={`${stats.guests.checkInRate} %`} tone="emerald" />
             <StatCard label="Mes tâches" value={stats.tasks.mineOpen} hint={stats.tasks.overdue ? `${stats.tasks.overdue} en retard` : 'Ouvertes'} tone={stats.tasks.overdue ? 'rose' : 'default'} />
           </>
         ) : (
@@ -100,7 +91,7 @@ export function WorkspaceStatsOverview({
               hint={`${stats.events.upcoming} à venir`}
             />
             <StatCard label="Invités" value={stats.guests.total} hint={`${stats.guests.accepted} présents`} />
-            <StatCard label="Check-in" value={`${stats.guests.checkInRate}%`} hint={`${stats.guests.checkedIn} scannés`} tone="emerald" />
+            <StatCard label="Entrées" value={`${stats.guests.checkInRate}%`} hint={`${stats.guests.checkedIn} scannés`} tone="emerald" />
             <StatCard
               label="Actions en cours"
               value={stats.tasks.open}
@@ -113,7 +104,7 @@ export function WorkspaceStatsOverview({
 
       {stats.upcoming.length > 0 ? (
         <div className="bg-white dark:bg-background border border-border rounded-2xl p-5 shadow-xs space-y-3">
-          <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-foreground">
+          <h3 className="text-sm font-bold flex items-center gap-2 text-foreground">
             {isProtocol ? <ScanLine className="w-4 h-4 text-primary" /> : <Calendar className="w-4 h-4 text-primary" />}
             {isProtocol ? 'Prochains accueils' : 'Prochains événements'}
           </h3>
@@ -126,12 +117,12 @@ export function WorkspaceStatsOverview({
                 >
                   <span className="min-w-0">
                     <span className="text-sm font-semibold block truncate">{event.title}</span>
-                    <span className="text-[11px] text-muted">
+                    <span className="text-xs text-muted">
                       {new Date(event.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
                       {event.location ? ` · ${event.location}` : ''}
                     </span>
                   </span>
-                  <span className="flex items-center gap-3 text-[11px] font-semibold text-muted">
+                  <span className="flex items-center gap-3 text-xs font-semibold text-muted">
                     <span className="inline-flex items-center gap-1">
                       <Users className="w-3 h-3" />
                       {event.checkedIn}/{event.guests}

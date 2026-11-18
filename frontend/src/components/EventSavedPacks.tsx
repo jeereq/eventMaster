@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Bookmark, Plus, Store, Trash2 } from 'lucide-react';
+import { Bookmark, Plus, Store, Trash2 } from '@/components/icons';
 import { formatFc } from '@/config/landingPricing';
 import { Alert, Button, EmptyState, Input, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -125,7 +125,7 @@ export default function EventSavedPacks({
       </div>
 
       {packs.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="favorites"
           icon={<Bookmark className="w-5 h-5" />}
           title="Aucun pack sauvegardé"
           description="Enregistrez vos simulations ou composez un pack depuis vos favoris."
@@ -142,7 +142,7 @@ export default function EventSavedPacks({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <h3 className="text-sm font-semibold text-foreground">{pack.name}</h3>
-                  <p className="text-[11px] text-muted mt-1">
+                  <p className="text-xs text-muted mt-1">
                     {eventTypeLabel(pack.eventType as ListingEventTypeId)}
                     {pack.styleLabel ? ` · ${pack.styleLabel}` : ''}
                   </p>
@@ -157,7 +157,7 @@ export default function EventSavedPacks({
                 </button>
               </div>
               <p className="text-sm font-semibold">{formatFc(pack.totalFc)}</p>
-              <p className="text-[11px] text-muted">
+              <p className="text-xs text-muted">
                 Budget {formatFc(pack.budgetFc)} · reste {formatFc(pack.leftoverFc)}
                 {pack.guestCount ? ` · ${pack.guestCount} invités` : ''}
                 {pack.city ? ` · ${pack.city}` : ''}
@@ -266,7 +266,7 @@ export default function EventSavedPacks({
                 ['Matériel & Équipements', favorites.filter((row) => row.kind === 'service' && isServiceRentalCategory(row.category))],
               ] as Array<[string, FavoriteListing[]]>).filter(([, rows]) => rows.length > 0).map(([label, rows]) => (
                   <div key={label} className="space-y-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</p>
+                    <p className="text-xs font-semibold text-muted">{label}</p>
                     <ul className="space-y-2">
                       {rows.map((row) => {
                         const key = `${row.kind}:${row.slug}`;
@@ -282,13 +282,13 @@ export default function EventSavedPacks({
                               )}
                             >
                               <span className={cn(
-                                'w-4 h-4 rounded border flex items-center justify-center text-[10px]',
+                                'w-4 h-4 rounded border flex items-center justify-center text-xs',
                                 checked ? 'bg-primary-solid border-primary-solid text-primary-foreground' : 'border-border',
                               )}>
                                 {checked ? '✓' : ''}
                               </span>
                               <div className="min-w-0 flex-1">
-                                <p className="text-[10px] uppercase tracking-wider text-muted">
+                                <p className="text-xs text-muted">
                                   {row.kind === 'venue' ? 'Salle' : row.categoryLabel || (isServiceRentalCategory(row.category) ? 'Matériel' : 'Prestataire')}
                                 </p>
                                 <p className="text-sm font-semibold truncate">{row.title}</p>

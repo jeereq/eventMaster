@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Construction, Mail, ShieldCheck } from 'lucide-react';
+import { Construction, Mail, ShieldCheck } from '@/components/icons';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button } from '@/components/ui';
@@ -31,7 +31,7 @@ export default function MaintenanceOverlay() {
     return (
       <div
         role="status"
-        className="fixed top-0 inset-x-0 z-[10060] border-b border-amber-500/40 bg-amber-950/95 text-amber-50 px-4 py-2.5 backdrop-blur-md"
+        className="fixed top-0 inset-x-0 z-[10060] border-b border-amber-500/40 bg-amber-950/95 text-amber-50 px-4 py-2.5"
       >
         <div className="page-container flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
           <p className="font-semibold flex items-center gap-2">
@@ -59,23 +59,7 @@ export default function MaintenanceOverlay() {
       <div
         className="absolute inset-0"
         style={{
-          background: `linear-gradient(145deg, var(--auth-from, #312e81) 0%, var(--auth-via, #1e1b4b) 45%, #020617 100%)`,
-        }}
-      />
-      <div
-        className="absolute top-[-20%] left-[-10%] w-[55%] h-[55%] rounded-full blur-[120px] opacity-35 pointer-events-none"
-        style={{ background: `rgb(var(--auth-glow, 79, 70, 229))` }}
-      />
-      <div
-        className="absolute bottom-[-25%] right-[-15%] w-[50%] h-[50%] rounded-full blur-[100px] opacity-20 pointer-events-none"
-        style={{ background: `rgb(var(--auth-glow, 79, 70, 229))` }}
-      />
-      <div
-        className="absolute inset-0 opacity-[0.06] pointer-events-none"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle at 20% 20%, white 0.5px, transparent 0.5px), radial-gradient(circle at 80% 60%, white 0.5px, transparent 0.5px)',
-          backgroundSize: '24px 24px',
+          background: 'var(--stage)',
         }}
       />
 
@@ -90,13 +74,13 @@ export default function MaintenanceOverlay() {
         </div>
 
         <div className="space-y-3">
-          <span className="inline-flex text-[10px] bg-amber-400/15 border border-amber-300/25 text-amber-100 font-semibold px-2.5 py-1 rounded-md uppercase tracking-wider">
+          <span className="inline-flex text-xs bg-amber-400/15 border border-amber-300/25 text-amber-100 font-semibold px-2.5 py-1 rounded-md ">
             Maintenance en cours
           </span>
           <h1 id="maintenance-title" className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">
             Nous revenons très bientôt
           </h1>
-          <p id="maintenance-desc" className="text-sm sm:text-[15px] text-white/70 leading-relaxed max-w-md mx-auto">
+          <p id="maintenance-desc" className="text-sm sm:text-base text-white/70 leading-relaxed max-w-md mx-auto">
             {site.maintenanceMessage}
           </p>
         </div>
@@ -119,7 +103,7 @@ export default function MaintenanceOverlay() {
           </Link>
         </div>
 
-        <p className="text-[11px] text-white/40">
+        <p className="text-xs text-white/40">
           {site.supportHours ? `Support : ${site.supportHours}` : 'Merci de votre patience.'}
         </p>
       </div>

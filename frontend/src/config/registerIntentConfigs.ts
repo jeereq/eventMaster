@@ -13,7 +13,7 @@ import {
   Eye,
   Ticket,
   Building2,
-} from 'lucide-react';
+} from '@/components/icons';
 import type { RegistrationActionConfig } from '@/lib/registerActionConfig';
 
 /** Copy landing / URL-intent — loaded only when action, intent or plan is present. */

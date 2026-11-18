@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from '@/components/icons';
 import MarketplaceRequestsHub from '@/components/dashboard/MarketplaceRequestsHub';
 
 export default function QuotesPage() {

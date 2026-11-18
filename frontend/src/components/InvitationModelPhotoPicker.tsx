@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LayoutTemplate, X } from 'lucide-react';
+import { LayoutTemplate, X } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import {

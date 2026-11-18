@@ -1,16 +1,14 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Heart, Minimize2, Store, Wallet, Bookmark, Sparkles } from 'lucide-react';
+import { Heart, Minimize2, Store, Wallet, Bookmark, Sparkles } from '@/components/icons';
 import { api } from '@/lib/api';
 import {
   Alert,
-  Breadcrumbs,
   Button,
   EmptyState,
   Input,
   Modal,
-  PageHeader,
   Pagination,
   usePaginateItems,
   usePageSize,
@@ -631,15 +629,13 @@ function ClientMarketplaceInner() {
               searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
               header={
                 <div className="flex items-center justify-between gap-3">
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface/95 backdrop-blur-xl border border-border shadow-md text-xs font-bold text-foreground">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
-                    <span>Mode Focus · Carte interactive</span>
-                    <span className="text-muted font-normal">({visible.length} fiches)</span>
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface/95 border border-border shadow-md text-xs font-bold text-foreground">
+                    <span>{visible.length} fiches</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setView(lastBrowseRef.current)}
-                    className="h-10 shrink-0 inline-flex items-center gap-1.5 px-3.5 rounded-full bg-surface/95 backdrop-blur-xl border border-border shadow-md text-xs font-bold text-foreground hover:bg-surface hover:text-primary transition hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    className="h-10 shrink-0 inline-flex items-center gap-1.5 px-3.5 rounded-full bg-surface/95 border border-border shadow-md text-xs font-bold text-foreground hover:bg-surface hover:text-primary transition hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                   >
                     <Minimize2 className="w-3.5 h-3.5" />
                     Quitter le focus
@@ -653,39 +649,6 @@ function ClientMarketplaceInner() {
       ) : null}
 
     <div className={cn('space-y-6 w-full', immersiveExplore && 'hidden')}>
-      <PageHeader
-        title={searchParams.get('kind') === 'event' && tab === 'explore' ? 'Événements' : 'Marketplace'}
-        description={
-          tab === 'plan'
-            ? 'Budget, invitations, salles.'
-            : tab === 'favorites'
-              ? 'Vos fiches enregistrées.'
-              : tab === 'packs'
-                ? 'Sélections prêtes pour un devis.'
-                : searchParams.get('kind') === 'event'
-                  ? 'Événements publics.'
-                  : 'Salles, prestataires, matériel.'
-        }
-        breadcrumbs={
-          <Breadcrumbs
-            items={[
-              { label: 'Marketplace', href: '/dashboard/catalogue' },
-              {
-                label:
-                  tab === 'favorites'
-                    ? 'Favoris'
-                    : tab === 'plan'
-                      ? 'Simulateur'
-                      : tab === 'packs'
-                        ? 'Mes packs'
-                        : searchParams.get('kind') === 'event'
-                          ? 'Événements'
-                          : 'Explorer',
-              },
-            ]}
-          />
-        }
-      />
 
       <div
         role="tablist"
@@ -721,7 +684,7 @@ function ClientMarketplaceInner() {
 
       {tab === 'explore' && !immersiveExplore ? (
           <>
-            <div className="sticky top-0 md:top-14 z-10 -mx-1 px-1 py-1 bg-background/90 backdrop-blur-md">
+            <div className="sticky top-0 md:top-14 z-10 -mx-1 px-1 py-1 bg-background/90">
               {exploreFilterBar('card')}
             </div>
 
@@ -729,7 +692,7 @@ function ClientMarketplaceInner() {
               <CatalogueResultsSkeleton mode={mapMode ? 'map' : mode === 'list' ? 'list' : 'grid'} count={pageSize} gridCols={gridCols} />
             ) : mapMode ? (
               markers.length === 0 ? (
-                <EmptyState icon={<Store className="w-5 h-5" />} title="Aucune position" description="Aucune fiche géolocalisée ne correspond à cette recherche." />
+                <EmptyState illustration="search" icon={<Store className="w-5 h-5" />} title="Aucune position" description="Aucune fiche géolocalisée ne correspond à cette recherche." />
               ) : (
                 <MarketplaceLocationsMap
                   markers={markers}
@@ -800,7 +763,6 @@ function ClientMarketplaceInner() {
                     value={favQ}
                     onChange={(e) => setFavQ(e.target.value)}
                     placeholder="Filtrer par nom, ville, prestataire…"
-                    leftIcon={<Store className="w-4 h-4" />}
                   />
                 </div>
                 <CatalogueViewToggle
@@ -927,7 +889,7 @@ function ClientMarketplaceInner() {
                   <div className="space-y-3">
                     {manualPackages.length > 0 ? (
                       <div className="space-y-1.5">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Issus des critères (sans IA)</p>
+                        <p className="text-xs font-bold text-muted">Issus des critères (sans IA)</p>
                         <div className="flex flex-wrap gap-2">
                           {manualPackages.map((pack) => (
                             <Button
@@ -945,7 +907,7 @@ function ClientMarketplaceInner() {
                     ) : null}
                     {aiPackages.length > 0 ? (
                       <div className="space-y-1.5">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Issus de l’IA</p>
+                        <p className="text-xs font-bold text-muted">Issus de l’IA</p>
                         <div className="flex flex-wrap gap-2">
                           {aiPackages.map((pack) => (
                             <Button
@@ -978,7 +940,7 @@ function ClientMarketplaceInner() {
                         <p className="text-xs font-bold text-foreground">
                           Formule IA sélectionnée & prête pour votre projet
                         </p>
-                        <p className="text-[11px] text-muted">
+                        <p className="text-xs text-muted">
                           Vous pouvez ajuster chaque ligne, sauvegarder dans Mes packs ou contacter directement les prestataires certifiés.
                         </p>
                       </div>
@@ -1033,7 +995,7 @@ function ClientMarketplaceInner() {
                 />
               </div>
             ) : !planning && (planView !== 'manual' || !planError) ? (
-              <EmptyState
+              <EmptyState illustration="payments"
                 icon={<Wallet className="w-5 h-5" />}
                 title={
                   planView === 'ai'

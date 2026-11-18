@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Heart, Building2, PartyPopper, Sparkles, Crown, Trees } from 'lucide-react';
+import { Heart, Building2, PartyPopper, Sparkles, Crown, Trees } from '@/components/icons';
 import {
   ROOM_PLAN_PROMPT_CATEGORIES,
   ROOM_PLAN_PROMPT_MODELS,

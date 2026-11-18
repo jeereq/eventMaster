@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useId, useState } from 'react';
-import { Building2 } from 'lucide-react';
+import { Building2 } from '@/components/icons';
 import { Alert, Button, Input, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import BillingDiscountFields from '@/components/BillingDiscountFields';

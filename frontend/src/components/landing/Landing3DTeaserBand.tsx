@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { ArrowRight, LayoutGrid, Eye, Users, ScanLine, Pencil, ShieldCheck } from 'lucide-react';
+import { ArrowRight, LayoutGrid, Eye, Users, ScanLine, Pencil, ShieldCheck } from '@/components/icons';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { applyRoomTemplate, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
@@ -182,7 +182,7 @@ export default function Landing3DTeaserBand() {
                       : 'Glissez pour tourner la salle.'}
                   </p>
                   {activePlan?.label && (
-                    <span className="hidden sm:inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full bg-stage-foreground/10 text-stage-foreground/90 border border-stage-foreground/15">
+                    <span className="hidden sm:inline-flex text-xs font-medium px-2 py-0.5 rounded-full bg-stage-foreground/10 text-stage-foreground/90 border border-stage-foreground/15">
                       {activePlan.label}
                     </span>
                   )}

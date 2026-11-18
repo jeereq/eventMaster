@@ -4,13 +4,14 @@ import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Users, UserPlus, Trash2, Loader2, Crown, Mail, Phone,
-  Shield, Briefcase, MessageSquare, Smartphone, TrendingUp, Copy, RefreshCw, Bell,
-} from 'lucide-react';
+  Users, UserPlus, Trash2, Loader2, Crown, Mail, Phone, Pencil,
+  Shield, Briefcase, MessageSquare, Smartphone, TrendingUp, Copy, RefreshCw,
+} from '@/components/icons';
 import {
   SkeletonGrid, ViewModeToggle, useViewMode, listStackClass,
   ProjectCard, StatusPill, ListRowAction, PhoneInput,
   Button, Modal, EmptyState, Alert, Input, Badge, Pagination, usePaginateItems, usePageSize,
+  ConfirmDialog, IconButton,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import UserAvatar from '@/components/UserAvatar';
@@ -18,7 +19,6 @@ import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { getQuotaActionMessage } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import OrgNotificationSettingsModal from '@/components/OrgNotificationSettingsModal';
 import {
   allowsAuthOtpChoice,
   authOtpMethodOptions,
@@ -74,7 +74,7 @@ const ROLE_OPTIONS = [
 ];
 
 export default function TeamManagement() {
-  const { user, tenant, planQuota, planFeatures, access, planName } = useAuth();
+  const { user, tenant, planQuota, planFeatures, planName } = useAuth();
   /** Nom commercial du forfait (base) ; l'identifiant brut seulement si le nom n'est pas chargé. */
   const planLabel = planName || tenant?.plan || null;
   const { site } = usePlatformSite();
@@ -107,11 +107,17 @@ export default function TeamManagement() {
   const [commissionRate, setCommissionRate] = useState('30');
   const [renewalCommissionRate, setRenewalCommissionRate] = useState('20');
   const [verificationMethod, setVerificationMethod] = useState<AuthOtpMethod>(defaultAuthOtpMethod(authChannels));
-  const [editingCommissionId, setEditingCommissionId] = useState<string | null>(null);
+  /** Membre ouvert dans le panneau latéral « Modifier ». */
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [editRole, setEditRole] = useState<TeamMember['orgRole']>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+  /** Membre dont le retrait attend la confirmation. */
+  const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
+  const [removing, setRemoving] = useState(false);
   const [editCommissionValue, setEditCommissionValue] = useState('');
   const [editRenewalCommissionValue, setEditRenewalCommissionValue] = useState('');
   const [resendingId, setResendingId] = useState<string | null>(null);
-  const [showNotifModal, setShowNotifModal] = useState(false);
   const pagedMembers = usePaginateItems(members, membersPage, membersPageSize);
 
   useEffect(() => {
@@ -215,27 +221,39 @@ export default function TeamManagement() {
     }
   };
 
-  const handleRoleChange = async (member: TeamMember, newRole: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL') => {
-    try {
-      await api.put(`/team/${member.id}`, { orgRole: newRole });
-      setSuccess('Rôle mis à jour.');
-      await loadTeam();
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la mise à jour du rôle.');
-    }
+  const memberName = (member: TeamMember) => member.name || member.email;
+
+  /** Panneau latéral : la liste reste visible, l'édition (rôle, commission) prend quelques secondes. */
+  const openEdit = (member: TeamMember) => {
+    setEditingMember(member);
+    setEditRole(member.orgRole);
+    setEditCommissionValue(String(Math.round((member.commissionRate ?? defaultCommissionRate) * 100)));
+    setEditRenewalCommissionValue(String(Math.round((member.renewalCommissionRate ?? defaultRenewalCommissionRate) * 100)));
+    setEditError('');
   };
 
-  const handleSaveCommission = async (memberId: string) => {
+  const handleSaveEdit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!editingMember) return;
+    setEditSaving(true);
+    setEditError('');
     try {
-      await api.put(`/team/${memberId}/commission`, {
-        commissionRate: parseFloat(editCommissionValue) / 100,
-        renewalCommissionRate: parseFloat(editRenewalCommissionValue) / 100,
-      });
-      setSuccess('Commission mise à jour.');
-      setEditingCommissionId(null);
+      if (editRole && editRole !== editingMember.orgRole) {
+        await api.put(`/team/${editingMember.id}`, { orgRole: editRole });
+      }
+      if (editingMember.orgRole === 'COMMERCIAL') {
+        await api.put(`/team/${editingMember.id}/commission`, {
+          commissionRate: parseFloat(editCommissionValue) / 100,
+          renewalCommissionRate: parseFloat(editRenewalCommissionValue) / 100,
+        });
+      }
+      setSuccess(`${memberName(editingMember)} : modifications enregistrées.`);
+      setEditingMember(null);
       await loadTeam();
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de la mise à jour de la commission.');
+      setEditError(err.message || 'Enregistrement impossible.');
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -253,15 +271,20 @@ export default function TeamManagement() {
     }
   };
 
-  const handleDelete = async (member: TeamMember) => {
-    if (member.isOwner) return;
-    if (!confirm(`Supprimer l'utilisateur ${member.name || member.email} de l'organisation ?`)) return;
+  /** Le retrait supprime le compte du membre : il passe toujours par une confirmation nommée. */
+  const handleConfirmRemove = async () => {
+    if (!memberToRemove || memberToRemove.isOwner) return;
+    setRemoving(true);
     try {
-      await api.delete(`/team/${member.id}`);
-      setSuccess('Utilisateur supprimé.');
+      await api.delete(`/team/${memberToRemove.id}`);
+      setSuccess(`${memberName(memberToRemove)} a été retiré de l’équipe.`);
+      setMemberToRemove(null);
       await loadTeam();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la suppression.');
+      setMemberToRemove(null);
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -296,17 +319,6 @@ export default function TeamManagement() {
             />
           )}
           </div>
-          {access?.isOwner && (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => setShowNotifModal(true)}
-              leftIcon={<Bell className="w-4 h-4 text-primary" />}
-            >
-              Alertes Billetterie & Dons
-            </Button>
-          )}
           {canManageTeam && (
             <Button type="button" size="sm" onClick={openForm} leftIcon={<UserPlus className="w-4 h-4" />}>
               Ajouter un membre
@@ -326,9 +338,9 @@ export default function TeamManagement() {
             { label: 'À valider', value: String(pendingCount), hint: pendingCount > 0 ? 'code de validation non saisi' : 'tous les comptes sont actifs', gauge: null },
           ].map((stat) => (
             <div key={stat.label} className="rounded-[var(--radius-card)] border border-border bg-surface-muted/60 px-3 py-2.5">
-              <p className="text-[11px] font-medium text-muted">{stat.label}</p>
+              <p className="text-xs font-medium text-muted">{stat.label}</p>
               <p className="text-lg font-semibold tabular-nums text-foreground">{stat.value}</p>
-              <p className="hidden truncate text-[11px] text-muted sm:block">{stat.hint}</p>
+              <p className="hidden truncate text-xs text-muted sm:block">{stat.hint}</p>
               {stat.gauge != null && (
                 <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-border" aria-hidden>
                   <div
@@ -354,7 +366,7 @@ export default function TeamManagement() {
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted block mb-1.5">
+              <label className="text-xs font-semibold text-muted block mb-1.5">
                 1er paiement (%)
               </label>
               <input
@@ -367,7 +379,7 @@ export default function TeamManagement() {
               />
             </div>
             <div>
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted block mb-1.5">
+              <label className="text-xs font-semibold text-muted block mb-1.5">
                 Paiements suivants (%)
               </label>
               <input
@@ -399,7 +411,7 @@ export default function TeamManagement() {
               Enregistrer
             </Button>
           </div>
-          <p className="text-[11px] text-muted">
+          <p className="text-xs text-muted">
             30 % au premier paiement et 20 % ensuite, sauf personnalisation par commercial.
           </p>
         </div>
@@ -435,7 +447,7 @@ export default function TeamManagement() {
         <form id="team-create-form" onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Nom complet" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Prénom Nom" />
-            <Input label="E-mail" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} leftIcon={<Mail className="w-4 h-4" />} />
+            <Input label="E-mail" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             <PhoneInput
               label={
                 verificationMethod === 'EMAIL'
@@ -523,7 +535,7 @@ export default function TeamManagement() {
                 >
                   <Icon className={cn('w-4 h-4 mb-2', orgRole === id ? 'text-primary' : 'text-muted')} />
                   <p className="text-xs font-semibold text-foreground">{label}</p>
-                  <p className="text-[11px] text-muted mt-0.5 leading-snug">{description}</p>
+                  <p className="text-xs text-muted mt-0.5 leading-snug">{description}</p>
                 </button>
               ))}
             </div>
@@ -559,7 +571,7 @@ export default function TeamManagement() {
       {loading ? (
         <SkeletonGrid count={3} columns={3} />
       ) : members.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="guests"
           icon={<Users className="w-5 h-5" />}
           title="Aucun membre pour l’instant"
           description="Ajoutez un manager ou un agent protocole."
@@ -586,6 +598,8 @@ export default function TeamManagement() {
               ? 'Propriétaire'
               : orgRoleLabels[member.orgRoleLabel] || member.orgRoleLabel;
 
+            const commissionSummary = `${Math.round((member.commissionRate ?? defaultCommissionRate) * 100)} % puis ${Math.round((member.renewalCommissionRate ?? defaultRenewalCommissionRate) * 100)} %`;
+
             const managementExtras = (
               <>
                 {!member.isEmailVerified && canManageTeam && (
@@ -593,101 +607,39 @@ export default function TeamManagement() {
                     type="button"
                     onClick={() => handleResendOtp(member)}
                     disabled={resendingId === member.id}
-                    className="min-h-8 text-[11px] font-semibold px-2.5 rounded-md border border-border text-foreground hover:bg-surface-muted inline-flex items-center gap-1.5"
+                    className="min-h-8 text-xs font-semibold px-2.5 rounded-md border border-border text-foreground hover:bg-surface-muted inline-flex items-center gap-1.5"
                   >
                     {resendingId === member.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                     Renvoyer le code
                   </button>
                 )}
-                {member.orgRole === 'COMMERCIAL' && canManageTeam && !member.isOwner && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {editingCommissionId === member.id ? (
-                      <>
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={editCommissionValue}
-                          onChange={(e) => setEditCommissionValue(e.target.value)}
-                          className="w-16 px-2 py-1 rounded-[var(--radius-button)] border border-border text-xs"
-                          title="1er paiement"
-                        />
-                        <span className="text-xs text-muted">puis</span>
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={editRenewalCommissionValue}
-                          onChange={(e) => setEditRenewalCommissionValue(e.target.value)}
-                          className="w-16 px-2 py-1 rounded-[var(--radius-button)] border border-border text-xs"
-                          title="Paiements suivants"
-                        />
-                        <span className="text-xs text-muted">%</span>
-                        <Button type="button" size="sm" variant="success" onClick={() => handleSaveCommission(member.id)}>
-                          OK
-                        </Button>
-                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditingCommissionId(null)}>
-                          Annuler
-                        </Button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingCommissionId(member.id);
-                          setEditCommissionValue(String(Math.round((member.commissionRate ?? defaultCommissionRate) * 100)));
-                          setEditRenewalCommissionValue(String(Math.round((member.renewalCommissionRate ?? defaultRenewalCommissionRate) * 100)));
-                        }}
-                        className="text-[10px] font-semibold px-2 py-1 rounded-md border border-border text-muted hover:bg-surface-muted"
-                      >
-                        {Math.round((member.commissionRate ?? defaultCommissionRate) * 100)} % puis {Math.round((member.renewalCommissionRate ?? defaultRenewalCommissionRate) * 100)} % — Modifier
-                      </button>
-                    )}
-                  </div>
-                )}
-                {canManageTeam && !member.isOwner && member.orgRole !== 'COMMERCIAL' && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-medium text-muted">Rôle</span>
-                    <div
-                      role="group"
-                      aria-label={`Rôle de ${member.name || member.email}`}
-                      className="inline-flex rounded-[var(--radius-button)] border border-border bg-surface-muted p-0.5"
-                    >
-                      {visibleRoles.map((role) => {
-                        const current = member.orgRole === role.id;
-                        const blocked = !current && role.id === 'MANAGER' && managersAtLimit;
-                        return (
-                          <button
-                            key={role.id}
-                            type="button"
-                            aria-pressed={current}
-                            disabled={current || blocked}
-                            onClick={() => handleRoleChange(member, role.id)}
-                            title={
-                              current
-                                ? `${role.label} (rôle actuel)`
-                                : blocked
-                                  ? 'Quota de managers atteint pour ce forfait'
-                                  : `Passer en ${role.label}`
-                            }
-                            className={cn(
-                              'min-h-8 rounded-[calc(var(--radius-button)-2px)] px-2.5 text-[11px] font-semibold transition-colors',
-                              current
-                                ? 'bg-surface text-foreground shadow-xs cursor-default'
-                                : blocked
-                                  ? 'text-muted/50 cursor-not-allowed'
-                                  : 'text-muted hover:text-primary',
-                            )}
-                          >
-                            {role.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                {member.orgRole === 'COMMERCIAL' && teamViewMode !== 'list' && (
+                  <p className="text-xs text-muted">Commission {commissionSummary}</p>
                 )}
               </>
             );
+
+            // Modifier : panneau latéral (rôle, commission). Retirer : confirmation qui nomme la personne.
+            const memberActions =
+              canManageTeam && !member.isOwner ? (
+                <span className="inline-flex items-center gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    leftIcon={<Pencil className="w-3.5 h-3.5" />}
+                    onClick={() => openEdit(member)}
+                  >
+                    Modifier
+                  </Button>
+                  <IconButton
+                    label={`Retirer ${memberName(member)} de l’équipe`}
+                    icon={Trash2}
+                    tone="danger"
+                    onClick={() => setMemberToRemove(member)}
+                  />
+                </span>
+              ) : null;
 
             if (teamViewMode === 'list') {
               return (
@@ -727,20 +679,7 @@ export default function TeamManagement() {
                       <StatusPill tone="amber">Compte à valider</StatusPill>
                     ) : undefined
                   }
-                  actions={
-                    canManageTeam && !member.isOwner ? (
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(member)}
-                        className="p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-[var(--radius-button)]"
-                        title="Retirer de l'organisation"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <ListRowAction>Profil</ListRowAction>
-                    )
-                  }
+                  actions={memberActions ?? <ListRowAction>Profil</ListRowAction>}
                 >
                   {managementExtras}
                 </ProjectCard>
@@ -757,7 +696,7 @@ export default function TeamManagement() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <h3 className="truncate text-sm font-semibold text-foreground">{member.name || 'Sans nom'}</h3>
-                      {member.id === user?.id && <span className="text-[11px] text-muted">(vous)</span>}
+                      {member.id === user?.id && <span className="text-xs text-muted">(vous)</span>}
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       <StatusPill tone={roleTone as 'amber' | 'violet' | 'primary'}>{roleLabel}</StatusPill>
@@ -766,17 +705,6 @@ export default function TeamManagement() {
                       )}
                     </div>
                   </div>
-                  {canManageTeam && !member.isOwner && (
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(member)}
-                      className="-mr-1 -mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-button)] text-muted transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30"
-                      title="Retirer de l'organisation"
-                      aria-label={`Retirer ${member.name || member.email} de l'organisation`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
                 </div>
                 <div className="space-y-1 text-xs text-muted">
                   <a href={`mailto:${member.email}`} className="flex min-w-0 items-center gap-1.5 hover:text-primary">
@@ -797,7 +725,10 @@ export default function TeamManagement() {
                   )}
                 </div>
                 {!member.isOwner && canManageTeam && (
-                  <div className="space-y-2 border-t border-border pt-3">{managementExtras}</div>
+                  <div className="mt-auto space-y-2 border-t border-border pt-3">
+                    {managementExtras}
+                    {memberActions}
+                  </div>
                 )}
               </article>
             );
@@ -815,10 +746,107 @@ export default function TeamManagement() {
         />
       )}
 
-      {/* Modal de configuration des alertes de billetterie & dons (Propriétaire) */}
-      <OrgNotificationSettingsModal
-        isOpen={showNotifModal}
-        onClose={() => setShowNotifModal(false)}
+      {/* Modifier un membre : panneau latéral, la liste de l'équipe reste visible. */}
+      <Modal
+        open={Boolean(editingMember)}
+        onClose={() => (editSaving ? undefined : setEditingMember(null))}
+        placement="right"
+        title={editingMember ? `Modifier ${memberName(editingMember)}` : undefined}
+        description={editingMember && editingMember.name ? editingMember.email : undefined}
+        dismissible={!editSaving}
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setEditingMember(null)} disabled={editSaving}>
+              Annuler
+            </Button>
+            <Button type="submit" form="team-member-edit-form" loading={editSaving}>
+              Enregistrer
+            </Button>
+          </>
+        }
+      >
+        {editingMember ? (
+          <form id="team-member-edit-form" onSubmit={handleSaveEdit} className="space-y-6">
+            {editError ? <Alert variant="error">{editError}</Alert> : null}
+
+            {editingMember.orgRole === 'COMMERCIAL' ? (
+              <fieldset className="space-y-3">
+                <legend className="text-sm font-semibold text-foreground">Commission</legend>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="Premier paiement (%)"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={editCommissionValue}
+                    onChange={(e) => setEditCommissionValue(e.target.value)}
+                  />
+                  <Input
+                    label="Paiements suivants (%)"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={editRenewalCommissionValue}
+                    onChange={(e) => setEditRenewalCommissionValue(e.target.value)}
+                  />
+                </div>
+              </fieldset>
+            ) : (
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-semibold text-foreground">Rôle</legend>
+                {visibleRoles
+                  .filter((role) => role.id !== 'COMMERCIAL')
+                  .map((role) => {
+                    const current = editingMember.orgRole === role.id;
+                    const blocked = !current && role.id === 'MANAGER' && managersAtLimit;
+                    return (
+                      <label
+                        key={role.id}
+                        className={cn(
+                          'flex items-start gap-3 rounded-[var(--radius-card)] border p-3.5 transition-colors',
+                          editRole === role.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-surface-muted/60',
+                          blocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="team-member-role"
+                          value={role.id}
+                          checked={editRole === role.id}
+                          disabled={blocked}
+                          onChange={() => setEditRole(role.id)}
+                          className="mt-1 h-4 w-4 accent-primary"
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-foreground">{role.label}</span>
+                          <span className="block text-sm text-muted">
+                            {blocked ? 'Quota de managers atteint pour ce forfait.' : role.description}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+              </fieldset>
+            )}
+          </form>
+        ) : null}
+      </Modal>
+
+      {/* Retrait : confirmation qui nomme la personne ; Annuler a le focus, Échap annule. */}
+      <ConfirmDialog
+        open={Boolean(memberToRemove)}
+        onClose={() => (removing ? undefined : setMemberToRemove(null))}
+        onConfirm={handleConfirmRemove}
+        loading={removing}
+        tone="danger"
+        title={memberToRemove ? `Retirer ${memberName(memberToRemove)} de l’équipe ?` : ''}
+        description={
+          memberToRemove
+            ? `Le compte ${memberToRemove.email} sera supprimé : cette personne ne pourra plus se connecter. Cette action est définitive.`
+            : ''
+        }
+        confirmLabel="Retirer de l’équipe"
+        cancelLabel="Annuler"
       />
     </div>
   );

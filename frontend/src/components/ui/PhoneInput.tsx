@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Phone } from 'lucide-react';
+import { Phone } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import CountryCodePicker from '@/components/ui/CountryCodePicker';
 import {
   DEFAULT_PHONE_COUNTRY_CODE,
-  PHONE_COUNTRY_CODES,
   composeE164,
   normalizeCountryCode,
   normalizeNationalNumber,
@@ -24,6 +24,8 @@ interface PhoneInputProps {
   label?: string;
   hint?: string;
   error?: string;
+  /** Affiche sous le champ le numéro complet enregistré (« Enregistré : +243… »). */
+  showRecorded?: boolean;
   countryCode: string;
   national: string;
   onCountryCodeChange: (code: string) => void;
@@ -66,6 +68,7 @@ export default function PhoneInput({
   label = 'Téléphone',
   hint,
   error,
+  showRecorded = true,
   countryCode,
   national,
   onCountryCodeChange,
@@ -89,32 +92,15 @@ export default function PhoneInput({
         </label>
       )}
       <div className="flex gap-2">
-        <div className="relative shrink-0">
-          <label htmlFor={selectId} className="sr-only">
-            Indicatif pays
-          </label>
-          <select
+        <div className="shrink-0">
+          <CountryCodePicker
             id={selectId}
             value={normalizeCountryCode(countryCode)}
-            onChange={(e) => onCountryCodeChange(e.target.value)}
+            onChange={onCountryCodeChange}
             disabled={disabled}
-            className={cn(
-              'min-h-11 min-w-[7.5rem] max-w-[9.5rem] appearance-none rounded-[var(--radius-button)]',
-              'border bg-surface-muted pl-3 pr-7 text-sm font-medium text-foreground',
-              'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary',
-              'disabled:opacity-60',
-              error ? 'border-danger/40' : 'border-border',
-            )}
-            aria-label="Indicatif pays"
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? errorId : hint ? hintId : undefined}
-          >
-            {PHONE_COUNTRY_CODES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.code} {c.iso}
-              </option>
-            ))}
-          </select>
+            invalid={Boolean(error)}
+            describedBy={error ? errorId : hint ? hintId : undefined}
+          />
         </div>
         <div className="relative flex-1 min-w-0">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
@@ -148,7 +134,7 @@ export default function PhoneInput({
       {error && (
         <p id={errorId} className="text-xs text-danger font-medium" role="alert">{error}</p>
       )}
-      {(countryCode || national) && (
+      {showRecorded && (countryCode || national) && (
         <p className="text-xs font-mono text-muted">
           Enregistré : {composeE164(countryCode, national) || '—'}
         </p>

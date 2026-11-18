@@ -3,7 +3,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   AlertCircle, ChevronLeft, ChevronRight, ImagePlus, Loader2, Play, RotateCcw, Star, Trash2, X,
-} from 'lucide-react';
+} from '@/components/icons';
 import { uploadMarketplaceMedia } from '@/lib/cloudinaryUpload';
 import {
   MARKETPLACE_MAX_PHOTOS,

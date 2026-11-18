@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Copy, Link2, Check } from 'lucide-react';
+import { Copy, Link2, Check } from '@/components/icons';
 import { Button } from '@/components/ui';
 import { buildReferralRegisterUrl } from '@/lib/referralLink';
 

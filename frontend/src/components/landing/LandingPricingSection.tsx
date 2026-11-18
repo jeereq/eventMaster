@@ -3,7 +3,8 @@ import { ChannelText } from '@/components/ChannelText';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Check, Minus, ChevronDown, ChevronUp, Sparkles, Tag, ShieldCheck, CreditCard, Smartphone, Wallet, Info } from 'lucide-react';
+import { ArrowRight, Check, Minus, ChevronDown, ChevronUp, Tag, ShieldCheck, CreditCard, Smartphone } from '@/components/icons';
+import PlanPricingRow, { planRowButtonClass } from '@/components/PlanPricingRow';
 import {
  LANDING_PLANS,
  FEATURE_COMPARISON,
@@ -12,7 +13,6 @@ import {
  VENDOR_PLAN_IDS,
  ANNUAL_DISCOUNT_PERCENT,
  getPlanDisplayPrice,
- getPlanCapabilityBadges,
  resolvePlanMonthlyFc,
  computePromoSavingsPercent,
  annualPayableFromPeriod,
@@ -23,11 +23,8 @@ import {
  planPricePeriodSuffix,
  type BillingCycle,
  type PlanId,
- type PlanCapabilityBadge,
 } from '@/config/landingPricing';
-import { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
 import { cn } from '@/lib/cn';
-import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import { useAuth } from '@/context/AuthContext';
 import {
  comparisonValueFromDb,
@@ -51,7 +48,6 @@ interface LandingPricingSectionProps {
  /** Catalogue en cours de chargement : les prix ne sont pas encore ceux de la base. */
  plansLoading?: boolean;
  defaultAudience?: 'B2B' | 'B2C' | 'VENDOR';
- lead?: string;
 }
 
 function FeatureCell({ value }: { value: string | boolean }) {
@@ -64,30 +60,10 @@ function FeatureCell({ value }: { value: string | boolean }) {
  return <span className="text-xs font-medium text-foreground dark:text-foreground">{value}</span>;
 }
 
-const BADGE_TONE: Record<PlanCapabilityBadge['tone'], string> = {
- indigo: 'bg-primary/10 text-primary border-primary/20',
- violet: 'bg-primary/10 text-primary border-primary/20',
- emerald: 'bg-primary/10 text-primary-solid border-primary/20',
- amber: 'bg-festive-accent-soft text-festive-accent border-festive-accent/25',
- rose: 'bg-danger/10 text-danger border-danger/20',
-};
-
-const TIER_ACCENT: Record<string, string> = {
- essentials: 'bg-muted',
- personal: 'bg-foreground/50',
- business: 'bg-foreground/40',
- premium: 'bg-foreground/70',
- enterprise: 'bg-foreground',
- venue: 'bg-primary',
- service: 'bg-[color:var(--festive-accent)]',
- catalog: 'bg-foreground',
-};
-
 export default function LandingPricingSection({
  dbPlans,
  plansLoading = false,
  defaultAudience = 'B2B',
- lead,
 }: LandingPricingSectionProps) {
  const { user } = useAuth();
  const [billing, setBilling] = useState<BillingCycle>('monthly');
@@ -123,7 +99,6 @@ export default function LandingPricingSection({
    ? computePromoSavingsPercent(displayedCatalogFc, displayedPromoFc)
    : null;
 
- const badges = getPlanCapabilityBadges(plan.id, db);
  // Badge « N invités » : quota de la base ; masqué pendant le chargement, landing seulement si l'API a échoué.
  const isGuestsBadge = Boolean(plan.badge && /invités/i.test(plan.badge));
  const badge = isGuestsBadge
@@ -146,7 +121,6 @@ export default function LandingPricingSection({
  promoSavingsPercent,
  description: db?.description || plan.tagline,
  highlights: highlightsFromDb(plan.id, plan.highlights, db),
- badges,
  limits: {
  events: db?.maxEvents ?? parseComparisonQuota(plan.id, 'Événements actifs'),
  guests: db?.maxGuests ?? parseComparisonQuota(plan.id, 'Invités inclus par période payée (quota org.)'),
@@ -213,274 +187,127 @@ export default function LandingPricingSection({
     : [...B2B_PLAN_IDS];
 
  return (
- <section
- id="tarifs"
- className="py-16 sm:py-20 bg-background/80 border-t border-border scroll-mt-16 em-landing-section-glow-alt"
- >
+ <section id="tarifs" className="py-16 sm:py-20 bg-[#10291c] text-white scroll-mt-16">
  <div className="page-container relative z-10">
-        <div className="max-w-2xl mb-10 space-y-2.5">
-          <h2 className="em-landing-heading text-2xl sm:text-3xl text-foreground">
-            {audience === 'B2C'
-              ? 'Forfaits Particuliers'
-              : audience === 'VENDOR'
-                ? 'Forfaits Salles & prestataires'
-                : 'Forfaits Organisations'}
-          </h2>
-          <p className="text-sm text-muted leading-relaxed">
-            {lead ||
-              (audience === 'B2C'
-                ? `Pour une fête privée : mariage, anniversaire, baptême. Choisissez selon votre nombre d’invités, éditeur de salle inclus. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`
-                : audience === 'VENDOR'
-                  ? `Vous louez une salle, proposez un service ou du matériel, sans organiser d’événements. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`
-                  : `Entreprises et organisateurs : billetterie, protocole QR et plusieurs événements. Dès Business, la vitrine salle et prestations est incluse. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`)}
-          </p>
-        </div>
+ <h2 className="em-landing-heading text-3xl sm:text-4xl text-white mb-8">
+ {audience === 'B2C'
+ ? 'Forfaits Particuliers'
+ : audience === 'VENDOR'
+ ? 'Forfaits Salles & prestataires'
+ : 'Forfaits Organisations'}
+ </h2>
 
  {activePromos.length > 0 && (
- <div className="mb-8 max-w-2xl rounded-[var(--radius-card)] em-hud-card p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
- <Tag className="w-5 h-5 text-primary shrink-0" />
- <div className="min-w-0">
- <p className="text-sm font-bold text-foreground">
- Promotions sur {activePromos.length} forfait{activePromos.length > 1 ? 's' : ''}
+ <div className="mb-8 max-w-2xl rounded-2xl bg-white/10 p-4 flex items-center gap-3">
+ <Tag className="w-5 h-5 text-[#b0eed5] shrink-0" />
+ <p className="text-sm font-semibold">
+ Promotion : {activePromos.map((p) => p.displayName).join(' · ')}
  </p>
- <p className="text-xs text-muted mt-0.5">
- {activePromos.map((p) => p.displayName).join(' · ')}
- </p>
- </div>
  </div>
  )}
 
- <div className="flex flex-col items-start gap-3 mb-10">
- <div className="flex flex-wrap items-center gap-3">
- <div className={cn('inline-flex items-center', SEGMENTED_TRACK)} role="tablist" aria-label="Type de compte">
+ <div className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+ <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Type de compte">
+ {([
+ ['B2C', 'Particuliers'],
+ ['B2B', 'Organisations'],
+ ['VENDOR', 'Salles & prestataires'],
+ ] as const).map(([id, label]) => (
  <button
+ key={id}
  type="button"
  role="tab"
- aria-selected={audience === 'B2C'}
- onClick={() => setAudience('B2C')}
- className={segmentedItem(audience === 'B2C', 'sm:px-4 text-xs sm:text-sm inline-flex items-center justify-center')}
+ aria-selected={audience === id}
+ onClick={() => setAudience(id)}
+ className={cn(
+ 'min-h-11 rounded-full px-4 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b0eed5]',
+ audience === id ? 'bg-[#b0eed5] text-[#10291c]' : 'border border-white/30 text-white hover:bg-white/10',
+ )}
  >
- Particuliers
+ {label}
  </button>
- <button
- type="button"
- role="tab"
- aria-selected={audience === 'B2B'}
- onClick={() => setAudience('B2B')}
- className={segmentedItem(audience === 'B2B', 'sm:px-4 text-xs sm:text-sm inline-flex items-center justify-center')}
- >
- Organisations
- </button>
- <button
- type="button"
- role="tab"
- aria-selected={audience === 'VENDOR'}
- onClick={() => setAudience('VENDOR')}
- className={segmentedItem(audience === 'VENDOR', 'sm:px-4 text-xs sm:text-sm inline-flex items-center justify-center')}
- >
- Salles & prestataires
- </button>
+ ))}
  </div>
 
- <div className={cn('inline-flex items-center', SEGMENTED_TRACK)} role="tablist" aria-label="Période de facturation">
+ <div className="flex items-center gap-3">
  <button
  type="button"
- role="tab"
- aria-selected={billing === 'monthly'}
- onClick={() => setBilling('monthly')}
- className={segmentedItem(billing === 'monthly', 'sm:px-4 text-xs sm:text-sm inline-flex items-center justify-center')}
+ role="switch"
+ aria-checked={billing === 'annual'}
+ aria-label="Facturation annuelle"
+ onClick={() => setBilling(billing === 'annual' ? 'monthly' : 'annual')}
+ className={cn(
+ 'relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b0eed5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#10291c]',
+ billing === 'annual' ? 'bg-[#b0eed5]' : 'bg-white/30',
+ )}
  >
- {audience === 'B2C' ? 'Trimestriel' : 'Mensuel'}
+ <span
+ aria-hidden
+ className={cn(
+ 'inline-block h-5 w-5 rounded-full bg-white shadow transition-transform',
+ billing === 'annual' ? 'translate-x-6' : 'translate-x-1',
+ )}
+ />
  </button>
- <button
- type="button"
- role="tab"
- aria-selected={billing === 'annual'}
- onClick={() => setBilling('annual')}
- className={segmentedItem(billing === 'annual', 'sm:px-4 text-xs sm:text-sm flex items-center justify-center gap-1.5')}
- >
- <span>Annuel</span>
- <span className="text-xs font-bold text-primary-solid bg-primary/10 px-1.5 py-0.2 rounded-full">
+ <span className="text-sm">Annuel</span>
+ <span className="rounded-full bg-[#b0eed5] px-2.5 py-0.5 text-xs font-semibold text-[#10291c]">
  −{ANNUAL_DISCOUNT_PERCENT} %
  </span>
- </button>
  </div>
  </div>
 
- <p className="text-xs text-muted">
- {billing === 'annual'
- ? audience === 'B2C'
- ? `Total pour 4 trimestres (365 jours), −${ANNUAL_DISCOUNT_PERCENT} % sur le prix catalogue`
- : `Total pour 12 mois (365 jours), −${ANNUAL_DISCOUNT_PERCENT} % sur le prix catalogue`
- : audience === 'B2C'
- ? 'Prix du trimestre (90 jours). Annuel : 4 trimestres d’un coup à −10 %.'
- : 'Activation après demande validée par la plateforme'}
- </p>
- </div>
-
- {tiers.map(({ label, ids, description }) => (
- <div key={label} className="mb-16 last:mb-10">
- {tiers.length > 1 ? (
- <div className="text-center mb-6 space-y-1">
- <h3 className="text-sm font-bold uppercase tracking-widest text-muted">{label}</h3>
- {description && (
- <p className="text-xs text-muted dark:text-muted max-w-xl mx-auto">{description}</p>
- )}
- </div>
- ) : null}
- <div
- className={`flex sm:grid gap-5 items-stretch overflow-x-auto pb-4 sm:pb-0 no-scrollbar snap-x snap-mandatory ${
- ids.length === 1
- ? 'max-w-md mx-auto'
- : ids.length === 2
- ? 'sm:grid-cols-2'
- : ids.length === 3
- ? 'sm:grid-cols-2 lg:grid-cols-3'
- : 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
- }`}
- >
+ {tiers.map(({ label, ids }) => (
+ <div key={label} className="mb-10">
+ {tiers.length > 1 ? <h3 className="mb-4 text-lg font-semibold text-white">{label}</h3> : null}
+ <div className="space-y-5">
  {plans
  .filter((p) => ids.includes(p.id))
- .map((plan) => (
- <article
+ .map((plan) => {
+ const monthlyFc = resolvePlanMonthlyFc(plan, dbPlans?.[plan.id]);
+ const notes: React.ReactNode[] = [];
+ if (isB2cPlanId(plan.id) && billing === 'monthly' && !plansLoading && monthlyFc > 0) {
+ notes.push(`soit ${Math.round(monthlyFc / 3).toLocaleString('fr-FR')} FC par mois`);
+ } else if (plan.monthlyNote) {
+ notes.push(plan.monthlyNote);
+ }
+ if (billing === 'annual' && plan.id !== 'FREE') {
+ notes.push(`Facturé ${isB2cPlanId(plan.id) ? '4 trimestres' : '12 mois'} d’un coup`);
+ notes.push(annualEquivalentNote(plan.id, monthlyFc));
+ }
+ return (
+ <PlanPricingRow
  key={plan.id}
- className={`relative flex flex-col rounded-[var(--radius-card)] overflow-hidden transition-all duration-300 min-w-[17.5rem] sm:min-w-0 shrink-0 snap-start flex-1 ${
- plan.highlighted
- ? 'border-2 border-primary bg-surface dark:bg-surface shadow-lg shadow-primary/10 z-10'
- : plan.promoActive
- ? 'border border-danger/40 bg-surface dark:bg-surface shadow-md'
- : 'em-hud-card border-border'
- }`}
- >
- <div className={`h-1.5 w-full ${plan.highlighted ? 'bg-gradient-to-r from-primary via-brand-accent to-festive-accent' : TIER_ACCENT[plan.tier]}`} />
-
- {plan.highlighted ? (
- <div className="absolute top-4 right-4 bg-festive-accent text-white text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs">
- <Sparkles className="w-3 h-3" />
- Le plus choisi
- </div>
- ) : plan.badge ? (
- <div className="absolute top-4 right-4 bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1">
- {plan.badge}
- </div>
- ) : null}
-
- <div className="p-6 sm:p-7 flex-1 flex flex-col">
- <div className="space-y-1 pr-16">
- {tiers.length > 1 || audience !== 'B2C' ? (
- <span className="text-xs font-bold uppercase tracking-wider text-muted">
- {plan.tierLabel}
- </span>
- ) : null}
- <h3 className="text-xl font-bold text-foreground dark:text-foreground">{plan.displayName}</h3>
- </div>
-
- <p className="text-xs text-muted dark:text-muted mt-3 min-h-[36px] leading-relaxed">
- {plan.description}
- </p>
-
- {plan.badges.some((badge) => badge.label.toLowerCase() !== plan.tierLabel.toLowerCase()) && (
- <div className="flex flex-wrap gap-1.5 mt-4">
- {plan.badges.filter((badge) => badge.label.toLowerCase() !== plan.tierLabel.toLowerCase()).slice(0, 4).map((badge) => (
- <span
- key={badge.id}
- className={`inline-flex text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${BADGE_TONE[badge.tone]}`}
- >
- {badge.label}
- </span>
- ))}
- </div>
- )}
-
- <div className="mt-6 mb-5">
- {plan.promoActive && plan.catalogPrice && (
- <div className="flex flex-wrap items-center gap-2 mb-2">
- <span className="text-xs font-bold uppercase tracking-wider bg-danger/10 text-danger px-2.5 py-1 rounded-full">
- {plan.promoLabel}
- </span>
- {plan.promoSavingsPercent != null && (
- <span className="text-xs font-bold text-primary-solid">
- −{plan.promoSavingsPercent} %
- </span>
- )}
- <span className="text-sm text-muted line-through">{plan.catalogPrice}</span>
- </div>
- )}
- <div className="flex items-baseline gap-1.5 flex-wrap">
- <span
- className={`text-3xl font-semibold tracking-tight ${
- plan.highlighted
- ? 'text-primary dark:text-primary'
- : plan.promoActive
- ? 'text-danger'
- : 'text-foreground dark:text-foreground'
- }`}
- >
- {plansLoading ? (
-  <span className="inline-block h-8 w-28 rounded-lg bg-surface-muted animate-pulse align-middle" aria-label="Chargement du prix" />
+ name={plan.displayName}
+ badge={plan.highlighted ? 'Le plus choisi' : plan.badge}
+ description={plan.description}
+ accent={plan.highlighted}
+ price={
+ plansLoading ? (
+ <span className="inline-block h-10 w-36 animate-pulse rounded-lg bg-[#10291c]/10 align-middle" aria-label="Chargement du prix" />
  ) : (
-  plan.price
- )}
- </span>
- {plan.id !== 'FREE' && (
- <span className="text-sm font-medium text-muted">{planPricePeriodSuffix(plan.id, billing)}</span>
- )}
- </div>
- <p className="text-xs text-muted mt-1.5">
- {isB2cPlanId(plan.id) && billing === 'monthly' && !plansLoading && resolvePlanMonthlyFc(plan, dbPlans?.[plan.id]) > 0
-  ? `soit ${Math.round(resolvePlanMonthlyFc(plan, dbPlans?.[plan.id]) / 3).toLocaleString('fr-FR')} FC par mois`
-  : plan.monthlyNote}
- </p>
- {billing === 'annual' && plan.id !== 'FREE' && (
- <p className="text-xs text-primary-solid font-semibold mt-1">
- Facturé {isB2cPlanId(plan.id) ? '4 trimestres' : '12 mois'} d’un coup · {ANNUAL_DISCOUNT_PERCENT} % d&apos;économie vs {isB2cPlanId(plan.id) ? 'trimestre' : 'mois'}
- </p>
- )}
- {billing === 'annual' && plan.id !== 'FREE' && (
- <p className="text-xs text-muted mt-0.5">
- {annualEquivalentNote(plan.id, resolvePlanMonthlyFc(plan, dbPlans?.[plan.id]))}
- </p>
- )}
- </div>
-
- <ul className="space-y-2.5 text-xs text-muted dark:text-foreground flex-1">
- {plan.highlights.map((h) => (
- <li key={h} className="flex gap-2.5">
- <Check className="w-4 h-4 text-primary-solid shrink-0 mt-0.5" />
- <span className="leading-relaxed"><ChannelText text={h} /></span>
- </li>
- ))}
- </ul>
-
- {(plan.limits.events > 0 || plan.limits.templates > 0 || plan.limits.rooms > 0 || plan.limits.services > 0) && (
- <PlanQuotaLimits
- compact
- maxEvents={plan.limits.events}
- maxGuests={plan.limits.guests}
- maxTemplates={plan.limits.templates}
- maxRooms={plan.limits.rooms}
- maxServices={plan.limits.services}
- maxOrgManagers={plan.limits.orgManagers}
- />
- )}
- </div>
-
- <div className="px-6 sm:px-7 pb-6 sm:pb-7 pt-0">
+ plan.price
+ )
+ }
+ periodSuffix={plan.id !== 'FREE' ? planPricePeriodSuffix(plan.id, billing) : undefined}
+ notes={notes}
+ promo={
+ plan.promoActive
+ ? { label: plan.promoLabel, savingsPercent: plan.promoSavingsPercent, catalogPrice: plan.catalogPrice }
+ : undefined
+ }
+ highlights={plan.highlights.map((h) => <ChannelText key={h} text={h} />)}
+ cta={
  <Link
  href={user ? `/dashboard/billing?plan=${plan.id}&billing=${billing}` : plan.ctaHref}
- className={`flex w-full min-h-11 items-center justify-center text-center py-2.5 rounded-[var(--radius-button)] text-sm font-medium transition ${
- plan.ctaVariant === 'outline' || plan.ctaVariant === 'contact'
- ? 'border border-border text-foreground hover:bg-surface-muted'
- : plan.highlighted
- ? 'bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold'
- : 'bg-surface-muted hover:bg-border text-foreground border border-border'
- }`}
+ className={planRowButtonClass(plan.ctaVariant === 'outline' || plan.ctaVariant === 'contact' ? 'outline' : 'solid')}
  >
  {user ? (plan.id === 'FREE' ? 'Mon espace gratuit' : 'Choisir ce forfait') : plan.cta}
+ <ArrowRight className="h-4 w-4" aria-hidden />
  </Link>
- </div>
- </article>
- ))}
+ }
+ />
+ );
+ })}
  </div>
  </div>
  ))}
@@ -547,7 +374,7 @@ export default function LandingPricingSection({
  <tr className="bg-primary/10 dark:bg-primary/10">
  <td
  colSpan={comparisonIds.length + 1}
- className="py-2.5 px-4 text-xs font-bold uppercase tracking-wider text-primary dark:text-primary"
+ className="py-2.5 px-4 text-xs font-bold text-primary dark:text-primary"
  >
  {row.category}
  </td>
@@ -599,18 +426,8 @@ export default function LandingPricingSection({
  </div>
  </div>
 
- <div className="mt-8 max-w-2xl mx-auto rounded-xl border border-primary/25 bg-primary/5 p-4 text-center sm:text-left flex flex-col sm:flex-row items-center sm:items-start gap-3">
- <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
- <div className="space-y-1">
- <p className="text-xs font-bold text-primary">Le quota d’invités repart à zéro à chaque période</p>
- <p className="text-xs text-foreground leading-relaxed">
- Les invités sont comptés <strong>sur la période payée en cours</strong> (le mois pour les organisations, le trimestre pour les particuliers), pas sur tout l’historique du compte. Vos invités passés ne bloquent jamais un nouvel événement.
- </p>
- </div>
- </div>
-
- <p className="text-center text-xs text-muted mt-6 max-w-2xl mx-auto leading-relaxed">
- Réduction annuelle de {ANNUAL_DISCOUNT_PERCENT} % sur le total (12 mois ou 4 trimestres). Tous les forfaits incluent des données séparées des autres organisations et l’espace invité pour répondre aux invitations.
+ <p className="mt-8 text-sm text-white/70">
+ Le quota d’invités repart à zéro à chaque période payée.
  </p>
  </div>
  </section>

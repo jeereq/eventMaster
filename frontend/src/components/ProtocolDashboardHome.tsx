@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import {
   PageHeader,
-  Breadcrumbs,
   Button,
   Alert,
   SkeletonStatsRow,
@@ -14,15 +13,9 @@ import WorkspaceStatsOverview, { type WorkspaceStats } from '@/components/Worksp
 import ProtocolTasksInbox from '@/components/ProtocolTasksInbox';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import {
-  CalendarCheck,
-  ClipboardList,
-  Inbox,
   Loader2,
-  Rss,
   ScanLine,
-  Store,
-  Ticket,
-} from 'lucide-react';
+} from '@/components/icons';
 
 export default function ProtocolDashboardHome() {
   const [workspace, setWorkspace] = useState<WorkspaceStats | null>(null);
@@ -63,9 +56,6 @@ export default function ProtocolDashboardHome() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title="Accueil & Protocole"
-        description="Votre journée en un coup d’œil : événements du jour, émargement et accueil des invités."
-        breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil' }]} />}
         action={
           <div className="flex flex-wrap gap-2">
             {todayEvent ? (
@@ -81,16 +71,6 @@ export default function ProtocolDashboardHome() {
                 </Button>
               </Link>
             )}
-            <Link href="/dashboard/protocol?view=tasks">
-              <Button size="sm" variant="secondary" leftIcon={<ClipboardList className="w-4 h-4" />}>
-                Mes tâches du jour
-              </Button>
-            </Link>
-            <Link href="/dashboard/tickets">
-              <Button size="sm" variant="secondary" leftIcon={<Ticket className="w-4 h-4" />}>
-                Billetterie
-              </Button>
-            </Link>
           </div>
         }
       />
@@ -110,64 +90,10 @@ export default function ProtocolDashboardHome() {
         <p className="text-sm text-muted">Aucune statistique disponible pour le moment.</p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        <Link
-          href="/dashboard/protocol"
-          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
-        >
-          <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
-            <ScanLine className="w-3.5 h-3.5 text-primary" /> Accueil
-          </p>
-          <p className="text-sm font-semibold mt-1">Événements du jour J</p>
-        </Link>
-        <Link
-          href="/dashboard/tickets"
-          className="rounded-2xl border border-primary/25 bg-surface/80 hover:bg-surface px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
-        >
-          <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
-            <Ticket className="w-3.5 h-3.5 text-primary" /> Billetterie
-          </p>
-          <p className="text-sm font-semibold mt-1">Commandes, ventes & entrées</p>
-        </Link>
-        <Link
-          href="/dashboard/publications"
-          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
-        >
-          <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
-            <Rss className="w-3.5 h-3.5 text-primary" /> Réalisations
-          </p>
-          <p className="text-sm font-semibold mt-1">Photos et actualités</p>
-        </Link>
-        <Link
-          href="/dashboard/quotes"
-          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
-        >
-          <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
-            <Inbox className="w-3.5 h-3.5 text-primary" /> Devis
-          </p>
-          <p className="text-sm font-semibold mt-1">Suivi des demandes</p>
-        </Link>
-        <Link
-          href="/dashboard/bookings?tab=bookings"
-          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
-        >
-          <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
-            <CalendarCheck className="w-3.5 h-3.5 text-primary" /> Réservations
-          </p>
-          <p className="text-sm font-semibold mt-1">Dates confirmées</p>
-        </Link>
-      </div>
-
       <div id="protocol-home-tasks">
         <ProtocolTasksInbox protocol />
       </div>
 
-      <p className="text-xs text-muted">
-        Besoin d’une salle ou d’un prestataire ?{' '}
-        <Link href="/dashboard/catalogue" className="font-semibold text-primary hover:underline inline-flex items-center gap-1">
-          <Store className="w-3.5 h-3.5" /> Explorer le catalogue
-        </Link>
-      </p>
     </div>
   );
 }

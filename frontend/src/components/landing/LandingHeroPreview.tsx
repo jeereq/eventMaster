@@ -16,7 +16,7 @@ import {
   Heart,
   ShieldCheck,
   Wand2,
-} from 'lucide-react';
+} from '@/components/icons';
 import { cn } from '@/lib/cn';
 import type { LandingProfileId } from '@/lib/landingProfiles';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -209,12 +209,6 @@ export default function LandingHeroPreview({
 
   return (
     <div className={cn('relative w-full', !embedded && 'max-w-4xl mx-auto')}>
-      {!embedded ? (
-        <div
-          className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-primary/20 via-[color:var(--festive-accent-soft)] to-primary/10 blur-2xl -z-10 opacity-75 pointer-events-none"
-          aria-hidden
-        />
-      ) : null}
 
       <div className={cn('overflow-hidden space-y-4', embedded ? 'p-0' : 'em-hud-card p-4 sm:p-6')}>
         {/* En-tête de la console d'actions directes */}
@@ -332,7 +326,7 @@ export default function LandingHeroPreview({
         </div>
 
         {/* Note de réassurance sous la grille */}
-        <div className="flex pt-2 border-t border-border/80 flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs text-muted">
+        <div className="flex pt-2 border-t border-border/80 flex-wrap items-center justify-between gap-2 text-xs sm:text-xs text-muted">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" />
             <span>Zéro installation requise · 100% dans le navigateur</span>

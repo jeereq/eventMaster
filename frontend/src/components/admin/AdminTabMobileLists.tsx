@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Check, Clock, Edit2, Eye, Trash2, X } from 'lucide-react';
+import { Check, Clock, Edit2, Eye, Trash2, X } from '@/components/icons';
 import type { PlanId } from '@/config/landingPricing';
 import { platformRoleLabel, orgRoleLabel, accountKindShortLabel, formatAdminDate } from '@/lib/adminRoles';
 
@@ -112,14 +112,14 @@ export function TenantsMobileList({
  <div className="flex items-start justify-between gap-2">
  <div className="min-w-0">
  <p className="font-bold text-foreground dark:text-foreground truncate">{t.name}</p>
- <p className="text-[10px] text-muted">Inscrite le {new Date(t.createdAt).toLocaleDateString('fr-FR')}</p>
+ <p className="text-xs text-muted">Inscrite le {new Date(t.createdAt).toLocaleDateString('fr-FR')}</p>
  </div>
- <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${planBadgeClass(t.plan)}`}>
+ <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-extrabold border shrink-0 ${planBadgeClass(t.plan)}`}>
  {t.plan}
  </span>
  </div>
  <div className="flex flex-wrap items-center gap-2 text-xs">
- <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${licenseClass}`}>
+ <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-extrabold border ${licenseClass}`}>
  {licenseLabel}
  </span>
  {t.licenseExpiresAt && (
@@ -136,7 +136,7 @@ export function TenantsMobileList({
  <p className="text-muted break-all">{t.managerEmail}</p>
  </div>
  {t.licenseKey && (
- <p className="text-[10px] bg-surface-muted text-muted px-2 py-1 rounded border font-mono truncate" title={t.licenseKey}>
+ <p className="text-xs bg-surface-muted text-muted px-2 py-1 rounded border font-mono truncate" title={t.licenseKey}>
  {t.licenseKey}
  </p>
  )}
@@ -196,7 +196,7 @@ export function UsersMobileList({
  <p className="font-bold text-foreground dark:text-foreground truncate">{u.name || 'Sans nom'}</p>
  <p className="text-xs text-muted break-all">{u.email}</p>
  </div>
- <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${
+ <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-extrabold border shrink-0 ${
  u.role === 'SUPER_ADMIN' ? 'bg-rose-50 border-rose-100 text-rose-700' :
  u.role === 'COMMERCIAL' ? 'bg-amber-50 border-amber-100 text-amber-700' :
  'bg-surface-muted border-border text-muted'
@@ -266,7 +266,7 @@ export function EventsMobileList({
  <p className="font-semibold text-foreground dark:text-foreground">{e.tenantName}</p>
  <p className="text-muted break-words">{e.location}</p>
  </div>
- <div className="flex flex-wrap gap-2 text-[10px] font-bold">
+ <div className="flex flex-wrap gap-2 text-xs font-bold">
  <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
  {e.guestCount} invités
  </span>
@@ -318,7 +318,7 @@ export function GuestsMobileList({
  <p className="font-bold text-foreground dark:text-foreground">{g.lastName} {g.firstName}</p>
  <p className="text-xs text-muted break-all">{g.email}</p>
  </div>
- <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${
+ <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-extrabold border shrink-0 ${
  g.rsvp === 'ACCEPTED' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
  g.rsvp === 'DECLINED' ? 'bg-rose-50 border-rose-100 text-rose-700' :
  'bg-amber-50 border-amber-100 text-amber-700'

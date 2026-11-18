@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Clock, CreditCard, Eye, Loader2 } from 'lucide-react';
+import { Clock, CreditCard, Eye, Loader2 } from '@/components/icons';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
@@ -276,7 +276,7 @@ export default function SubscriptionRequestListPanel({
                         e.stopPropagation();
                         onApprove(req);
                       }}
-                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[11px] font-bold rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
                     >
                       {isRowBusy && <Loader2 className="w-3 h-3 animate-spin shrink-0" />}
                       {req.requestKind === 'discount' ? 'Valider le rabais' : 'Approuver'}
@@ -289,7 +289,7 @@ export default function SubscriptionRequestListPanel({
                         e.stopPropagation();
                         onReject(req.id);
                       }}
-                      className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-[11px] font-bold rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                      className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
                     >
                       {isRowBusy && <Loader2 className="w-3 h-3 animate-spin shrink-0" />}
                       Rejeter
@@ -343,14 +343,14 @@ export default function SubscriptionRequestListPanel({
                           {isAnnualDurationDays(req.durationDays) ? ' · annuel' : ''}
                         </p>
                         {req.proofOfPayment && (
-                          <p className="text-[11px] text-muted italic truncate" title={req.proofOfPayment}>
+                          <p className="text-xs text-muted italic truncate" title={req.proofOfPayment}>
                             &quot;{req.proofOfPayment}&quot;
                           </p>
                         )}
                         {commercial && (
-                          <p className="text-[11px] text-primary font-medium truncate">{commercial}</p>
+                          <p className="text-xs text-primary font-medium truncate">{commercial}</p>
                         )}
-                        <p className="text-[11px] text-muted">
+                        <p className="text-xs text-muted">
                           {new Date(req.createdAt).toLocaleDateString('fr-FR', {
                             day: 'numeric',
                             month: 'short',

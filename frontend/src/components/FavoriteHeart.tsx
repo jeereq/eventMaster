@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Heart } from 'lucide-react';
+import { Heart } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 export default function FavoriteHeart({

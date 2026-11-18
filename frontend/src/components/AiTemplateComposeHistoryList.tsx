@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Clock, ImageIcon, Layers } from 'lucide-react';
+import { Clock, ImageIcon, Layers } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import {
   type AiTemplateComposeHistoryItem,
@@ -163,9 +163,9 @@ export default function AiTemplateComposeHistoryList({
                   <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2 break-words hover:text-primary transition-colors">
                     {composeTitle(item)}
                   </p>
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
                     {hasDualVariants && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
                         <Layers className="w-2.5 h-2.5" />
                         Fidèle + ample
                       </span>
@@ -184,7 +184,7 @@ export default function AiTemplateComposeHistoryList({
                         type="button"
                         onClick={() => onOpen(item, variants[0])}
                         title="Rouvrir avec la Proposition A"
-                        className="text-[11px] font-bold px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition cursor-pointer touch-manipulation"
+                        className="text-xs font-bold px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition cursor-pointer touch-manipulation"
                       >
                         Prop. A
                       </button>
@@ -192,7 +192,7 @@ export default function AiTemplateComposeHistoryList({
                         type="button"
                         onClick={() => onOpen(item, variants[1])}
                         title="Rouvrir avec la Proposition B"
-                        className="text-[11px] font-bold px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition cursor-pointer touch-manipulation"
+                        className="text-xs font-bold px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition cursor-pointer touch-manipulation"
                       >
                         Prop. B
                       </button>
@@ -201,7 +201,7 @@ export default function AiTemplateComposeHistoryList({
                     <button
                       type="button"
                       onClick={() => onOpen(item)}
-                      className="text-[11px] font-semibold text-primary hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-primary hover:underline cursor-pointer"
                     >
                       Rouvrir
                     </button>

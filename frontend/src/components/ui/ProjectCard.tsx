@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ArrowRight, Eye } from 'lucide-react';
+import { ArrowRight, Eye } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 /** Palette de fonds média (sans photo) — verts profonds et tons chauds du nouveau design. */
@@ -282,7 +282,7 @@ export function ProjectCard({
               {value != null && value !== '' && (
                 <p className="text-sm font-semibold text-foreground tracking-tight tabular-nums">{value}</p>
               )}
-              {valueMeta && <p className="mt-0.5 text-[11px] text-muted truncate max-w-[9rem]">{valueMeta}</p>}
+              {valueMeta && <p className="mt-0.5 text-xs text-muted truncate max-w-[9rem]">{valueMeta}</p>}
             </div>
           ) : null}
 
@@ -338,14 +338,14 @@ export function ProjectCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent pointer-events-none" />
         {overlayBadge ? (
           <div className="absolute top-2.5 left-2.5 z-10 max-w-[calc(100%-1.25rem)]">
-            <span className="inline-flex items-center rounded-full bg-white/95 backdrop-blur-sm shadow-sm">
+            <span className="inline-flex items-center rounded-full bg-white/95 shadow-sm">
               {overlayBadge}
             </span>
           </div>
         ) : null}
         <div className="absolute left-3 right-3 bottom-2.5 text-white z-10">
           <p className="font-display font-semibold text-sm leading-snug line-clamp-2 drop-shadow">{title}</p>
-          {overlayMeta ? <p className="text-[11px] text-white/85 mt-0.5 line-clamp-1">{overlayMeta}</p> : null}
+          {overlayMeta ? <p className="text-xs text-white/85 mt-0.5 line-clamp-1">{overlayMeta}</p> : null}
         </div>
       </div>
 
@@ -360,7 +360,7 @@ export function ProjectCard({
           >
             <div className="min-w-0 flex items-center justify-between gap-2">
               {showCta ? (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
                   {ctaLabel || 'Voir la fiche'}
                   <ArrowRight className="w-3 h-3 transition group-hover:translate-x-0.5" />
                 </span>
@@ -375,7 +375,7 @@ export function ProjectCard({
             )}
           </div>
         )}
-        {showCta && footer ? <div className="text-[11px] text-muted">{footer}</div> : null}
+        {showCta && footer ? <div className="text-xs text-muted">{footer}</div> : null}
       </div>
     </div>
   );

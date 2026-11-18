@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, RotateCcw, Trash, ChevronRight } from 'lucide-react';
+import { Plus, RotateCcw, Trash, ChevronRight } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import type { RsvpField, RsvpFieldType } from '@/lib/rsvpFormFields';
 import {
@@ -74,13 +74,13 @@ export default function RsvpFieldTypeEditor({
   return (
     <div className="space-y-3">
       {exportIssues.length > 0 ? (
-        <p role="status" className="text-[10px] text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2 break-words">
+        <p role="status" className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2 break-words">
           {exportIssues[0]}
         </p>
       ) : null}
 
       <div className="space-y-1.5">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Champs du formulaire</p>
+        <p className="text-xs font-bold text-muted">Champs du formulaire</p>
         <ul className="border border-border rounded-[var(--radius-card)] divide-y divide-border overflow-hidden bg-surface">
           {fields.map((field, index) => {
             const kind = getRsvpFieldKindEntry(field);
@@ -100,19 +100,19 @@ export default function RsvpFieldTypeEditor({
                     <span className="block text-xs font-semibold text-foreground truncate">
                       {field.label || `Champ #${index + 1}`}
                     </span>
-                    <span className="block text-[10px] text-muted truncate">
+                    <span className="block text-xs text-muted truncate">
                       {RSVP_FIELD_TYPE_LABELS[field.type] || field.type}
                       {field.analyticsKey ? ` · ${field.analyticsKey}` : ''}
                     </span>
                   </span>
                   <span className="flex items-center gap-1 shrink-0">
                     {mandatory ? (
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                      <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
                         Obligatoire
                       </span>
                     ) : null}
                     {field.required && !mandatory ? (
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded">
+                      <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded">
                         Requis
                       </span>
                     ) : null}
@@ -202,7 +202,7 @@ function FieldDetail({
     <div className="p-3.5 bg-surface border border-border rounded-[var(--radius-card)] space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted">
+          <p className="text-xs font-bold text-muted">
             {mandatory ? `Type · ${kind?.label}` : `Champ #${index + 1}`}
           </p>
           <p className="text-sm font-semibold text-foreground mt-0.5 truncate">{field.label || 'Sans libellé'}</p>
@@ -221,7 +221,7 @@ function FieldDetail({
       </div>
 
       <label className="space-y-1 block">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Libellé affiché à l’invité</span>
+        <span className="text-xs font-semibold text-muted">Libellé affiché à l’invité</span>
         <input
           type="text"
           value={field.label}
@@ -238,7 +238,7 @@ function FieldDetail({
       </label>
 
       <label className="space-y-1 block">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Affichage</span>
+        <span className="text-xs font-semibold text-muted">Affichage</span>
         <select
           value={field.type}
           onChange={(e) => {
@@ -262,7 +262,7 @@ function FieldDetail({
       </label>
 
       <label className="flex items-center justify-between gap-3 cursor-pointer">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Champ requis</span>
+        <span className="text-xs font-semibold text-muted">Champ requis</span>
         <input
           type="checkbox"
           checked={Boolean(field.required) || mandatory}
@@ -275,7 +275,7 @@ function FieldDetail({
 
       {needsOptions && kind?.predefinedOptions ? (
         <div className="space-y-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Options</span>
+          <span className="text-xs font-semibold text-muted">Options</span>
           <div className="inline-flex p-0.5 rounded-[var(--radius-button)] bg-surface-muted border border-border">
             <button
               type="button"
@@ -284,7 +284,7 @@ function FieldDetail({
                 onChange({ options: kind.predefinedOptions });
               }}
               className={cn(
-                'px-2.5 py-1 rounded-md text-[11px] font-semibold transition',
+                'px-2.5 py-1 rounded-md text-xs font-semibold transition',
                 optionMode === 'predefined' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
               )}
             >
@@ -297,7 +297,7 @@ function FieldDetail({
                 setCustomDraft(field.options || kind.predefinedOptions || '');
               }}
               className={cn(
-                'px-2.5 py-1 rounded-md text-[11px] font-semibold transition',
+                'px-2.5 py-1 rounded-md text-xs font-semibold transition',
                 optionMode === 'custom' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
               )}
             >
@@ -308,7 +308,7 @@ function FieldDetail({
                 type="button"
                 onClick={() => setOptionMode('brands')}
                 className={cn(
-                  'px-2.5 py-1 rounded-md text-[11px] font-semibold transition',
+                  'px-2.5 py-1 rounded-md text-xs font-semibold transition',
                   optionMode === 'brands' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
                 )}
               >
@@ -338,7 +338,7 @@ function FieldDetail({
         </div>
       ) : needsOptions ? (
         <label className="space-y-1 block">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Options (séparées par des virgules)</span>
+          <span className="text-xs font-semibold text-muted">Options (séparées par des virgules)</span>
           <input
             type="text"
             value={field.options || ''}
@@ -349,7 +349,7 @@ function FieldDetail({
       ) : null}
 
       <label className="space-y-1 block">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Texte d’aide</span>
+        <span className="text-xs font-semibold text-muted">Texte d’aide</span>
         <input
           type="text"
           value={field.helpText || ''}
@@ -360,7 +360,7 @@ function FieldDetail({
       </label>
 
       <label className="space-y-1 block">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Placeholder</span>
+        <span className="text-xs font-semibold text-muted">Placeholder</span>
         <input
           type="text"
           value={field.placeholder || ''}
@@ -371,7 +371,7 @@ function FieldDetail({
       </label>
 
       <label className="space-y-1 block">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Identifiant d’export</span>
+        <span className="text-xs font-semibold text-muted">Identifiant d’export</span>
         <input
           type="text"
           value={exportKey}
@@ -383,7 +383,7 @@ function FieldDetail({
           className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm font-mono text-foreground focus:outline-none focus:border-primary transition disabled:opacity-60"
           title={mandatory ? 'Identifiant fixe pour les stats EventMaster' : 'Utilisé dans les exports et statistiques'}
         />
-        <span className="block text-[10px] text-muted leading-relaxed">
+        <span className="block text-xs text-muted leading-relaxed">
           Sert aux exports CSV et aux statistiques. Doit être unique entre les champs.
         </span>
       </label>
@@ -392,7 +392,7 @@ function FieldDetail({
         <button
           type="button"
           onClick={onReset}
-          className="text-[11px] font-semibold text-muted hover:text-primary inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
+          className="text-xs font-semibold text-muted hover:text-primary inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
         >
           <RotateCcw className="w-3 h-3" /> Réinitialiser ce type
         </button>

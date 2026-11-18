@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Building2, Calendar, KeyRound, MapPin, Sparkles, Users } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, KeyRound, MapPin, Sparkles, Users } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { listStackClass, StatusPill } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -77,9 +77,9 @@ function Cover({
 }
 
 function VisibilityMark({ item }: { item: CatalogueItem }) {
-  if (item.isBlockedByAdmin) return <StatusPill tone="rose">Bloqué</StatusPill>;
-  if (item.isPublic === true) return <StatusPill tone="emerald">Public</StatusPill>;
-  if (item.isPublic === false) return <StatusPill tone="slate">Masqué</StatusPill>;
+  if (item.isBlockedByAdmin) return <StatusPill tone="rose">Suspendue</StatusPill>;
+  if (item.isPublic === true) return <StatusPill tone="emerald">Publiée</StatusPill>;
+  if (item.isPublic === false) return <StatusPill tone="slate">Brouillon</StatusPill>;
   return null;
 }
 
@@ -87,7 +87,7 @@ function KindMark({ item, size = 'md' }: { item: CatalogueItem; size?: 'sm' | 'm
   const displayKind = catalogueItemDisplayKind(item);
   const Icon = kindIcon(displayKind);
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stage border border-stage-foreground/20 text-stage-foreground text-[11px] font-bold shadow-sm">
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stage border border-stage-foreground/20 text-stage-foreground text-xs font-bold shadow-sm">
       <Icon className="w-3 h-3 text-stage-foreground" strokeWidth={2.4} />
       <span className="hidden sm:inline">{catalogueKindLabel(displayKind)}</span>
     </span>
@@ -133,7 +133,7 @@ function GridCard({
           <FavoriteHeart active={Boolean(favorited)} onToggle={() => onToggleFavorite(item)} />
         </div>
       ) : distance ? (
-        <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-stage text-stage-foreground text-[10px] font-semibold px-2.5 py-0.5 border border-stage-foreground/20 shadow-xs">
+        <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-stage text-stage-foreground text-xs font-semibold px-2.5 py-0.5 border border-stage-foreground/20 shadow-xs">
           {distance}
         </span>
       ) : null}
@@ -162,7 +162,7 @@ function GridCard({
 
         <div className="p-2.5 sm:p-4 space-y-1.5 sm:space-y-2 flex-1 flex flex-col justify-between">
           <div className="space-y-1">
-            <h3 className="font-bold text-xs sm:text-[15px] text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
+            <h3 className="font-bold text-xs sm:text-base text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
               {item.title}
             </h3>
 
@@ -190,7 +190,7 @@ function GridCard({
 
           <div className="pt-2 border-t border-border/50 flex items-baseline justify-between text-xs">
             <div>
-              <span className="font-bold text-sm sm:text-[15px] text-foreground tabular-nums">
+              <span className="font-bold text-sm sm:text-base text-foreground tabular-nums">
                 {cataloguePriceCaption(item)}
               </span>
               {catalogueHasPromo(item) && item.priceFromFc != null ? (

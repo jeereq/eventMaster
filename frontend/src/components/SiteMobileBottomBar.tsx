@@ -9,6 +9,7 @@ import {
   Store,
   LayoutGrid,
   Sparkles,
+  Calculator,
   Menu,
   X,
   FileText,
@@ -23,7 +24,7 @@ import {
   Shield,
   Images,
   ArrowRight,
-} from 'lucide-react';
+} from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { revealAndScrollToSection } from '@/lib/aiFabPlacement';
 import { motionSafeScrollBehavior } from '@/lib/prefersReducedMotion';
@@ -62,7 +63,7 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
     id: 'simulator',
     label: 'Simulateur',
     href: SIMULATOR_HREF,
-    icon: Sparkles,
+    icon: Calculator,
   },
   {
     id: 'realisations',
@@ -260,7 +261,7 @@ export default function SiteMobileBottomBar({
           className,
         )}
       >
-        <div className="pointer-events-auto max-w-md mx-auto bg-surface/92 dark:bg-stage-elevated/95 backdrop-blur-2xl backdrop-saturate-150 border border-border/80 dark:border-border-subtle/30 rounded-[1.75rem] shadow-[0_12px_36px_-6px_rgba(0,0,0,0.16),0_4px_16px_-2px_rgba(0,0,0,0.06)] dark:shadow-[0_16px_40px_-6px_rgba(0,0,0,0.6)] px-1 py-1 grid grid-cols-5 gap-0.5 items-end relative">
+        <div className="pointer-events-auto max-w-md mx-auto bg-surface/92 dark:bg-stage-elevated/95 backdrop-saturate-150 border border-border/80 dark:border-border-subtle/30 rounded-[1.75rem] shadow-[0_12px_36px_-6px_rgba(0,0,0,0.16),0_4px_16px_-2px_rgba(0,0,0,0.06)] dark:shadow-[0_16px_40px_-6px_rgba(0,0,0,0.6)] px-1 py-1 grid grid-cols-5 gap-0.5 items-end relative">
           {SITE_MOBILE_NAV_ITEMS.map((item) => {
             const active = isItemActive(item.href, pathname, currentHash, sheetOpen);
             const Icon = item.id === 'more' && sheetOpen ? X : item.icon;
@@ -293,7 +294,7 @@ export default function SiteMobileBottomBar({
                   </span>
                 )}
 
-                <span className="text-[10.5px] min-[400px]:text-xs tracking-tight leading-tight truncate max-w-full text-center">
+                <span className="text-xs min-[400px]:text-xs tracking-tight leading-tight truncate max-w-full text-center">
                   {item.id === 'more' && sheetOpen ? (
                     'Fermer'
                   ) : item.shortLabel ? (
@@ -345,7 +346,7 @@ export default function SiteMobileBottomBar({
         <div className="md:hidden">
           {/* Arrière-plan flouté d'occlusion */}
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 transition-opacity animate-in fade-in duration-200"
+            className="fixed inset-0 bg-black/60 z-50 transition-opacity animate-in fade-in duration-200"
             onClick={() => setSheetOpen(false)}
             aria-hidden
           />
@@ -379,7 +380,7 @@ export default function SiteMobileBottomBar({
 
             {/* Section 1 : Pages secondaires (sans Accueil, Marketplace, Simulateur, Plans) */}
             <div className="space-y-1">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider px-1">
+              <span className="text-xs font-bold text-muted px-1">
                 Explorer
               </span>
               <div className="grid grid-cols-1 gap-1.5 pt-1">
@@ -424,7 +425,7 @@ export default function SiteMobileBottomBar({
 
             {/* Section 2 : Espace Utilisateur & Compte */}
             <div className="space-y-1 pt-1">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider px-1">
+              <span className="text-xs font-bold text-muted px-1">
                 Compte
               </span>
               {user ? (
@@ -495,7 +496,7 @@ export default function SiteMobileBottomBar({
 
             {/* Section 3 : Préférences rapides & PWA */}
             <div className="space-y-1 pt-1">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider px-1">
+              <span className="text-xs font-bold text-muted px-1">
                 Préférences
               </span>
               <div className="grid grid-cols-1 gap-2 pt-1">

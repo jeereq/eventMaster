@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, Check, Loader2, Volume2, VolumeX } from 'lucide-react';
+import { Bell, Check, Loader2, Volume2, VolumeX } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { notificationTypeLabel } from '@/config/platformNotifications';
 import {
@@ -86,7 +86,7 @@ export function NotificationBell({ className }: { className?: string }) {
         {unreadCount > 0 ? (
           <UnreadCountBadge
             count={unreadCount}
-            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-danger text-primary-foreground text-[10px] font-bold tabular-nums"
+            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-danger text-primary-foreground text-xs font-bold tabular-nums"
           />
         ) : null}
       </button>
@@ -167,7 +167,7 @@ export function NotificationBell({ className }: { className?: string }) {
                     )}
                     <div className={cn(!n.readAt ? '' : 'pl-4')}>
                       <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                        <span className="text-xs font-semibold text-primary">
                           {notificationTypeLabel(n.type)}
                         </span>
                         <span className="text-xs text-muted">{formatRelativeTime(n.createdAt)}</span>
