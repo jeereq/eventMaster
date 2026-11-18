@@ -13,7 +13,7 @@ import type { ThreeEvent } from '@react-three/fiber';
  */
 
 export type SeatPose = { localX: number; localZ: number; y: number; faceY: number };
-export type TheaterSeatVariant = 'theater' | 'lounge';
+export type TheaterSeatVariant = 'theater' | 'lounge' | 'cinema';
 
 const PICKED = '#93c5fd';
 const BLOCKED = '#64748b';
@@ -29,6 +29,26 @@ function rounded(w: number, h: number, d: number, r: number, rotX = 0, pos: [num
 
 function seatGeometries(variant: TheaterSeatVariant, spacing: number) {
   const w = Math.min(0.5, spacing - 0.06);
+  if (variant === 'cinema') {
+    // Fauteuil de multiplexe : assise épaisse, dossier haut avec appui-tête,
+    // joues pleines jusqu’au sol et larges accoudoirs avec porte-gobelet.
+    const cw = Math.min(0.5, spacing - 0.05);
+    return {
+      cushion: rounded(cw, 0.15, 0.5, 0.06, -0.06, [0, 0.43, 0.07]),
+      back: rounded(cw - 0.01, 0.8, 0.16, 0.07, -0.2, [0, 0.9, -0.19]),
+      shell: rounded(cw + 0.01, 0.84, 0.04, 0.018, -0.2, [0, 0.9, -0.285]),
+      pan: rounded(cw - 0.02, 0.06, 0.46, 0.012, -0.06, [0, 0.34, 0.05]),
+      standard: rounded(0.07, 0.64, 0.66, 0.025, 0, [0, 0.32, -0.04]),
+      arm: rounded(0.11, 0.06, 0.62, 0.028, 0, [0, 0.67, 0.0]),
+      plate: rounded(0.07, 0.026, 0.006, 0.002, -0.2, [0, 1.12, -0.31]),
+      cup: (() => {
+        const g = new THREE.TorusGeometry(0.038, 0.009, 6, 16);
+        g.rotateX(Math.PI / 2);
+        g.translate(0, 0.705, 0.22);
+        return g;
+      })(),
+    };
+  }
   if (variant === 'lounge') {
     return {
       cushion: rounded(w, 0.14, 0.52, 0.05, -0.05, [0, 0.42, 0.04]),
@@ -38,6 +58,7 @@ function seatGeometries(variant: TheaterSeatVariant, spacing: number) {
       standard: rounded(0.06, 0.5, 0.6, 0.02, 0, [0, 0.25, -0.03]),
       arm: rounded(0.09, 0.05, 0.56, 0.02, 0, [0, 0.55, -0.02]),
       plate: rounded(0.07, 0.025, 0.006, 0.002, -0.22, [0, 0.78, -0.305]),
+      cup: null,
     };
   }
   return {
@@ -48,6 +69,7 @@ function seatGeometries(variant: TheaterSeatVariant, spacing: number) {
     standard: rounded(0.05, 0.6, 0.5, 0.018, 0, [0, 0.3, -0.07]),
     arm: rounded(0.075, 0.035, 0.46, 0.016, 0, [0, 0.62, -0.04]),
     plate: rounded(0.065, 0.024, 0.006, 0.002, -0.2, [0, 1.05, -0.338]),
+    cup: null,
   };
 }
 
@@ -101,29 +123,35 @@ export function TheaterSeatRow({
   onSeat?: (index: number, e: ThreeEvent<MouseEvent>) => void;
 }) {
   const geos = useMemo(() => seatGeometries(variant, spacing), [variant, spacing]);
-  useLayoutEffect(() => () => Object.values(geos).forEach((g) => g.dispose()), [geos]);
+  useLayoutEffect(() => () => Object.values(geos).forEach((g) => g?.dispose()), [geos]);
 
   const mats = useMemo(() => {
     const upholstery = new THREE.MeshPhysicalMaterial({
       color: '#ffffff',
       roughness: 0.92,
-      sheen: variant === 'theater' ? 0.8 : 0.4,
+      // Reflet velours discret : un voile blanc trop fort délavait la teinte du tissu.
+      sheen: variant === 'theater' ? 0.5 : variant === 'cinema' ? 0.3 : 0.4,
       sheenRoughness: 0.55,
       sheenColor: new THREE.Color('#ffffff'),
     });
+    const cinema = variant === 'cinema';
     const shell = new THREE.MeshStandardMaterial({
-      color: variant === 'theater' ? '#1c1917' : frameColor,
-      roughness: variant === 'theater' ? 0.45 : 0.6,
+      color: variant === 'theater' ? '#1c1917' : cinema ? '#141215' : frameColor,
+      roughness: variant === 'theater' ? 0.45 : cinema ? 0.75 : 0.6,
       metalness: 0.05,
     });
     const standard = new THREE.MeshStandardMaterial({
-      color: variant === 'theater' ? '#23201d' : frameColor,
-      roughness: 0.5,
+      color: variant === 'theater' ? '#23201d' : cinema ? '#1b181c' : frameColor,
+      roughness: cinema ? 0.85 : 0.5,
       metalness: variant === 'theater' ? 0.35 : 0.05,
     });
-    const arm = new THREE.MeshStandardMaterial({ color: variant === 'theater' ? '#5b3a22' : frameColor, roughness: 0.45 });
+    const arm = new THREE.MeshStandardMaterial({
+      color: variant === 'theater' ? '#5b3a22' : cinema ? '#2a2629' : frameColor,
+      roughness: cinema ? 0.7 : 0.45,
+    });
+    const cupMat = new THREE.MeshStandardMaterial({ color: '#0b0b0d', roughness: 0.4, metalness: 0.5 });
     const brass = new THREE.MeshStandardMaterial({ color: '#c4a35a', metalness: 0.8, roughness: 0.25 });
-    return { upholstery, shell, standard, arm, brass };
+    return { upholstery, shell, standard, arm, brass, cupMat };
   }, [variant, frameColor]);
   useLayoutEffect(() => () => Object.values(mats).forEach((m) => m.dispose()), [mats]);
 
@@ -157,6 +185,7 @@ export function TheaterSeatRow({
       plate: { geometry: geos.plate, material: mats.brass, matrices: seatM },
       standard: { geometry: geos.standard, material: mats.standard, matrices: standM },
       arm: { geometry: geos.arm, material: mats.arm, matrices: standM },
+      ...(geos.cup ? { cup: { geometry: geos.cup, material: mats.cupMat, matrices: standM } } : {}),
     };
     return list;
   }, [poses, spacing, picked, blocked, seatColor, geos, mats]);
@@ -177,6 +206,7 @@ export function TheaterSeatRow({
       <Instanced part={parts.plate} castShadow={false} />
       <Instanced part={parts.standard} castShadow={castShadow} />
       <Instanced part={parts.arm} castShadow={castShadow} />
+      {parts.cup ? <Instanced part={parts.cup} castShadow={false} /> : null}
     </group>
   );
 }
