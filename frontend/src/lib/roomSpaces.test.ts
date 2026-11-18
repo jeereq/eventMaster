@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import type { RoomLayoutBlueprint } from './roomLayoutUtils.ts';
 import {
   dollhouseOverviewPose,
+  entranceEyeLevelPose,
   findRoomSpace,
   listRoomSpaces,
   roomSpaceCameraPose,
@@ -111,5 +112,27 @@ describe('cadrages caméra', () => {
   it('vue maquette : caméra de biais, au-dessus de la salle', () => {
     const pose = dollhouseOverviewPose({ widthM: 24, depthM: 18 });
     assert.ok(pose.pos[0] > 0 && pose.pos[2] > 0 && pose.pos[1] > 8);
+  });
+});
+
+describe('entranceEyeLevelPose', () => {
+  it('se place juste après l’entrée, à hauteur d’yeux, tourné vers le centre', () => {
+    const pose = entranceEyeLevelPose(blueprint({
+      fixtures: [{ id: 'e', kind: 'entrance', x: 45, y: 96, w: 10, h: 4 }],
+    } as Partial<RoomLayoutBlueprint>));
+    assert.ok(pose);
+    // Entrée au sud (z ≈ +7.8 m) : la caméra entre dans la salle (z plus petit) sans sortir des murs.
+    assert.ok(pose.pos[2] < 7.8 && pose.pos[2] <= 8 - 0.6);
+    assert.ok(Math.abs(pose.pos[0]) < 0.01);
+    assert.equal(pose.pos[1], 1.65);
+    assert.deepEqual(pose.target, [0, 1.1, 0]);
+  });
+
+  it('se rabat sur une porte, et renvoie null sans porte ni entrée', () => {
+    const withDoor = entranceEyeLevelPose(blueprint({
+      fixtures: [{ id: 'd', kind: 'door', x: 0, y: 45, w: 3, h: 10 }],
+    } as Partial<RoomLayoutBlueprint>));
+    assert.ok(withDoor && withDoor.pos[0] > -10 + 0.59);
+    assert.equal(entranceEyeLevelPose(blueprint({})), null);
   });
 });

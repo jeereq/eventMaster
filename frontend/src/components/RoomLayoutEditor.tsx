@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useHideAiFabWhileVisible } from '@/components/landing/useHideAiFabWhileVisible';
+import { ROOM_INTRO_VIEWS, introViewLabel, resolveIntroView, type RoomIntroView } from '@/lib/roomIntroView';
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
@@ -500,6 +501,20 @@ function ToolbarCluster({
   );
 }
 
+/**
+ * Menus flottants de la barre d’outils : ceux du bout de la barre (Rendu, Lumière…)
+ * débordaient à droite de l’écran. S’il dépasse, le menu s’aligne sur le bord droit de son bouton.
+ */
+function keepPanelOnScreen(panel: HTMLDivElement | null) {
+  if (!panel || typeof window === 'undefined') return;
+  if (!window.matchMedia('(min-width: 1024px)').matches) return;
+  const rect = panel.getBoundingClientRect();
+  if (rect.right > window.innerWidth - 8) {
+    panel.style.left = 'auto';
+    panel.style.right = '0';
+  }
+}
+
 function EditorToolGroup({
   id,
   label,
@@ -565,6 +580,7 @@ function EditorToolGroup({
       {open ? (
         <div
           id={panelId}
+          ref={keepPanelOnScreen}
           className={cn(
             'basis-full w-full flex flex-wrap items-center gap-1.5',
             'lg:absolute lg:left-0 lg:top-full lg:z-40 lg:mt-2 lg:w-max lg:max-w-[min(40rem,calc(100vw-4rem))]',
@@ -1025,6 +1041,8 @@ export default function RoomLayoutEditor({
   const [wallEditMode, setWallEditMode] = useState(false);
   const [lockOrbit, setLockOrbit] = useState(true);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
+  // Aperçu de la « découverte du plan » : chaque incrément rejoue l’arrivée choisie.
+  const [introReplayKey, setIntroReplayKey] = useState(0);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
   const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors' | 'podiums' | 'instruments' | 'bars' | 'hospitality' | 'environment' | 'elements' | 'plots'>(null);
   const [elementCreatorOpen, setElementCreatorOpen] = useState(false);
@@ -2589,6 +2607,17 @@ export default function RoomLayoutEditor({
     renderQualityRaw === 'showcase' && !caps.canShowcaseRender ? 'standard' : renderQualityRaw;
   const lightingPreset = (blueprint.metadata.lightingPreset ?? 'auto') as LightingPreset;
 
+  const replayIntro = () => setIntroReplayKey((k) => k + 1);
+
+  const setIntroView = (view: RoomIntroView) => {
+    updateBlueprint(
+      { ...blueprint, metadata: { ...blueprint.metadata, introView: view } },
+      { message: `Découverte du plan : ${introViewLabel(view)}`, kind: 'settings' },
+    );
+    // Aperçu immédiat : on montre l’arrivée telle que les visiteurs la verront.
+    if (view !== 'none') replayIntro();
+  };
+
   const setRenderQuality = (q: RenderQuality) => {
     if (q === 'showcase' && !caps.canShowcaseRender) {
       log('Showcase réservé aux forfaits Premium / Complet', 'info');
@@ -2948,6 +2977,9 @@ export default function RoomLayoutEditor({
         blueprint={blueprint}
         selected={selection}
         introFlyIn
+        // À l’ouverture, l’éditeur garde le survol ; l’aperçu rejoue la perspective choisie pour les visiteurs.
+        introView={introReplayKey > 0 ? undefined : 'arc'}
+        introReplayKey={introReplayKey}
         onSelect={handleCanvasSelect}
         onMoveItem={handleWebGLMove}
         onMoveEnd={handleWebGLMoveEnd}
@@ -9333,6 +9365,32 @@ export default function RoomLayoutEditor({
           })}
         </select>
       </label>
+      <label
+        className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')}
+        title="Découverte du plan : la perspective par laquelle vos visiteurs arrivent sur la salle en 3D"
+      >
+        <Video className="w-3.5 h-3.5" aria-hidden />
+        <span className="sr-only sm:not-sr-only">Découverte :</span>
+        <select
+          value={resolveIntroView(blueprint.metadata.introView)}
+          onChange={(e) => setIntroView(e.target.value as RoomIntroView)}
+          className="bg-transparent text-xs font-bold text-foreground outline-none"
+          aria-label="Découverte du plan : perspective d’arrivée"
+        >
+          {ROOM_INTRO_VIEWS.map((v) => (
+            <option key={v.id} value={v.id}>{v.label}</option>
+          ))}
+        </select>
+      </label>
+      <button
+        type="button"
+        onClick={replayIntro}
+        disabled={walkthroughActive || resolveIntroView(blueprint.metadata.introView) === 'none'}
+        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+        title="Rejouer l’arrivée telle que la verront vos visiteurs"
+      >
+        <RotateCcw className="w-3.5 h-3.5" aria-hidden /> Revoir l’arrivée
+      </button>
       <Gate allowed={caps.canShowcaseRender} need={{ feature: 'canShowcaseRender' }}><button
         type="button"
         onClick={() => {

@@ -331,3 +331,25 @@ export function dollhouseOverviewPose(room: { widthM: number; depthM: number; fo
 
 /** Hauteur de coupe des murs en vue maquette (m). */
 export const DOLLHOUSE_WALL_CUT_M = 1.25;
+
+/**
+ * Point de vue « depuis l’entrée » : à hauteur d’yeux, juste après la porte, tourné vers
+ * le centre de la salle, comme un invité qui arrive. Sans entrée ni porte sur le plan → null.
+ */
+export function entranceEyeLevelPose(blueprint: RoomLayoutBlueprint): CameraPoseLite | null {
+  const widthM = finite(blueprint.canvas?.widthM, 20) > 0 ? finite(blueprint.canvas?.widthM, 20) : 20;
+  const depthM = finite(blueprint.canvas?.heightM, 16) > 0 ? finite(blueprint.canvas?.heightM, 16) : 16;
+  const fixtures = blueprint.fixtures ?? [];
+  const door = fixtures.find((f) => f.kind === 'entrance') ?? fixtures.find((f) => f.kind === 'door');
+  if (!door) return null;
+  const c = pctCenterToWorld(finite(door.x, 0) + finite(door.w, 0) / 2, finite(door.y, 0) + finite(door.h, 0) / 2, widthM, depthM);
+  const len = Math.hypot(c.x, c.z);
+  // Porte au milieu du plan (cas rare) : on regarde vers le nord, comme sur le plan 2D.
+  const ux = len > 0.3 ? -c.x / len : 0;
+  const uz = len > 0.3 ? -c.z / len : -1;
+  const step = Math.min(1.6, Math.max(0.6, len * 0.4));
+  const margin = 0.6;
+  const px = Math.max(-widthM / 2 + margin, Math.min(widthM / 2 - margin, c.x + ux * step));
+  const pz = Math.max(-depthM / 2 + margin, Math.min(depthM / 2 - margin, c.z + uz * step));
+  return { pos: [px, 1.65, pz], target: [0, 1.1, 0] };
+}
