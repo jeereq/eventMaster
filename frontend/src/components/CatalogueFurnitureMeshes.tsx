@@ -14,6 +14,7 @@ import { CatalogueArcTable } from '@/components/roomCelebrationMeshes';
 import { TableBase } from '@/components/room/TableBaseMeshes';
 import { SurfaceMat, type SurfaceFinish } from '@/components/room/SurfaceMaterial';
 import { withRepeat } from '@/lib/roomSurfaceFinish';
+import { cushionGeometry, drapedRectSkirtGeometry, drapedSkirtGeometry, legGeometry, moldedDiscGeometry, softBoxGeometry } from '@/components/room/furnitureGeometry';
 
 type MatProps = {
   color: string;
@@ -265,12 +266,10 @@ function CatalogueChairMesh({
             </mesh>
           </React.Fragment>
         ))}
-        <mesh position={[0, seatH, 0]} castShadow receiveShadow>
-          <boxGeometry args={[sw * 0.95, 0.03, sd * 0.9]} />
+        <mesh position={[0, seatH, 0]} geometry={softBoxGeometry(sw * 0.95, 0.03, sd * 0.9, 0.012)} castShadow receiveShadow>
           <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={0.45} metalness={0.08} />
         </mesh>
-        <mesh position={[0, seatH + backH * 0.45, -sd * 0.4]} castShadow>
-          <boxGeometry args={[sw * 0.9, backH, 0.025]} />
+        <mesh position={[0, seatH + backH * 0.45, -sd * 0.4]} geometry={softBoxGeometry(sw * 0.9, backH, 0.025, 0.01)} castShadow>
           <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={0.5} metalness={0.08} />
         </mesh>
         <mesh position={[0, seatH + backH * 0.7, -sd * 0.38]} castShadow>
@@ -399,18 +398,15 @@ function CatalogueChairMesh({
       <group position={position} rotation={[0, rotationY, 0]}>
         {([-1, 1] as const).flatMap((sx) =>
           ([-1, 1] as const).map((sz) => (
-            <mesh key={`${sx}-${sz}`} position={[sx * sw * 0.36, seatH / 2, sz * sd * 0.34]} castShadow>
-              <cylinderGeometry args={[0.018, 0.022, seatH, 10]} />
+            <mesh key={`${sx}-${sz}`} position={[sx * sw * 0.36, seatH / 2, sz * sd * 0.34]} geometry={legGeometry(seatH, 0.02, 0.016, 'taper')} castShadow>
               <Mat finish={frameFinish} color={visual.frameColor} roughness={0.5} metalness={0.15} />
             </mesh>
           )),
         )}
-        <mesh position={[0, seatH, 0]} castShadow receiveShadow>
-          <boxGeometry args={[sw, sh * 1.1, sd]} />
+        <mesh position={[0, seatH, 0]} geometry={cushionGeometry(sw, sh * 1.1, sd, 0.3)} castShadow receiveShadow>
           <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={fabric.roughness} metalness={fabric.metalness} />
         </mesh>
-        <mesh position={[0, seatH + backH * 0.45, -sd * 0.38]} castShadow>
-          <boxGeometry args={[sw * 0.88, backH, 0.04]} />
+        <mesh position={[0, seatH + backH * 0.45, -sd * 0.38]} geometry={softBoxGeometry(sw * 0.88, backH, 0.04, 0.012)} castShadow>
           <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={fabric.roughness} />
         </mesh>
         {/* Cross-back en X */}
@@ -679,14 +675,12 @@ function CatalogueChairMesh({
       <group position={position} rotation={[0, rotationY, 0]}>
         {([-1, 1] as const).flatMap((sx) =>
           ([-1, 1] as const).map((sz) => (
-            <mesh key={`${sx}-${sz}`} position={[sx * sw * 0.34, seatH / 2, sz * sd * 0.32]} castShadow>
-              <cylinderGeometry args={[0.014, 0.016, seatH, 10]} />
+            <mesh key={`${sx}-${sz}`} position={[sx * sw * 0.34, seatH / 2, sz * sd * 0.32]} geometry={legGeometry(seatH, 0.017, 0.012, 'taper')} castShadow>
               <Mat finish={frameFinish} color={visual.frameColor} roughness={0.48} metalness={0.12} />
             </mesh>
           )),
         )}
-        <mesh position={[0, seatH, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[sw * 0.48, sw * 0.5, 0.04, 22]} />
+        <mesh position={[0, seatH, 0]} geometry={moldedDiscGeometry(sw * 0.49, 0.04, 28)} castShadow receiveShadow>
           <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={0.7} />
         </mesh>
         <mesh position={[0, seatH + backH * 0.55, -sd * 0.34]} rotation={[0.12, 0, 0.45]} castShadow>
@@ -725,14 +719,20 @@ function CatalogueChairMesh({
   const isTolix = style === 'tolix';
   const isArmchair = chairType === 'ARMCHAIR' || style === 'lounge' || style === 'club' || style === 'bergere';
   const isBanquet = chairType === 'BANQUET' && !isChiavari;
-  const legR = isChiavari ? 0.011 : isTolix ? 0.014 : isArmchair ? 0.028 : 0.02;
+  const isMedallion = style === 'louis' || style === 'ovalBack' || style === 'phoenix';
+  const legR = isChiavari ? 0.012 : isTolix ? 0.014 : isArmchair ? 0.028 : isMedallion ? 0.022 : 0.02;
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
       {([-1, 1] as const).flatMap((sx) =>
         ([-1, 1] as const).map((sz) => (
-          <mesh key={`${sx}-${sz}`} position={[sx * sw * 0.38, seatH / 2, sz * sd * 0.36]} castShadow>
-            <cylinderGeometry args={[legR, legR * 1.15, seatH, isChiavari ? 8 : 12]} />
+          <mesh
+            key={`${sx}-${sz}`}
+            position={[sx * sw * 0.38, seatH / 2, sz * sd * 0.36]}
+            // Chiavari : pied bambou à nœuds ; Louis / médaillon : pied tourné ; sinon fuseau effilé.
+            geometry={legGeometry(seatH, legR * 1.15, legR * (isMedallion ? 0.8 : 0.9), isChiavari ? 'bamboo' : isMedallion ? 'turned' : 'taper')}
+            castShadow
+          >
             <Mat
               color={visual.frameColor}
               metalness={isChiavari ? 0.85 : isTolix ? 0.82 : 0.35}
@@ -742,14 +742,13 @@ function CatalogueChairMesh({
         )),
       )}
 
-      {style === 'louis' || style === 'ovalBack' || style === 'phoenix' ? (
+      {isMedallion ? (
         <>
-          <mesh position={[0, seatH, 0]} castShadow receiveShadow>
-            <boxGeometry args={[sw * 1.02, 0.05, sd]} />
+          {/* Ceinture moulurée (arêtes adoucies) et galette rembourrée bombée */}
+          <mesh position={[0, seatH, 0]} geometry={softBoxGeometry(sw * 1.02, 0.05, sd, 0.014)} castShadow receiveShadow>
             <Mat finish={frameFinish} color={visual.frameColor} roughness={0.45} metalness={0.15} />
           </mesh>
-          <mesh position={[0, seatH + 0.04, 0]} castShadow>
-            <boxGeometry args={[sw * 0.9, 0.04, sd * 0.88]} />
+          <mesh position={[0, seatH + 0.045, 0.004]} geometry={cushionGeometry(sw * 0.94, 0.045, sd * 0.9, 0.45)} castShadow receiveShadow>
             <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={0.7} />
           </mesh>
           {/* Dossier médaillon : cadre ovale mouluré + garniture capitonnée plate (pas de boule) */}
@@ -761,8 +760,7 @@ function CatalogueChairMesh({
               <group position={[0, cy, -sd * 0.42]} rotation={[-0.1, 0, 0]}>
                 {/* Pieds arrière prolongés jusqu’au médaillon */}
                 {([-1, 1] as const).map((side) => (
-                  <mesh key={side} position={[side * ovalR * 0.92, -ovalR * ovalScaleY * 0.62, 0]} castShadow>
-                    <boxGeometry args={[0.03, ovalR * ovalScaleY * 0.9, 0.03]} />
+                  <mesh key={side} position={[side * ovalR * 0.92, -ovalR * ovalScaleY * 0.62, 0]} geometry={legGeometry(ovalR * ovalScaleY * 0.9, 0.015, 0.016, 'spindle')} castShadow>
                     <Mat finish={frameFinish} color={visual.frameColor} roughness={0.4} metalness={0.12} />
                   </mesh>
                 ))}
@@ -786,30 +784,33 @@ function CatalogueChairMesh({
         </>
       ) : isChiavari ? (
         <>
-          <mesh position={[0, seatH, 0]} castShadow receiveShadow>
-            <boxGeometry args={[sw, 0.04, sd]} />
+          <mesh position={[0, seatH, 0]} geometry={softBoxGeometry(sw, 0.04, sd, 0.012)} castShadow receiveShadow>
             <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={0.55} metalness={0.1} />
           </mesh>
-          {/* Dossier ajouré chiavari */}
-          <mesh position={[-sw * 0.38, seatH + backH * 0.5, -sd * 0.42]} castShadow>
-            <cylinderGeometry args={[0.01, 0.01, backH, 8]} />
-            <Mat finish={frameFinish} color={visual.frameColor} metalness={0.85} roughness={0.2} />
-          </mesh>
-          <mesh position={[sw * 0.38, seatH + backH * 0.5, -sd * 0.42]} castShadow>
-            <cylinderGeometry args={[0.01, 0.01, backH, 8]} />
-            <Mat finish={frameFinish} color={visual.frameColor} metalness={0.85} roughness={0.2} />
-          </mesh>
+          {/* Dossier ajouré chiavari : montants bambou, traverses en échelle */}
+          {([-1, 1] as const).map((side) => (
+            <mesh key={`post-${side}`} position={[side * sw * 0.38, seatH + backH * 0.5, -sd * 0.42]} geometry={legGeometry(backH, 0.01, 0.011, 'bamboo')} castShadow>
+              <Mat finish={frameFinish} color={visual.frameColor} metalness={0.85} roughness={0.2} />
+            </mesh>
+          ))}
           <mesh position={[0, seatH + backH * 0.85, -sd * 0.42]} castShadow>
             <torusGeometry args={[sw * 0.28, 0.01, 8, 20, Math.PI]} />
             <Mat finish={frameFinish} color={visual.frameColor} metalness={0.85} roughness={0.2} />
           </mesh>
-          <mesh position={[0, seatH + backH * 0.35, -sd * 0.42]} castShadow>
-            <boxGeometry args={[sw * 0.55, 0.015, 0.015]} />
-            <Mat finish={frameFinish} color={visual.frameColor} metalness={0.85} roughness={0.2} />
-          </mesh>
-          <mesh position={[0, seatH + 0.03, 0]} castShadow>
-            <boxGeometry args={[sw * 0.85, 0.025, sd * 0.85]} />
-            <Mat color="#f8fafc" roughness={0.7} />
+          {[0.3, 0.52, 0.72].map((t) => (
+            <mesh key={`rail-${t}`} position={[0, seatH + backH * t, -sd * 0.42]} rotation={[0, 0, Math.PI / 2]} geometry={legGeometry(sw * 0.74, 0.0075, 0.0075, 'spindle')} castShadow>
+              <Mat finish={frameFinish} color={visual.frameColor} metalness={0.85} roughness={0.2} />
+            </mesh>
+          ))}
+          {/* Entretoises latérales entre les pieds */}
+          {([-1, 1] as const).map((side) => (
+            <mesh key={`rung-${side}`} position={[side * sw * 0.38, seatH * 0.3, 0]} rotation={[Math.PI / 2, 0, 0]} geometry={legGeometry(sd * 0.72, 0.007, 0.007, 'spindle')} castShadow>
+              <Mat finish={frameFinish} color={visual.frameColor} metalness={0.85} roughness={0.2} />
+            </mesh>
+          ))}
+          {/* Galette d'assise amovible, bombée */}
+          <mesh position={[0, seatH + 0.035, 0.005]} geometry={cushionGeometry(sw * 0.86, 0.035, sd * 0.84, 0.4)} castShadow receiveShadow>
+            <Mat color="#f8fafc" finish="linen" roughness={0.75} />
           </mesh>
           {style === 'tiffany' && (
             <>
@@ -838,12 +839,10 @@ function CatalogueChairMesh({
         </>
       ) : isArmchair ? (
         <>
-          <mesh position={[0, seatH - 0.02, 0]} castShadow>
-            <boxGeometry args={[sw * 1.08, 0.1, sd * 1.05]} />
+          <mesh position={[0, seatH - 0.02, 0]} geometry={softBoxGeometry(sw * 1.08, 0.1, sd * 1.05, 0.02)} castShadow>
             <Mat finish={frameFinish} color={visual.frameColor} metalness={0.15} roughness={0.55} />
           </mesh>
-          <mesh position={[0, seatH + sh * 0.5, 0.02]} castShadow receiveShadow>
-            <boxGeometry args={[sw, sh * 1.35, sd * 0.92]} />
+          <mesh position={[0, seatH + sh * 0.5, 0.02]} geometry={cushionGeometry(sw, sh * 1.35, sd * 0.92, 0.22)} castShadow receiveShadow>
             <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={fabric.roughness} metalness={fabric.metalness} />
           </mesh>
           {style === 'club' ? (
@@ -856,9 +855,9 @@ function CatalogueChairMesh({
             <mesh
               position={[0, seatH + backH * 0.48, -sd * (style === 'lounge' ? 0.46 : 0.4)]}
               rotation={[style === 'lounge' ? -0.26 : style === 'modern' ? -0.1 : 0, 0, 0]}
+              geometry={softBoxGeometry(sw * 1.05, style === 'lounge' ? backH * 0.9 : backH, style === 'modern' ? 0.08 : 0.14, style === 'modern' ? 0.025 : 0.05)}
               castShadow
             >
-              <boxGeometry args={[sw * 1.05, style === 'lounge' ? backH * 0.9 : backH, style === 'modern' ? 0.08 : 0.14]} />
               <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={fabric.roughness} metalness={fabric.metalness} />
             </mesh>
           )}
@@ -881,8 +880,7 @@ function CatalogueChairMesh({
           )}
           {([-1, 1] as const).map((side) => (
             <group key={side} position={[side * sw * (style === 'club' ? 0.56 : 0.52), seatH + (style === 'club' ? 0.1 : 0.14), -0.02]}>
-              <mesh castShadow>
-                <boxGeometry args={[style === 'club' ? 0.17 : style === 'modern' ? 0.05 : 0.11, (style === 'club' ? 0.26 : 0.14) * visual.scale, sd * 0.82]} />
+              <mesh geometry={softBoxGeometry(style === 'club' ? 0.17 : style === 'modern' ? 0.05 : 0.11, (style === 'club' ? 0.26 : 0.14) * visual.scale, sd * 0.82, style === 'modern' ? 0.015 : 0.035)} castShadow>
                 <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={fabric.roughness} metalness={fabric.metalness} />
               </mesh>
               <mesh position={[0, -0.12, sd * 0.2]} castShadow>
@@ -907,12 +905,10 @@ function CatalogueChairMesh({
             <cylinderGeometry args={[sw * 0.46, sw * 0.48, sh * (visual.cushion ? 1.05 : 0.65), 28]} />
             <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={fabric.roughness} metalness={fabric.metalness} />
           </mesh>
-          <mesh position={[0, seatH + backH * 0.48, -sd * 0.4]} rotation={[0.08, 0, 0]} castShadow>
-            <boxGeometry args={[sw * 0.9, backH, 0.055]} />
+          <mesh position={[0, seatH + backH * 0.48, -sd * 0.4]} rotation={[0.08, 0, 0]} geometry={cushionGeometry(sw * 0.9, backH, 0.055, 0)} castShadow>
             <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={fabric.roughness} metalness={fabric.metalness} />
           </mesh>
-          <mesh position={[0, seatH + backH * 0.5, -sd * 0.43]} rotation={[0.08, 0, 0]} castShadow>
-            <boxGeometry args={[sw * 0.94, backH * 1.02, 0.02]} />
+          <mesh position={[0, seatH + backH * 0.5, -sd * 0.43]} rotation={[0.08, 0, 0]} geometry={softBoxGeometry(sw * 0.94, backH * 1.02, 0.02, 0.008)} castShadow>
             <Mat finish={frameFinish} color={visual.frameColor} metalness={0.45} roughness={0.4} />
           </mesh>
           {isBanquet && (
@@ -923,8 +919,7 @@ function CatalogueChairMesh({
           )}
           {visual.hasArms && ([-1, 1] as const).map((side) => (
             <group key={side} position={[side * sw * 0.48, seatH + 0.12, 0]}>
-              <mesh castShadow>
-                <boxGeometry args={[0.05, 0.07, sd * 0.75]} />
+              <mesh geometry={softBoxGeometry(0.05, 0.07, sd * 0.75, 0.02)} castShadow>
                 <Mat finish={frameFinish} color={visual.frameColor} metalness={0.5} roughness={0.35} />
               </mesh>
             </group>
@@ -1115,8 +1110,7 @@ export function CatalogueTableStructure({
   if (shape === 'oval') {
     return (
       <group>
-        <mesh position={[0, topY, 0]} scale={[1, 1, size[1] / size[0]]} castShadow receiveShadow>
-          <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.06, segments]} />
+        <mesh position={[0, topY, 0]} scale={[1, 1, size[1] / size[0]]} geometry={moldedDiscGeometry(size[0] / 2, 0.06, segments)} castShadow receiveShadow>
           <Mat color={topColor} {...topMat} />
         </mesh>
         <mesh position={[0, topY - 0.04, 0]} scale={[1, 1, size[1] / size[0]]} castShadow>
@@ -1124,12 +1118,12 @@ export function CatalogueTableStructure({
           <Mat color="#5c4030" finish="wood" roughness={0.5} />
         </mesh>
         {mat.isCloth ? (
-          <mesh position={[0, topY - 0.17, 0]} scale={[1, 1, size[1] / size[0]]} castShadow receiveShadow>
-            <cylinderGeometry args={[size[0] / 2 * 1.01, size[0] / 2 * 1.035, 0.34, 48, 1, true]} />
+          // Nappe drapée : arrondi sur le chant, léger évasement et plis souples vers l'ourlet.
+          <mesh position={[0, topY + 0.03, 0]} geometry={drapedSkirtGeometry(size[0] / 2, size[1] / 2, 0.4)} castShadow receiveShadow>
             <SurfaceMat
               color={topColor}
-              map={withRepeat(mat.map, 6, 1)}
-              normalMap={withRepeat(mat.normalMap ?? null, 6, 1)}
+              map={withRepeat(mat.map, 1, 1)}
+              normalMap={withRepeat(mat.normalMap ?? null, 1, 1)}
               normalScale={0.6}
               roughness={0.92}
               metalness={0}
@@ -1160,8 +1154,7 @@ export function CatalogueTableStructure({
     // round banquet
     return (
       <group>
-        <mesh position={[0, topY, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.06, segments]} />
+        <mesh position={[0, topY, 0]} geometry={moldedDiscGeometry(size[0] / 2, 0.06, segments)} castShadow receiveShadow>
           <Mat color={topColor} {...topMat} />
         </mesh>
         <mesh position={[0, topY - 0.035, 0]} castShadow>
@@ -1169,13 +1162,12 @@ export function CatalogueTableStructure({
           <Mat color="#5c4030" finish="wood" roughness={0.5} />
         </mesh>
         {mat.isCloth ? (
-          // Nappe : retombée opaque en lin (même trame que le plateau), plus de voiles translucides.
-          <mesh position={[0, topY - 0.17, 0]} castShadow receiveShadow>
-            <cylinderGeometry args={[size[0] / 2 * 1.01, size[0] / 2 * 1.035, 0.34, 48, 1, true]} />
+          // Nappe : retombée opaque en lin (même trame que le plateau), drapée en plis souples.
+          <mesh position={[0, topY + 0.03, 0]} geometry={drapedSkirtGeometry(size[0] / 2, size[0] / 2, 0.4)} castShadow receiveShadow>
             <SurfaceMat
               color={topColor}
-              map={withRepeat(mat.map, 6, 1)}
-              normalMap={withRepeat(mat.normalMap ?? null, 6, 1)}
+              map={withRepeat(mat.map, 1, 1)}
+              normalMap={withRepeat(mat.normalMap ?? null, 1, 1)}
               normalScale={0.6}
               roughness={0.92}
               metalness={0}
@@ -1237,8 +1229,7 @@ function createRoundedRectShape(w: number, d: number, r: number): THREE.Shape {
           <Mat color={topColor} {...topMat} />
         </mesh>
       ) : (
-        <mesh position={[0, topY, 0]} castShadow receiveShadow>
-          <boxGeometry args={[size[0], 0.055, size[1]]} />
+        <mesh position={[0, topY, 0]} geometry={softBoxGeometry(size[0], 0.055, size[1], mat.isCloth ? 0.012 : 0.008)} castShadow receiveShadow>
           <Mat color={topColor} {...topMat} />
         </mesh>
       )}
@@ -1250,16 +1241,16 @@ function createRoundedRectShape(w: number, d: number, r: number): THREE.Shape {
         </mesh>
       ) : null}
       {mat.isCloth ? (
-        <mesh position={[0, topY - 0.16, 0]} castShadow receiveShadow>
-          <boxGeometry args={[size[0] * 1.01, 0.3, size[1] * 1.01]} />
+        <mesh position={[0, topY + 0.0275, 0]} geometry={drapedRectSkirtGeometry(size[0], size[1], 0.36)} castShadow receiveShadow>
           <SurfaceMat
             color={topColor}
-            map={withRepeat(mat.map, 4, 1)}
-            normalMap={withRepeat(mat.normalMap ?? null, 4, 1)}
+            map={withRepeat(mat.map, 1, 1)}
+            normalMap={withRepeat(mat.normalMap ?? null, 1, 1)}
             normalScale={0.6}
             roughness={0.92}
             metalness={0}
             finish="plain"
+            side={THREE.DoubleSide}
           />
         </mesh>
       ) : null}
@@ -1279,8 +1270,7 @@ function createRoundedRectShape(w: number, d: number, r: number): THREE.Shape {
           {([-1, 1] as const).flatMap((sx) =>
             ([-1, 1] as const).map((sz) => (
               <group key={`${sx}-${sz}`} position={[sx * size[0] * legInset, 0, sz * size[1] * legInset]}>
-                <mesh position={[0, topY / 2, 0]} castShadow>
-                  <boxGeometry args={[0.055, topY - 0.05, 0.055]} />
+                <mesh position={[0, topY / 2, 0]} geometry={softBoxGeometry(0.055, topY - 0.05, 0.055, 0.008)} castShadow>
                   <Mat color="#57534e" metalness={0.4} roughness={0.4} />
                 </mesh>
                 <mesh position={[0, 0.03, 0]} castShadow>

@@ -204,7 +204,7 @@ def wood_planks(name: str, palette: list[tuple[float, str]], seed: int, plank_w:
 
 # ───────────────────────── herringbone ─────────────────────────
 
-def herringbone(name: str, colors: list[str], seed: int, w: int = 64, ratio: int = 4, grain_strength: float = 0.2, rings: float = 7, joint_dark: float = 0.45, tone_jitter: tuple[float, float] = (0.92, 1.06), figure: float = 0.0):
+def herringbone(name: str, colors: list[str], seed: int, w: int = 64, ratio: int = 4, grain_strength: float = 0.2, rings: float = 7, joint_dark: float = 0.45, tone_jitter: tuple[float, float] = (0.92, 1.06), figure: float = 0.0, figure_rings: tuple[float, float] = (1.1, 1.9), bevel: float = 0.0):
     size = SIZE
     L = w * ratio
     # Réseau : H_k en (k*w, k*w), V_k en (L + k*w, w - L + k*w) ; translation t2 trouvée par recherche.
@@ -261,7 +261,7 @@ def herringbone(name: str, colors: list[str], seed: int, w: int = 64, ratio: int
             v = lv[m] / w
             u0 = rng.uniform(0.25, 0.75)
             curv = rng.uniform(0.6, 1.4)
-            k = rng.uniform(1.1, 1.9)
+            k = rng.uniform(*figure_rings)
             wob = (warp_n[m] - 0.5) * 0.35
             phase = k * (v - rng.uniform(-0.5, 0.5) + curv * (u - u0) ** 2) + wob
             # Bois final : liserés fins et plus sombres sur un bois de printemps clair.
@@ -279,6 +279,15 @@ def herringbone(name: str, colors: list[str], seed: int, w: int = 64, ratio: int
     albedo *= (0.95 + 0.1 * spectral_noise(size, seed + 8, beta=1.2))[..., None]
     albedo *= (1 - joint_dark * edge)[..., None]
     height = 0.8 + 0.12 * t - 0.6 * edge
+    if bevel > 0:
+        # Chanfrein (micro-biseau) le long des joints : un léger creux en V qui accroche
+        # la lumière rasante et détache chaque lame, sans assombrir tout le bord.
+        soft = edge.copy()
+        for _ in range(3):
+            soft = (soft + np.roll(soft, 1, 0) + np.roll(soft, -1, 0) + np.roll(soft, 1, 1) + np.roll(soft, -1, 1)) / 5
+        soft = np.clip(soft * 2.2, 0, 1)
+        height -= bevel * soft
+        albedo *= (1 - 0.18 * bevel * soft)[..., None]
     return albedo, height
 
 
@@ -500,11 +509,11 @@ def main():
     a, h = flagstone(); save('flagstone', a, h, 8)
     a, h = travertine(); save('travertine', a, h, 5)
     # Chêne gris cérusé : teintes resserrées et veinage marqué (l’ancienne palette, trop contrastée, lisait comme du métal brossé).
-    a, h = herringbone('herringbone-grey', ['#968f88', '#88827b', '#a29c94', '#8f8982', '#aba49c'], 111, grain_strength=0.3, joint_dark=0.32, tone_jitter=(0.95, 1.04), figure=0.3); save('herringbone-grey', a, h, 6)
-    a, h = herringbone('parquet-oak-herringbone', ['#b98a55', '#a87a47', '#c49762', '#9c6f3f', '#b3854f'], 161, figure=0.25); save('parquet-oak-herringbone', a, h, 6)
+    a, h = herringbone('herringbone-grey', ['#968f88', '#88827b', '#a29c94', '#8f8982', '#aba49c'], 111, grain_strength=0.22, rings=22, joint_dark=0.4, tone_jitter=(0.93, 1.05), figure=0.18, figure_rings=(2.4, 3.6), bevel=0.35); save('herringbone-grey', a, h, 6)
+    a, h = herringbone('parquet-oak-herringbone', ['#b98a55', '#a87a47', '#c49762', '#9c6f3f', '#b3854f'], 161, rings=20, figure=0.2, figure_rings=(2.4, 3.6), bevel=0.35); save('parquet-oak-herringbone', a, h, 6)
     a, h = wood_planks('oak-planks', [(0, '#9b6d3e'), (0.4, '#b58450'), (0.75, '#c89a64'), (1, '#d6ad78')], 171, plank_w=128, rings=9, tone_var=0.1)
     save('oak-planks', a, h, 6)
-    a, h = herringbone('herringbone-greige', ['#c3b8a6', '#b3a794', '#cfc5b4', '#a99d8a'], 121, figure=0.25); save('herringbone-greige', a, h, 6)
+    a, h = herringbone('herringbone-greige', ['#c3b8a6', '#b3a794', '#cfc5b4', '#a99d8a'], 121, rings=20, figure=0.2, figure_rings=(2.4, 3.6), bevel=0.35); save('herringbone-greige', a, h, 6)
     a, h = wood_planks('wood-blonde', [(0, '#b89a72'), (0.4, '#cdb38e'), (0.75, '#dcc6a4'), (1, '#e8d8bb')], 131, plank_w=128, rings=8, tone_var=0.08)
     save('wood-blonde', a, h, 6)
     a, h = wood_planks('wood-charcoal', [(0, '#2e2c2a'), (0.45, '#434039'), (0.8, '#58544c'), (1, '#6a655b')], 141, plank_w=102, rings=10, tone_var=0.14)

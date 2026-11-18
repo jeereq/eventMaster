@@ -154,7 +154,8 @@ import { LandscapeMesh, OutdoorSurroundingsScene, seedFromId } from '@/component
 import { CorridorMesh } from '@/components/room/CorridorMesh';
 import { AtelierGlazing, CassettePanels, DoorHandles, Hinges, handleY } from '@/components/room/DoorHardware';
 import { MetalMat } from '@/components/room/BathroomMeshes';
-import { Architrave, Cornice, Plinth, ARCHITRAVE_W, TRIM_DEFAULT_COLOR } from '@/components/room/WallTrimMeshes';
+import { Architrave, Cornice, Plinth, WallDecorTrim, ARCHITRAVE_W, TRIM_DEFAULT_COLOR } from '@/components/room/WallTrimMeshes';
+import { wallTrimHasBaseAndCornice, wallTrimLayout } from '@/lib/roomWallTrim';
 import { WindowUnit } from '@/components/room/WindowMeshes';
 
 type SurfaceDecor = Pick<
@@ -1816,6 +1817,22 @@ function WallMesh({
   }, [openings, length]);
   /** Corniche seulement si aucune ouverture ne monte jusqu’au plafond. */
   const corniceFree = !openings.some((op) => (op.sillM ?? (op.kind === 'door' ? 0 : 0.9)) + op.heightM > wallH - 0.12);
+  const trimStyle = wall.trim;
+  const baseAndCornice = wallTrimHasBaseAndCornice(trimStyle);
+  /** Boiserie, cimaise, cadres ou pilastres : calculés hors des ouvertures, sur la hauteur réelle du mur. */
+  const decor = useMemo(
+    () => wallTrimLayout(trimStyle, length, cutaway ? wall.heightM : wallH, openings),
+    [trimStyle, length, cutaway, wall.heightM, wallH, openings],
+  );
+  const visibleDecor = useMemo(() => {
+    if (!cutaway) return decor;
+    // Vue maquette : on ne garde que les pièces sous la tranche de coupe.
+    return {
+      boxes: decor.boxes.filter((b) => b.y + b.h / 2 <= wallH),
+      rails: decor.rails.filter((r) => r.y + 0.03 <= wallH),
+    };
+  }, [decor, cutaway, wallH]);
+  const trimColor = wall.trimColor ?? TRIM_DEFAULT_COLOR;
 
   if (length < 0.05) return null;
 
@@ -1887,9 +1904,14 @@ function WallMesh({
         );
       })}
       {/* Plinthes moulurées côté pièce, coupées aux portes */}
-      {plinthRuns.map(([a, b]) => (
-        <Plinth key={`plinth-${a.toFixed(3)}`} x0={a} x1={b} y={-wallH / 2} z={inSide * (thick / 2)} side={inSide} />
-      ))}
+      {baseAndCornice
+        ? plinthRuns.map(([a, b]) => (
+            <Plinth key={`plinth-${a.toFixed(3)}`} x0={a} x1={b} y={-wallH / 2} z={inSide * (thick / 2)} side={inSide} color={trimColor} />
+          ))
+        : null}
+      {visibleDecor.boxes.length || visibleDecor.rails.length ? (
+        <WallDecorTrim layout={visibleDecor} y={-wallH / 2} z={inSide * (thick / 2)} side={inSide} color={trimColor} />
+      ) : null}
       {cutaway ? (
         /* Tranche de coupe : bande claire sur le dessus du mur, comme une maquette d’architecte. */
         bricks
@@ -1908,7 +1930,7 @@ function WallMesh({
           ))
       ) : (
         /* Corniche à gorge sous le plafond */
-        corniceFree ? <Cornice length={length * 0.998} y={wallH / 2} z={inSide * (thick / 2)} side={inSide} /> : null
+        corniceFree && baseAndCornice ? <Cornice length={length * 0.998} y={wallH / 2} z={inSide * (thick / 2)} side={inSide} color={trimColor} /> : null
       )}
       {openings.filter((op) => !cutaway || op.kind !== 'door').map((op) => (
         <OpeningMesh
