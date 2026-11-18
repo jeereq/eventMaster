@@ -1137,18 +1137,55 @@ function PortraitFace({ guest }: { guest: SimulatedGuest }) {
   );
 }
 
+/** Regard d'un invité, en repère monde : position des yeux et direction du corps. */
+export interface GuestEyePose {
+  x: number;
+  y: number;
+  z: number;
+  /** Cap (rad) : le regard part vers (sin yaw, 0, cos yaw). */
+  yaw: number;
+}
+
+const eyeScratch = makeScratch();
+const eyeMatrix = new THREE.Matrix4();
+const eyeVec = new THREE.Vector3();
+const eyeQuat = new THREE.Quaternion();
+
+/**
+ * Point de vue « dans les yeux » d'un invité : même tête que celle dessinée dans la foule
+ * (assis, debout ou en train de danser à l'instant t), un peu devant le visage.
+ */
+export function guestEyePose(g: SimulatedGuest, t = 0): GuestEyePose {
+  const head = guestParts(g, g.pose === 'dancing' ? t : 0).find((p) => p.geo === 'head');
+  const pos = head?.pos ?? [0, g.pose === 'seated' ? 1.25 : 1.6, 0];
+  if (head?.quat) eyeQuat.set(head.quat[0], head.quat[1], head.quat[2], head.quat[3]);
+  else eyeQuat.identity();
+  // Entre les deux yeux, juste devant le visage : la caméra ne voit pas l'intérieur de la tête.
+  eyeVec.set(0, 0.012, HEAD_R[2] + 0.02).applyQuaternion(eyeQuat);
+  eyeVec.set(pos[0] + eyeVec.x, pos[1] + eyeVec.y, pos[2] + eyeVec.z);
+  guestMatrix(g, g.pose === 'dancing' ? t : 0, eyeScratch, eyeMatrix);
+  eyeVec.applyMatrix4(eyeMatrix);
+  // Les danseurs se balancent : on n'en garde qu'un tiers pour que la vue ne donne pas le tournis.
+  const sway = g.pose === 'dancing' ? Math.sin(t * 1.6 + g.phase) * 0.15 : 0;
+  return { x: eyeVec.x, y: eyeVec.y, z: eyeVec.z, yaw: g.rotY + sway };
+}
+
 /** Invités simulés : assis et debout (fixes) + danseurs (animés) + visages en photo. */
 export const GuestAvatars = React.memo(function GuestAvatars({
   guests,
   animate = true,
   castShadow = true,
+  hiddenGuestId = null,
 }: {
   guests: SimulatedGuest[];
   animate?: boolean;
   castShadow?: boolean;
+  /** Invité dont on prend le point de vue : on ne dessine pas son corps devant la caméra. */
+  hiddenGuestId?: string | null;
 }) {
-  const still = useMemo(() => guests.filter((g) => g.pose !== 'dancing'), [guests]);
-  const dancers = useMemo(() => guests.filter((g) => g.pose === 'dancing'), [guests]);
+  const shown = useMemo(() => (hiddenGuestId ? guests.filter((g) => g.id !== hiddenGuestId) : guests), [guests, hiddenGuestId]);
+  const still = useMemo(() => shown.filter((g) => g.pose !== 'dancing'), [shown]);
+  const dancers = useMemo(() => shown.filter((g) => g.pose === 'dancing'), [shown]);
   const portraits = useMemo(() => still.filter((g) => g.photoUrl), [still]);
   return (
     <group name="simulated-guests">

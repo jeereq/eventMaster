@@ -24,6 +24,9 @@ import {
   Flower2,
   Square,
   ChevronRight,
+  ChevronLeft,
+  Dices,
+  Eye,
   Clapperboard,
   Play,
   Square as StopIcon,
@@ -133,8 +136,21 @@ import { clampRowSeatCount, rowArcZ, rowCurveFactor } from '@/lib/roomAmphitheat
 import { detectLayoutClearanceConflicts } from '@/lib/roomLayoutClearance';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import { entranceViewPose } from '@/lib/roomWalkthrough';
-import { buildGuestSimulation, type GuestSimulationSettings } from '@/lib/roomGuestSimulation';
+import { buildGuestSimulation, type GuestSimulationSettings, type SimulatedGuest } from '@/lib/roomGuestSimulation';
 import { GuestAvatars } from '@/components/room/GuestAvatarMeshes';
+import AvatarEyeCamera, { AVATAR_START_PITCH, type AvatarLook } from '@/components/room/AvatarEyeCamera';
+import {
+  AVATAR_VIEW_FILTER_LABELS,
+  availableAvatarFilters,
+  describeAvatarViewer,
+  filterAvatarViewers,
+  pickDefaultAvatarViewer,
+  randomAvatarViewer,
+  stepAvatarViewer,
+  wrapAngle,
+  yawToward,
+  type AvatarViewFilter,
+} from '@/lib/roomAvatarView';
 import {
   DOLLHOUSE_WALL_CUT_M,
   dollhouseOverviewPose,
@@ -3845,7 +3861,9 @@ function SceneContent({
   introGlide = false,
   filmActive = false,
   frameTrackRef,
-  guestSimulation = null,
+  simulatedGuests = [],
+  avatarViewGuest = null,
+  avatarLookRef,
 }: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode' | 'introFlyIn' | 'introView' | 'introReplayKey'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
@@ -3874,6 +3892,11 @@ function SceneContent({
   filmActive?: boolean;
   /** Piste vidéo de l’enregistrement : une image est poussée après chaque rendu. */
   frameTrackRef?: React.MutableRefObject<CanvasCaptureMediaStreamTrack | null>;
+  /** Invités simulés à dessiner (calculés par le parent, qui choisit aussi le point de vue). */
+  simulatedGuests?: SimulatedGuest[];
+  /** Vue à la place d’un invité : la caméra est posée dans ses yeux. */
+  avatarViewGuest?: SimulatedGuest | null;
+  avatarLookRef?: React.MutableRefObject<AvatarLook>;
 }) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
   const pendingIntroRef = useRef<IntroPath | null>(null);
@@ -4226,15 +4249,6 @@ function SceneContent({
     return map;
   }, [blockedSeats]);
   const surfacePickable = !lockOrbit && !dragSession;
-  const simulatedGuests = useMemo(() => {
-    if (!guestSimulation) return [];
-    return buildGuestSimulation(blueprint, {
-      ...guestSimulation,
-      surfaceElevationAt: (x, y, id) => resolveFurnitureSurfaceAt(blueprint, x, y, { allowTable: false, ignoreId: id })?.elevationM ?? 0,
-      storyElevation: (storyId) => worldElevationForStory(blueprint, storyId),
-      storyVisible: (storyId) => isStoryVisible(blueprint, storyId),
-    }).guests;
-  }, [blueprint, guestSimulation]);
   const outdoorSurroundings = resolveOutdoorSurroundings(blueprint.metadata.outdoorSurroundings);
 
   return (
@@ -4841,7 +4855,11 @@ function SceneContent({
           guests={simulatedGuests}
           animate={!reduceMotion}
           castShadow={qualitySettings.quality !== 'draft'}
+          hiddenGuestId={avatarViewGuest?.id ?? null}
         />
+      ) : null}
+      {avatarViewGuest && avatarLookRef ? (
+        <AvatarEyeCamera guest={avatarViewGuest} lookRef={avatarLookRef} reduceMotion={reduceMotion} />
       ) : null}
       <IntroFlyIn
         pendingRef={pendingIntroRef}
@@ -4858,11 +4876,11 @@ function SceneContent({
       <OrbitControls
         ref={orbitControlsRef as never}
         key={stackView ? `stack-${stories.length}-${focusY.toFixed(1)}` : 'floor'}
-        enabled={!dragSession && !walkthroughActive}
+        enabled={!dragSession && !walkthroughActive && !avatarViewGuest}
         enablePan={!wallEditMode && !lockOrbit && !dragSession && !presentationMode && !walkthroughActive}
         enableRotate={(!wallEditMode && !lockOrbit && !dragSession && !walkthroughActive) || (presentationMode && !walkthroughActive)}
         enableZoom={!walkthroughActive}
-        autoRotate={presentationMode && !walkthroughActive && !reduceMotion && !filmActive && !introRunning && !introGlide}
+        autoRotate={presentationMode && !walkthroughActive && !avatarViewGuest && !reduceMotion && !filmActive && !introRunning && !introGlide}
         autoRotateSpeed={0.55}
         maxPolarAngle={Math.PI / 2.05}
         minDistance={3}
@@ -5198,6 +5216,116 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     }
   }, [handleSelectPreset]);
 
+  // ───────────── Vue à la place d’un invité : la salle vue par les yeux d’un avatar ─────────────
+  const simulatedGuests = useMemo(() => {
+    if (!guestSimulation) return [] as SimulatedGuest[];
+    return buildGuestSimulation(blueprint, {
+      ...guestSimulation,
+      surfaceElevationAt: (x, y, id) => resolveFurnitureSurfaceAt(blueprint, x, y, { allowTable: false, ignoreId: id })?.elevationM ?? 0,
+      storyElevation: (storyId) => worldElevationForStory(blueprint, storyId),
+      storyVisible: (storyId) => isStoryVisible(blueprint, storyId),
+    }).guests;
+  }, [blueprint, guestSimulation]);
+  const [avatarActive, setAvatarActive] = useState(false);
+  const [avatarViewId, setAvatarViewId] = useState<string | null>(null);
+  const [avatarFilter, setAvatarFilter] = useState<AvatarViewFilter>('all');
+  const avatarLookRef = useRef<AvatarLook>({ yaw: 0, pitch: AVATAR_START_PITCH });
+  const cameraBeforeAvatarRef = useRef<{ pos: THREE.Vector3; target: THREE.Vector3 } | null>(null);
+  const hasSeating = useMemo(
+    () => (blueprint.furniture ?? []).some((f) => f.kind === 'table' || f.kind === 'row' || f.kind === 'chair'),
+    [blueprint.furniture],
+  );
+  // Sans invités simulés, on peut quand même s’asseoir à n’importe quelle place (avatar invisible).
+  const avatarViewers = useMemo(() => {
+    if (simulatedGuests.length > 0) return simulatedGuests;
+    if (!avatarActive) return [] as SimulatedGuest[];
+    return buildGuestSimulation(blueprint, {
+      fill: 1,
+      dancing: false,
+      surfaceElevationAt: (x, y, id) => resolveFurnitureSurfaceAt(blueprint, x, y, { allowTable: false, ignoreId: id })?.elevationM ?? 0,
+      storyElevation: (storyId) => worldElevationForStory(blueprint, storyId),
+      storyVisible: (storyId) => isStoryVisible(blueprint, storyId),
+    }).guests;
+  }, [simulatedGuests, avatarActive, blueprint]);
+  const avatarAvailable = simulatedGuests.length > 0 || hasSeating;
+  const stageSpace = useMemo(() => findRoomSpace(spaces, ['stage', 'dj']) ?? null, [spaces]);
+  const avatarFilters = useMemo(() => availableAvatarFilters(avatarViewers), [avatarViewers]);
+  const effectiveAvatarFilter: AvatarViewFilter = avatarFilters.includes(avatarFilter) ? avatarFilter : 'all';
+  const avatarViewer = useMemo(() => {
+    if (!avatarActive) return null;
+    return avatarViewers.find((g) => g.id === avatarViewId)
+      ?? pickDefaultAvatarViewer(filterAvatarViewers(avatarViewers, effectiveAvatarFilter), stageSpace?.center)
+      ?? pickDefaultAvatarViewer(avatarViewers, stageSpace?.center);
+  }, [avatarActive, avatarViewers, avatarViewId, effectiveAvatarFilter, stageSpace]);
+  const avatarList = useMemo(() => filterAvatarViewers(avatarViewers, effectiveAvatarFilter), [avatarViewers, effectiveAvatarFilter]);
+  const avatarIndex = avatarViewer ? avatarList.findIndex((g) => g.id === avatarViewer.id) : -1;
+  const avatarLabel = avatarViewer ? describeAvatarViewer(blueprint, avatarViewer) : '';
+
+  const lookAtStage = useCallback((viewer: SimulatedGuest | null) => {
+    if (!viewer || !stageSpace) return false;
+    avatarLookRef.current = {
+      yaw: wrapAngle(yawToward(viewer, stageSpace.center) - viewer.rotY),
+      pitch: AVATAR_START_PITCH * 0.5,
+    };
+    return true;
+  }, [stageSpace]);
+
+  const showAvatar = useCallback((viewer: SimulatedGuest | null) => {
+    if (!viewer) return;
+    avatarLookRef.current = { yaw: 0, pitch: AVATAR_START_PITCH };
+    setAvatarViewId(viewer.id);
+  }, []);
+
+  const enterAvatarView = useCallback(() => {
+    const controls = orbitControlsRef.current;
+    cameraBeforeAvatarRef.current = controls
+      ? { pos: controls.object.position.clone(), target: controls.target.clone() }
+      : null;
+    if (film) stopFilm();
+    setFilmMenuOpen(false);
+    setSpacesOpen(false);
+    setFocusedSpaceId(null);
+    setActivePreset(null);
+    setCameraTargetPose(null);
+    setAvatarViewId(null);
+    avatarLookRef.current = { yaw: 0, pitch: AVATAR_START_PITCH };
+    setAvatarActive(true);
+  }, [film, stopFilm]);
+
+  const exitAvatarView = useCallback(() => {
+    setAvatarActive(false);
+    const before = cameraBeforeAvatarRef.current;
+    cameraBeforeAvatarRef.current = null;
+    // On ressort par un travelling jusqu’au point de vue d’avant.
+    if (before) setCameraTargetPose({ pos: before.pos, target: before.target });
+    else handleSelectPreset('overview');
+  }, [handleSelectPreset]);
+
+  useEffect(() => {
+    if (!avatarActive) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (e.key === 'Escape') {
+        exitAvatarView();
+        return;
+      }
+      const step = Math.PI / 18;
+      if (e.key === 'ArrowLeft') avatarLookRef.current.yaw += step;
+      else if (e.key === 'ArrowRight') avatarLookRef.current.yaw -= step;
+      else if (e.key === 'ArrowUp') avatarLookRef.current.pitch = Math.min(1.2, avatarLookRef.current.pitch + step);
+      else if (e.key === 'ArrowDown') avatarLookRef.current.pitch = Math.max(-1.2, avatarLookRef.current.pitch - step);
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [avatarActive, exitAvatarView]);
+
+  // Une visite guidée qui démarre reprend la main sur la caméra.
+  if (walkthroughActive && avatarActive) setAvatarActive(false);
+
   useEffect(() => {
     const node = viewerRootRef.current;
     if (!node) return;
@@ -5276,6 +5404,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       className={cn(
         'relative w-full overflow-hidden rounded-[var(--radius-card)] border border-border bg-foreground touch-none overscroll-none',
         reserveTopRight && '@container',
+        avatarActive && '[&_canvas]:cursor-grab [&_canvas:active]:cursor-grabbing',
         className,
       )}
       onPointerDown={() => {
@@ -5287,7 +5416,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       }}
     >
       {/* Préréglages de caméra cinématiques */}
-      {!walkthroughActive && !wallEditMode && (
+      {!walkthroughActive && !wallEditMode && !avatarActive && (
         <div
           className={cn(
             'absolute top-2.5 left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 border border-border/70 shadow-sm max-w-[calc(100%-4.5rem)] overflow-x-auto no-scrollbar pointer-events-auto',
@@ -5357,6 +5486,18 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             <DoorOpen className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Entrée</span>
           </button>
+          {avatarAvailable ? (
+            <button
+              type="button"
+              onClick={enterAvatarView}
+              aria-pressed={false}
+              title="Vue invité : voir la salle avec les yeux d’un invité, depuis sa place"
+              className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11 text-foreground/80 hover:text-foreground hover:bg-surface-muted"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Vue invité</span>
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={handleResetCamera}
@@ -5609,14 +5750,14 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             onMoveEnd={onMoveEnd}
             onResizeItem={onResizeItem}
             onResizeEnd={onResizeEnd}
-            readOnly={readOnly || previewMode}
+            readOnly={readOnly || previewMode || avatarActive}
             wallEditMode={wallEditMode}
             lockOrbit={orbitLocked}
             qualitySettings={qualitySettings}
             lighting={lighting}
             captureApiRef={captureApiRef}
             presentationMode={presentationMode}
-            hideLabels={hideLabels || !qualitySettings.showHints}
+            hideLabels={hideLabels || avatarActive || !qualitySettings.showHints}
             walkthroughActive={walkthroughActive}
             reduceMotion={reduceMotion}
             onWalkthroughProgress={(label, progress) => {
@@ -5631,20 +5772,135 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
               setCameraTargetPose(null);
               setIntroGlide(false);
             }}
-            dollhouse={dollhouse}
-            highlightSpace={walkthroughActive ? null : highlightSpace}
+            dollhouse={dollhouse && !avatarActive}
+            highlightSpace={walkthroughActive || avatarActive ? null : highlightSpace}
             introFlyIn={introFlyIn && !walkthroughActive && (!presentationMode || introChosen)}
             introView={introView}
             introReplayKey={introReplayKey}
             onIntroPreset={handleIntroPreset}
             introGlide={introGlide}
-            guestSimulation={guestSimulation}
+            simulatedGuests={simulatedGuests}
+            avatarViewGuest={avatarViewer}
+            avatarLookRef={avatarLookRef}
             filmActive={film !== null}
             frameTrackRef={frameTrackRef}
           />
         </Suspense>
       </Canvas>
-      {walkthroughActive ? (
+      {avatarActive ? (
+        <>
+          <div className="pointer-events-none absolute top-2.5 left-2.5 right-2.5 z-10 flex justify-start">
+            <div className="rounded-md bg-foreground/85 px-2.5 py-1.5 text-xs font-medium text-background">
+              {touchScreen
+                ? 'Glissez pour tourner la tête · pincez pour zoomer'
+                : 'Glissez pour tourner la tête · molette pour zoomer · Échap pour sortir'}
+            </div>
+          </div>
+          <div className="absolute bottom-2 left-2 right-2 z-10 flex justify-center pointer-events-none">
+            <div
+              className="pointer-events-auto w-full max-w-[34rem] rounded-2xl border border-border/70 bg-background/92 p-2 text-foreground shadow-lg dark:bg-surface-elevated/92"
+              role="group"
+              aria-label="Vue à la place d’un invité"
+            >
+              <div className="flex items-center gap-2 px-1">
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-solid text-primary-foreground">
+                  <Eye className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted leading-4">
+                    {simulatedGuests.length > 0 ? 'Vous voyez la salle comme cet invité' : 'Vous voyez la salle depuis cette place'}
+                  </p>
+                  <p className="truncate text-sm font-semibold leading-5" aria-live="polite">
+                    {avatarViewer ? avatarLabel : 'Aucune place dans cette salle'}
+                  </p>
+                </div>
+                {avatarList.length > 0 && avatarIndex >= 0 ? (
+                  <span className="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted">
+                    {avatarIndex + 1} / {avatarList.length}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={exitAvatarView}
+                  title="Quitter la vue invité (Échap)"
+                  aria-label="Quitter la vue invité"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                {avatarFilters.length > 1
+                  ? avatarFilters.map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        aria-pressed={effectiveAvatarFilter === f}
+                        onClick={() => {
+                          setAvatarFilter(f);
+                          if (f !== 'all' && avatarViewer?.pose !== f) {
+                            showAvatar(pickDefaultAvatarViewer(filterAvatarViewers(avatarViewers, f), stageSpace?.center));
+                          }
+                        }}
+                        className={cn(
+                          'min-h-9 rounded-full px-2.5 text-xs font-semibold transition-all',
+                          effectiveAvatarFilter === f
+                            ? 'bg-primary-solid text-primary-foreground'
+                            : 'bg-surface-muted text-foreground/80 hover:text-foreground',
+                        )}
+                      >
+                        {AVATAR_VIEW_FILTER_LABELS[f]}
+                      </button>
+                    ))
+                  : null}
+                <span className="ml-auto inline-flex items-center gap-1">
+                  {stageSpace ? (
+                    <button
+                      type="button"
+                      onClick={() => lookAtStage(avatarViewer)}
+                      title="Tourner la tête vers la scène"
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold text-foreground/80 hover:bg-surface-muted hover:text-foreground"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Regarder la scène</span>
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => showAvatar(stepAvatarViewer(avatarViewers, avatarViewer?.id ?? null, -1, effectiveAvatarFilter))}
+                    title="Invité précédent"
+                    aria-label="Invité précédent"
+                    disabled={avatarList.length < 2}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground/80 hover:bg-surface-muted hover:text-foreground disabled:opacity-40"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => showAvatar(randomAvatarViewer(avatarViewers, avatarViewer?.id ?? null, effectiveAvatarFilter))}
+                    title="Une autre place au hasard"
+                    aria-label="Une autre place au hasard"
+                    disabled={avatarList.length < 2}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground/80 hover:bg-surface-muted hover:text-foreground disabled:opacity-40"
+                  >
+                    <Dices className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => showAvatar(stepAvatarViewer(avatarViewers, avatarViewer?.id ?? null, 1, effectiveAvatarFilter))}
+                    title="Invité suivant"
+                    aria-label="Invité suivant"
+                    disabled={avatarList.length < 2}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground/80 hover:bg-surface-muted hover:text-foreground disabled:opacity-40"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : walkthroughActive ? (
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
           <div className="rounded-md bg-foreground/85 px-2.5 py-1.5 text-xs font-bold text-background">
             Visite guidée · {tourCaption || 'entrée par la porte'}
