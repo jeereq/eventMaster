@@ -1,5 +1,6 @@
 import type { RoomLayoutBlueprint, RoomWallOpening, RoomWallSegment } from '@/lib/roomLayoutUtils';
 import { resolveBlueprintWalls } from '@/lib/roomLayoutUtils';
+import { entranceEyeLevelPose } from '@/lib/roomSpaces';
 
 export type WalkthroughWaypoint = {
   /** Position caméra monde. */
@@ -122,6 +123,24 @@ function fallbackEntrance(widthM: number, heightM: number): DoorAnchor {
     outward: [0, 1],
     inward: [0, -1],
     widthM: 1.2,
+  };
+}
+
+/**
+ * Point de vue « depuis l’entrée » (découverte du plan, bouton Entrée de la 3D) :
+ * juste après la porte principale du mur, à hauteur d’yeux, tourné vers la table
+ * d’honneur ou le centre. Sans porte dans les murs, on se place à l’entrée posée sur le plan.
+ */
+export function entranceViewPose(blueprint: RoomLayoutBlueprint): { pos: [number, number, number]; target: [number, number, number] } | null {
+  const widthM = blueprint.canvas.widthM;
+  const heightM = blueprint.canvas.heightM;
+  const door = findMainDoor(blueprint);
+  if (!door) return entranceEyeLevelPose(blueprint);
+  const eye = 1.6;
+  const honor = findNamedFocus(blueprint, widthM, heightM, /honneur|honor/i, 'table');
+  return {
+    pos: [door.x + door.inward[0] * 1.4, eye, door.z + door.inward[1] * 1.4],
+    target: honor ?? [0, 1.15, 0],
   };
 }
 

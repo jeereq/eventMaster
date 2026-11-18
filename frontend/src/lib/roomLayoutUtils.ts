@@ -882,6 +882,8 @@ export interface RoomLayoutBlueprint {
     presentationMode?: boolean;
     /** Ouvrir la 3D en vue maquette (murs coupés à mi-hauteur). */
     dollhouseView?: boolean;
+    /** Découverte du plan : perspective d’arrivée de la caméra (survol, vue de dessus, depuis l’entrée…). */
+    introView?: import('@/lib/roomIntroView').RoomIntroView;
     /** Modèle de structure multi-étages appliqué. */
     buildingPresetId?: import('@/lib/roomBuildingUtils').BuildingStoryPresetId;
     /** Étages du bâtiment (RDC, 1er…). */

@@ -127,6 +127,7 @@ import type { BarBack, BarFront, BarMetal, BarStool, BarTop } from '@/lib/roomBa
 import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
 import { detectLayoutClearanceConflicts } from '@/lib/roomLayoutClearance';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
+import { entranceViewPose } from '@/lib/roomWalkthrough';
 import {
   DOLLHOUSE_WALL_CUT_M,
   dollhouseOverviewPose,
@@ -136,6 +137,13 @@ import {
   type RoomSpace,
   type RoomSpaceIcon,
 } from '@/lib/roomSpaces';
+import {
+  isPresetIntroView,
+  resolveIntroView,
+  topDownIntroDistance,
+  type RoomIntroPresetView,
+  type RoomIntroView,
+} from '@/lib/roomIntroView';
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
 import { LocalRoomEnvironment } from '@/components/room/LocalRoomEnvironment';
 import { PlotMarking } from '@/components/room/PlotMarkingMeshes';
@@ -239,6 +247,10 @@ interface RoomWebGLViewerProps {
   paused?: boolean;
   /** Arrivée cinématique de la caméra au premier affichage (désactivée pour les captures). */
   introFlyIn?: boolean;
+  /** Perspective de découverte (sinon celle enregistrée sur le plan, « survol » par défaut). */
+  introView?: RoomIntroView;
+  /** Change de valeur pour rejouer l’arrivée (aperçu depuis l’éditeur). */
+  introReplayKey?: number;
 }
 
 const SPACE_ICONS: Record<RoomSpaceIcon, React.ComponentType<{ className?: string }>> = {
@@ -3482,29 +3494,32 @@ function SpaceHighlight({ space, reduceMotion }: { space: RoomSpace; reduceMotio
 
 /**
  * Entrée cinématique : la caméra part de loin, en hauteur et de biais, puis
- * glisse vers le cadrage de la salle (≈ 2,4 s), comme l’arrivée sur une
+ * glisse vers la perspective de découverte (≈ 2,4 s), comme l’arrivée sur une
  * maquette. Annulée dès que l’utilisateur touche la vue.
+ * Le trajet est déposé dans `pendingRef` par le cadrage ; ce composant le prend
+ * en charge à l’image suivante, ce qui permet aussi de le rejouer.
  */
+type IntroPath = { from: THREE.Vector3; to: THREE.Vector3 };
+
 function IntroFlyIn({
-  from,
-  to,
+  pendingRef,
   orbitControlsRef,
-  onDone,
+  onRunningChange,
 }: {
-  from: THREE.Vector3;
-  to: THREE.Vector3;
+  pendingRef: React.MutableRefObject<IntroPath | null>;
   orbitControlsRef?: React.Ref<unknown>;
-  onDone: () => void;
+  onRunningChange: (running: boolean) => void;
 }) {
   const { camera, gl } = useThree();
+  const pathRef = useRef<IntroPath | null>(null);
   const startRef = useRef<number | null>(null);
-  const doneRef = useRef(false);
   const duration = 2.4;
   useEffect(() => {
     const stop = () => {
-      if (doneRef.current) return;
-      doneRef.current = true;
-      onDone();
+      pendingRef.current = null;
+      if (!pathRef.current) return;
+      pathRef.current = null;
+      onRunningChange(false);
     };
     const dom = gl.domElement;
     dom.addEventListener('pointerdown', stop);
@@ -3513,17 +3528,23 @@ function IntroFlyIn({
       dom.removeEventListener('pointerdown', stop);
       dom.removeEventListener('wheel', stop);
     };
-  }, [gl, onDone]);
+  }, [gl, onRunningChange, pendingRef]);
   useFrame(({ clock }) => {
-    if (doneRef.current) return;
-    if (startRef.current === null) startRef.current = clock.elapsedTime;
-    const t = Math.min(1, (clock.elapsedTime - startRef.current) / duration);
+    if (pendingRef.current) {
+      pathRef.current = pendingRef.current;
+      pendingRef.current = null;
+      startRef.current = clock.elapsedTime;
+      onRunningChange(true);
+    }
+    const path = pathRef.current;
+    if (!path) return;
+    const t = Math.min(1, (clock.elapsedTime - (startRef.current ?? clock.elapsedTime)) / duration);
     const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     // Arc : on interpole en coordonnées sphériques autour de la cible pour tourner autour de la salle.
     const ctrl = (orbitControlsRef as { current?: { target?: THREE.Vector3; update?: () => void } } | undefined)?.current;
     const target = ctrl?.target ?? new THREE.Vector3();
-    const a = new THREE.Spherical().setFromVector3(from.clone().sub(target));
-    const b = new THREE.Spherical().setFromVector3(to.clone().sub(target));
+    const a = new THREE.Spherical().setFromVector3(path.from.clone().sub(target));
+    const b = new THREE.Spherical().setFromVector3(path.to.clone().sub(target));
     let dTheta = b.theta - a.theta;
     if (dTheta > Math.PI) dTheta -= Math.PI * 2;
     if (dTheta < -Math.PI) dTheta += Math.PI * 2;
@@ -3536,8 +3557,8 @@ function IntroFlyIn({
     camera.lookAt(target);
     ctrl?.update?.();
     if (t >= 1) {
-      doneRef.current = true;
-      onDone();
+      pathRef.current = null;
+      onRunningChange(false);
     }
   });
   return null;
@@ -3568,9 +3589,13 @@ function SceneContent({
   dollhouse = false,
   highlightSpace = null,
   introFlyIn = false,
+  introView = 'arc',
+  introReplayKey = 0,
+  onIntroPreset,
+  introGlide = false,
   filmActive = false,
   frameTrackRef,
-}: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode' | 'introFlyIn'> & {
+}: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode' | 'introFlyIn' | 'introView' | 'introReplayKey'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
   captureApiRef?: React.MutableRefObject<RoomWebGLCaptureApi | null>;
@@ -3586,15 +3611,29 @@ function SceneContent({
   highlightSpace?: RoomSpace | null;
   /** Arrivée cinématique de la caméra au premier affichage. */
   introFlyIn?: boolean;
+  /** Perspective de découverte choisie pour ce plan. */
+  introView?: RoomIntroView;
+  /** Change de valeur pour rejouer l’arrivée. */
+  introReplayKey?: number;
+  /** Arrivée sur un point de vue précis (entrée, scène, table d’honneur) : travelling confié au parent. */
+  onIntroPreset?: (view: RoomIntroPresetView) => void;
+  /** Travelling d’arrivée en cours : glissé lent, pas de rotation auto. */
+  introGlide?: boolean;
   /** Film de la salle en cours : travellings plus lents, pas de rotation auto. */
   filmActive?: boolean;
   /** Piste vidéo de l’enregistrement : une image est poussée après chaque rendu. */
   frameTrackRef?: React.MutableRefObject<CanvasCaptureMediaStreamTrack | null>;
 }) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
-  const [introPath, setIntroPath] = useState<{ from: THREE.Vector3; to: THREE.Vector3 } | null>(null);
+  const pendingIntroRef = useRef<IntroPath | null>(null);
+  const [introRunning, setIntroRunning] = useState(false);
   const introPlayedRef = useRef(false);
-  const endIntro = useCallback(() => setIntroPath(null), []);
+  const introReplaySeenRef = useRef(introReplayKey);
+  // Ref : le rappel change à chaque modification du plan, il ne doit pas relancer le cadrage.
+  const onIntroPresetRef = useRef(onIntroPreset);
+  useEffect(() => {
+    onIntroPresetRef.current = onIntroPreset;
+  }, [onIntroPreset]);
   useFrame(() => {
     frameTrackRef?.current?.requestFrame?.();
   });
@@ -3740,19 +3779,51 @@ function SceneContent({
       controls.update?.();
       controls.saveState?.();
     }
-    if (introFlyIn && !reduceMotion && !introPlayedRef.current) {
+    if (introReplayKey !== introReplaySeenRef.current) {
+      // Aperçu demandé depuis l’éditeur : on rejoue l’arrivée choisie.
+      introReplaySeenRef.current = introReplayKey;
+      introPlayedRef.current = false;
+    }
+    if (introFlyIn && !introPlayedRef.current && introView !== 'none') {
       introPlayedRef.current = true;
-      const to = camera.position.clone();
-      const offset = to.clone().sub(new THREE.Vector3(0, focusY, 0));
+      const center = new THREE.Vector3(0, focusY, 0);
+      const framing = camera.position.clone();
+      const offset = framing.clone().sub(center);
       // Départ : plus loin, plus haut, décalé de 70° autour de la salle.
       const start = offset.clone().multiplyScalar(1.9).applyAxisAngle(new THREE.Vector3(0, 1, 0), -1.22);
       start.y = Math.max(start.y, offset.length() * 1.25);
-      const from = start.add(new THREE.Vector3(0, focusY, 0));
-      camera.position.copy(from);
-      camera.lookAt(0, focusY, 0);
-      setIntroPath({ from, to });
+      const from = start.add(center);
+      if (isPresetIntroView(introView)) {
+        // Entrée, scène, table d’honneur : on part du ciel et le parent conduit le travelling.
+        if (!reduceMotion) {
+          camera.position.copy(from);
+          camera.lookAt(center);
+        }
+        onIntroPresetRef.current?.(introView);
+      } else {
+        let to = framing;
+        if (introView === 'top') {
+          const topDist = topDownIntroDistance({ widthM, depthM: heightM, fovDeg: fov, aspect: viewportAspect })
+            + (stackView ? topStoryElev + wallHeightM : wallHeightM) * 0.5;
+          // Un léger décalage vers le sud garde le nord en haut de l’écran, comme sur le plan 2D.
+          to = new THREE.Vector3(0, focusY + topDist, 0.001);
+        } else if (introView === 'dollhouse' && !stackView) {
+          const pose = dollhouseOverviewPose({ widthM, depthM: heightM, fovDeg: fov, aspect: viewportAspect });
+          to = new THREE.Vector3(...pose.pos);
+        }
+        if (reduceMotion) {
+          // Sans animation (préférence système) : on se pose directement sur la perspective choisie.
+          camera.position.copy(to);
+          camera.lookAt(center);
+          controls?.update?.();
+        } else {
+          camera.position.copy(from);
+          camera.lookAt(center);
+          pendingIntroRef.current = { from, to };
+        }
+      }
     }
-  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM, viewportAspect, orbitControlsRef, introFlyIn, reduceMotion, dollhouseFraming]);
+  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM, viewportAspect, orbitControlsRef, introFlyIn, reduceMotion, dollhouseFraming, introView, introReplayKey]);
 
   const [dragSession, setDragSession] = React.useState<DragSession | null>(null);
 
@@ -4391,19 +4462,16 @@ function SceneContent({
       />
 
       {highlightSpace ? <SpaceHighlight space={highlightSpace} reduceMotion={reduceMotion} /> : null}
-      {introPath ? (
-        <IntroFlyIn
-          from={introPath.from}
-          to={introPath.to}
-          orbitControlsRef={orbitControlsRef}
-          onDone={endIntro}
-        />
-      ) : null}
+      <IntroFlyIn
+        pendingRef={pendingIntroRef}
+        orbitControlsRef={orbitControlsRef}
+        onRunningChange={setIntroRunning}
+      />
       <CinematicCameraController
         targetPose={cameraTargetPose ?? null}
         onArrival={onCameraTargetArrived}
         orbitControlsRef={orbitControlsRef}
-        speed={filmActive ? 1.7 : 5.2}
+        speed={filmActive || introGlide ? 1.7 : 5.2}
       />
 
       <OrbitControls
@@ -4413,7 +4481,7 @@ function SceneContent({
         enablePan={!wallEditMode && !lockOrbit && !dragSession && !presentationMode && !walkthroughActive}
         enableRotate={(!wallEditMode && !lockOrbit && !dragSession && !walkthroughActive) || (presentationMode && !walkthroughActive)}
         enableZoom={!walkthroughActive}
-        autoRotate={presentationMode && !walkthroughActive && !reduceMotion && !filmActive}
+        autoRotate={presentationMode && !walkthroughActive && !reduceMotion && !filmActive && !introRunning && !introGlide}
         autoRotateSpeed={0.55}
         maxPolarAngle={Math.PI / 2.05}
         minDistance={3}
@@ -4451,11 +4519,17 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   paused = false,
   blockedSeats = [],
   introFlyIn = false,
+  introView: introViewProp,
+  introReplayKey = 0,
 }, ref) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
   const touchScreen = useCoarsePointer();
   const [tourCaption, setTourCaption] = useState('entrée par la porte');
   const presentationMode = presentationModeProp ?? blueprint.metadata.presentationMode === true;
+  // Perspective de découverte : choisie par l’éditeur, sinon celle enregistrée sur le plan.
+  const introView = introViewProp ?? resolveIntroView(blueprint.metadata.introView);
+  // En mode présentation, l’arrivée n’était pas jouée : on la joue seulement si une perspective a été choisie.
+  const introChosen = introViewProp !== undefined || blueprint.metadata.introView !== undefined;
   const orbitLocked = previewMode || presentationMode || walkthroughActive ? false : lockOrbit;
   const hideLabels = presentationMode || previewMode || walkthroughActive;
   const qualitySettings = useMemo(
@@ -4563,16 +4637,26 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
         pos = [-Math.max(widthM * 0.22, 2.6), 1.9, Math.max(heightM * 0.18, 2.2)];
         target = [0, 0.85, 0];
         break;
-      case 'entrance':
-        pos = [0, 1.7, Math.max(heightM * 0.48, 5.2)];
-        target = [0, 1.4, 0];
+      case 'entrance': {
+        // Depuis la vraie porte d’entrée quand le plan en a une (sinon, bord sud de la salle).
+        const door = entranceViewPose(blueprint);
+        pos = door?.pos ?? [0, 1.7, Math.max(heightM * 0.48, 5.2)];
+        target = door?.target ?? [0, 1.4, 0];
         break;
+      }
     }
     setCameraTargetPose({
       pos: new THREE.Vector3(...pos),
       target: new THREE.Vector3(...target),
     });
-  }, [blueprint.canvas?.widthM, blueprint.canvas?.heightM, spaces, flyToSpace]);
+  }, [blueprint, spaces, flyToSpace]);
+
+  // Découverte « depuis l’entrée / face à la scène / table d’honneur » : travelling lent depuis le ciel.
+  const [introGlide, setIntroGlide] = useState(false);
+  const handleIntroPreset = useCallback((view: RoomIntroPresetView) => {
+    setIntroGlide(!reduceMotion);
+    handleSelectPreset(view);
+  }, [handleSelectPreset, reduceMotion]);
 
   const dollhouseOverview = useCallback(() => {
     const widthM = Number.isFinite(blueprint.canvas?.widthM) && (blueprint.canvas?.widthM ?? 0) > 0 ? blueprint.canvas.widthM : 20;
@@ -5157,10 +5241,17 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             orbitControlsRef={orbitControlsRef}
             blockedSeats={blockedSeats}
             cameraTargetPose={cameraTargetPose}
-            onCameraTargetArrived={() => setCameraTargetPose(null)}
+            onCameraTargetArrived={() => {
+              setCameraTargetPose(null);
+              setIntroGlide(false);
+            }}
             dollhouse={dollhouse}
             highlightSpace={walkthroughActive ? null : highlightSpace}
-            introFlyIn={introFlyIn && !walkthroughActive && !presentationMode}
+            introFlyIn={introFlyIn && !walkthroughActive && (!presentationMode || introChosen)}
+            introView={introView}
+            introReplayKey={introReplayKey}
+            onIntroPreset={handleIntroPreset}
+            introGlide={introGlide}
             filmActive={film !== null}
             frameTrackRef={frameTrackRef}
           />
