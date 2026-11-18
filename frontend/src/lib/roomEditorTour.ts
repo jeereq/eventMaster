@@ -158,8 +158,8 @@ const STEPS: EditorTourStepDef[] = [
   {
     id: 'assistant',
     target: 'assistant',
-    title: 'Une question ? L’assistant répond',
-    body: 'Le bouton « Assistant » ouvre un chat : demandez « comment ajouter une porte ? » ou « que puis-je faire ? ». Il explique où cliquer, pas à pas, donne les raccourcis, montre la zone de l’éditeur concernée et liste toutes les actions possibles.',
+    title: 'L’assistant vous guide geste par geste',
+    body: 'Le bouton « Assistant » : dites ce que vous voulez faire (« ajouter une porte »), il éclaire chaque bouton à toucher, dans l’ordre, et avance dès que c’est fait. « Toutes les actions » liste plus de 200 guides, rangés par thème.',
   },
   {
     id: 'check',
