@@ -12,7 +12,8 @@ import { AlignCenterHorizontal, AlignCenterVertical, AlignEndVertical, AlignStar
 import { cn } from '@/lib/cn';
 import type { LayoutActionEntry } from '@/lib/layoutActionLog';
 import { wallLengthMeters, type RoomLayoutBlueprint, type RoomWallOpening, type RoomWallSegment } from '@/lib/roomLayoutUtils';
-import { clampWallArt, wallArtHeightM, type RoomWallArt } from '@/lib/roomWallArt';
+import { WALL_ART_FACE_LABELS, clampWallArt, wallArtFace, wallArtHeightM, type RoomWallArt, type WallArtFace } from '@/lib/roomWallArt';
+import { graffitiPreviewUrl } from './graffitiDraw';
 
 type ItemType = 'opening' | 'art';
 
@@ -33,6 +34,8 @@ interface WallItem {
   imageUrl?: string;
   text?: string;
   color?: string;
+  /** Aperçu du graffiti tel qu'il est peint. */
+  previewUrl?: string | null;
 }
 
 const SNAP = 0.05;
@@ -95,6 +98,8 @@ export default function WallElevationEditor({
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ key: string; rect: Rect } | null>(null);
   const [keepRatio, setKeepRatio] = useState(true);
+  /** Face affichée : côté salle ou côté extérieur (les portes et fenêtres traversent le mur). */
+  const [face, setFace] = useState<WallArtFace>('inside');
   const dragRef = useRef<DragState | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -109,7 +114,9 @@ export default function WallElevationEditor({
 
   const lengthM = wall ? wallLengthMeters(wall, blueprint.canvas) : 0;
   const heightM = wall?.heightM ?? 3;
-  const mirrored = wall ? viewedMirrored(wall, blueprint.canvas) : false;
+  // Vu de l'extérieur, le mur se lit dans l'autre sens.
+  const mirrored = wall ? viewedMirrored(wall, blueprint.canvas) !== (face === 'outside') : false;
+  const outsideCount = (wall?.art ?? []).filter((a) => wallArtFace(a) === 'outside').length;
 
   const items: WallItem[] = [];
   if (wall) {
@@ -125,6 +132,7 @@ export default function WallElevationEditor({
       });
     });
     (wall.art ?? []).forEach((a, i) => {
+      if (wallArtFace(a) !== face) return;
       list.push({
         type: 'art',
         id: a.id,
@@ -134,6 +142,7 @@ export default function WallElevationEditor({
         imageUrl: a.imageUrl,
         text: a.text,
         color: a.fillColor,
+        previewUrl: a.kind === 'graffiti' ? graffitiPreviewUrl(a) : null,
       });
     });
   }
@@ -317,13 +326,36 @@ export default function WallElevationEditor({
       <div>
         <p id={`wall-elev-${wall.id}`} className="text-sm font-semibold text-foreground">Placer sur le mur</p>
         <p className="text-xs text-muted">
-          Mur vu depuis la salle ({lengthM.toFixed(2)} × {heightM.toFixed(2)} m). Glissez une porte, une fenêtre ou une image ; tirez le coin pour la taille. Flèches du clavier : 5 cm (Maj : 25 cm).
+          Mur vu {face === 'outside' ? 'de l’extérieur' : 'depuis la salle'} ({lengthM.toFixed(2)} × {heightM.toFixed(2)} m). Glissez une porte, une fenêtre ou une image ; tirez le coin pour la taille. Flèches du clavier : 5 cm (Maj : 25 cm).
         </p>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5" role="tablist" aria-label="Face du mur affichée">
+        {(Object.keys(WALL_ART_FACE_LABELS) as WallArtFace[]).map((f) => (
+          <button
+            key={f}
+            type="button"
+            role="tab"
+            aria-selected={face === f}
+            onClick={() => {
+              setFace(f);
+              setSelectedKey(null);
+            }}
+            className={cn(
+              'min-h-11 rounded-[var(--radius-button)] border px-2 text-xs font-semibold',
+              face === f ? 'border-primary bg-primary/10 text-foreground' : 'border-border bg-surface text-muted hover:bg-surface-muted',
+            )}
+          >
+            {WALL_ART_FACE_LABELS[f]}
+            {f === 'outside' && outsideCount > 0 ? ` (${outsideCount})` : ''}
+          </button>
+        ))}
       </div>
 
       {items.length === 0 ? (
         <p className="rounded-[var(--radius-card)] border border-dashed border-border px-3 py-4 text-center text-xs text-muted">
-          Ajoutez une porte, une fenêtre, une image ou un graffiti pour le placer ici.
+          {face === 'outside'
+            ? 'Rien côté extérieur : dans « Images et graffitis », choisissez « Côté extérieur » pour une image ou un graffiti.'
+            : 'Ajoutez une porte, une fenêtre, une image ou un graffiti pour le placer ici.'}
         </p>
       ) : (
         <div ref={scrollerRef} className="overflow-x-auto overscroll-x-contain rounded-[var(--radius-card)] border border-border bg-surface-muted">
@@ -379,7 +411,9 @@ export default function WallElevationEditor({
                   {it.kind === 'image' && it.imageUrl ? (
                     <image href={it.imageUrl} x={x + 1} y={y + 1} width={Math.max(0, w - 2)} height={Math.max(0, h - 2)} preserveAspectRatio="none" />
                   ) : null}
-                  {it.kind === 'graffiti' ? (
+                  {it.kind === 'graffiti' && it.previewUrl ? (
+                    <image href={it.previewUrl} x={x} y={y} width={w} height={h} preserveAspectRatio="none" />
+                  ) : it.kind === 'graffiti' ? (
                     <text x={x + w / 2} y={y + h / 2} fontSize={Math.max(9, Math.min(h * 0.6, w / Math.max(3, (it.text ?? '').length) * 1.6))} textAnchor="middle" dominantBaseline="central" fill={it.color ?? '#ff6b35'} fontWeight={800}>
                       {it.text}
                     </text>

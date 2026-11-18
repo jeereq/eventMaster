@@ -40,3 +40,14 @@ describe('editorTourSummary', () => {
     assert.equal(editorTourSummary(roomEditorCapabilities('complete')).nextPlan, null);
   });
 });
+
+describe('nouveautés du guide', () => {
+  it('présente tailles, murs, décor mural, salle remplie et plein air à tous les forfaits', () => {
+    const basic = buildEditorTour(roomEditorCapabilities('basic'));
+    for (const id of ['resize', 'walls', 'wallArt', 'crowd', 'openSpace']) {
+      const step = basic.find((s) => s.id === id);
+      assert.ok(step, id);
+      assert.equal(step?.locked, false, id);
+    }
+  });
+});

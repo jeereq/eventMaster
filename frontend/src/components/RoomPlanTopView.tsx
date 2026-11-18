@@ -30,6 +30,8 @@ import {
 } from '@/lib/roomPlanTopViewGeom';
 import FixtureRenderer from '@/components/FixtureRenderer';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
+import { wallArtPlanStrips } from '@/lib/roomWallArtPlan';
+import type { SimulatedGuest } from '@/lib/roomGuestSimulation';
 import { cn } from '@/lib/cn';
 
 /** Couleur par défaut du plateau, identique à la vue 3D. */
@@ -114,13 +116,31 @@ export interface RoomPlanTopViewProps {
   /** Noms des tables et libellés des éléments fixes. */
   showLabels?: boolean;
   className?: string;
+  /** Invités simulés (salle remplie), dessinés vus du dessus comme en 3D. */
+  guests?: SimulatedGuest[] | null;
+}
+
+/** Invité vu du dessus : épaules dans la couleur de la tenue, tête (cheveux ou foulard). */
+function GuestGlyph({ g, W, H }: { g: SimulatedGuest; W: number; H: number }) {
+  const x = g.x + W / 2;
+  const y = g.z + H / 2;
+  const s = g.scale;
+  const deg = (-g.rotY * 180) / Math.PI;
+  const dress = g.style === 'dress' && g.pose !== 'seated';
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${deg})`}>
+      {dress ? <ellipse rx={0.2 * s} ry={0.17 * s} fill={g.outfit} opacity={0.9} /> : null}
+      <ellipse rx={0.23 * s} ry={0.12 * s} fill={g.outfit} stroke="rgba(15,23,42,0.35)" strokeWidth={0.015} />
+      <circle cy={0.02 * s} r={0.085 * s} fill={g.headwrap ?? g.hair} stroke="rgba(15,23,42,0.3)" strokeWidth={0.012} />
+    </g>
+  );
 }
 
 /**
  * Plan 2D vu du dessus, à l’échelle réelle de la salle : mêmes proportions,
  * même sol, mêmes tables et chaises (taille, place, couleur) que la vue 3D.
  */
-export default function RoomPlanTopView({ blueprint, showLabels = true, className }: RoomPlanTopViewProps) {
+export default function RoomPlanTopView({ blueprint, showLabels = true, className, guests = null }: RoomPlanTopViewProps) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const W = Math.max(1, blueprint.canvas.widthM || 20);
   const H = Math.max(1, blueprint.canvas.heightM || 16);
@@ -154,6 +174,8 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
   const furniture = blueprint.furniture.filter((item) => onStory(item.storyId));
   const walls = isBlueprintWallsVisible(meta) ? resolveBlueprintWalls(blueprint) : [];
   const outline = blueprint.roomOutline;
+  // Images et graffitis : liseré coloré le long du mur, du côté où ils sont posés.
+  const artStrips = wallArtPlanStrips(walls.filter((w) => onStory(w.storyId)), W, H);
 
   const geometry = useMemo(() => {
     const tables: Array<{ item: Extract<typeof furniture[number], { kind: 'table' }>; top: TopViewTable }> = [];
@@ -335,6 +357,25 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
               </g>
             );
           })}
+
+          {artStrips.map((a) => (
+            <g key={a.id}>
+              <title>{`${a.label} · ${a.face === 'outside' ? 'côté extérieur' : 'côté salle'}`}</title>
+              <line x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2} stroke="rgba(15,23,42,0.55)" strokeWidth={0.16} strokeLinecap="round" />
+              <line
+                x1={a.x1}
+                y1={a.y1}
+                x2={a.x2}
+                y2={a.y2}
+                stroke={a.color}
+                strokeWidth={0.1}
+                strokeLinecap="round"
+                strokeDasharray={a.kind === 'graffiti' ? '0.22 0.08' : undefined}
+              />
+            </g>
+          ))}
+
+          {guests?.map((g) => <GuestGlyph key={g.id} g={g} W={W} H={H} />)}
 
           {showLabels
             ? geometry.tables.map(({ item, top }) => {

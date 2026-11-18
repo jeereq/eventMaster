@@ -30,3 +30,20 @@ test('un élément reste sur le mur : largeur, bords et hauteur', () => {
   const tallForWall = clampWallArt({ id: 'd', kind: 'image', t: 0.5, yM: 1.5, widthM: 3, aspect: 0.5 }, 6, 2.5);
   assert.ok(wallArtHeightM(tallForWall) <= 2.5);
 });
+
+test('les effets d’un graffiti suivent son style tant qu’on ne les règle pas', async () => {
+  const { graffitiEffects, wallArtFace } = await import('./roomWallArt.ts');
+  assert.equal(graffitiEffects({ graffitiStyle: 'drip' }).drips, true);
+  assert.equal(graffitiEffects({ graffitiStyle: 'neon' }).spray, false);
+  assert.equal(graffitiEffects({ graffitiStyle: 'drip', effects: { drips: false } }).drips, false);
+  assert.equal(graffitiEffects({ graffitiStyle: 'chrome', effects: { drips: true } }).depth, true);
+  assert.equal(wallArtFace({}), 'inside');
+  assert.equal(wallArtFace({ face: 'outside' }), 'outside');
+});
+
+test('inclinaison, courbure et contour restent dans leurs bornes', () => {
+  const art = clampWallArt({ id: 'g', kind: 'graffiti', t: 0.5, yM: 1.5, widthM: 2, aspect: 3, tiltDeg: 80, curve: -4, outlineScale: 9 }, 8, 3);
+  assert.equal(art.tiltDeg, 25);
+  assert.equal(art.curve, -1);
+  assert.equal(art.outlineScale, 2);
+});

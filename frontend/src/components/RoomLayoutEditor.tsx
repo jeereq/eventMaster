@@ -5432,6 +5432,7 @@ export default function RoomLayoutEditor({
           <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
             <button
               type="button"
+              data-tour="walls"
               aria-expanded={accordion === 'murs'}
               aria-controls="editor-panel-murs"
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'murs' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
