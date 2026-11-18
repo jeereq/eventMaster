@@ -105,3 +105,24 @@ describe('libellé de la place', () => {
     assert.equal(describeAvatarViewer(bp, { ...guest('t1:0', 0, 0, 0), name: 'Awa' }), 'Awa');
   });
 });
+
+describe('invités réels d’un événement', () => {
+  const bp = blueprint([
+    { id: 't1', kind: 'table', name: 'Table 1', shape: 'round', capacity: 8, chairType: 'BANQUET', x: 30, y: 50 },
+    { id: 't2', kind: 'table', name: 'Table 2', shape: 'round', capacity: 8, chairType: 'BANQUET', x: 70, y: 50 },
+  ]);
+  it('assoit chaque invité à sa place, avec son nom, et laisse les autres places vides', () => {
+    const res = buildGuestSimulation(bp, {
+      fill: 1,
+      dancing: false,
+      seatOccupants: { 't1:0': { name: 'Awa Diallo' }, 't2:5': { name: 'Jean Mbala' } },
+    });
+    assert.equal(res.guests.length, 2);
+    const jean = res.guests.find((g) => g.id === 't2:5');
+    assert.equal(jean?.name, 'Jean Mbala');
+    assert.equal(describeAvatarViewer(bp, jean!), 'Jean Mbala');
+  });
+  it('sans invité placé, la salle reste vide', () => {
+    assert.equal(buildGuestSimulation(bp, { fill: 1, dancing: false, seatOccupants: {} }).guests.length, 0);
+  });
+});

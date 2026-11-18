@@ -3,6 +3,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { SimulatedGuest } from '@/lib/roomGuestSimulation';
 
@@ -1170,18 +1171,131 @@ export function guestEyePose(g: SimulatedGuest, t = 0): GuestEyePose {
   return { x: eyeVec.x, y: eyeVec.y, z: eyeVec.z, yaw: g.rotY + sway };
 }
 
+/* ------------------------------------------------------------------ */
+/* Clic sur un invité                                                  */
+/* ------------------------------------------------------------------ */
+
+/** Silhouette cliquable d'un invité (repère local, sol à y = 0) : largeur, hauteur, profondeur, centre. */
+export function guestPickBox(g: Pick<SimulatedGuest, 'pose'>): { size: Vec3; center: Vec3 } {
+  return g.pose === 'seated'
+    ? { size: [0.56, 1.36, 0.62], center: [0, 0.68, 0.04] }
+    : { size: [0.52, 1.78, 0.42], center: [0, 0.89, 0] };
+}
+
+const pickGeometry = new THREE.BoxGeometry(1, 1, 1);
+// Invisible mais touchable : rien n'est dessiné (ni couleur ni profondeur), le rayon le trouve quand même.
+const pickMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false });
+
+/** Clic franc (pas un glissé de caméra) en pixels. */
+const CLICK_SLOP_PX = 6;
+
+/**
+ * Zones de clic invisibles, une par invité : cliquer un avatar le désigne (vue depuis ses yeux).
+ * Un seul maillage instancié simple, au lieu de lancer des rayons sur les centaines de pièces de la foule.
+ */
+const GuestPickTargets = React.memo(function GuestPickTargets({
+  guests,
+  onPick,
+  hoverLabel = 'Voir avec ses yeux',
+}: {
+  guests: SimulatedGuest[];
+  onPick: (guest: SimulatedGuest) => void;
+  /** Texte de l'étiquette au survol d'un avatar. */
+  hoverLabel?: string;
+}) {
+  const ref = useRef<THREE.InstancedMesh | null>(null);
+  const [hovered, setHovered] = useState<SimulatedGuest | null>(null);
+  // Le canevas est la cible de l'événement d'origine : on y pose le curseur « main ».
+  const setCursor = (e: { nativeEvent: Event }, cursor: string) => {
+    const el = e.nativeEvent.target;
+    if (el instanceof HTMLElement) el.style.cursor = cursor;
+  };
+  useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const m = new THREE.Matrix4();
+    const local = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    guests.forEach((g, i) => {
+      const box = guestPickBox(g);
+      q.setFromAxisAngle(UP, g.rotY);
+      m.compose(new THREE.Vector3(g.x, g.y, g.z), q, new THREE.Vector3(g.scale, g.scale, g.scale));
+      local.compose(new THREE.Vector3(...box.center), new THREE.Quaternion(), new THREE.Vector3(...box.size));
+      mesh.setMatrixAt(i, m.multiply(local));
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  }, [guests]);
+  if (guests.length === 0) return null;
+  const shownHover = hovered && guests.includes(hovered) ? hovered : null;
+  const hoverTop = shownHover ? guestPickBox(shownHover).size[1] * shownHover.scale + 0.22 : 0;
+  return (
+    <>
+    {shownHover ? (
+      <Html
+        position={[shownHover.x, shownHover.y + hoverTop, shownHover.z]}
+        center
+        zIndexRange={[30, 0]}
+        style={{ pointerEvents: 'none', userSelect: 'none' }}
+      >
+        <div
+          style={{
+            padding: '4px 9px',
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            background: 'rgba(28,25,23,0.85)',
+            color: '#fff',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+          }}
+        >
+          {shownHover.name ? `${shownHover.name} · ${hoverLabel.toLowerCase()}` : hoverLabel}
+        </div>
+      </Html>
+    ) : null}
+    <instancedMesh
+      key={guests.length}
+      ref={ref}
+      args={[pickGeometry, pickMaterial, guests.length]}
+      name="simulated-guests-pick"
+      onClick={(e) => {
+        const g = e.instanceId !== undefined ? guests[e.instanceId] : undefined;
+        if (!g || e.delta > CLICK_SLOP_PX) return;
+        e.stopPropagation();
+        onPick(g);
+      }}
+      onPointerMove={(e) => {
+        const g = e.instanceId !== undefined ? guests[e.instanceId] : undefined;
+        if (!g) return;
+        e.stopPropagation();
+        setCursor(e, 'pointer');
+        if (g !== hovered) setHovered(g);
+      }}
+      onPointerOut={(e) => {
+        setCursor(e, '');
+        setHovered(null);
+      }}
+    />
+    </>
+  );
+});
+
 /** Invités simulés : assis et debout (fixes) + danseurs (animés) + visages en photo. */
 export const GuestAvatars = React.memo(function GuestAvatars({
   guests,
   animate = true,
   castShadow = true,
   hiddenGuestId = null,
+  onPickGuest,
 }: {
   guests: SimulatedGuest[];
   animate?: boolean;
   castShadow?: boolean;
   /** Invité dont on prend le point de vue : on ne dessine pas son corps devant la caméra. */
   hiddenGuestId?: string | null;
+  /** Clic sur un avatar : prendre son point de vue. Absent = avatars non cliquables. */
+  onPickGuest?: (guest: SimulatedGuest) => void;
 }) {
   const shown = useMemo(() => (hiddenGuestId ? guests.filter((g) => g.id !== hiddenGuestId) : guests), [guests, hiddenGuestId]);
   const still = useMemo(() => shown.filter((g) => g.pose !== 'dancing'), [shown]);
@@ -1192,6 +1306,7 @@ export const GuestAvatars = React.memo(function GuestAvatars({
       {still.length > 0 ? <GuestCrowd guests={still} animate={false} castShadow={castShadow} /> : null}
       {dancers.length > 0 ? <GuestCrowd guests={dancers} animate={animate} castShadow={castShadow} /> : null}
       {portraits.map((g) => <PortraitFace key={g.id} guest={g} />)}
+      {onPickGuest ? <GuestPickTargets guests={shown} onPick={onPickGuest} /> : null}
     </group>
   );
 });

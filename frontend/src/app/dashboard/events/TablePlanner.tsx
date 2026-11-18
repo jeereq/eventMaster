@@ -36,6 +36,7 @@ import {
 } from '@/lib/ticketPricing';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
+import type { GuestSimulationSettings, SeatOccupant } from '@/lib/roomGuestSimulation';
 import Room3DErrorBoundary from '@/components/Room3DErrorBoundary';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
@@ -416,6 +417,25 @@ export default function TablePlanner({
   const plannerHeightM = roomLayoutBlueprint?.canvas?.heightM ?? 16;
 
   const [safe3DMode, setSafe3DMode] = useState(false);
+  // Invités placés visibles en 3D : chacun à sa place, cliquable pour voir la salle avec ses yeux.
+  const [show3DGuests, setShow3DGuests] = useState(true);
+  const seatOccupants = useMemo(() => {
+    const out: Record<string, SeatOccupant> = {};
+    for (const table of tables) {
+      for (const [seatIndex, guestId] of Object.entries(normalizeTableSeats(table.seats, table.capacity))) {
+        if (!guestId) continue;
+        const guest = guests.find((g) => g.id === guestId);
+        if (guest) out[`${table.id}:${seatIndex}`] = { name: `${guest.firstName} ${guest.lastName}`.trim() };
+      }
+    }
+    return out;
+  }, [tables, guests]);
+  const seatedGuestCount = Object.keys(seatOccupants).length;
+  const planGuestSimulation = useMemo<GuestSimulationSettings | null>(
+    // Pinceau de zone actif : les clics vont aux tables, on range les invités le temps de peindre.
+    () => (show3DGuests && !paintZoneId && seatedGuestCount > 0 ? { fill: 0, dancing: false, seatOccupants } : null),
+    [show3DGuests, paintZoneId, seatedGuestCount, seatOccupants],
+  );
   const previewQuality = caps.canShowcaseRender && !safe3DMode ? 'showcase' as const : 'standard' as const;
 
   const [activeLightingPreset, setActiveLightingPreset] = useState<LightingPreset>(() => {
@@ -938,6 +958,7 @@ export default function TablePlanner({
                   }
                 }}
                 showMeta={false}
+                guestSimulation={planGuestSimulation}
                 className="absolute inset-0 h-full w-full [&_.em-floor-canvas]:min-h-[320px]"
               />
             </Room3DErrorBoundary>
@@ -948,7 +969,9 @@ export default function TablePlanner({
               <span>
                 {paintZoneId
                   ? `Pinceau actif : touchez une table pour l'assigner à ${pricingZones.find((z) => z.id === paintZoneId)?.name}`
-                  : 'Touchez une table en 3D pour la sélectionner et modifier sa zone'}
+                  : planGuestSimulation
+                    ? 'Touchez une table pour la sélectionner · un invité pour voir la salle avec ses yeux'
+                    : 'Touchez une table en 3D pour la sélectionner et modifier sa zone'}
               </span>
             </div>
 
@@ -972,6 +995,26 @@ export default function TablePlanner({
                 </select>
               </div>
 
+              {seatedGuestCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setShow3DGuests((on) => !on)}
+                  aria-pressed={show3DGuests}
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-xs font-semibold transition shadow-sm',
+                    show3DGuests
+                      ? 'bg-primary-solid text-primary-foreground border-primary'
+                      : 'bg-foreground/80 hover:bg-foreground border-background/20 text-background',
+                  )}
+                  title={show3DGuests
+                    ? 'Masquer les invités placés · cliquez un invité pour voir la salle avec ses yeux'
+                    : 'Afficher les invités placés à leur table, cliquables pour voir avec leurs yeux'}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Invités</span>
+                  <span className="tabular-nums">{seatedGuestCount}</span>
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setIs3DFullscreen(true)}
@@ -1135,6 +1178,7 @@ export default function TablePlanner({
                 selectedTableId={activeTableId}
                 onSelectTable={(tableId) => setActiveTableId(tableId)}
                 showMeta={false}
+                guestSimulation={planGuestSimulation}
                 className="absolute inset-0 h-full w-full"
               />
             </Room3DErrorBoundary>
