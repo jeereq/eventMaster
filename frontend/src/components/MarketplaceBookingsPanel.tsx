@@ -55,6 +55,9 @@ import { useAuth } from '@/context/AuthContext';
 import { ReviewStars, ReviewStarsInput } from '@/components/marketplace/ReviewStars';
 import { commissionPercent, depositPercent } from '@/lib/platformRates';
 import OnlineDepositSettings from '@/components/marketplace/OnlineDepositSettings';
+import VendorUnavailabilitySettings from '@/components/marketplace/VendorUnavailabilitySettings';
+import { formatDayDistance } from '@/lib/relativeDate';
+import CommissionPayButton from '@/components/marketplace/CommissionPayButton';
 import { segmentedItem, SEGMENTED_TRACK } from '@/components/ui/segmented';
 import type { MarketplaceDepositPayment } from '@/lib/marketplace';
 
@@ -92,6 +95,27 @@ function kindIcon(item: MarketplaceBookingItem) {
 }
 
 const MAX_UNAVAILABLE_PREVIEW = 5;
+
+/**
+ * Ordre de lecture : ce qui attend une action d'abord (demandes, acceptées),
+ * puis les dates confirmées à venir, de la plus proche à la plus lointaine,
+ * enfin l'historique (terminées, annulées), du plus récent au plus ancien.
+ */
+const BOOKING_DESK_RANK: Record<MarketplaceBookingStatus, number> = {
+  REQUESTED: 0,
+  ACCEPTED: 1,
+  CONFIRMED: 2,
+  COMPLETED: 3,
+  CANCELLED: 4,
+};
+
+function compareBookingsForDesk(a: MarketplaceBookingItem, b: MarketplaceBookingItem) {
+  const rank = BOOKING_DESK_RANK[a.status] - BOOKING_DESK_RANK[b.status];
+  if (rank) return rank;
+  const ta = new Date(a.eventDate).getTime();
+  const tb = new Date(b.eventDate).getTime();
+  return BOOKING_DESK_RANK[a.status] >= 3 ? tb - ta : ta - tb;
+}
 const STATUS_SUMMARY_ORDER: MarketplaceBookingStatus[] = [
   'REQUESTED',
   'ACCEPTED',
@@ -198,6 +222,7 @@ function BookingStepper({ item }: { item: MarketplaceBookingItem }) {
 export default function MarketplaceBookingsPanel({
   bookings,
   commissionDueFc,
+  onlinePaymentAvailable = false,
   onChanged,
   organizerView = false,
   highlightBookingId,
@@ -205,6 +230,8 @@ export default function MarketplaceBookingsPanel({
 }: {
   bookings: MarketplaceBookingItem[];
   commissionDueFc: number;
+  /** Le paiement en ligne est ouvert (commission réglable par FlexPay). */
+  onlinePaymentAvailable?: boolean;
   onChanged: () => Promise<void> | void;
   organizerView?: boolean;
   highlightBookingId?: string | null;
@@ -388,7 +415,7 @@ export default function MarketplaceBookingsPanel({
     if (fromDate && end && end < fromDate) return false;
     if (toDate && day && day > toDate) return false;
     return true;
-  }), [bookings, filter, status, kind, query, fromDate, toDate]);
+  }).sort(compareBookingsForDesk), [bookings, filter, status, kind, query, fromDate, toDate]);
   const pagedVisible = usePaginateItems(visible, page, pageSize);
 
   useEffect(() => {
@@ -488,19 +515,27 @@ export default function MarketplaceBookingsPanel({
 
   return (
     <div className="space-y-4">
-      {!organizerView && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border border-border rounded-[var(--radius-card)] bg-surface px-4 py-3">
-          <div>
+      {!organizerView ? (
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="h-full flex flex-wrap items-center justify-between gap-3 border border-border rounded-[var(--radius-card)] bg-surface px-4 py-3">
+          <div className="min-w-0">
             <p className="text-xs font-semibold text-foreground">Commission marketplace à régler</p>
             <p className="text-xs text-muted mt-0.5">
               {commissionPct} % des réservations confirmées, hors commissions déjà payées ou retenues sur un acompte en ligne
             </p>
           </div>
-          <p className="text-lg font-semibold tabular-nums">{formatFc(commissionDueFc)}</p>
+          <div className="flex items-center gap-3">
+            <p className="text-lg font-semibold tabular-nums">{formatFc(commissionDueFc)}</p>
+            {canHandleAsVendor && onlinePaymentAvailable ? (
+              <CommissionPayButton commissionDueFc={commissionDueFc} onPaid={onChanged} />
+            ) : null}
+          </div>
         </div>
-      )}
-      {!organizerView && canHandleAsVendor ? (
-        <OnlineDepositSettings depositPct={depositPct} commissionPct={commissionPct} onSaved={onChanged} />
+        {canHandleAsVendor ? (
+          <OnlineDepositSettings depositPct={depositPct} commissionPct={commissionPct} onSaved={onChanged} />
+        ) : null}
+        <VendorUnavailabilitySettings bookedDates={[...confirmedDates, ...pendingDates]} onSaved={onChanged} />
+      </div>
       ) : null}
 
       {error && <Alert variant="error">{error}</Alert>}
@@ -743,7 +778,16 @@ export default function MarketplaceBookingsPanel({
                 setCalendarOpen(true);
               };
               const facts: MarketplaceDealFact[] = [
-                { label: 'Période', value: periodLabel, onClick: item.eventDate ? focusPeriod : undefined },
+                {
+                  label: 'Période',
+                  value: item.eventDate && (item.status === 'REQUESTED' || item.status === 'ACCEPTED' || item.status === 'CONFIRMED') ? (
+                    <>
+                      {periodLabel}
+                      <span className="block text-xs font-normal text-muted">{formatDayDistance(item.eventDate)}</span>
+                    </>
+                  ) : periodLabel,
+                  onClick: item.eventDate ? focusPeriod : undefined,
+                },
               ];
               if (counterpart) facts.push({ label: isVendor ? 'Client' : 'Professionnel', value: counterpart });
               if (item.event?.title) facts.push({ label: 'Événement', value: item.event.title });

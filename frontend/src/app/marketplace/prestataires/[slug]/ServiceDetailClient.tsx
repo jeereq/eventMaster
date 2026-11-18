@@ -161,7 +161,7 @@ export default function MarketplaceServiceDetailPage() {
           <MarketplaceActivityFeed
             scope={{ kind: 'vendor', slug: service.orgSlug }}
             authorLabel={service.orgName || 'Ce prestataire'}
-            className="max-w-2xl"
+            layout="grid"
           />
         ) : null}
         inquiry={service ? (

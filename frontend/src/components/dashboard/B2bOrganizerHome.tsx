@@ -197,7 +197,7 @@ export default function B2bOrganizerHome({
     todo.push({
       id: 'quotes',
       label: asVendor ? 'Demandes de devis reçues' : 'Devis en cours',
-      href: asVendor ? '/dashboard/bookings?tab=quotes&role=vendor' : '/dashboard/bookings?tab=quotes',
+      href: asVendor ? '/dashboard/quotes?role=vendor' : '/dashboard/quotes',
       count: pendingQuotesCount,
       icon: Inbox,
       urgent: false,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import {
   resolveChandelierCount,
@@ -8,115 +8,13 @@ import {
   type ChandelierType,
 } from '@/lib/roomCeilingUtils';
 import type { DoorStyle, AisleStyle, ChandelierFixtureStyle, OpeningMaterial } from '@/lib/roomLayoutUtils';
-import { getDoorMaterialProps } from '@/lib/roomWebGLMaterials';
+import { getDoorMaterialProps, resolveImportedSurface } from '@/lib/roomWebGLMaterials';
+import { tileRepeat } from '@/lib/roomImportedTextureMath';
+import { aislePetals, evenlySpacedOffsets, shadeHex, type AislePetal } from '@/lib/roomAisleLayout';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
-import { CandelabraChandelier, ChandelierModel, CrystalChandelier, chandelierLightY } from '@/components/room/ChandelierMeshes';
-
-function ChandelierClassic({ pointLights }: { pointLights: boolean }) {
-  return (
-    <group>
-      <mesh position={[0, 0.1, 0]}>
-        <cylinderGeometry args={[0.005, 0.005, 0.2, 6]} />
-        <SurfaceMat color="#57534e" metalness={0.7} roughness={0.3} />
-      </mesh>
-      <CandelabraChandelier scale={0.62} />
-      {pointLights ? (
-        <pointLight position={[0, -0.4, 0]} intensity={0.55} color="#fef3c7" distance={10} decay={2} />
-      ) : null}
-    </group>
-  );
-}
-
-function ChandelierCrystal({ pointLights }: { pointLights: boolean }) {
-  return (
-    <group>
-      <mesh position={[0, 0.1, 0]}>
-        <cylinderGeometry args={[0.005, 0.005, 0.2, 6]} />
-        <SurfaceMat color="#a8a29e" metalness={0.85} roughness={0.2} />
-      </mesh>
-      <CrystalChandelier scale={0.72} />
-      {pointLights ? (
-        <pointLight position={[0, -0.45, 0]} intensity={0.78} color="#fef3c7" distance={11} decay={2} />
-      ) : null}
-    </group>
-  );
-}
-
-function ChandelierModern({ pointLights }: { pointLights: boolean }) {
-  return (
-    <group>
-      <mesh position={[0, 0.35, 0]}>
-        <cylinderGeometry args={[0.005, 0.005, 0.55, 6]} />
-        <SurfaceMat color="#57534e" metalness={0.6} roughness={0.35} />
-      </mesh>
-      <mesh position={[0, 0.02, 0]} castShadow>
-        <cylinderGeometry args={[0.09, 0.11, 0.28, 24]} />
-        <SurfaceMat color="#1c1917" metalness={0.55} roughness={0.35} />
-      </mesh>
-      <mesh position={[0, -0.14, 0]}>
-        <cylinderGeometry args={[0.08, 0.08, 0.04, 24]} />
-        <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.85} roughness={0.4} />
-      </mesh>
-      {pointLights ? (
-        <pointLight position={[0, -0.25, 0]} intensity={0.65} color="#fff7ed" distance={9} decay={2} />
-      ) : null}
-    </group>
-  );
-}
-
-function ChandelierIndustrial({ pointLights }: { pointLights: boolean }) {
-  return (
-    <group>
-      <mesh position={[0, 0.32, 0]}>
-        <cylinderGeometry args={[0.01, 0.01, 0.5, 6]} />
-        <SurfaceMat color="#292524" metalness={0.7} roughness={0.4} />
-      </mesh>
-      <mesh position={[0, 0.05, 0]} castShadow>
-        <coneGeometry args={[0.18, 0.22, 16, 1, true]} />
-        <meshStandardMaterial color="#44403c" metalness={0.65} roughness={0.4} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh position={[0, -0.02, 0]}>
-        <sphereGeometry args={[0.07, 12, 12]} />
-        <meshStandardMaterial color="#fef9c3" emissive="#fde68a" emissiveIntensity={0.9} roughness={0.3} />
-      </mesh>
-      {pointLights ? (
-        <pointLight position={[0, -0.15, 0]} intensity={0.5} color="#fde68a" distance={8} decay={2} />
-      ) : null}
-    </group>
-  );
-}
-
-function ChandelierLantern({ pointLights }: { pointLights: boolean }) {
-  return (
-    <group>
-      <mesh position={[0, 0.3, 0]}>
-        <cylinderGeometry args={[0.006, 0.006, 0.4, 6]} />
-        <SurfaceMat color="#a8a29e" metalness={0.75} roughness={0.3} />
-      </mesh>
-      <mesh position={[0, 0.08, 0]} castShadow>
-        <boxGeometry args={[0.22, 0.06, 0.22]} />
-        <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
-      </mesh>
-      <mesh position={[0, -0.08, 0]} castShadow>
-        <boxGeometry args={[0.2, 0.28, 0.2]} />
-        <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.45} transparent opacity={0.75} roughness={0.35} />
-      </mesh>
-      {[0, 1, 2, 3].map((i) => (
-        <mesh key={i} position={[0, -0.08, 0]} rotation={[0, (i * Math.PI) / 2, 0]} castShadow>
-          <boxGeometry args={[0.22, 0.28, 0.012]} />
-          <SurfaceMat color="#b45309" metalness={0.55} roughness={0.4} />
-        </mesh>
-      ))}
-      <mesh position={[0, -0.24, 0]} castShadow>
-        <boxGeometry args={[0.22, 0.04, 0.22]} />
-        <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
-      </mesh>
-      {pointLights ? (
-        <pointLight position={[0, -0.1, 0]} intensity={0.6} color="#fdba74" distance={9} decay={2} />
-      ) : null}
-    </group>
-  );
-}
+import { AtelierGlazing, CassettePanels, DoorHandles, Hinges, handleY } from '@/components/room/DoorHardware';
+import type { HomeMetalFinish } from '@/lib/roomHomeFurniture';
+import { ChandelierModel, chandelierLightY } from '@/components/room/ChandelierMeshes';
 
 function ChandelierRecessed({ pointLights }: { pointLights: boolean }) {
   return (
@@ -136,37 +34,34 @@ function ChandelierRecessed({ pointLights }: { pointLights: boolean }) {
   );
 }
 
-function ChandelierByType({
-  type,
-  pointLights,
-}: {
-  type: ChandelierType;
-  pointLights: boolean;
-}) {
-  switch (type) {
-    case 'crystal':
-      return <ChandelierCrystal pointLights={pointLights} />;
-    case 'modern':
-      return <ChandelierModern pointLights={pointLights} />;
-    case 'industrial':
-      return <ChandelierIndustrial pointLights={pointLights} />;
-    case 'lantern':
-      return <ChandelierLantern pointLights={pointLights} />;
-    case 'recessed':
-      return <ChandelierRecessed pointLights={pointLights} />;
-    case 'classic':
-    default:
-      return <ChandelierClassic pointLights={pointLights} />;
-  }
+/** Lustres / suspensions au plafond. */
+/** Modèle détaillé utilisé pour chaque type de lustre automatique (mêmes lustres que ceux posés à la main). */
+const AMBIENT_CHANDELIER_MODEL: Record<Exclude<ChandelierType, 'recessed'>, ChandelierFixtureStyle> = {
+  classic: 'candleCandelabra',
+  crystal: 'crystalCascade',
+  modern: 'modernMinimal',
+  industrial: 'industrialDome',
+  lantern: 'lantern',
+};
+
+/** Positions des lustres automatiques : alignés au centre, le long du grand côté de la salle. */
+export function ambientChandelierPositions(count: number, widthM: number, heightM: number): Array<[number, number]> {
+  const n = Math.max(1, Math.min(5, Math.round(count)));
+  const alongX = widthM >= heightM;
+  const span = (alongX ? widthM : heightM) * 0.8;
+  return Array.from({ length: n }, (_, i) => {
+    const t = (i + 0.5) / n - 0.5;
+    return alongX ? [t * span, 0] : [0, t * span];
+  });
 }
 
-/** Lustres / suspensions au plafond. */
 export function RoomChandeliers({
   widthM,
   heightM,
   wallHeightM,
   count = 3,
   pointLights = true,
+  maxPointLights = 5,
   chandelierType = 'classic',
 }: {
   widthM: number;
@@ -174,30 +69,34 @@ export function RoomChandeliers({
   wallHeightM: number;
   count?: number;
   pointLights?: boolean;
+  /** Lampes réelles au-delà desquelles les lustres restent allumés sans éclairer (performances). */
+  maxPointLights?: number;
   chandelierType?: ChandelierType | string;
 }) {
   const type = resolveChandelierType(chandelierType);
-  const positions = useMemo(() => {
-    const n = Math.max(1, Math.min(5, count));
-    const flush = type === 'recessed';
-    return Array.from({ length: n }).map((_, i) => {
-      const t = n === 1 ? 0.5 : i / (n - 1);
-      const y = flush ? wallHeightM - 0.02 : wallHeightM - 0.15;
-      return [
-        (t - 0.5) * widthM * 0.55,
-        y,
-        (i % 2 === 0 ? -0.12 : 0.12) * heightM,
-      ] as [number, number, number];
-    });
-  }, [count, widthM, heightM, wallHeightM, type]);
+  const positions = useMemo(() => ambientChandelierPositions(count, widthM, heightM), [count, widthM, heightM]);
+  const model = type === 'recessed' ? null : AMBIENT_CHANDELIER_MODEL[type];
 
   return (
     <group>
-      {positions.map((pos, i) => (
-        <group key={`${type}-${i}`} position={pos}>
-          <ChandelierByType type={type} pointLights={pointLights} />
-        </group>
-      ))}
+      {positions.map(([x, z], i) => {
+        const lit = pointLights && i < maxPointLights;
+        if (!model) {
+          return (
+            <group key={`${type}-${i}`} position={[x, wallHeightM - 0.02, z]}>
+              <ChandelierRecessed pointLights={lit} />
+            </group>
+          );
+        }
+        return (
+          <group key={`${type}-${i}`} position={[x, 0, z]}>
+            <ChandelierModel style={model} ceilingM={wallHeightM} lightColor="#ffd79a" />
+            {lit ? (
+              <pointLight position={[0, chandelierLightY(model, wallHeightM), 0]} intensity={0.8} color="#fef3c7" distance={10} decay={2} />
+            ) : null}
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -244,16 +143,17 @@ export function RoomUplights({
               roughness={0.2}
             />
           </mesh>
-          <mesh position={[0, 0.12, 0]}>
-            <coneGeometry args={[0.2, 0.55, 16]} />
-            <meshStandardMaterial
-              color="#fef9c3"
+          {/* Halo discret sur le mur plutôt qu’un cône opaque, qui se voyait comme un objet posé. */}
+          <mesh position={[0, 0.5, 0]} rotation={[Math.PI, 0, 0]}>
+            <coneGeometry args={[0.22, 0.8, 16, 1, true]} />
+            <meshBasicMaterial
+              color="#fbbf24"
               transparent
-              opacity={0.15}
-              emissive="#fbbf24"
-              emissiveIntensity={0.45}
+              opacity={0.06}
+              blending={THREE.AdditiveBlending}
               depthWrite={false}
               side={THREE.DoubleSide}
+              toneMapped={false}
             />
           </mesh>
         </group>
@@ -356,11 +256,15 @@ export type RoomAmbianceFlags = {
   plants?: boolean;
 };
 
+/** Intérieur délimité par les murs (repère monde) : centre et dimensions en mètres. */
+export type RoomInteriorBox = { cx: number; cz: number; w: number; d: number };
+
 export function RoomAmbiance({
   widthM,
   heightM,
   wallHeightM,
   flags,
+  interior,
   maxChandeliers = 3,
   maxUplights = 12,
   chandelierPointLights = true,
@@ -378,8 +282,12 @@ export function RoomAmbiance({
   chandelierType?: ChandelierType | string;
   chandelierCount?: number;
   curtainColor?: string;
+  /** Murs en retrait du plan : uplights, rideaux et plantes se posent contre leurs faces intérieures. */
+  interior?: RoomInteriorBox;
 }) {
-  const count = resolveChandelierCount(chandelierCount, maxChandeliers);
+  const box = interior ?? { cx: 0, cz: 0, w: widthM, d: heightM };
+  // Le nombre choisi est toujours respecté ; la qualité de rendu ne limite que les lampes réelles.
+  const count = resolveChandelierCount(chandelierCount, 5);
   return (
     <group>
       {flags.chandeliers ? (
@@ -389,16 +297,19 @@ export function RoomAmbiance({
           wallHeightM={wallHeightM}
           count={count}
           pointLights={chandelierPointLights}
+          maxPointLights={maxChandeliers}
           chandelierType={chandelierType}
         />
       ) : null}
-      {flags.uplights ? (
-        <RoomUplights widthM={widthM} heightM={heightM} maxCount={maxUplights} />
-      ) : null}
-      {flags.curtains ? (
-        <RoomCurtains widthM={widthM} heightM={heightM} wallHeightM={wallHeightM} color={curtainColor} />
-      ) : null}
-      {flags.plants ? <RoomCornerPlants widthM={widthM} heightM={heightM} /> : null}
+      <group position={[box.cx, 0, box.cz]}>
+        {flags.uplights ? (
+          <RoomUplights widthM={box.w} heightM={box.d} maxCount={maxUplights} />
+        ) : null}
+        {flags.curtains ? (
+          <RoomCurtains widthM={box.w} heightM={box.d} wallHeightM={wallHeightM} color={curtainColor} />
+        ) : null}
+        {flags.plants ? <RoomCornerPlants widthM={box.w} heightM={box.d} /> : null}
+      </group>
     </group>
   );
 }
@@ -415,11 +326,13 @@ export function CatalogueDoor({
   color,
   openingMaterial,
   frameColor,
+  hardwareFinish,
   selected = false,
 }: {
   w: number;
   d: number;
   height?: number;
+  hardwareFinish?: HomeMetalFinish;
   style?: DoorStyle;
   doorSwing?: 'left' | 'right' | 'double' | 'sliding' | 'arch';
   hasMat?: boolean;
@@ -437,6 +350,7 @@ export function CatalogueDoor({
   const jambColor = frameColor ?? leafColor;
   const frameThickness = 0.08;
   const doorThick = 0.045;
+  const hardware: HomeMetalFinish = hardwareFinish ?? 'chrome';
   const frameW = Math.max(0.9, w);
   const frameH = Math.max(2.1, height);
 
@@ -836,7 +750,7 @@ export function CatalogueDoor({
               {/* Bande vitrée dépolie */}
               <mesh position={[0, 0.1, doorThick / 2 + 0.002]}>
                 <boxGeometry args={[frameW * 0.16, frameH * 0.7, 0.004]} />
-                <meshStandardMaterial color="#f1f5f9" roughness={0.2} transparent opacity={0.7} />
+                <SurfaceMat color="#eef2f5" finish="glass" roughness={0.35} opacity={0.55} />
               </mesh>
               <mesh position={[-frameW * 0.3, -0.05, doorThick / 2 + 0.01]}>
                 <boxGeometry args={[0.03, 0.4, 0.02]} />
@@ -876,6 +790,38 @@ export function CatalogueDoor({
           </group>
         )}
 
+        {/* 13. VERRIÈRE D’ATELIER : vantail en profils acier et petits carreaux */}
+        {style === 'atelier' && (() => {
+          const leafW = frameW - frameThickness * 1.2;
+          const leafH = frameH - frameThickness * 1.2;
+          const steel = selected ? '#c7d2fe' : (color ?? '#1f1f1f');
+          return (
+            <group>
+              <AtelierGlazing w={leafW} h={leafH} t={0.04} cols={3} rows={5} frameColor={steel} />
+              <DoorHandles x={leafW * 0.42} y={handleY(frameH)} t={0.04} toward={-1} finish={hardwareFinish ?? 'black'} />
+              <Hinges x={-(leafW / 2 - 0.02)} leafH={leafH} t={0.04} finish={hardwareFinish ?? 'black'} />
+            </group>
+          );
+        })()}
+
+        {/* 14. PORTE À CASSETTES MOULURÉES (deux faces) */}
+        {style === 'cassette' && (() => {
+          const leafW = frameW - frameThickness * 1.2;
+          const leafH = frameH - frameThickness * 1.2;
+          const lacquer = selected ? '#c7d2fe' : (color ?? '#f4f1ea');
+          return (
+            <group>
+              <mesh castShadow receiveShadow>
+                <boxGeometry args={[leafW, leafH, doorThick]} />
+                <SurfaceMat color={lacquer} finish="lacquer" roughness={0.38} />
+              </mesh>
+              <CassettePanels w={leafW} h={leafH} t={doorThick} color={lacquer} cols={2} rows={3} />
+              <DoorHandles x={leafW * 0.4} y={handleY(frameH)} t={doorThick + 0.016} toward={-1} finish={hardwareFinish ?? 'brass'} />
+              <Hinges x={-(leafW / 2 - 0.01)} leafH={leafH} t={doorThick} finish={hardwareFinish ?? 'brass'} />
+            </group>
+          );
+        })()}
+
         {/* 10. PORTE SIMPLE / MOULURÉE PAR DÉFAUT */}
         {style !== 'grandPortal' &&
           style !== 'frenchDoor' &&
@@ -887,7 +833,9 @@ export function CatalogueDoor({
           style !== 'double' &&
           style !== 'arch' &&
           style !== 'sliding' &&
-          style !== 'folding' && (
+          style !== 'folding' &&
+          style !== 'atelier' &&
+          style !== 'cassette' && (
             <group position={[0, 0, 0]}>
               {/* Vantail principal */}
               <mesh castShadow receiveShadow>
@@ -903,23 +851,9 @@ export function CatalogueDoor({
                 <boxGeometry args={[(frameW - frameThickness * 2) * 0.8, frameH * 0.38, 0.008]} />
                 <meshStandardMaterial color={color ?? '#f8fafc'} roughness={0.45} />
               </mesh>
-              {/* Ensemble poignée béquille en L sur rosace circulaire */}
-              <group position={[frameW * 0.34, -0.06, doorThick / 2 + 0.015]}>
-                <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
-                  <cylinderGeometry args={[0.026, 0.026, 0.008, 16]} />
-                  <SurfaceMat color="#94a3b8" metalness={0.85} roughness={0.2} />
-                </mesh>
-                {/* Béquille en L */}
-                <mesh position={[-0.05, 0, 0.02]} castShadow>
-                  <boxGeometry args={[0.11, 0.018, 0.016]} />
-                  <SurfaceMat color="#cbd5e1" metalness={0.9} roughness={0.15} />
-                </mesh>
-                {/* Trou de serrure sous la rosace */}
-                <mesh position={[0, -0.06, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                  <cylinderGeometry args={[0.016, 0.016, 0.006, 12]} />
-                  <SurfaceMat color="#64748b" metalness={0.8} roughness={0.3} />
-                </mesh>
-              </group>
+              {/* Béquilles des deux côtés et paumelles côté gonds */}
+              <DoorHandles x={frameW * 0.36} y={handleY(frameH)} t={doorThick} toward={-1} finish={hardware} />
+              <Hinges x={-(frameW / 2 - frameThickness * 0.6 - 0.01)} leafH={frameH - frameThickness * 1.2} t={doorThick} finish={hardware} />
             </group>
           )}
       </group>
@@ -964,7 +898,7 @@ export function CatalogueChandelierFixture({
       {/* Source de lumière ponctuelle scénique */}
       <pointLight
         position={[0, chandelierLightY(hangStyle, ceilingM), 0]}
-        intensity={lightIntensity * 0.85}
+        intensity={lightIntensity * 0.6}
         color={lightColor}
         distance={lightRadius}
         decay={2}
@@ -974,6 +908,51 @@ export function CatalogueChandelierFixture({
 }
 
 /** ───────── ALLÉE VIP & TAPIS DE CÉRÉMONIE 3D (PINTEREST) ───────── */
+/** Pétales en goutte légèrement bombés, dessinés en une seule fois (instances). */
+function AislePetalsInstanced({ petals, color }: { petals: AislePetal[]; color: string }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const geo = useMemo(() => {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, -1);
+    shape.bezierCurveTo(0.9, -0.6, 0.8, 0.7, 0, 1);
+    shape.bezierCurveTo(-0.8, 0.7, -0.9, -0.6, 0, -1);
+    const g = new THREE.ShapeGeometry(shape, 6);
+    const pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i += 1) {
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      pos.setZ(i, 0.18 * (1 - (x * x + y * y) * 0.6));
+    }
+    g.computeVertexNormals();
+    return g;
+  }, []);
+  useEffect(() => () => geo.dispose(), [geo]);
+  useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const c = new THREE.Color();
+    petals.forEach((p, i) => {
+      e.set(-Math.PI / 2, 0, p.rot);
+      q.setFromEuler(e);
+      m.compose(new THREE.Vector3(p.x, 0.029 + (i % 3) * 0.0006, p.z), q, new THREE.Vector3(p.size * 0.8, p.size, p.size));
+      mesh.setMatrixAt(i, m);
+      mesh.setColorAt(i, c.set(shadeHex(color, (p.tone - 0.5) * 0.45)));
+    });
+    mesh.count = petals.length;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  }, [petals, color]);
+  return (
+    <instancedMesh key={petals.length} ref={ref} args={[geo, undefined, Math.max(1, petals.length)]} receiveShadow>
+      <meshStandardMaterial roughness={0.55} side={THREE.DoubleSide} />
+    </instancedMesh>
+  );
+}
+
 export function CatalogueAisle({
   w,
   d,
@@ -981,6 +960,14 @@ export function CatalogueAisle({
   hasGoldBorder = true,
   hasSideLanterns = false,
   hasPetals = false,
+  color,
+  borderColor,
+  petalColor,
+  petalDensity,
+  lanternSpacingM,
+  imageUrl,
+  imageTileM,
+  seed = 1,
   selected = false,
 }: {
   w: number;
@@ -989,6 +976,18 @@ export function CatalogueAisle({
   hasGoldBorder?: boolean;
   hasSideLanterns?: boolean;
   hasPetals?: boolean;
+  /** Couleur du tapis choisie (remplace la teinte du thème). */
+  color?: string;
+  borderColor?: string;
+  petalColor?: string;
+  /** 0–1 : quantité de pétales. */
+  petalDensity?: number;
+  /** Écart entre deux lanternes (m). */
+  lanternSpacingM?: number;
+  /** Photo importée posée sur le tapis (motif répété). */
+  imageUrl?: string;
+  imageTileM?: number;
+  seed?: number;
   selected?: boolean;
 }) {
   const isRed = style === 'royalRed';
@@ -1002,49 +1001,94 @@ export function CatalogueAisle({
   const isMarble = style === 'marbleInlay';
   const isFairy = style === 'fairyLight';
   const isSilk = style === 'silkIvory';
-  const aisleColor = selected
-    ? '#c7d2fe'
-    : isRed
-      ? '#881337'
-      : isMirror
-        ? '#ffffff'
-        : isBotanical || isSilk
-          ? '#fef3c7'
-          : isWood
-            ? '#78350f'
-            : isDamask || isSequin
-              ? '#d97706'
-              : isLed || isFairy
-                ? '#0f172a'
-                : isBlack
-                  ? '#18181b'
-                  : isMarble
-                    ? '#f5f5f4'
-                    : '#881337';
+  const themeColor = isRed
+    ? '#881337'
+    : isMirror
+      ? '#ffffff'
+      : isBotanical || isSilk
+        ? '#fef3c7'
+        : isWood
+          ? '#78350f'
+          : isDamask || isSequin
+            ? '#d97706'
+            : isLed || isFairy
+              ? '#0f172a'
+              : isBlack
+                ? '#18181b'
+                : isMarble
+                  ? '#f5f5f4'
+                  : '#881337';
+  const aisleColor = selected ? '#c7d2fe' : color ?? themeColor;
+  const trimColor = borderColor ?? '#d4af37';
+  const roseColor = petalColor ?? '#f43f5e';
+
+  // Velours, soie, tissage : la trame se voit à hauteur d’invité.
+  const runnerFinish = isMirror || isLed || isFairy
+    ? 'plain'
+    : isBlack || isRed
+      ? 'velvet'
+      : isSilk
+        ? 'linen'
+        : isWood
+          ? 'wood'
+          : isMarble
+            ? 'stone'
+            : 'fabric';
+  const runnerRoughness = isMirror || isSilk ? 0.12 : isLed ? 0.2 : isWood || isMarble ? 0.55 : isSequin ? 0.22 : 0.94;
+  const runnerMetalness = isMirror ? 0.75 : isDamask || isSequin ? 0.45 : isMarble ? 0.05 : 0;
+
+  const imported = useMemo(() => {
+    if (!imageUrl) return null;
+    const tile = imageTileM && imageTileM > 0 ? imageTileM : Math.max(0.6, w);
+    return resolveImportedSurface(imageUrl, tileRepeat(w, tile), tileRepeat(d, tile));
+  }, [imageUrl, imageTileM, w, d]);
+
+  const petals = useMemo(
+    () => (hasPetals || isBotanical ? aislePetals(w, d, petalDensity ?? 0.35, seed) : []),
+    [hasPetals, isBotanical, w, d, petalDensity, seed],
+  );
+  const lanternZ = useMemo(
+    () => (hasSideLanterns ? evenlySpacedOffsets(d, lanternSpacingM ?? 2) : []),
+    [hasSideLanterns, d, lanternSpacingM],
+  );
 
   return (
     <group>
       {/* Tapis principal au sol */}
       <mesh position={[0, 0.015, 0]} receiveShadow>
         <boxGeometry args={[w, 0.025, d]} />
-        <meshStandardMaterial
-          color={aisleColor}
-          roughness={isMirror || isSilk ? 0.08 : isLed ? 0.2 : isWood || isMarble ? 0.55 : isSequin ? 0.18 : 0.94}
-          metalness={isMirror ? 0.75 : isDamask || isSequin ? 0.45 : isMarble ? 0.22 : 0.04}
-        />
+        {imported ? (
+          <SurfaceMat
+            color={selected ? '#c7d2fe' : '#ffffff'}
+            finish="plain"
+            map={imported.map}
+            normalMap={imported.normalMap}
+            roughnessMap={imported.roughnessMap}
+            normalScale={0.8}
+            roughness={0.9}
+            metalness={0}
+          />
+        ) : (
+          <SurfaceMat
+            color={aisleColor}
+            finish={runnerFinish}
+            repeat={[Math.max(1, w * 2.5), Math.max(1, d * 2.5)]}
+            vertical={isWood}
+            roughness={runnerRoughness}
+            metalness={runnerMetalness}
+          />
+        )}
       </mesh>
 
       {/* Bordures or / ganse de prestige */}
       {(hasGoldBorder || isRed || isDamask) && (
         <>
-          <mesh position={[-w / 2 + 0.025, 0.028, 0]} receiveShadow castShadow>
-            <boxGeometry args={[0.04, 0.01, d]} />
-            <SurfaceMat color="#fbbf24" metalness={0.8} roughness={0.25} />
-          </mesh>
-          <mesh position={[w / 2 - 0.025, 0.028, 0]} receiveShadow castShadow>
-            <boxGeometry args={[0.04, 0.01, d]} />
-            <SurfaceMat color="#fbbf24" metalness={0.8} roughness={0.25} />
-          </mesh>
+          {[-1, 1].map((side) => (
+            <mesh key={side} position={[side * (w / 2 - 0.025), 0.03, 0]} receiveShadow castShadow>
+              <boxGeometry args={[0.04, 0.012, d]} />
+              <SurfaceMat color={trimColor} finish={borderColor ? 'fabric' : 'brass'} metalness={borderColor ? 0 : 0.8} roughness={borderColor ? 0.8 : 0.28} repeat={[1, Math.max(1, d * 4)]} />
+            </mesh>
+          ))}
         </>
       )}
 
@@ -1062,19 +1106,41 @@ export function CatalogueAisle({
         </>
       )}
 
-      {/* Lanternes posées le long de l'allée */}
-      {hasSideLanterns && (
+      {/* Lanternes posées le long de l'allée : cage dorée, verre, bougie allumée */}
+      {lanternZ.length > 0 && (
         <group>
           {[-1, 1].map((side) =>
-            [0.2, 0.5, 0.8].map((t, idx) => (
-              <group key={`${side}-${idx}`} position={[side * (w / 2 + 0.12), 0.12, (t - 0.5) * d]}>
-                <mesh castShadow>
-                  <boxGeometry args={[0.12, 0.22, 0.12]} />
-                  <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
+            lanternZ.map((z, idx) => (
+              <group key={`${side}-${idx}`} position={[side * (w / 2 + 0.14), 0, z]}>
+                <mesh position={[0, 0.01, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.15, 0.02, 0.15]} />
+                  <SurfaceMat color="#b08d57" finish="brass" metalness={0.85} roughness={0.32} />
                 </mesh>
-                <mesh position={[0, 0, 0]}>
-                  <boxGeometry args={[0.09, 0.18, 0.09]} />
-                  <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.8} />
+                {[[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sz]) => (
+                  <mesh key={`${sx}${sz}`} position={[sx * 0.065, 0.13, sz * 0.065]} castShadow>
+                    <boxGeometry args={[0.012, 0.22, 0.012]} />
+                    <SurfaceMat color="#b08d57" finish="brass" metalness={0.85} roughness={0.32} />
+                  </mesh>
+                ))}
+                <mesh position={[0, 0.245, 0]} castShadow>
+                  <coneGeometry args={[0.1, 0.06, 4, 1]} />
+                  <SurfaceMat color="#b08d57" finish="brass" metalness={0.85} roughness={0.32} />
+                </mesh>
+                <mesh position={[0, 0.29, 0]}>
+                  <torusGeometry args={[0.022, 0.005, 6, 16]} />
+                  <SurfaceMat color="#b08d57" finish="brass" metalness={0.85} roughness={0.32} />
+                </mesh>
+                <mesh position={[0, 0.13, 0]}>
+                  <boxGeometry args={[0.12, 0.2, 0.12]} />
+                  <SurfaceMat color="#ffffff" finish="glass" roughness={0.05} transparent opacity={0.18} depthWrite={false} />
+                </mesh>
+                <mesh position={[0, 0.06, 0]}>
+                  <cylinderGeometry args={[0.025, 0.025, 0.08, 14]} />
+                  <meshStandardMaterial color="#fdf6e3" roughness={0.6} />
+                </mesh>
+                <mesh position={[0, 0.115, 0]}>
+                  <sphereGeometry args={[0.012, 10, 8]} />
+                  <meshStandardMaterial color="#fde68a" emissive="#f59e0b" emissiveIntensity={2.4} toneMapped={false} />
                 </mesh>
               </group>
             )),
@@ -1082,21 +1148,8 @@ export function CatalogueAisle({
         </group>
       )}
 
-      {/* Pétales de roses parsemés */}
-      {(hasPetals || isBotanical) && (
-        <group>
-          {Array.from({ length: 16 }).map((_, idx) => {
-            const px = ((idx % 4) / 3 - 0.5) * w * 0.75;
-            const pz = ((Math.floor(idx / 4)) / 3 - 0.5) * d * 0.85;
-            return (
-              <mesh key={idx} position={[px, 0.03, pz]} rotation={[-Math.PI / 2, 0, idx * 0.7]}>
-                <circleGeometry args={[0.035, 6]} />
-                <meshStandardMaterial color={idx % 2 === 0 ? '#fb7185' : '#f43f5e'} roughness={0.6} />
-              </mesh>
-            );
-          })}
-        </group>
-      )}
+      {/* Pétales semés : position, taille et nuance stables pour chaque allée */}
+      {petals.length > 0 && <AislePetalsInstanced petals={petals} color={roseColor} />}
 
       {isWood &&
         Array.from({ length: Math.max(6, Math.round(d / 0.35)) }).map((_, i) => {

@@ -57,7 +57,7 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
     });
 
     const limits = getPlansFromSettings();
-    const currentLimits = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
+    const currentLimits = getPlanLimitsForTenant(tenant.plan, tenant.accountKind, tenant.pendingPlan);
     const snapshot = await getTenantPlanSnapshot(tenantId);
     const planDetails = snapshot ? formatPlanFeaturesResponse(snapshot) : null;
 

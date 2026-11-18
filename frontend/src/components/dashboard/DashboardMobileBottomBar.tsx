@@ -98,10 +98,11 @@ function isBottomItemActive(
   if (query) {
     const want = new URLSearchParams(query);
     for (const [key, value] of want.entries()) {
+      if (key === 'tab' && path === '/dashboard/bookings') continue;
       if (have.get(key) !== value) return false;
     }
     if (path === '/dashboard/bookings' && want.has('tab')) {
-      const haveTab = have.get('tab') || 'quotes';
+      const haveTab = have.get('tab') || 'bookings';
       if (haveTab !== want.get('tab')) return false;
     }
     return pathname === path || (path === '/dashboard/events' && eventsPathMatch);
@@ -235,7 +236,7 @@ function buildRoleMobileBottomItems({
     return [
       { id: 'network', name: 'Réseau', href: '/dashboard/org-commercial', icon: Briefcase },
       { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
-      { id: 'quotes', name: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox },
+      { id: 'quotes', name: 'Devis', href: '/dashboard/quotes', icon: Inbox },
       { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }
@@ -257,7 +258,7 @@ function buildRoleMobileBottomItems({
       { id: 'home', name: 'Accueil', href: '/dashboard', icon: LayoutDashboard },
       { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
       allStudiosBlocked
-        ? { id: 'quotes', name: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox }
+        ? { id: 'quotes', name: 'Devis', href: '/dashboard/quotes', icon: Inbox }
         : { id: 'simulator', name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', icon: Sparkles },
       { id: 'tickets', name: 'Billets', href: '/dashboard/tickets', icon: Ticket },
       { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
@@ -268,7 +269,7 @@ function buildRoleMobileBottomItems({
   if (accountKind === 'VENDOR' || (!workspace.showEvents && workspace.showMarketplace)) {
     return [
       { id: 'home', name: 'Accueil', href: '/dashboard', icon: LayoutDashboard },
-      { id: 'quotes', name: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox },
+      { id: 'quotes', name: 'Devis', href: '/dashboard/quotes', icon: Inbox },
       { id: 'bookings', name: 'Planning', href: '/dashboard/bookings?tab=bookings', icon: CalendarCheck },
       workspace.showRooms
         ? { id: 'rooms', name: 'Salles', href: '/dashboard/rooms', icon: Building2 }
@@ -316,11 +317,11 @@ function buildRoleMobileBottomItems({
   }
 
   if (workspace.showMarketplace) {
-    items.push({ id: 'quotes', name: 'Devis', href: '/dashboard/bookings?tab=quotes&role=vendor', icon: Inbox });
+    items.push({ id: 'quotes', name: 'Devis', href: '/dashboard/quotes?role=vendor', icon: Inbox });
   } else if (workspace.showBrowseCatalogue) {
     items.push({ id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store });
   } else {
-    items.push({ id: 'quotes', name: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox });
+    items.push({ id: 'quotes', name: 'Devis', href: '/dashboard/quotes', icon: Inbox });
   }
 
   items.push({ id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true });

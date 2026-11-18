@@ -306,6 +306,35 @@ export function getSeatCoordinates(
   return { x, y, rotationDeg: isTopSide ? 0 : 180 };
 }
 
+/**
+ * Rotation affichée à l’écran (degrés CSS/SVG, sens horaire) d’une table ou
+ * rangée tournée de `rotationDeg` dans le plan. La vue 3D applique la rotation
+ * autour de l’axe vertical : vue du dessus, elle tourne dans le sens
+ * anti-horaire. Les plans 2D utilisent ce sens pour montrer la même salle.
+ */
+export function planRotationScreenDeg(rotationDeg: number | null | undefined): number {
+  const deg = Number(rotationDeg) || 0;
+  return deg === 0 ? 0 : -deg;
+}
+
+/** Fait tourner un siège 2D (décalage autour du centre de sa table) avec sa table, comme en 3D. */
+export function rotateSeatCoordinates<T extends { x: number; y: number; rotationDeg?: number }>(
+  coords: T,
+  tableRotationDeg: number | null | undefined,
+): T {
+  const screenDeg = planRotationScreenDeg(tableRotationDeg);
+  if (screenDeg === 0) return coords;
+  const a = (screenDeg * Math.PI) / 180;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return {
+    ...coords,
+    x: coords.x * c - coords.y * s,
+    y: coords.x * s + coords.y * c,
+    rotationDeg: (coords.rotationDeg ?? 0) + screenDeg,
+  };
+}
+
 /** Dimensions du plateau 3D (mètres), alignées sur le viewer. */
 export function tablePlateSizeMeters(
   shape: TableShape,

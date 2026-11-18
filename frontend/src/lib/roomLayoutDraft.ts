@@ -41,6 +41,12 @@ export interface RoomLayoutDraft {
   wizard?: RoomLayoutDraftWizard;
   editMeta?: RoomLayoutDraftMeta;
   pendingServerSync?: boolean;
+  /**
+   * Version du serveur (date de dernière modification de la salle) sur
+   * laquelle ce brouillon a été bâti : sert à détecter un conflit au moment
+   * de le renvoyer.
+   */
+  serverUpdatedAt?: string;
 }
 
 function draftId(tenantId: string, roomKey: string): string {
@@ -79,6 +85,7 @@ function normalizeDraft(value: unknown): RoomLayoutDraft | null {
     wizard: raw.wizard,
     editMeta: raw.editMeta,
     pendingServerSync: Boolean(raw.pendingServerSync),
+    serverUpdatedAt: typeof raw.serverUpdatedAt === 'string' ? raw.serverUpdatedAt : undefined,
   };
 }
 
@@ -152,6 +159,7 @@ export async function writeRoomLayoutDraft(input: {
   wizard?: RoomLayoutDraftWizard;
   editMeta?: RoomLayoutDraftMeta;
   pendingServerSync?: boolean;
+  serverUpdatedAt?: string | null;
 }): Promise<RoomLayoutDraft> {
   const draft: RoomLayoutDraft = {
     id: draftId(input.tenantId, input.roomKey),
@@ -163,6 +171,7 @@ export async function writeRoomLayoutDraft(input: {
     wizard: input.wizard,
     editMeta: input.editMeta,
     pendingServerSync: input.pendingServerSync,
+    serverUpdatedAt: input.serverUpdatedAt ?? undefined,
   };
   if (typeof window === 'undefined') return draft;
   try {

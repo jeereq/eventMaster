@@ -352,7 +352,7 @@ export function RoomAmbienceCard({
           <TableSurfaceSwatch surface={preset.tableSurface} className="w-8 shrink-0" />
         ) : null}
       </div>
-      <p className="text-[10px] font-bold text-foreground flex items-center gap-1">
+      <p className="text-xs font-bold text-foreground flex items-center gap-1">
         {preset.label}
         {active ? (
           <span className="text-[8px] font-bold uppercase text-primary bg-primary/10 px-1 py-0.5 rounded">
@@ -360,7 +360,7 @@ export function RoomAmbienceCard({
           </span>
         ) : null}
       </p>
-      <p className="text-[9px] text-muted leading-snug line-clamp-2">{preset.description}</p>
+      <p className="text-xs text-muted leading-snug line-clamp-2">{preset.description}</p>
       {authorName ? (
         <p className="text-[8px] text-muted">Par {authorName}</p>
       ) : null}

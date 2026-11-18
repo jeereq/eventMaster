@@ -285,11 +285,13 @@ export function getWorkspaceModules(opts: {
   if (vendorOnly && !opts.planQuota) {
     return {
       showEvents: false,
-      showRooms: canRooms,
+      // Quotas pas encore chargés : pas de salle supposée, seule une audience salle l'ouvre.
+      showRooms: canRooms && (opts.planFeatures?.audience === 'VENUE' || opts.planFeatures?.audience === 'CATALOG'),
       showMarketplace: !protocolOnly,
       showBrowseCatalogue: !protocolOnly,
       showTemplates: false,
-      showAnalytics: !protocolOnly,
+      // Les statistiques et revenus restent réservés aux organisateurs.
+      showAnalytics: false,
       showProtocol: false,
       showTeam: canTeam,
     };
@@ -316,7 +318,7 @@ export function getWorkspaceModules(opts: {
     showMarketplace,
     showBrowseCatalogue,
     showTemplates: hasEvents && hasTemplates && !protocolOnly,
-    showAnalytics: showEvents || isCatalogOrVenue,
+    showAnalytics: !vendorOnly && (showEvents || isCatalogOrVenue),
     showProtocol:
       protocolOnly
       || (

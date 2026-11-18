@@ -62,7 +62,7 @@ export async function getTenantPlanSnapshot(tenantId: string): Promise<TenantPla
 
   if (!tenant) return null;
 
-  const features = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
+  const features = getPlanLimitsForTenant(tenant.plan, tenant.accountKind, tenant.pendingPlan);
 
   const [guestUsage, orgManagers] = await Promise.all([
     countTenantGuestsForQuota(tenantId),
@@ -161,6 +161,29 @@ export async function assertOrgManagerQuota(tenantId: string, addingManager = tr
       `Quota de managers organisation atteint (${max} max pour ${snapshot.planName}). Passez à un forfait supérieur.`,
     );
   }
+}
+
+function blueprintUsesThemesOrFixtures(blueprint: unknown): boolean {
+  if (!blueprint || typeof blueprint !== 'object') return false;
+  const bp = blueprint as {
+    fixtures?: unknown[];
+    metadata?: {
+      roomThemeId?: string;
+      customThemes?: unknown[];
+      floorImageUrl?: string | null;
+    };
+  };
+  const themeId = bp.metadata?.roomThemeId;
+  if (themeId && themeId !== 'classic') return true;
+  if (Array.isArray(bp.metadata?.customThemes) && bp.metadata.customThemes.length > 0) return true;
+  if (bp.metadata?.floorImageUrl) return true;
+  if (Array.isArray(bp.fixtures) && bp.fixtures.length > 0) return true;
+  return false;
+}
+
+export async function assertThemesFixturesForBlueprint(tenantId: string, blueprint: unknown) {
+  if (!blueprintUsesThemesOrFixtures(blueprint)) return;
+  await assertPlanFeature(tenantId, 'roomThemesFixtures');
 }
 
 export async function assertRoomTypeForPlan(tenantId: string, roomType: string): Promise<PlanDefinition> {

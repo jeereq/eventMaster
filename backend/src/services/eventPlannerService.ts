@@ -3,7 +3,7 @@ import { prisma } from '../db';
 import { parseListingDetails } from '../utils/listingDetails';
 import { parsePhotoUrls, coverFromMedia, isServiceRentalCategory, priceUnitLabel, RENTAL_CATEGORIES, serviceCategoryLabel } from '../utils/publicVenue';
 import { normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
-import { collectUnavailableDates, isRangeAvailable } from '../utils/marketplaceDates';
+import { isRangeAvailable, rowUnavailableDates } from '../utils/marketplaceDates';
 import {
   EVENT_PLAN_TYPES,
   parseEventPlanInput,
@@ -512,7 +512,7 @@ function renormalizeShares(venueShare: number, slots: PackSlot[]): { venueShare:
 
 const listingInclude = {
   room: { select: { name: true, capacity: true } },
-  tenant: { select: { name: true, vendorProfile: { select: { displayName: true } } } },
+  tenant: { select: { name: true, marketplaceUnavailableDates: true, vendorProfile: { select: { displayName: true } } } },
   bookings: {
     where: { status: { in: HOLD_BOOKING_STATUSES } },
     select: { eventDate: true, eventEndDate: true },
@@ -521,7 +521,7 @@ const listingInclude = {
 
 const offeringInclude = {
   vendorProfile: { select: { displayName: true } },
-  tenant: { select: { name: true } },
+  tenant: { select: { name: true, marketplaceUnavailableDates: true } },
   bookings: {
     where: { status: { in: HOLD_BOOKING_STATUSES } },
     select: { eventDate: true, eventEndDate: true },
@@ -608,7 +608,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     rows.flatMap((listing) => {
       if (opts.commune && String(listing.commune || '').toLowerCase() !== opts.commune.toLowerCase()) return [];
       if (opts.date && dateKey) {
-        const unavailable = collectUnavailableDates(listing.blockedDates, listing.bookings);
+        const unavailable = rowUnavailableDates(listing);
         if (!isRangeAvailable(unavailable, dateKey, dateKey)) return [];
       }
       const match = eventMatch(listing.details, input.eventType);
@@ -631,7 +631,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     rows.flatMap((offering) => {
       if (opts.commune && String(offering.commune || '').toLowerCase() !== opts.commune.toLowerCase()) return [];
       if (opts.date && dateKey) {
-        const unavailable = collectUnavailableDates(offering.blockedDates, offering.bookings);
+        const unavailable = rowUnavailableDates(offering);
         if (!isRangeAvailable(unavailable, dateKey, dateKey)) return [];
       }
       const match = eventMatch(offering.details, input.eventType);

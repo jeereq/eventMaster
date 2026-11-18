@@ -217,7 +217,7 @@ function buildTodo(org: BoardOrgContext): TodoItem[] {
     todo.push({
       id: 'quotes',
       label: asVendor ? 'Devis à chiffrer' : 'Devis sans réponse finale',
-      href: asVendor ? '/dashboard/bookings?tab=quotes&role=vendor' : '/dashboard/bookings?tab=quotes',
+      href: asVendor ? '/dashboard/quotes?role=vendor' : '/dashboard/quotes',
       count: org.pendingQuotesCount,
       icon: Inbox,
     });

@@ -245,7 +245,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
     title: 'Demandes de devis',
     description:
       'Vos demandes de devis envoyées aux salles et prestataires. Suivi des réponses et conversion en réservation.',
-    route: '/dashboard/bookings?tab=quotes',
+    route: '/dashboard/quotes',
   },
   'nav-reservations': {
     title: 'Réservations',

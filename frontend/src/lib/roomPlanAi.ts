@@ -257,6 +257,7 @@ const WALL_TEXTURES = new Set<WallTextureStyle>([
 const CHAIR_STYLES = new Set<ChairStyle>([
   'classic', 'chiavari', 'napoleon', 'ghost', 'lounge', 'crossback', 'louis', 'ovalBack',
   'wishbone', 'tiffany', 'phoenix', 'panton', 'tolix', 'club', 'bergere', 'modern',
+  'windsor', 'bistro', 'scandi',
 ]);
 const SEAT_MATERIALS = new Set<SeatMaterial>([
   'velvet', 'wood', 'fabric', 'leather', 'plastic', 'linen',
@@ -567,6 +568,10 @@ const ZONE_KIND_ALIASES: Record<string, ZoneKind> = {
   tapis: 'carpet',
   moquette: 'carpet',
   custom: 'custom',
+  plot: 'plot',
+  emplacement: 'plot',
+  stand: 'plot',
+  lot: 'plot',
   kitchen: 'custom',
   cuisine: 'custom',
   cocina: 'custom',
@@ -1016,11 +1021,11 @@ function assignImportedTiers(
 
 /** Toitures que le rendu 3D sait construire (tout style reconnu par l’IA est conservé). */
 const IMPORTED_ROOF_STYLES = new Set<RoofStyle>([
-  'tentSwag', 'pagoda', 'gabled', 'coffered', 'glassCanopy', 'dome', 'pergola', 'mansard', 'skylight', 'fabricStretch',
+  'tentSwag', 'pagoda', 'gabled', 'coffered', 'glassCanopy', 'dome', 'pergola', 'mansard', 'skylight', 'fabricStretch', 'clearTent', 'barrel', 'sawtooth',
 ]);
 
 const IMPORTED_CHANDELIER_STYLES = new Set<ChandelierFixtureStyle>([
-  'crystalCascade', 'brassRings', 'bohoPampas', 'botanicalHalo', 'fairyCanopy', 'candleCandelabra', 'modernMinimal', 'lantern',
+  'crystalCascade', 'brassRings', 'bohoPampas', 'botanicalHalo', 'fairyCanopy', 'candleCandelabra', 'modernMinimal', 'lantern', 'industrialDome',
 ]);
 
 /** Forme de piscine : valeur de l’IA, sinon déduite du libellé (« Piscine haricot »…). */

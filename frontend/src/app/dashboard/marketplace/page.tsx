@@ -153,6 +153,7 @@ export default function MarketplaceDeskPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceItem | null>(null);
   const [saving, setSaving] = useState(false);
+  const [mediaUploading, setMediaUploading] = useState(false);
   const [editorTab, setEditorTab] = useState<MarketplaceFormTab>('details');
   const [draft, setDraft] = useState<ServiceOfferingDraft>({
     title: '',
@@ -323,6 +324,11 @@ export default function MarketplaceDeskPage() {
   };
 
   const handleSave = async (publish: boolean) => {
+    if (mediaUploading) {
+      setEditorTab('medias');
+      setError('Patientez : vos photos sont encore en cours d’envoi.');
+      return;
+    }
     const promoMessage = offeringPromoMessage(draft);
     if (promoMessage) {
       setEditorTab('details');
@@ -514,7 +520,7 @@ export default function MarketplaceDeskPage() {
         ))}
         <span aria-hidden className="mx-1 w-px shrink-0 self-stretch bg-border" />
         <Link
-          href="/dashboard/bookings?tab=quotes"
+          href="/dashboard/quotes"
           className="inline-flex items-center gap-1.5 shrink-0 min-h-11 px-3 py-2 rounded-full text-xs font-semibold border border-border text-muted hover:text-foreground whitespace-nowrap touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <Inbox className="w-3.5 h-3.5" aria-hidden />
@@ -785,23 +791,25 @@ export default function MarketplaceDeskPage() {
           : isServiceRentalCategory(draft.category)
             ? 'Nouveau matériel & équipement'
             : 'Nouvelle prestation'}
-        description="Visible sur le marketplace uniquement après publication."
+        description="Brouillon : visible par vous seul. Publiée : visible par les clients."
         size="xl"
         footer={
           <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-muted">
-              {publishGaps.length
-                ? `Publication : ${publishGaps[0].message}`
-                : 'Tous les critères obligatoires sont remplis.'}
+            <p className="text-xs text-muted" role="status">
+              {mediaUploading
+                ? 'Envoi des photos en cours…'
+                : publishGaps.length
+                  ? `Pour publier : ${publishGaps[0].message}`
+                  : 'Tout est prêt.'}
             </p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={() => setEditorOpen(false)}>
                 Annuler
               </Button>
-              <Button type="button" variant="secondary" size="sm" loading={saving} onClick={() => handleSave(false)} leftIcon={<GlobeLock className="w-4 h-4" />}>
-                Brouillon
+              <Button type="button" variant="secondary" size="sm" loading={saving} disabled={mediaUploading} onClick={() => handleSave(false)} leftIcon={<GlobeLock className="w-4 h-4" />}>
+                Enregistrer en brouillon
               </Button>
-              <Button type="button" variant="success" size="sm" loading={saving} onClick={() => handleSave(true)} leftIcon={<Globe className="w-4 h-4" />}>
+              <Button type="button" variant="success" size="sm" loading={saving} disabled={mediaUploading} onClick={() => handleSave(true)} leftIcon={<Globe className="w-4 h-4" />}>
                 Publier
               </Button>
             </div>
@@ -814,6 +822,7 @@ export default function MarketplaceDeskPage() {
           tab={editorTab}
           onTabChange={setEditorTab}
           error={error}
+          onUploadingChange={setMediaUploading}
         />
       </Modal>
     </div>

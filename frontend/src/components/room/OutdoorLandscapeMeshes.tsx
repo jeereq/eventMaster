@@ -13,7 +13,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { RoundedBox } from '@react-three/drei';
-import { loadTiledTexture, normalMapUrlFor } from '@/lib/roomWebGLMaterials';
+import { generatedDetailMaps, loadTiledTexture, roughnessWithMap } from '@/lib/roomWebGLMaterials';
 import {
   LANDSCAPE_STYLE_META,
   OUTDOOR_SURROUNDINGS_META,
@@ -27,6 +27,7 @@ import {
   type SurroundingSpecies,
 } from '@/lib/roomOutdoorUtils';
 import { offsetRing } from '@/lib/roomRoofGeometry';
+import { GARDEN_LAWN_SURFACE, gardenLayout, resolveGardenOptions, type GardenOptions } from '@/lib/roomGardenLayout';
 
 // ───────────────────────── matières partagées ─────────────────────────
 
@@ -44,17 +45,18 @@ function texturedMat(
   if (cached) return cached as THREE.MeshStandardMaterial;
   const { normalScale = 1, ...rest } = opts;
   const map = loadTiledTexture(url, rx, ry);
-  // Pas de carte de normales pour une image importée (seules les textures générées en ont une).
-  const normalUrl = normalMapUrlFor(url);
-  const normalMap = normalUrl ? loadTiledTexture(normalUrl, rx, ry, true) : null;
+  // Normales et rugosité : seules les textures générées en ont (pas une image importée).
+  const { normalMap, roughnessMap } = generatedDetailMaps(url, rx, ry);
   const mat = new THREE.MeshStandardMaterial({
     map,
     normalMap,
+    roughnessMap,
     normalScale: new THREE.Vector2(normalScale, normalScale),
     roughness: 0.85,
     metalness: 0,
     ...rest,
   });
+  mat.roughness = roughnessWithMap(mat.roughness, roughnessMap);
   matCache.set(cacheKey, mat);
   return mat;
 }
@@ -799,6 +801,172 @@ function Boulders({ w, d, h, seed }: { w: number; d: number; h: number; seed: nu
   );
 }
 
+// ───────────────────────── espace vert réglable ─────────────────────────
+
+/** Touffe d’herbe : 5 brins effilés et inclinés, mise en cache (une géométrie pour toutes). */
+function tuftGeometry(): THREE.BufferGeometry {
+  const cached = geoCache.get('tuft');
+  if (cached) return cached;
+  const rand = seededRandom(17);
+  const pos: number[] = [];
+  for (let b = 0; b < 5; b += 1) {
+    const a = (b / 5) * Math.PI * 2 + rand() * 0.6;
+    const ox = Math.cos(a) * 0.03;
+    const oz = Math.sin(a) * 0.03;
+    const lean = 0.25 + rand() * 0.35;
+    const tx = ox + Math.cos(a) * lean;
+    const tz = oz + Math.sin(a) * lean;
+    const px = -Math.sin(a) * 0.012;
+    const pz = Math.cos(a) * 0.012;
+    // Triangle : base large, pointe fine (hauteur 1, mise à l’échelle par instance).
+    pos.push(ox - px, 0, oz - pz, ox + px, 0, oz + pz, tx * 0.3, 1, tz * 0.3);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  geoCache.set('tuft', g);
+  return g;
+}
+
+type Instance = { p: [number, number, number]; s: [number, number, number]; rot: number; color: string };
+
+/** Beaucoup d’objets identiques (brins, fleurs) en un seul appel de dessin. */
+function Instances({ geometry, items, roughness = 0.8, castShadow = false, doubleSide = false }: { geometry: THREE.BufferGeometry; items: Instance[]; roughness?: number; castShadow?: boolean; doubleSide?: boolean }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  React.useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const up = new THREE.Vector3(0, 1, 0);
+    const c = new THREE.Color();
+    const v = new THREE.Vector3();
+    const sc = new THREE.Vector3();
+    items.forEach((it, i) => {
+      q.setFromAxisAngle(up, it.rot);
+      m.compose(v.set(...it.p), q, sc.set(...it.s));
+      mesh.setMatrixAt(i, m);
+      mesh.setColorAt(i, c.set(it.color));
+    });
+    mesh.count = items.length;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  }, [items]);
+  if (items.length === 0) return null;
+  return (
+    <instancedMesh key={items.length} ref={ref} args={[geometry, undefined, items.length]} castShadow={castShadow} receiveShadow>
+      <meshStandardMaterial roughness={roughness} side={doubleSide ? THREE.DoubleSide : THREE.FrontSide} />
+    </instancedMesh>
+  );
+}
+
+const FLOWER_HEAD = new THREE.IcosahedronGeometry(1, 1);
+const FLOWER_STEM = new THREE.CylinderGeometry(0.5, 0.5, 1, 4, 1);
+FLOWER_STEM.translate(0, 0.5, 0);
+
+function shade(hex: string, t: number) {
+  return `#${new THREE.Color(hex).offsetHSL(0, 0, t).getHexString()}`;
+}
+
+function Garden({ w, d, seed, options }: { w: number; d: number; seed: number; options?: Partial<GardenOptions> }) {
+  const opts = useMemo(() => resolveGardenOptions(options), [options]);
+  const layout = useMemo(() => gardenLayout(w, d, opts, seed), [w, d, opts, seed]);
+  const surface = GARDEN_LAWN_SURFACE[opts.lawn];
+  const bw = layout.borderWidth;
+  const lawnW = Math.max(0.2, w - (opts.border === 'flowers' ? 0 : bw * 2));
+  const lawnD = Math.max(0.2, d - (opts.border === 'flowers' ? 0 : bw * 2));
+  const lawnMat = texturedMat('garden-lawn', surface.url, [Math.max(1, lawnW / 2), Math.max(1, lawnD / 2)], { color: surface.tint, roughness: opts.lawn === 'synthetic' ? 0.7 : 0.95, normalScale: 1.1 });
+  const meadow = opts.lawn === 'meadow';
+
+  const tufts = useMemo<Instance[]>(
+    () => layout.tufts.map((t) => ({
+      p: [t.x, 0.012, t.z],
+      s: [t.s * 0.5, surface.tuftHeight * t.s, t.s * 0.5],
+      rot: t.rot,
+      color: shade(surface.tuftColor, (t.k - 0.5) * 0.12),
+    })),
+    [layout.tufts, surface],
+  );
+  const stems = useMemo<Instance[]>(
+    () => layout.flowers.map((f) => ({ p: [f.x, 0.01, f.z], s: [0.006, (meadow ? 0.26 : 0.12) * f.s, 0.006], rot: 0, color: '#4d7a2c' })),
+    [layout.flowers, meadow],
+  );
+  const heads = useMemo<Instance[]>(
+    () => layout.flowers.map((f) => ({
+      p: [f.x, 0.01 + (meadow ? 0.26 : 0.12) * f.s, f.z],
+      s: [0.03 * f.s, 0.018 * f.s, 0.03 * f.s],
+      rot: f.rot,
+      color: opts.flowerColors[f.k % opts.flowerColors.length],
+    })),
+    [layout.flowers, meadow, opts.flowerColors],
+  );
+
+  const edges: Array<{ p: [number, number, number]; len: number; rot: number }> = [
+    { p: [0, 0, -d / 2 + bw / 2], len: w, rot: 0 },
+    { p: [0, 0, d / 2 - bw / 2], len: w, rot: 0 },
+    { p: [-w / 2 + bw / 2, 0, 0], len: d - bw * 2, rot: Math.PI / 2 },
+    { p: [w / 2 - bw / 2, 0, 0], len: d - bw * 2, rot: Math.PI / 2 },
+  ];
+
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow material={lawnMat}>
+        <planeGeometry args={[lawnW, lawnD]} />
+      </mesh>
+      <Instances geometry={tuftGeometry()} items={tufts} roughness={0.9} doubleSide />
+
+      {/* Bordure */}
+      {opts.border !== 'none' && edges.map((e, i) => (
+        <group key={i} position={e.p} rotation={[0, e.rot, 0]}>
+          {opts.border === 'hedge' && (
+            <RoundedBox args={[e.len, 0.5, bw]} radius={0.1} smoothness={3} position={[0, 0.25, 0]} castShadow receiveShadow material={foliageMat('#dfe9d2', [Math.max(1, Math.round(e.len / 1.2)), 1])} />
+          )}
+          {opts.border === 'stone' && (
+            <mesh position={[0, 0.05, 0]} castShadow receiveShadow material={stoneMat('#e7e1d6', Math.max(1, Math.round(e.len / 1.5)))}>
+              <boxGeometry args={[e.len, 0.1, bw]} />
+            </mesh>
+          )}
+          {opts.border === 'wood' && (
+            <mesh position={[0, 0.06, 0]} castShadow receiveShadow material={woodMat(Math.max(1, Math.round(e.len / 2)))}>
+              <boxGeometry args={[e.len, 0.12, 0.03]} />
+            </mesh>
+          )}
+          {opts.border === 'flowers' && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.014, 0]} receiveShadow material={texturedMat('garden-mulch', '/floors/gen/dirt.jpg', [Math.max(1, e.len / 1.5), 1], { color: '#8a6a4f', roughness: 1 })}>
+              <planeGeometry args={[e.len, bw]} />
+            </mesh>
+          )}
+        </group>
+      ))}
+
+      {/* Chemin */}
+      {opts.path === 'gravel' && (
+        <mesh rotation={[-Math.PI / 2, 0, layout.pathAlongX ? 0 : Math.PI / 2]} position={[0, 0.016, 0]} receiveShadow material={texturedMat('garden-gravel', '/floors/gen/gravel-light.jpg', [Math.max(1, (layout.pathAlongX ? w : d) / 1.5), 1], { roughness: 0.95, normalScale: 1.4 })}>
+          <planeGeometry args={[(layout.pathAlongX ? w : d) - bw * 2, layout.pathWidth]} />
+        </mesh>
+      )}
+      {layout.stones.map((st, i) => (
+        <mesh key={i} position={[st.x, 0.02, st.z]} rotation={[0, st.rot, 0]} scale={[st.s, 0.035, st.s * 0.82]} geometry={blobGeometry(seed * 3 + i, 2, 0.08)} material={stoneMat('#d6d0c4', 1)} castShadow receiveShadow />
+      ))}
+
+      <Instances geometry={FLOWER_STEM} items={stems} roughness={0.8} />
+      <Instances geometry={FLOWER_HEAD} items={heads} roughness={0.55} />
+
+      {layout.shrubs.map((b, i) => (
+        <mesh key={`b${i}`} position={[b.x, b.s * 0.5, b.z]} scale={[b.s, b.s * 0.85, b.s]} geometry={blobGeometry(b.k, 2, 0.25)} material={foliageMat('#e8f0dc', 1)} castShadow receiveShadow />
+      ))}
+      {layout.trees.map((t, i) => (
+        <group key={`t${i}`} position={[t.x, 0, t.z]} rotation={[0, t.rot, 0]}>
+          {t.k % 2 === 0
+            ? <DeciduousTree w={2.6 * t.s} d={2.6 * t.s} h={3.6 * t.s} seed={t.k} />
+            : <OliveTree w={2.4 * t.s} d={2.4 * t.s} h={3 * t.s} seed={t.k} />}
+        </group>
+      ))}
+    </group>
+  );
+}
+
 // ───────────────────────── point d'entrée fixture ─────────────────────────
 
 export function LandscapeMesh({
@@ -809,8 +977,11 @@ export function LandscapeMesh({
   seed = 1,
   selected = false,
   poolShape,
+  garden,
 }: {
   style: LandscapeStyle;
+  /** Espace vert : réglages (gazon, bordure, fleurs…). */
+  garden?: Partial<GardenOptions>;
   /** Piscine : forme du bassin. */
   poolShape?: PoolShape;
   w: number;
@@ -835,6 +1006,7 @@ export function LandscapeMesh({
     case 'torch': body = <Torch h={h} />; break;
     case 'fence': body = <Fence w={w} d={d} h={h} />; break;
     case 'boulder': body = <Boulders w={w} d={d} h={h} seed={seed} />; break;
+    case 'garden': body = <Garden w={w} d={d} seed={seed} options={garden} />; break;
     default: body = null;
   }
   return (

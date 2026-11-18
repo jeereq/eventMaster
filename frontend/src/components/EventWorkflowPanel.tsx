@@ -258,7 +258,7 @@ export default function EventWorkflowPanel({
               {badge !== undefined && badge !== '' ? (
                 <span
                   className={cn(
-                    'rounded-full px-1.5 text-[11px] font-bold tabular-nums',
+                    'rounded-full px-1.5 text-xs font-bold tabular-nums',
                     selected ? 'bg-background/20' : 'bg-surface-muted text-foreground',
                   )}
                 >

@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useHideAiFabWhileVisible } from '@/components/landing/useHideAiFabWhileVisible';
+import { ROOM_INTRO_VIEWS, introViewLabel, resolveIntroView, type RoomIntroView } from '@/lib/roomIntroView';
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, Move, Rotate3d, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees,
+  GraduationCap, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, Move, Rotate3d, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence,
 } from '@/components/icons';
+import { buildPlotGrid, buildSinglePlot, findFreePlotSpot, isOpenSpace, nextPlotLabel, normalizePlotGrid, plotGridFootprint, PLOT_COLORS, PLOT_GRID_DEFAULTS, type PlotGridOptions } from '@/lib/roomPlots';
 import {
   LANDSCAPE_GROUP_LABELS,
   LANDSCAPE_STYLE_META,
@@ -24,6 +27,16 @@ import {
   type LandscapeStyle,
   type OutdoorSurroundings,
 } from '@/lib/roomOutdoorUtils';
+import {
+  HOME_FURNITURE_GROUP_LABELS,
+  HOME_METAL_FINISH_LABELS,
+  type HomeMetalFinish,
+  HOME_FURNITURE_META,
+  HOME_FURNITURE_ORDER,
+  homeFurnitureFootprintPct,
+  type HomeFurnitureGroup,
+  type HomeFurnitureStyle,
+} from '@/lib/roomHomeFurniture';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
@@ -70,13 +83,17 @@ import {
   arrangeDensityLabels,
   chairTypeLabels,
   chairStyleLabels,
-  seatMaterialLabels,
   zoneKindLabels,
-  zoneMaterialLabels,
+  plotBorderLabels,
+  type PlotBorderStyle,
   doorStyleLabels,
   doorStyleHints,
   aisleStyleLabels,
   aisleStyleHints,
+  zoneMaterialLabels,
+  tableBaseLabels,
+  tableBaseDefaultColor,
+  tableAcceptsBase,
   chandelierFixtureStyleLabels,
   chandelierFixtureStyleHints,
   amphitheaterStyleLabels,
@@ -103,7 +120,6 @@ import {
   flowerTypeLabels,
   getRoomOutlineClipPath,
   refreshBlueprintMetadata,
-  resolveTableColor,
   roomOutlineLabels,
   roomTypeLabels,
   sanitizeBlueprintLayout,
@@ -123,6 +139,8 @@ import {
   barStylePresets,
   nextOwnedLabel,
   roofStyleLabels,
+  stageRigLabels,
+  type StageRig,
   screenKindLabels,
   screenRatioLabels,
   centerpieceStyleLabels,
@@ -145,6 +163,7 @@ import {
   type TableSurfaceStyle,
   type ZoneKind,
   type ZoneMaterial,
+  type TableBaseStyle,
   type AmbienceApplyScope,
   type DoorStyle,
   type AisleStyle,
@@ -157,7 +176,17 @@ import {
   type OpeningMaterial,
   openingMaterialLabels,
   isTentVenue,
+  wallLengthMeters,
+  type RoomWallSegment,
 } from '@/lib/roomLayoutUtils';
+import QuickAddPalette, { type QuickAddAction } from '@/components/room/QuickAddPalette';
+import EditorTour from '@/components/room/EditorTour';
+import WallArtPanel from '@/components/room/WallArtPanel';
+import LedShowControls from '@/components/room/LedShowControls';
+import { STRING_LIGHT_LAYOUT_LABELS, STRING_LIGHT_MOUNT_LABELS, STRING_LIGHT_STYLE_LABELS } from '@/lib/roomStringLights';
+import { START_EDITOR_TOUR_EVENT } from '@/components/room/RoomEditorPlanCard';
+import { buildEditorTour, editorTourSummary, EDITOR_TOUR_SEEN_KEY, type EditorTourAction } from '@/lib/roomEditorTour';
+import { BAR_BACK_LABELS, BAR_FRONT_LABELS, BAR_METAL_LABELS, BAR_STOOL_LABELS, BAR_STYLE_DESIGN, BAR_TOP_LABELS } from '@/lib/roomBarDesign';
 import {
   copyAmbienceShareLink,
   decodeAmbienceShareToken,
@@ -183,7 +212,7 @@ import {
   publishBlueprintAmbienceToOrg,
   publishOrgAmbience,
 } from '@/lib/roomAmbienceOrg';
-import { roomEditorCapabilities, snapLayoutPct, smartSnapLayoutPct } from '@/lib/roomEditorAccess';
+import { parseRoomEditorLevel, roomEditorCapabilities, snapLayoutPct, smartSnapLayoutPct } from '@/lib/roomEditorAccess';
 import {
   downloadDataUrl,
   exportPixelRatio,
@@ -197,22 +226,22 @@ import {
 import {
   alignLayoutSelection,
   alignModeLabels,
+  copyLayoutSelection,
   duplicateLayoutSelection,
   expandSelectionWithGroups,
+  pasteLayoutClipboard,
+  type LayoutClipboard,
   flipLayoutSelection,
   getSelectionBounds,
   groupLayoutSelection,
   moveLayoutSelectionByDelta,
   rotateLayoutSelection,
-  selectionKey,
   toggleSelectionItem,
   ungroupLayoutSelection,
   selectAllItems,
   selectItemsByKind,
   invertSelection,
-  selectItemsInRect,
   orientSelectionTowards,
-  calculateAngleToPoint,
   type SmartOrientationTarget,
   type AlignMode,
   type LayoutSelectionItem,
@@ -227,6 +256,21 @@ import {
 import { readImageFile } from '@/lib/imageCropUtils';
 import { uploadImageFile, uploadVideoFile } from '@/lib/cloudinaryUpload';
 import { RoomEnvironmentPanel } from '@/components/room/RoomEnvironmentPanel';
+import { LEGACY_CORRIDOR_GREY } from '@/lib/roomAisleLayout';
+import { instrumentFinishPresets } from '@/lib/roomInstrumentFinish';
+import {
+  GARDEN_BORDER_LABELS,
+  GARDEN_FLOWER_PALETTES,
+  GARDEN_LAWN_LABELS,
+  GARDEN_PATH_LABELS,
+  resolveGardenOptions,
+  type GardenBorder,
+  type GardenLawn,
+  type GardenOptions,
+  type GardenPath,
+} from '@/lib/roomGardenLayout';
+import { EditorGate as Gate, EditorGateProvider, EditorUpsellDialog, LockedSectionCard, type LockedUpsell } from '@/components/room/EditorLocks';
+import { describeEditorUpsell } from '@/lib/roomEditorUpsell';
 import {
   CUSTOM_ELEMENT_MODES,
   CUSTOM_ELEMENT_MODE_META,
@@ -254,7 +298,6 @@ import {
 } from '@/lib/roomThemeUtils';
 import {
   FLOOR_CATEGORIES,
-  FLOOR_TYPE_PICKER_ORDER,
   floorsForCategory,
   floorTypeLabels,
   resolveDepthAmount,
@@ -305,6 +348,8 @@ import {
   type FoundationKind,
 } from '@/lib/roomBuildingUtils';
 import { cn } from '@/lib/cn';
+import { DANCE_FLOOR_STYLE_LABELS, DANCE_LED_PATTERN_LABELS, type DanceFloorStyle, type DanceLedPattern } from '@/lib/roomDanceFloor';
+import { TEMPLATE_CATEGORIES, templateMatchesCategory, type TemplateCategory } from '@/lib/roomTemplateCategories';
 import { supportsOneSideSeating, tablePlateSizeMeters } from '@/lib/tablePlanUtils';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { Alert, Button, IconButton, Input, Kbd, Modal, Toolbar } from '@/components/ui';
@@ -316,11 +361,49 @@ const EDITOR_CHIP =
 const EDITOR_PANEL_BTN =
   'inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-[var(--radius-button)] border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-40 disabled:cursor-not-allowed';
 const EDITOR_HEADING = 'text-sm font-semibold text-foreground flex items-center gap-1';
+const EDITOR_SWATCH = 'min-h-11 min-w-11 shrink-0 rounded-[var(--radius-button)] border border-border cursor-pointer';
+
+/** Ligne « libellé + nuancier + réinitialiser » pour une couleur facultative. */
+function DecorColorField({ label, value, fallback, onChange }: { label: string; value?: string; fallback: string; onChange: (next: string | undefined) => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <input type="color" value={value ?? fallback} onChange={(e) => onChange(e.target.value)} aria-label={label} title={label} className={EDITOR_SWATCH} />
+      <span className="flex-1 text-sm text-foreground">{label}</span>
+      {value ? (
+        <button type="button" onClick={() => onChange(undefined)} className="min-h-11 px-2 text-xs font-semibold text-muted hover:text-foreground">
+          Par défaut
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/** Curseur avec valeur affichée (mètres, pourcentage…). */
+function DecorRangeField({ label, value, min, max, step, format, onChange }: { label: string; value: number; min: number; max: number; step: number; format: (v: number) => string; onChange: (v: number) => void }) {
+  return (
+    <label className="block space-y-1">
+      <span className="text-xs font-semibold text-foreground">{label} : {format(value)}</span>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} className="w-full accent-primary" aria-label={label} />
+    </label>
+  );
+}
+
+const fmtM = (v: number) => `${v.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} m`;
 const EDITOR_HINT = 'text-sm text-muted leading-snug';
+/** Teintes de toiture courantes (tuile, ardoise, zinc, toile, bois, cuivre…). */
+const ROOF_COLOR_PRESETS = [
+  { color: '#d6d3d1', label: 'Pierre claire' },
+  { color: '#ffffff', label: 'Blanc / toile' },
+  { color: '#f2e8d5', label: 'Toile ivoire' },
+  { color: '#c2643d', label: 'Tuile terre cuite' },
+  { color: '#64748b', label: 'Ardoise' },
+  { color: '#9ca3af', label: 'Zinc' },
+  { color: '#8b5a2b', label: 'Bois' },
+  { color: '#5f8f7a', label: 'Cuivre vert-de-gris' },
+  { color: '#1f2937', label: 'Anthracite' },
+] as const;
 const EDITOR_CARD_ACTION =
   'inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border bg-surface text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
-const EDITOR_FILE =
-  'block w-full min-h-11 text-sm text-foreground file:mr-3 file:min-h-11 file:px-3 file:rounded-[var(--radius-button)] file:border-0 file:bg-surface-muted file:text-sm file:font-medium file:text-foreground';
 const EDITOR_REMOVE =
   'inline-flex items-center min-h-11 text-sm font-medium text-rose-700 dark:text-rose-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-[var(--radius-button)]';
 
@@ -329,6 +412,47 @@ const EDITOR_TOOL =
 const EDITOR_TOOL_IDLE = 'bg-surface border-border text-foreground hover:bg-surface-muted';
 const EDITOR_TOOL_MUTED = 'bg-surface border-border text-muted hover:bg-surface-muted hover:text-foreground';
 const EDITOR_TOOL_ON = 'bg-primary/10 border-primary/40 text-primary';
+/**
+ * Sélecteur d'image en français. Le champ natif affichait « Choose File / No file chosen »
+ * (langue du navigateur) au milieu d'un panneau tout en français.
+ */
+function EditorImagePicker({
+  label,
+  onFile,
+  hasImage = false,
+  accept = 'image/*',
+}: {
+  /** Ce que l'image représente, pour les lecteurs d'écran (« Image de chaise »…). */
+  label: string;
+  onFile: (file: File) => void | Promise<void>;
+  hasImage?: boolean;
+  accept?: string;
+}) {
+  const [fileName, setFileName] = useState('');
+  const status = fileName || (hasImage ? 'Image en place' : 'Aucune image choisie');
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <label className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'shrink-0 cursor-pointer focus-within:ring-2 focus-within:ring-primary/40')}>
+        <ImagePlus className="w-3.5 h-3.5" aria-hidden />
+        {hasImage || fileName ? 'Changer l’image' : 'Choisir une image'}
+        <input
+          type="file"
+          accept={accept}
+          className="sr-only"
+          aria-label={`${label} : choisir un fichier`}
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+            setFileName(file.name);
+            await onFile(file);
+          }}
+        />
+      </label>
+      <span className="min-w-0 truncate text-xs text-muted" title={fileName || undefined}>{status}</span>
+    </div>
+  );
+}
 
 const launchedPlanPhotoSeeds = new WeakSet<File>();
 const EDITOR_TOOL_PRIMARY = 'bg-primary-solid text-primary-foreground border-transparent hover:bg-primary-solid-hover';
@@ -354,7 +478,7 @@ function DiscloseChevron({ open }: { open: boolean }) {
   );
 }
 
-type EditorToolGroupId = 'display' | 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene' | 'hospitality' | 'outdoor' | 'custom';
+type EditorToolGroupId = 'display' | 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene' | 'hospitality' | 'home' | 'outdoor' | 'custom';
 
 function ToolbarCluster({
   label,
@@ -377,12 +501,27 @@ function ToolbarCluster({
   );
 }
 
+/**
+ * Menus flottants de la barre d’outils : ceux du bout de la barre (Rendu, Lumière…)
+ * débordaient à droite de l’écran. S’il dépasse, le menu s’aligne sur le bord droit de son bouton.
+ */
+function keepPanelOnScreen(panel: HTMLDivElement | null) {
+  if (!panel || typeof window === 'undefined') return;
+  if (!window.matchMedia('(min-width: 1024px)').matches) return;
+  const rect = panel.getBoundingClientRect();
+  if (rect.right > window.innerWidth - 8) {
+    panel.style.left = 'auto';
+    panel.style.right = '0';
+  }
+}
+
 function EditorToolGroup({
   id,
   label,
   openId,
   onToggle,
   icon,
+  closeOnPick = false,
   children,
 }: {
   id: EditorToolGroupId;
@@ -390,6 +529,8 @@ function EditorToolGroup({
   openId: EditorToolGroupId | null;
   onToggle: (id: EditorToolGroupId) => void;
   icon?: React.ReactNode;
+  /** Menu d’ajout : se referme après un choix pour laisser voir l’élément posé. */
+  closeOnPick?: boolean;
   children: React.ReactNode;
 }) {
   const items = React.Children.toArray(children).filter(Boolean);
@@ -429,6 +570,7 @@ function EditorToolGroup({
         )}
         aria-expanded={open}
         aria-controls={panelId}
+        data-tour={`tool-${id}`}
         onClick={() => onToggle(id)}
       >
         {icon}
@@ -438,11 +580,16 @@ function EditorToolGroup({
       {open ? (
         <div
           id={panelId}
+          ref={keepPanelOnScreen}
           className={cn(
             'basis-full w-full flex flex-wrap items-center gap-1.5',
             'lg:absolute lg:left-0 lg:top-full lg:z-40 lg:mt-2 lg:w-max lg:max-w-[min(40rem,calc(100vw-4rem))]',
             'lg:p-2 lg:rounded-[var(--radius-card)] lg:border lg:border-border lg:bg-surface lg:shadow-xl',
           )}
+          onClick={closeOnPick ? (e) => {
+            // Seuls les boutons referment : un champ ou un import de fichier garde le menu ouvert.
+            if (e.target instanceof Element && e.target.closest('button')) onToggle(id);
+          } : undefined}
         >
           {items}
         </div>
@@ -452,16 +599,6 @@ function EditorToolGroup({
 }
 
 type SelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall' | 'chair';
-
-type TemplateCategory = 'all' | 'banquet' | 'restaurant' | 'conference' | 'empty';
-
-const TEMPLATE_CATEGORIES: { id: TemplateCategory; label: string }[] = [
-  { id: 'all', label: 'Tous' },
-  { id: 'banquet', label: 'Banquets & Fêtes' },
-  { id: 'restaurant', label: 'Restaurants & Cafés' },
-  { id: 'conference', label: 'Conférences' },
-  { id: 'empty', label: 'Salles & Formes' },
-];
 
 function getDirectionLabel(deg: number): string {
   const norm = ((Math.round(deg) % 360) + 360) % 360;
@@ -802,6 +939,47 @@ interface RoomLayoutEditorProps {
 
 type CropTarget = { kind: 'fixture'; id: string } | null;
 
+const TABLE_SHAPE_OPTIONS: ReadonlyArray<readonly [TableShape, string]> = [
+  ['round', 'Ronde'],
+  ['rectangular', 'Rectangulaire'],
+  ['square', 'Carrée'],
+  ['oval', 'Ovale'],
+  ['cocktail', 'Cocktail (basse)'],
+  ['highTop', 'Mange-debout'],
+  ['arc', 'Courbe (arc)'],
+];
+
+/** `?guide=1` dans l’adresse ouvre directement la visite guidée (liens « Découvrir l’éditeur »). */
+function readGuideParam(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('guide') === '1';
+}
+
+/** Retire `?guide=1` une fois la visite fermée, pour qu’elle ne reparte pas à chaque salle ouverte. */
+function clearGuideParam() {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has('guide')) return;
+  url.searchParams.delete('guide');
+  window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+}
+
+function tourAlreadySeen(): boolean {
+  try {
+    return window.localStorage.getItem(EDITOR_TOUR_SEEN_KEY) === '1';
+  } catch {
+    return true;
+  }
+}
+
+function markTourSeen() {
+  try {
+    window.localStorage.setItem(EDITOR_TOUR_SEEN_KEY, '1');
+  } catch {
+    /* navigation privée : le guide sera simplement reproposé */
+  }
+}
+
 export default function RoomLayoutEditor({
   blueprint: rawBlueprint,
   onChange,
@@ -822,7 +1000,17 @@ export default function RoomLayoutEditor({
   const isRoomBlocked = site?.studioVisibility?.room === false;
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
   const caps = roomEditorCapabilities(editorLevel, allowThemesFixtures);
+  /** Lustres posés à la main : ils remplacent les lustres automatiques du plafond. */
+  const placedChandelierCount = blueprint.fixtures.filter((f) => f.kind === 'chandelier').length;
   const canOpenStudio = caps.canPlanFromPhoto && !readOnly && !isRoomBlocked;
+  const [upsell, setUpsell] = useState<LockedUpsell | null>(null);
+  const parsedEditorLevel = parseRoomEditorLevel(editorLevel);
+  /** Les formes hors forfait restent listées, grisées, avec le forfait qui les débloque. */
+  const tableShapeOptionLabel = (shape: TableShape, label: string): string => {
+    if (caps.tableShapes.includes(shape)) return label;
+    const plan = describeEditorUpsell(label, { shape }, parsedEditorLevel).planLabel;
+    return `${label} — ${plan ?? 'non inclus'}`;
+  };
   const [selection, setSelection] = useState<LayoutSelectionItem[]>([]);
   const [mobilePane, setMobilePane] = useState<'plan' | 'tools' | 'edit'>('plan');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -853,25 +1041,28 @@ export default function RoomLayoutEditor({
   const [wallEditMode, setWallEditMode] = useState(false);
   const [lockOrbit, setLockOrbit] = useState(true);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
+  // Aperçu de la « découverte du plan » : chaque incrément rejoue l’arrivée choisie.
+  const [introReplayKey, setIntroReplayKey] = useState(0);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
-  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors' | 'podiums' | 'instruments' | 'bars' | 'hospitality' | 'environment' | 'elements'>(null);
+  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors' | 'podiums' | 'instruments' | 'bars' | 'hospitality' | 'environment' | 'elements' | 'plots'>(null);
   const [elementCreatorOpen, setElementCreatorOpen] = useState(false);
   const [elementLibrary, setElementLibrary] = useState<CustomElementDefinition[] | null>(null);
   const envCoalesceRef = useRef<{ key: string; at: number } | null>(null);
   const [aisleCount, setAisleCount] = useState(2);
   const [chairGroups, setChairGroups] = useState(2);
+  const [plotGrid, setPlotGrid] = useState<PlotGridOptions>(PLOT_GRID_DEFAULTS);
   const [rowsPerGroup, setRowsPerGroup] = useState(4);
   const [seatsPerRow, setSeatsPerRow] = useState(12);
   const [amphiStyle, setAmphiStyle] = useState<AmphitheaterStyle>('modernFan');
   const [amphiTiers, setAmphiTiers] = useState(4);
   const [amphiSeatsPerRow, setAmphiSeatsPerRow] = useState(12);
   const [amphiChairType, setAmphiChairType] = useState<ChairType>('THEATER');
-  const [amphiChairStyle, setAmphiChairStyle] = useState<ChairStyle>('napoleon');
-  const [amphiSeatMaterial, setAmphiSeatMaterial] = useState<SeatMaterial>('velvet');
+  const [amphiChairStyle] = useState<ChairStyle>('napoleon');
+  const [amphiSeatMaterial] = useState<SeatMaterial>('velvet');
   const [amphiAisleSplit, setAmphiAisleSplit] = useState(true);
-  const [quickChandelierStyle, setQuickChandelierStyle] = useState<ChandelierFixtureStyle>('crystalCascade');
-  const [quickDoorStyle, setQuickDoorStyle] = useState<DoorStyle>('frenchDoor');
-  const [quickAisleStyle, setQuickAisleStyle] = useState<AisleStyle>('royalRed');
+  const [quickChandelierStyle] = useState<ChandelierFixtureStyle>('crystalCascade');
+  const [quickDoorStyle] = useState<DoorStyle>('frenchDoor');
+  const [quickAisleStyle] = useState<AisleStyle>('royalRed');
   const [elementsFilter, setElementsFilter] = useState<'all' | LayoutSelectionItem['kind']>('all');
   const [elementsQuery, setElementsQuery] = useState('');
   // Replié par défaut : le panneau s’ouvre sur « Créer le plan » et les réglages.
@@ -899,6 +1090,29 @@ export default function RoomLayoutEditor({
   const [customTplName, setCustomTplName] = useState('');
   const [templateCategory, setTemplateCategory] = useState<TemplateCategory>('all');
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+  /** Palette Ctrl+K : liste figée à l’ouverture (la palette est modale, le plan ne bouge pas entre-temps). */
+  const [quickAddActions, setQuickAddActions] = useState<QuickAddAction[] | null>(null);
+  const buildQuickAddRef = useRef<() => QuickAddAction[]>(() => []);
+  const openQuickAdd = useCallback(() => setQuickAddActions(buildQuickAddRef.current()), []);
+  const clipboardRef = useRef<LayoutClipboard | null>(null);
+  /** Guide interactif : ouvert, ou proposé d’office à la première visite. */
+  const [tourOpen, setTourOpen] = useState(() => !readOnly && readGuideParam());
+  const [tourOffer, setTourOffer] = useState(() => !readOnly && !readGuideParam() && !tourAlreadySeen());
+  const startTour = useCallback(() => {
+    markTourSeen();
+    setTourOffer(false);
+    setTourOpen(true);
+  }, []);
+  useEffect(() => {
+    if (readOnly) return;
+    // `preventDefault` signale au bandeau de la page Salles que l’éditeur a pris la main.
+    const onStart = (event: Event) => {
+      event.preventDefault();
+      startTour();
+    };
+    window.addEventListener(START_EDITOR_TOUR_EVENT, onStart);
+    return () => window.removeEventListener(START_EDITOR_TOUR_EVENT, onStart);
+  }, [readOnly, startTour]);
   const [clearanceModalOpen, setClearanceModalOpen] = useState(false);
   const [clearancePreset, setClearancePreset] = useState<ClearancePreset>('standard');
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
@@ -918,62 +1132,10 @@ export default function RoomLayoutEditor({
     return list;
   }, [floorCategory, floorSearch]);
 
-  const filteredTemplates = useMemo(() => {
-    if (templateCategory === 'all') return ROOM_LAYOUT_TEMPLATES;
-    return ROOM_LAYOUT_TEMPLATES.filter((tpl) => {
-      const id = tpl.id.toLowerCase();
-      if (templateCategory === 'restaurant') {
-        return (
-          id.includes('restaurant') ||
-          id.includes('cafe') ||
-          id.includes('bistrot') ||
-          id.includes('salon') ||
-          id.includes('cocktail') ||
-          id.includes('communal') ||
-          id.includes('fast-casual') ||
-          id.includes('pizzeria') ||
-          id.includes('container') ||
-          id.includes('lounge') ||
-          id.includes('patio') ||
-          id.includes('coffee') ||
-          id.includes('loft')
-        );
-      }
-      if (templateCategory === 'conference') {
-        return (
-          id.includes('conference') ||
-          id.includes('amphi') ||
-          id.includes('board') ||
-          id.includes('class') ||
-          id.includes('theater') ||
-          id.includes('chair')
-        );
-      }
-      if (templateCategory === 'empty') {
-        return id.includes('empty') || id.includes('tent');
-      }
-      return (
-        !id.includes('restaurant') &&
-        !id.includes('cafe') &&
-        !id.includes('bistrot') &&
-        !id.includes('salon') &&
-        !id.includes('fast-casual') &&
-        !id.includes('pizzeria') &&
-        !id.includes('container') &&
-        !id.includes('lounge') &&
-        !id.includes('patio') &&
-        !id.includes('coffee') &&
-        !id.includes('loft') &&
-        !id.includes('conference') &&
-        !id.includes('amphi') &&
-        !id.includes('board') &&
-        !id.includes('class') &&
-        !id.includes('theater') &&
-        !id.includes('empty') &&
-        !id.includes('tent')
-      );
-    });
-  }, [templateCategory]);
+  const filteredTemplates = useMemo(
+    () => ROOM_LAYOUT_TEMPLATES.filter((tpl) => templateMatchesCategory(tpl.id, templateCategory)),
+    [templateCategory],
+  );
 
   const [tplParams, setTplParams] = useState<LayoutParams>({
     tableCount: 8,
@@ -1052,7 +1214,7 @@ export default function RoomLayoutEditor({
     skipHistoryRef.current = false;
   }, [emitBlueprint, withLoggedAction]);
 
-  const updateBlueprint = (
+  const updateBlueprint = useCallback((
     next: RoomLayoutBlueprint,
     action?: { message: string; kind?: LayoutActionEntry['kind']; context?: RoomActionContext },
   ) => {
@@ -1060,7 +1222,17 @@ export default function RoomLayoutEditor({
       pushHistory(latestBlueprintRef.current);
     }
     emitBlueprint(withLoggedAction(next, action));
-  };
+  }, [pushHistory, emitBlueprint, withLoggedAction]);
+
+  /** Passe du plan 2D (0) à la perspective 3D (100). Lit toujours le plan à jour. */
+  const setDepthAmount = useCallback((amount: number) => {
+    const current = latestBlueprintRef.current;
+    const next = Math.max(0, Math.min(100, Math.round(amount)));
+    updateBlueprint({
+      ...current,
+      metadata: { ...current.metadata, depthAmount: next, depthView: next > 0 },
+    }, { message: next <= 0 ? 'Vue du dessus' : `Perspective 3D : ${next}%`, kind: 'settings' });
+  }, [updateBlueprint]);
 
   const undo = useCallback(() => {
     const prev = pastRef.current.pop();
@@ -1197,14 +1369,14 @@ export default function RoomLayoutEditor({
       message: alignModeLabels[mode],
       kind: 'edit',
     });
-  }, [blueprint, readOnly, selection]);
+  }, [blueprint, readOnly, selection, updateBlueprint]);
 
   const groupSelection = useCallback(() => {
     if (selection.length < 2 || readOnly) return;
     const next = groupLayoutSelection(blueprint, selection);
     updateBlueprint(next, { message: `Groupe créé (${selection.length} éléments)`, kind: 'edit' });
     setSelection(expandSelectionWithGroups(next, selection));
-  }, [blueprint, readOnly, selection]);
+  }, [blueprint, readOnly, selection, updateBlueprint]);
 
   const ungroupSelection = useCallback(() => {
     if (selection.length === 0 || readOnly) return;
@@ -1212,7 +1384,7 @@ export default function RoomLayoutEditor({
       message: 'Groupe dissous',
       kind: 'edit',
     });
-  }, [blueprint, readOnly, selection]);
+  }, [blueprint, readOnly, selection, updateBlueprint]);
 
   const duplicateSelection = useCallback(() => {
     if (readOnly || selection.length === 0) return;
@@ -1241,7 +1413,7 @@ export default function RoomLayoutEditor({
       kind: 'add',
     });
     setSelection(result.selection);
-  }, [blueprint, caps.canDuplicate, caps.label, caps.maxRows, caps.maxTables, log, readOnly, selection]);
+  }, [blueprint, caps.canDuplicate, caps.label, caps.maxRows, caps.maxTables, log, readOnly, selection, updateBlueprint]);
 
   const rotateSelection = useCallback(() => {
     if (readOnly || selection.length === 0) return;
@@ -1249,7 +1421,7 @@ export default function RoomLayoutEditor({
       message: 'Sélection tournée de 90°',
       kind: 'edit',
     });
-  }, [blueprint, readOnly, selection]);
+  }, [blueprint, readOnly, selection, updateBlueprint]);
 
   const flipSelection = useCallback((axis: 'horizontal' | 'vertical') => {
     if (readOnly || selection.length === 0) return;
@@ -1257,7 +1429,7 @@ export default function RoomLayoutEditor({
       message: axis === 'horizontal' ? 'Sélection miroir horizontal' : 'Sélection miroir vertical',
       kind: 'edit',
     });
-  }, [blueprint, readOnly, selection]);
+  }, [blueprint, readOnly, selection, updateBlueprint]);
 
   const handleWebGLMove = useCallback((kind: SelectableKind, id: string, xPct: number, yPct: number) => {
     if (readOnly) return;
@@ -1331,7 +1503,7 @@ export default function RoomLayoutEditor({
     dragHistPushedRef.current = false;
   }, [emitBlueprint, log, withLoggedAction]);
 
-  const deleteSelected = () => {
+  const deleteSelected = useCallback(() => {
     if (selection.length === 0 || readOnly) return;
     const wallIds = new Set(selection.filter((s) => s.kind === 'wall').map((s) => s.id));
     const fixtureIds = new Set(selection.filter((s) => s.kind === 'fixture').map((s) => s.id));
@@ -1348,7 +1520,7 @@ export default function RoomLayoutEditor({
       kind: 'delete',
     });
     setSelection([]);
-  };
+  }, [blueprint, readOnly, selection, updateBlueprint]);
 
   useEffect(() => {
     if (readOnly) return;
@@ -1360,6 +1532,48 @@ export default function RoomLayoutEditor({
       const key = e.key.toLowerCase();
       if (e.key === 'Escape') {
         setSelection([]);
+        return;
+      }
+      // Palette d’ajout et aide : Ctrl+K ou « / », « ? ».
+      if ((mod && key === 'k') || (!mod && !e.altKey && e.key === '/')) {
+        e.preventDefault();
+        openQuickAdd();
+        return;
+      }
+      if (!mod && e.key === '?') {
+        e.preventDefault();
+        setShortcutsModalOpen(true);
+        return;
+      }
+      if (mod && (key === 'c' || key === 'x') && selection.length > 0 && !window.getSelection()?.toString()) {
+        const clip = copyLayoutSelection(blueprint, selection);
+        if (!clip) return;
+        e.preventDefault();
+        clipboardRef.current = clip;
+        const n = clip.furniture.length + clip.fixtures.length;
+        if (key === 'x') {
+          deleteSelected();
+          log(n > 1 ? `${n} éléments coupés` : 'Élément coupé', 'info');
+        } else {
+          log(n > 1 ? `${n} éléments copiés (Ctrl+V pour coller)` : 'Élément copié (Ctrl+V pour coller)', 'info');
+        }
+        return;
+      }
+      if (mod && key === 'v' && clipboardRef.current) {
+        e.preventDefault();
+        if (!caps.canDuplicate) {
+          log('La duplication n’est pas incluse dans votre forfait', 'info');
+          return;
+        }
+        const result = pasteLayoutClipboard(blueprint, clipboardRef.current, resolveActiveStoryId(blueprint));
+        if (result.selection.length === 0) return;
+        updateBlueprint(result.blueprint, {
+          message: result.selection.length > 1 ? `${result.selection.length} éléments collés` : 'Élément collé',
+          kind: 'add',
+        });
+        setSelection(result.selection);
+        // Coller encore décale de nouveau, comme une duplication en chaîne.
+        clipboardRef.current = copyLayoutSelection(result.blueprint, result.selection) ?? clipboardRef.current;
         return;
       }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selection.length > 0) {
@@ -1381,7 +1595,8 @@ export default function RoomLayoutEditor({
       }
       if (selection.length > 0 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault();
-        const step = e.shiftKey ? 2.5 : 1;
+        // Maj = grand pas, Alt = calage fin.
+        const step = e.shiftKey ? 2.5 : e.altKey ? 0.25 : 1;
         const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
         updateBlueprint(moveLayoutSelectionByDelta(blueprint, expandSelectionWithGroups(blueprint, selection), dx, dy), {
@@ -1415,7 +1630,7 @@ export default function RoomLayoutEditor({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [readOnly, selection, blueprint, groupSelection, ungroupSelection, duplicateSelection, updateBlueprint, rotateSelection, deleteSelected]);
+  }, [readOnly, selection, blueprint, groupSelection, ungroupSelection, duplicateSelection, updateBlueprint, rotateSelection, deleteSelected, log, caps.canDuplicate, openQuickAdd]);
 
   const addTable = () => {
     const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
@@ -1464,7 +1679,6 @@ export default function RoomLayoutEditor({
   };
 
   const duplicateSelectedTable = duplicateSelection;
-  const duplicateSelectedFixture = duplicateSelection;
   const duplicateSelectedChair = duplicateSelection;
 
   const addRow = () => {
@@ -1553,6 +1767,60 @@ export default function RoomLayoutEditor({
     const zone = { ...draftZone, x: zoneSlot.x, y: zoneSlot.y };
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, zone] }, { message: `Zone « ${zone.label} » ajoutée`, kind: 'add' });
     setSelection([{ kind: 'zone', id: zone.id }]);
+  };
+
+  /** Emplacement sans murs : surface délimitée au sol (marquage), à sa taille réelle. */
+  const addPlot = () => {
+    if (!caps.canZones) {
+      log('Les emplacements ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const storyId = resolveActiveStoryId(blueprint);
+    const plot = { ...buildSinglePlot(blueprint.canvas, nextPlotLabel(blueprint)), storyId };
+    // Les emplacements se meublent librement, mais ne se chevauchent pas entre eux.
+    const spot = findFreePlotSpot(
+      blueprint.furniture.filter(
+        (f): f is Extract<typeof f, { kind: 'zone' }> => f.kind === 'zone' && f.zoneKind === 'plot' && (f.storyId ?? storyId) === storyId,
+      ),
+      plot,
+    );
+    const placed = { ...plot, ...spot };
+    updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, placed] }, { message: `« ${placed.label} » ajouté (sans murs)`, kind: 'add' });
+    setSelection([{ kind: 'zone', id: placed.id }]);
+  };
+
+  /** Grille d’emplacements numérotés (A1, A2…) avec allées, centrée dans l’espace. */
+  const addPlotGridQuick = () => {
+    if (!caps.canZones) {
+      log('Les emplacements ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const { plots, fits } = buildPlotGrid(blueprint.canvas, { ...plotGrid, storyId: resolveActiveStoryId(blueprint) });
+    updateBlueprint(
+      { ...blueprint, furniture: [...blueprint.furniture, ...plots] },
+      { message: `${plots.length} emplacement${plots.length > 1 ? 's' : ''} ajouté${plots.length > 1 ? 's' : ''}`, kind: 'add' },
+    );
+    if (!fits) log('La grille dépasse l’espace : agrandissez le plan ou réduisez les emplacements', 'info');
+    setSelection(plots.map((p) => ({ kind: 'zone' as const, id: p.id })));
+    setQuickCreate(null);
+  };
+
+  const addStoryFromHeader = () => {
+    const next = addStory(blueprint);
+    updateBlueprint(setStackView(next, false), { message: 'Nouvel étage ajouté', kind: 'add' });
+    setSelection([]);
+    setAccordion('batiment');
+  };
+
+  /** Espace ouvert : murs et toit masqués d’un geste (rien n’est supprimé). */
+  const openSpace = isOpenSpace(blueprint.metadata);
+  const toggleOpenSpace = () => {
+    const next = !openSpace;
+    if (next) setWallEditMode(false);
+    updateBlueprint({
+      ...blueprint,
+      metadata: { ...blueprint.metadata, showWalls: !next, showRoof: !next },
+    }, { message: next ? 'Espace ouvert : murs et toit masqués' : 'Murs et toit réaffichés', kind: 'settings' });
   };
 
   const addFreeChair = () => {
@@ -1753,6 +2021,31 @@ export default function RoomLayoutEditor({
       color: meta.color,
       heightM: meta.heightM,
       landscapeStyle: style,
+      storyId: resolveActiveStoryId(blueprint),
+    });
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
+      { message: `${meta.label} ajouté`, kind: 'add' },
+    );
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+  };
+
+  const addHomeFurniture = (style: HomeFurnitureStyle) => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('homeFurniture')) {
+      log('Le mobilier résidentiel n’est pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const meta = HOME_FURNITURE_META[style];
+    const size = homeFurnitureFootprintPct(style, blueprint.canvas?.widthM ?? 20, blueprint.canvas?.heightM ?? 16);
+    const fixture = placeFixtureWithClearance(blueprint, {
+      ...createBlueprintFixture('homeFurniture'),
+      ...size,
+      x: 50 - size.w / 2,
+      y: 50 - size.h / 2,
+      label: meta.label,
+      color: meta.color,
+      heightM: meta.heightM,
+      homeStyle: style,
       storyId: resolveActiveStoryId(blueprint),
     });
     updateBlueprint(
@@ -2317,14 +2610,6 @@ export default function RoomLayoutEditor({
     });
   };
 
-  const setDepthAmount = (amount: number) => {
-    const next = Math.max(0, Math.min(100, Math.round(amount)));
-    updateBlueprint({
-      ...blueprint,
-      metadata: { ...blueprint.metadata, depthAmount: next, depthView: next > 0 },
-    }, { message: next <= 0 ? 'Vue du dessus' : `Perspective 3D : ${next}%`, kind: 'settings' });
-  };
-
   // Raccourcis V et C : toujours la version à jour du plan (n'écrase pas une modification récente).
   useEffect(() => {
     viewShortcutsRef.current = {
@@ -2338,6 +2623,17 @@ export default function RoomLayoutEditor({
   const renderQuality =
     renderQualityRaw === 'showcase' && !caps.canShowcaseRender ? 'standard' : renderQualityRaw;
   const lightingPreset = (blueprint.metadata.lightingPreset ?? 'auto') as LightingPreset;
+
+  const replayIntro = () => setIntroReplayKey((k) => k + 1);
+
+  const setIntroView = (view: RoomIntroView) => {
+    updateBlueprint(
+      { ...blueprint, metadata: { ...blueprint.metadata, introView: view } },
+      { message: `Découverte du plan : ${introViewLabel(view)}`, kind: 'settings' },
+    );
+    // Aperçu immédiat : on montre l’arrivée telle que les visiteurs la verront.
+    if (view !== 'none') replayIntro();
+  };
 
   const setRenderQuality = (q: RenderQuality) => {
     if (q === 'showcase' && !caps.canShowcaseRender) {
@@ -2675,6 +2971,11 @@ export default function RoomLayoutEditor({
     log('Inventaire exporté en CSV', 'info');
   };
 
+  // L'éditeur a son propre bouton « Studio IA » : le bouton flottant des studios recouvrait
+  // le bas du plan (et le panneau de réglages sur ordinateur). Il s'efface tant que le plan est à l'écran.
+  const [canvasHost, setCanvasHost] = useState<HTMLDivElement | null>(null);
+  useHideAiFabWhileVisible(canvasHost);
+
   const copyInventoryText = async () => {
     try {
       await navigator.clipboard.writeText(inventoryReport.textSummary);
@@ -2687,16 +2988,21 @@ export default function RoomLayoutEditor({
   };
 
   const renderCanvas = (className: string) => (
-    <div className={cn('relative w-full h-full min-h-0', className)}>
+    <div ref={setCanvasHost} className={cn('relative w-full h-full min-h-0', className)} data-tour="canvas">
       <RoomWebGLViewer
         ref={webglRef}
         blueprint={blueprint}
         selected={selection}
+        introFlyIn
+        // À l’ouverture, l’éditeur garde le survol ; l’aperçu rejoue la perspective choisie pour les visiteurs.
+        introView={introReplayKey > 0 ? undefined : 'arc'}
+        introReplayKey={introReplayKey}
         onSelect={handleCanvasSelect}
         onMoveItem={handleWebGLMove}
         onMoveEnd={handleWebGLMoveEnd}
         readOnly={readOnly}
         wallEditMode={wallEditMode}
+        reserveTopRight={!readOnly && !walkthroughActive}
         lockOrbit={lockOrbit}
         renderQuality={renderQuality}
         lightingPreset={lightingPreset}
@@ -2719,6 +3025,7 @@ export default function RoomLayoutEditor({
       {!readOnly && !walkthroughActive ? (
         <Toolbar
           label="Vue du plan"
+          tourId="view-toggle"
           className="hidden lg:flex absolute top-2.5 right-2.5 z-20 items-center gap-1 p-1 rounded-full bg-background/90 border border-border/70 shadow-sm"
         >
           <div role="group" aria-label="Mode d’affichage" className="flex items-center gap-0.5 rounded-full bg-surface-muted">
@@ -2786,9 +3093,9 @@ export default function RoomLayoutEditor({
 
           <div className="h-5 w-px bg-border my-auto mx-0.5" />
 
-          {caps.canDuplicate && (
+          <Gate allowed={caps.canDuplicate} need={{ feature: 'canDuplicate' }}>
             <IconButton label="Dupliquer la sélection" icon={Copy} shortcut={['Mod', 'D']} onClick={duplicateSelection} />
-          )}
+          </Gate>
 
           {/* Menu Rotation & Orientation Rapide */}
           <div className="relative">
@@ -2925,8 +3232,7 @@ export default function RoomLayoutEditor({
             )}
           </div>
 
-          {selection.length >= 2 && caps.canAlign && (
-            <div className="relative">
+          {selection.length >= 2 && (caps.canAlign ? (<div className="relative">
               <IconButton
                 label="Aligner la sélection"
                 icon={AlignCenter}
@@ -2994,8 +3300,17 @@ export default function RoomLayoutEditor({
                   </div>
                 </div>
               )}
-            </div>
-          )}
+            </div>) : (
+            <Gate allowed={false} need={{ feature: 'canAlign' }}>
+              <button
+                type="button"
+                aria-label="Aligner les éléments sélectionnés"
+                className="min-h-11 min-w-11 rounded-full text-foreground flex items-center justify-center"
+              >
+                <AlignCenter className="w-4 h-4" />
+              </button>
+            </Gate>
+          ))}
 
           {/* Quick Color Picker */}
           <div className="relative">
@@ -3068,16 +3383,30 @@ export default function RoomLayoutEditor({
     setSelection(id ? [{ kind: 'wall', id }] : []);
   }, []);
 
+  /** Décor mural : sélectionne le plus long mur de l’étage affiché pour ouvrir son panneau « Images et graffitis ». */
+  const selectWallForArt = () => {
+    const activeStory = resolveActiveStoryId(blueprint);
+    const candidates = (blueprint.walls ?? []).filter((w) => !w.storyId || w.storyId === activeStory);
+    const longest = candidates.reduce<RoomWallSegment | null>(
+      (best, w) => (!best || wallLengthMeters(w, blueprint.canvas) > wallLengthMeters(best, blueprint.canvas) ? w : best),
+      null,
+    );
+    if (!longest) {
+      log('Ajoutez d’abord des murs à la salle', 'info');
+      return;
+    }
+    selectWall(longest.id);
+    setMobilePane('edit');
+    log('Mur sélectionné : ajoutez une image ou un graffiti dans le panneau', 'info');
+  };
+
   const renderChairImageUpload = (id: string, currentUrl?: string) => (
-    <label className="block space-y-1.5">
+    <div className="space-y-1.5">
       <span className="text-sm font-semibold text-foreground flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image de chaise (optionnel)</span>
-      <input
-        type="file"
-        accept="image/*"
-        className={EDITOR_FILE}
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
+      <EditorImagePicker
+        label="Image de chaise"
+        hasImage={Boolean(currentUrl)}
+        onFile={async (file) => {
           const url = await readImageFile(file);
           updateFurniture(id, { chairImageUrl: url }, 'Image de chaise personnalisée');
         }}
@@ -3087,19 +3416,16 @@ export default function RoomLayoutEditor({
           Retirer l&apos;image
         </button>
       )}
-    </label>
+    </div>
   );
 
   const renderTableImageUpload = (id: string, currentUrl?: string) => (
-    <label className="block space-y-1.5">
+    <div className="space-y-1.5">
       <span className="text-sm font-semibold text-foreground flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image de table (nappage, bois…)</span>
-      <input
-        type="file"
-        accept="image/*"
-        className={EDITOR_FILE}
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
+      <EditorImagePicker
+        label="Image de table"
+        hasImage={Boolean(currentUrl)}
+        onFile={async (file) => {
           const url = await readImageFile(file);
           updateFurniture(id, { tableImageUrl: url }, 'Image de table importée');
         }}
@@ -3109,7 +3435,7 @@ export default function RoomLayoutEditor({
           Retirer l&apos;image
         </button>
       )}
-    </label>
+    </div>
   );
 
   const renderEditPanel = () => {
@@ -3230,11 +3556,9 @@ export default function RoomLayoutEditor({
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {caps.canDuplicate ? (
-                <button type="button" onClick={duplicateSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
+              <Gate allowed={caps.canDuplicate} need={{ feature: 'canDuplicate' }}><button type="button" onClick={duplicateSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
                   <Copy className="w-3.5 h-3.5" aria-hidden /> Dupliquer
-                </button>
-              ) : null}
+                </button></Gate>
               <button type="button" onClick={rotateSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
                 <RotateCw className="w-3.5 h-3.5" aria-hidden /> Tourner 90°
               </button>
@@ -3258,8 +3582,7 @@ export default function RoomLayoutEditor({
                   </button>
                 </div>
 
-                {caps.canAlign ? (
-                  <>
+                {caps.canAlign ? (<>
                     <div className="grid grid-cols-4 gap-1.5">
                       {([
                         ['left', AlignLeft],
@@ -3329,8 +3652,13 @@ export default function RoomLayoutEditor({
                     >
                       <MoveHorizontal className="w-3.5 h-3.5" aria-hidden /> Optimiser les espacements
                     </button>
-                  </>
-                ) : null}
+                  </>) : (
+                  <Gate allowed={false} need={{ feature: 'canAlign' }}>
+                    <button type="button" className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+                      Aligner & répartir
+                    </button>
+                  </Gate>
+                )}
               </div>
             </details>
 
@@ -3522,8 +3850,7 @@ export default function RoomLayoutEditor({
               </button>
             ) : null}
             <div className="grid grid-cols-3 gap-2">
-              {caps.canPlanFromPhoto && !isRoomBlocked ? (
-                <button
+              {!isRoomBlocked ? <Gate allowed={caps.canPlanFromPhoto} need={{ feature: 'canPlanFromPhoto' }}><button
                   type="button"
                   aria-pressed={planPath === 'photo'}
                   disabled={aiPlanReading}
@@ -3536,10 +3863,8 @@ export default function RoomLayoutEditor({
                 >
                   <ImagePlus className="w-4 h-4 text-primary-solid" aria-hidden />
                   <span className="text-xs font-semibold text-foreground leading-tight">Depuis une photo</span>
-                </button>
-              ) : null}
-              {caps.canTemplates ? (
-                <button
+                </button></Gate> : null}
+              <Gate allowed={caps.canTemplates} need={{ feature: 'canTemplates' }}><button
                   type="button"
                   onClick={() => {
                     setTemplatesOpen(true);
@@ -3550,8 +3875,7 @@ export default function RoomLayoutEditor({
                 >
                   <LayoutTemplate className="w-4 h-4 text-primary-solid" aria-hidden />
                   <span className="text-xs font-semibold text-foreground leading-tight">Un modèle</span>
-                </button>
-              ) : null}
+                </button></Gate>
               <button
                 type="button"
                 aria-pressed={planPath === 'manual' && toolbarGroup === 'furniture'}
@@ -3659,12 +3983,11 @@ export default function RoomLayoutEditor({
             ) : null}
           </section>
           {!caps.canThemes ? (
-            <Alert variant="warning" title={`Forfait ${caps.label}`}>
-              <p>{caps.description}</p>
-              <Button href="/dashboard/billing" variant="ghost" size="sm" className="mt-2 -ml-3">
-                Voir les forfaits
-              </Button>
-            </Alert>
+            <LockedSectionCard
+              title="Thèmes, murs & sols"
+              planLabel={describeEditorUpsell('Thèmes', { feature: 'canThemes' }, parsedEditorLevel).planLabel}
+              description={`Ambiances complètes, matières des murs et du sol, éclairage. Votre forfait actuel (${caps.label}) : ${caps.description}`}
+            />
           ) : (
             <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
               <button
@@ -3728,14 +4051,12 @@ export default function RoomLayoutEditor({
                     </div>
                   ))}
                 </div>
-                {caps.canCustomTheme ? (
-                  <CustomRoomThemePanel
+                <Gate allowed={caps.canCustomTheme} need={{ feature: 'canCustomTheme' }}><CustomRoomThemePanel
                     blueprint={blueprint}
                     onChange={(next) => updateBlueprint(next)}
                     onApplyTheme={(id) => applyTheme(id as RoomThemeId)}
                     activeThemeId={blueprint.metadata.roomThemeId}
-                  />
-                ) : null}
+                  /></Gate>
                   </div>
                   <div className="space-y-3 pt-4 border-t border-border/50">
                     <p className="text-sm font-semibold text-foreground flex items-center gap-1">
@@ -4236,23 +4557,57 @@ export default function RoomLayoutEditor({
                   </label>
                   {roofVisible && (
                     <div className="grid grid-cols-2 gap-3 pl-1">
-                      <label className="block space-y-1.5 col-span-2">
+                      <div className="col-span-2 space-y-1.5">
                         <span className="text-xs font-semibold text-foreground">Style de toit</span>
-                        <select
-                          value={blueprint.metadata.roofStyle ?? 'flat'}
-                          onChange={(e) => updateBlueprint({
-                            ...blueprint,
-                            metadata: { ...blueprint.metadata, roofStyle: e.target.value as RoofStyle },
-                          }, { message: `Toit : ${roofStyleLabels[e.target.value as RoofStyle]}`, kind: 'settings' })}
-                          className={EDITOR_FIELD}
-                        >
-                          {(Object.keys(roofStyleLabels) as RoofStyle[]).map((style) => (
-                            <option key={style} value={style}>{roofStyleLabels[style]}</option>
-                          ))}
-                        </select>
-                      </label>
+                        <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Style de toit">
+                          {(Object.keys(roofStyleLabels) as RoofStyle[]).map((style) => {
+                            const active = (blueprint.metadata.roofStyle ?? 'flat') === style;
+                            return (
+                              <button
+                                key={style}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => updateBlueprint({
+                                  ...blueprint,
+                                  metadata: { ...blueprint.metadata, roofStyle: style },
+                                }, { message: `Toit : ${roofStyleLabels[style]}`, kind: 'settings' })}
+                                className={cn(
+                                  'min-h-11 rounded-[var(--radius-button)] border px-2 py-1.5 text-left text-xs font-semibold leading-snug transition-colors',
+                                  active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-foreground hover:border-primary/40',
+                                )}
+                              >
+                                {roofStyleLabels[style]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="col-span-2 space-y-1.5">
+                        <span className="text-xs font-semibold text-foreground">Matière et teinte</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {ROOF_COLOR_PRESETS.map((p) => {
+                            const active = (blueprint.metadata.roofColor ?? '#d6d3d1').toLowerCase() === p.color;
+                            return (
+                              <button
+                                key={p.color}
+                                type="button"
+                                title={p.label}
+                                aria-label={p.label}
+                                aria-pressed={active}
+                                onClick={() => updateBlueprint({
+                                  ...blueprint,
+                                  metadata: { ...blueprint.metadata, roofColor: p.color },
+                                }, { message: `Toit : ${p.label}`, kind: 'settings' })}
+                                className={cn('inline-flex h-11 w-11 items-center justify-center rounded-full border-2', active ? 'border-primary' : 'border-transparent')}
+                              >
+                                <span className="h-7 w-7 rounded-full border border-black/10" style={{ background: p.color }} />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                       <label className="block space-y-1.5">
-                        <span className="text-xs font-semibold text-foreground">Couleur plafond</span>
+                        <span className="text-xs font-semibold text-foreground">Autre teinte</span>
                         <input
                           type="color"
                           value={blueprint.metadata.roofColor ?? '#d6d3d1'}
@@ -4298,6 +4653,12 @@ export default function RoomLayoutEditor({
                       />
                       Lustres au plafond
                     </label>
+                    {placedChandelierCount > 0 ? (
+                      <p className={EDITOR_HINT} role="note">
+                        {placedChandelierCount === 1 ? 'Un lustre est posé' : `${placedChandelierCount} lustres sont posés`} sur le plan : ce sont eux qui sont affichés.
+                        {blueprint.metadata.showChandeliers === true ? ' Les lustres automatiques ci-dessous ne s’ajoutent pas.' : ''}
+                      </p>
+                    ) : null}
                     {blueprint.metadata.showChandeliers === true ? (
                       <div className="space-y-2">
                         <p className={EDITOR_HEADING}>Type de lustre</p>
@@ -4356,6 +4717,11 @@ export default function RoomLayoutEditor({
                     )}
                   </div>
 
+                  <LedShowControls
+                    value={blueprint.metadata.ledShow}
+                    onChange={(next, message) => updateBlueprint({ ...blueprint, metadata: { ...blueprint.metadata, ledShow: next } }, { message, kind: 'settings' })}
+                  />
+
                   <details className="group rounded-[var(--radius-button)] border border-border bg-surface-muted/30 px-2.5 py-2">
                     <summary className="text-sm font-semibold text-foreground cursor-pointer select-none min-h-11 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
                       Autre décor (uplights, rideaux…)
@@ -4398,41 +4764,30 @@ export default function RoomLayoutEditor({
                     </div>
                   </details>
                 </div>
-                {caps.canCustomImages ? (
-                  <div className="space-y-3">
-                    <label className="block text-xs space-y-1">
+                <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}><div className="space-y-3">
+                    <div className="text-xs space-y-1">
                       <span className="font-semibold text-muted flex items-center gap-1">
                         <ImagePlus className="w-3.5 h-3.5" /> Repère photo (sol)
                       </span>
                       <p className={EDITOR_HINT}>
                         Affiche le scan sous le mobilier, sans le lire. Pour détecter tables et décor, utilisez « Lire le plan avec l’IA ».
                       </p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className={EDITOR_FILE}
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (file) await importRoomPlanImage(file);
-                          e.target.value = '';
-                        }}
+                      <EditorImagePicker
+                        label="Repère photo au sol"
+                        hasImage={Boolean(blueprint.metadata.floorImageUrl) && blueprint.metadata.floorImageFit === 'cover'}
+                        onFile={importRoomPlanImage}
                       />
-                    </label>
-                    <label className="block text-xs space-y-1">
+                    </div>
+                    <div className="text-xs space-y-1">
                       <span className="font-semibold text-muted flex items-center gap-1">
                         <ImagePlus className="w-3.5 h-3.5" /> Texture de sol (mosaïque)
                       </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className={EDITOR_FILE}
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (file) await setFloorImage(file);
-                          e.target.value = '';
-                        }}
+                      <EditorImagePicker
+                        label="Texture de sol"
+                        hasImage={Boolean(blueprint.metadata.floorImageUrl) && blueprint.metadata.floorImageFit !== 'cover'}
+                        onFile={setFloorImage}
                       />
-                    </label>
+                    </div>
                     {blueprint.metadata.floorImageUrl && (
                       <div className="flex flex-wrap gap-2 items-center">
                         <span className="text-sm font-medium text-primary">
@@ -4455,8 +4810,30 @@ export default function RoomLayoutEditor({
                         </button>
                       </div>
                     )}
-                  </div>
-                ) : null}
+                    {blueprint.metadata.floorImageUrl && blueprint.metadata.floorImageFit !== 'cover' && (
+                      <label className="block space-y-1.5">
+                        <span className="text-xs font-semibold text-foreground">
+                          Taille du motif : {(blueprint.metadata.floorImageTileM ?? 3.5).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} m
+                        </span>
+                        <input
+                          type="range"
+                          min={0.3}
+                          max={8}
+                          step={0.1}
+                          value={blueprint.metadata.floorImageTileM ?? 3.5}
+                          onChange={(e) => updateBlueprint({
+                            ...blueprint,
+                            metadata: { ...blueprint.metadata, floorImageTileM: parseFloat(e.target.value) },
+                          })}
+                          className="w-full accent-primary"
+                          aria-label="Taille réelle d’une répétition de l’image de sol"
+                        />
+                        <span className={EDITOR_HINT}>
+                          Largeur réelle couverte par l’image : 0,6 m pour un carreau de 60 cm, 2 à 3 m pour un parquet.
+                        </span>
+                      </label>
+                    )}
+                  </div></Gate>
                   </div>
                 </div>
               )}
@@ -4582,8 +4959,7 @@ export default function RoomLayoutEditor({
                   </p>
                 </div>
 
-                {caps.fixtureKinds.includes('stairs') ? (
-                  <div className="space-y-2">
+                <Gate allowed={caps.fixtureKinds.includes('stairs')} need={{ fixture: 'stairs' }}><div className="space-y-2">
                     <p className={EDITOR_HEADING}>Escalier vers…</p>
                     {resolveStories(blueprint).length < 2 ? (
                       <p className={EDITOR_HINT}>Ajoutez un 2ᵉ étage (ou un modèle Duplex) pour créer un escalier.</p>
@@ -4605,11 +4981,9 @@ export default function RoomLayoutEditor({
                       </div>
                     )}
                     <StairsUserGuide compact defaultOpen={false} />
-                  </div>
-                ) : null}
+                  </div></Gate>
 
-                {caps.fixtureKinds.includes('balcony') ? (
-                  <div className="space-y-2">
+                <Gate allowed={caps.fixtureKinds.includes('balcony')} need={{ fixture: 'balcony' }}><div className="space-y-2">
                     <p className={EDITOR_HEADING}>Balcons</p>
                     <div className="grid grid-cols-2 gap-1.5">
                       {(Object.keys(balconySideLabels) as BalconySide[]).map((side) => (
@@ -4631,8 +5005,7 @@ export default function RoomLayoutEditor({
                       Ajouter les 4 façades
                     </button>
                     <p className={EDITOR_HINT}>Les balcons se placent sur l’étage actif. Déplacez-les ensuite sur le plan.</p>
-                  </div>
-                ) : null}
+                  </div></Gate>
 
                 <div className="space-y-2">
                   <p className={EDITOR_HEADING}>Vue</p>
@@ -4732,8 +5105,7 @@ export default function RoomLayoutEditor({
                         </label>
                       ) : null}
                     </div>
-                    {caps.fixtureKinds.includes('corridor') ? (
-                      <div className="space-y-2">
+                    <Gate allowed={caps.fixtureKinds.includes('corridor')} need={{ fixture: 'corridor' }}><div className="space-y-2">
                         <p className={EDITOR_HEADING}>Couloir</p>
                         <button
                           type="button"
@@ -4755,8 +5127,7 @@ export default function RoomLayoutEditor({
                         >
                           Percer les portes (couloirs → murs)
                         </button>
-                      </div>
-                    ) : null}
+                      </div></Gate>
                   </div>
                 </details>
               </div>
@@ -4961,8 +5332,7 @@ export default function RoomLayoutEditor({
             </div>
           </div>
           
-          {caps.canChangeOutline ? (
-            <div className="space-y-3 pt-4 border-t border-border/50">
+          <Gate allowed={caps.canChangeOutline} need={{ feature: 'canChangeOutline' }}><div className="space-y-3 pt-4 border-t border-border/50">
               <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Shapes className="w-3.5 h-3.5" /> Forme de la salle</p>
               <p className="text-sm text-muted leading-relaxed">
                 Met à jour le sol découpé et les murs 3D (L, U, hexagone, cercle…). Annulable avec Ctrl+Z.
@@ -4992,8 +5362,7 @@ export default function RoomLayoutEditor({
                   </button>
                 ))}
               </div>
-            </div>
-          ) : null}
+            </div></Gate>
               </div>
             )}
           </div>
@@ -5015,6 +5384,17 @@ export default function RoomLayoutEditor({
               onSelectWall={selectWall}
               onChange={(next, action) => updateBlueprint(next, action)}
             />
+            {!readOnly ? (
+              <WallArtPanel
+                blueprint={blueprint}
+                wallId={selected.id}
+                onChange={(next, action) => updateBlueprint(next, action)}
+                uploadImage={uploadElementImage}
+                canUploadImages={caps.canCustomImages}
+                imagesPlanLabel={describeEditorUpsell('Images sur les murs', { feature: 'canCustomImages' }, parsedEditorLevel).planLabel}
+                onLockedImages={() => setUpsell({ ...describeEditorUpsell('Images sur les murs', { feature: 'canCustomImages' }, parsedEditorLevel), label: 'Images sur les murs' })}
+              />
+            ) : null}
           </div>
           <LayoutActionPanel actions={actionLog} />
         </div>
@@ -5027,6 +5407,7 @@ export default function RoomLayoutEditor({
       const isInstrument = selectedFixture.kind === 'instrument';
       const isBar = selectedFixture.kind === 'bar';
       const isLandscape = selectedFixture.kind === 'landscape';
+      const isHomeFurniture = selectedFixture.kind === 'homeFurniture';
       const isStage = selectedFixture.kind === 'stage' || isPodium;
       const isFlower = selectedFixture.kind === 'flower';
       const isArch = selectedFixture.kind === 'arch';
@@ -5053,7 +5434,8 @@ export default function RoomLayoutEditor({
       const isDoor = selectedFixture.kind === 'door' || selectedFixture.kind === 'entrance';
       const isAisle = selectedFixture.kind === 'aisle' || selectedFixture.kind === 'carpet';
       const isChandelier = selectedFixture.kind === 'chandelier';
-      const canHaveImage = isColumn || isStage || isFlower || isBuffet || isStairs || isAisle || isDecal;
+      const isCorridor = selectedFixture.kind === 'corridor';
+      const canHaveImage = isColumn || isStage || isFlower || isBuffet || isStairs || isAisle || isDecal || isCorridor;
 
       return (
         <div className="space-y-3">
@@ -5118,6 +5500,32 @@ export default function RoomLayoutEditor({
             ) : isInstrument ? (
               <p className="text-xs text-muted">Glissez-le sur un podium ou une scène pour le surélever.</p>
             ) : null}
+
+            {/* ───────── GUIRLANDES ───────── */}
+            {selectedFixture.kind === 'stringLight' && (
+              <div className="space-y-2 pt-2 border-t border-border">
+                <p className={EDITOR_HEADING}>Guirlande lumineuse</p>
+                {([
+                  ['stringLightStyle', 'Ampoules', STRING_LIGHT_STYLE_LABELS, 'edison'],
+                  ['stringLightLayout', 'Tracé', STRING_LIGHT_LAYOUT_LABELS, 'canopy'],
+                  ['stringLightMount', 'Accroche', STRING_LIGHT_MOUNT_LABELS, 'poles'],
+                ] as const).map(([key, label, labels, fallback]) => (
+                  <label key={key} className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">{label}</span>
+                    <select
+                      className={EDITOR_FIELD}
+                      value={(selectedFixture[key] as string | undefined) ?? fallback}
+                      onChange={(e) => updateFixture(selectedFixture.id, { [key]: e.target.value } as Partial<typeof selectedFixture>)}
+                    >
+                      {Object.entries(labels).map(([v, l]) => (
+                        <option key={v} value={v}>{l}</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+                <p className={EDITOR_HINT}>« Accrochées au plafond » supprime les poteaux : idéal en intérieur.</p>
+              </div>
+            )}
 
             {/* ───────── PORTES & ENTRÉES D’ACCUEIL ───────── */}
             {isDoor && (
@@ -5225,6 +5633,19 @@ export default function RoomLayoutEditor({
                     />
                   </label>
                 </div>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-foreground">Poignées et paumelles</span>
+                  <select
+                    value={selectedFixture.hardwareFinish ?? ''}
+                    onChange={(e) => updateFixture(selectedFixture.id, { hardwareFinish: (e.target.value || undefined) as HomeMetalFinish | undefined }, 'Finition des poignées')}
+                    className={EDITOR_FIELD}
+                  >
+                    <option value="">Selon le modèle</option>
+                    {(Object.keys(HOME_METAL_FINISH_LABELS) as HomeMetalFinish[]).map((id) => (
+                      <option key={id} value={id}>{HOME_METAL_FINISH_LABELS[id]}</option>
+                    ))}
+                  </select>
+                </label>
 
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block space-y-1.5">
@@ -5311,7 +5732,7 @@ export default function RoomLayoutEditor({
                   <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={selectedFixture.hasSideLanterns !== false}
+                      checked={selectedFixture.hasSideLanterns === true}
                       onChange={(e) => updateFixture(selectedFixture.id, { hasSideLanterns: e.target.checked }, 'Lanternes latérales')}
                       className="rounded border-border size-4"
                     />
@@ -5320,13 +5741,168 @@ export default function RoomLayoutEditor({
                   <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={selectedFixture.hasPetals !== false}
+                      checked={selectedFixture.hasPetals === true}
                       onChange={(e) => updateFixture(selectedFixture.id, { hasPetals: e.target.checked }, 'Pétales de fleurs')}
                       className="rounded border-border size-4"
                     />
                     <span>Pétales de roses parsemés</span>
                   </label>
                 </div>
+
+                {selectedFixture.kind === 'aisle' && (
+                  <div className="space-y-2 p-2 rounded bg-surface border border-border">
+                    <p className="text-xs font-semibold text-muted">Personnaliser</p>
+                    <DecorColorField
+                      label="Couleur du tapis"
+                      value={selectedFixture.aisleColor}
+                      fallback="#881337"
+                      onChange={(next) => updateFixture(selectedFixture.id, { aisleColor: next })}
+                    />
+                    {selectedFixture.hasGoldBorder !== false && (
+                      <DecorColorField
+                        label="Couleur de la ganse"
+                        value={selectedFixture.aisleBorderColor}
+                        fallback="#d4af37"
+                        onChange={(next) => updateFixture(selectedFixture.id, { aisleBorderColor: next })}
+                      />
+                    )}
+                    {selectedFixture.hasPetals === true && (
+                      <>
+                        <DecorColorField
+                          label="Couleur des pétales"
+                          value={selectedFixture.petalColor}
+                          fallback="#f43f5e"
+                          onChange={(next) => updateFixture(selectedFixture.id, { petalColor: next })}
+                        />
+                        <DecorRangeField
+                          label="Quantité de pétales"
+                          value={selectedFixture.petalDensity ?? 0.35}
+                          min={0.05}
+                          max={1}
+                          step={0.05}
+                          format={(v) => `${Math.round(v * 100)} %`}
+                          onChange={(v) => updateFixture(selectedFixture.id, { petalDensity: v })}
+                        />
+                      </>
+                    )}
+                    {selectedFixture.hasSideLanterns === true && (
+                      <DecorRangeField
+                        label="Écart entre lanternes"
+                        value={selectedFixture.lanternSpacingM ?? 2}
+                        min={0.8}
+                        max={4}
+                        step={0.1}
+                        format={fmtM}
+                        onChange={(v) => updateFixture(selectedFixture.id, { lanternSpacingM: v })}
+                      />
+                    )}
+                    {selectedFixture.imageUrl && (
+                      <DecorRangeField
+                        label="Taille du motif importé"
+                        value={selectedFixture.surfaceImageTileM ?? 1.2}
+                        min={0.3}
+                        max={6}
+                        step={0.1}
+                        format={fmtM}
+                        onChange={(v) => updateFixture(selectedFixture.id, { surfaceImageTileM: v })}
+                      />
+                    )}
+                    <p className={EDITOR_HINT}>Une photo de tapis ou de tissu se pose sur l’allée avec « Image personnalisée » plus bas.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ───────── COULOIR ───────── */}
+            {isCorridor && (
+              <div className="space-y-2 pt-2 border-t border-border">
+                <p className={EDITOR_HEADING}>Couloir</p>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-foreground">Sol</span>
+                  <select
+                    value={selectedFixture.material ?? 'wood'}
+                    onChange={(e) => updateFixture(selectedFixture.id, { material: e.target.value as ZoneMaterial }, 'Sol du couloir')}
+                    className={EDITOR_FIELD}
+                  >
+                    {(Object.keys(zoneMaterialLabels) as ZoneMaterial[]).map((m) => (
+                      <option key={m} value={m}>{zoneMaterialLabels[m]}</option>
+                    ))}
+                  </select>
+                </label>
+                <DecorColorField
+                  label="Teinte du sol"
+                  value={selectedFixture.color && selectedFixture.color.toLowerCase() !== LEGACY_CORRIDOR_GREY ? selectedFixture.color : undefined}
+                  fallback="#c9a273"
+                  onChange={(next) => updateFixture(selectedFixture.id, { color: next ?? LEGACY_CORRIDOR_GREY })}
+                />
+                <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedFixture.corridorWalls !== false}
+                    onChange={(e) => updateFixture(selectedFixture.id, { corridorWalls: e.target.checked }, e.target.checked ? 'Murs du couloir' : 'Couloir sans murs')}
+                    className="rounded border-border size-4"
+                  />
+                  <span>Murs de chaque côté</span>
+                </label>
+                {selectedFixture.corridorWalls !== false && (
+                  <>
+                    <DecorRangeField
+                      label="Hauteur des murs"
+                      value={selectedFixture.corridorWallHeightM ?? 2.2}
+                      min={0.8}
+                      max={4}
+                      step={0.1}
+                      format={fmtM}
+                      onChange={(v) => updateFixture(selectedFixture.id, { corridorWallHeightM: v })}
+                    />
+                    <DecorColorField
+                      label="Couleur des murs"
+                      value={selectedFixture.corridorWallColor}
+                      fallback="#ece8e1"
+                      onChange={(next) => updateFixture(selectedFixture.id, { corridorWallColor: next })}
+                    />
+                    <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedFixture.corridorSconces === true}
+                        onChange={(e) => updateFixture(selectedFixture.id, { corridorSconces: e.target.checked }, 'Appliques murales')}
+                        className="rounded border-border size-4"
+                      />
+                      <span>Appliques murales</span>
+                    </label>
+                    {selectedFixture.corridorSconces === true && (
+                      <DecorRangeField
+                        label="Écart entre appliques"
+                        value={selectedFixture.corridorSconceSpacingM ?? 3}
+                        min={1}
+                        max={8}
+                        step={0.5}
+                        format={fmtM}
+                        onChange={(v) => updateFixture(selectedFixture.id, { corridorSconceSpacingM: v })}
+                      />
+                    )}
+                  </>
+                )}
+                <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedFixture.corridorPlinths !== false}
+                    onChange={(e) => updateFixture(selectedFixture.id, { corridorPlinths: e.target.checked }, 'Plinthes')}
+                    className="rounded border-border size-4"
+                  />
+                  <span>{selectedFixture.corridorWalls !== false ? 'Plinthes' : 'Bordures au sol'}</span>
+                </label>
+                {selectedFixture.imageUrl && (
+                  <DecorRangeField
+                    label="Taille du motif importé"
+                    value={selectedFixture.surfaceImageTileM ?? 1.2}
+                    min={0.3}
+                    max={6}
+                    step={0.1}
+                    format={fmtM}
+                    onChange={(v) => updateFixture(selectedFixture.id, { surfaceImageTileM: v })}
+                  />
+                )}
               </div>
             )}
 
@@ -5620,6 +6196,39 @@ export default function RoomLayoutEditor({
                 </select>
               </label>
             ) : null}
+            {selectedFixture.kind === 'stage' ? (
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-muted">Habillage de scène</span>
+                <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Habillage de scène">
+                  {(Object.keys(stageRigLabels) as StageRig[]).map((rig) => {
+                    const active = (selectedFixture.stageRig ?? 'none') === rig;
+                    return (
+                      <button
+                        key={rig}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => updateFixture(selectedFixture.id, { stageRig: rig }, `Scène : ${stageRigLabels[rig]}`)}
+                        className={cn(
+                          'min-h-11 rounded-[var(--radius-button)] border px-2 py-1.5 text-left text-xs font-semibold leading-snug transition-colors',
+                          active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-foreground hover:border-primary/40',
+                        )}
+                      >
+                        {stageRigLabels[rig]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedFixture.stageStairs !== false}
+                    onChange={(e) => updateFixture(selectedFixture.id, { stageStairs: e.target.checked }, e.target.checked ? 'Escalier de scène ajouté' : 'Escalier de scène retiré')}
+                    className="rounded border-border size-4"
+                  />
+                  <span>Escalier d’accès (dès 30 cm de haut)</span>
+                </label>
+              </div>
+            ) : null}
 
             {isPodium && (
               <>
@@ -5704,6 +6313,44 @@ export default function RoomLayoutEditor({
                 </span>
               </label>
             )}
+            {isInstrument && (() => {
+              const presets = instrumentFinishPresets((selectedFixture.instrumentStyle ?? 'piano') as InstrumentStyle);
+              if (presets.length === 0) return null;
+              const current = selectedFixture.instrumentFinish;
+              return (
+                <div className="space-y-1.5">
+                  <span className="block text-xs font-semibold text-muted">Finition</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => updateFixture(selectedFixture.id, { instrumentFinish: undefined }, 'Finition d’origine')}
+                      aria-pressed={!current}
+                      className={cn(EDITOR_CHIP, !current && 'border-primary bg-primary/10 text-primary')}
+                    >
+                      D’origine
+                    </button>
+                    {presets.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => updateFixture(selectedFixture.id, { instrumentFinish: p.color }, `Finition : ${p.label}`)}
+                        aria-pressed={current === p.color}
+                        className={cn(EDITOR_CHIP, 'gap-1.5', current === p.color && 'border-primary bg-primary/10 text-primary')}
+                      >
+                        <span className="size-3.5 rounded-full border border-border" style={{ background: p.color }} />
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                  <DecorColorField
+                    label="Autre teinte"
+                    value={current && !presets.some((p) => p.color === current) ? current : undefined}
+                    fallback={current ?? presets[0].color}
+                    onChange={(next) => updateFixture(selectedFixture.id, { instrumentFinish: next })}
+                  />
+                </div>
+              );
+            })()}
 
             {isBar && (
               <label className="block text-xs space-y-1">
@@ -5734,6 +6381,51 @@ export default function RoomLayoutEditor({
                 <span className="text-xs text-muted">{barStyleHints[(selectedFixture.barStyle ?? 'cocktail') as BarStyle]}</span>
               </label>
             )}
+            {isBar && (() => {
+              const style = (selectedFixture.barStyle ?? 'cocktail') as BarStyle;
+              const auto = BAR_STYLE_DESIGN[style];
+              const parts = [
+                { key: 'barFront', label: 'Façade', labels: BAR_FRONT_LABELS as Record<string, string>, value: selectedFixture.barFront, fallback: auto.front },
+                { key: 'barTop', label: 'Plateau', labels: BAR_TOP_LABELS as Record<string, string>, value: selectedFixture.barTop, fallback: auto.top },
+                ...(style === 'island' ? [] : [{ key: 'barBack', label: 'Arrière-bar', labels: BAR_BACK_LABELS as Record<string, string>, value: selectedFixture.barBack, fallback: auto.back }]),
+                { key: 'barStool', label: 'Tabourets', labels: BAR_STOOL_LABELS as Record<string, string>, value: selectedFixture.barStool, fallback: auto.stool },
+                { key: 'barMetal', label: 'Métal', labels: BAR_METAL_LABELS as Record<string, string>, value: selectedFixture.barMetal, fallback: auto.metal },
+              ] as const;
+              const customised = parts.some((part) => part.value);
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={EDITOR_HEADING}>Habillage du bar</p>
+                    {customised ? (
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-primary hover:underline min-h-11 px-1"
+                        onClick={() => updateFixture(selectedFixture.id, { barFront: undefined, barTop: undefined, barBack: undefined, barStool: undefined, barMetal: undefined }, 'Habillage du bar par défaut')}
+                      >
+                        Par défaut
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {parts.map((part) => (
+                      <label key={part.key} className="block text-xs space-y-1">
+                        <span className="font-semibold text-muted">{part.label}</span>
+                        <select
+                          value={part.value ?? ''}
+                          onChange={(e) => updateFixture(selectedFixture.id, { [part.key]: e.target.value || undefined }, `${part.label} du bar`)}
+                          className={EDITOR_FIELD}
+                        >
+                          <option value="">Auto · {part.labels[part.fallback]}</option>
+                          {Object.entries(part.labels).map(([id, label]) => (
+                            <option key={id} value={id}>{label}</option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {selectedFixture.kind === 'customElement' && selectedFixture.customElement ? (() => {
               const def = selectedFixture.customElement;
@@ -5823,6 +6515,53 @@ export default function RoomLayoutEditor({
               );
             })() : null}
 
+            {isHomeFurniture && (() => {
+              const style = (selectedFixture.homeStyle ?? 'bed') as HomeFurnitureStyle;
+              const meta = HOME_FURNITURE_META[style];
+              return (
+                <>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Meuble</span>
+                  <select
+                    value={style}
+                    onChange={(e) => {
+                      const next = e.target.value as HomeFurnitureStyle;
+                      const nextMeta = HOME_FURNITURE_META[next];
+                      const size = homeFurnitureFootprintPct(next, blueprint.canvas?.widthM ?? 20, blueprint.canvas?.heightM ?? 16);
+                      updateFixture(selectedFixture.id, {
+                        homeStyle: next,
+                        ...size,
+                        heightM: nextMeta.heightM,
+                        color: nextMeta.color,
+                        label: nextOwnedLabel(selectedFixture.label, meta.label, nextMeta.label),
+                      }, nextMeta.label);
+                    }}
+                    className={EDITOR_FIELD}
+                  >
+                    {HOME_FURNITURE_ORDER.map((id) => (
+                      <option key={id} value={id}>{HOME_FURNITURE_GROUP_LABELS[HOME_FURNITURE_META[id].group]} · {HOME_FURNITURE_META[id].label}</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-muted">{meta.hint}</span>
+                </label>
+                {meta.group === 'bathroom' ? (
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Robinetterie et métaux</span>
+                      <select
+                        value={selectedFixture.homeMetalFinish ?? 'chrome'}
+                        onChange={(e) => updateFixture(selectedFixture.id, { homeMetalFinish: e.target.value as HomeMetalFinish }, 'Finition')}
+                        className={EDITOR_FIELD}
+                      >
+                        {(Object.keys(HOME_METAL_FINISH_LABELS) as HomeMetalFinish[]).map((id) => (
+                          <option key={id} value={id}>{HOME_METAL_FINISH_LABELS[id]}</option>
+                        ))}
+                      </select>
+                  </label>
+                ) : null}
+                </>
+              );
+            })()}
+
             {isLandscape && (() => {
               const style = (selectedFixture.landscapeStyle ?? 'oak') as LandscapeStyle;
               const meta = LANDSCAPE_STYLE_META[style];
@@ -5869,7 +6608,74 @@ export default function RoomLayoutEditor({
                       </select>
                     </label>
                   ) : null}
-                  {style !== 'pool' && style !== 'pond' && style !== 'firePit' ? (
+                  {style === 'garden' ? (() => {
+                    const g = resolveGardenOptions(selectedFixture.garden);
+                    const setGarden = (patch: Partial<GardenOptions>, message?: string) =>
+                      updateFixture(selectedFixture.id, { garden: { ...g, ...patch } }, message);
+                    const paletteId = Object.entries(GARDEN_FLOWER_PALETTES).find(([, pal]) => pal.colors.join() === g.flowerColors.join())?.[0] ?? 'custom';
+                    return (
+                      <div className="space-y-2 p-2 rounded bg-surface border border-border">
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Gazon</span>
+                          <select value={g.lawn} onChange={(e) => setGarden({ lawn: e.target.value as GardenLawn }, 'Type de gazon')} className={EDITOR_FIELD}>
+                            {(Object.keys(GARDEN_LAWN_LABELS) as GardenLawn[]).map((id) => <option key={id} value={id}>{GARDEN_LAWN_LABELS[id]}</option>)}
+                          </select>
+                        </label>
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Bordure</span>
+                          <select value={g.border} onChange={(e) => setGarden({ border: e.target.value as GardenBorder }, 'Bordure du jardin')} className={EDITOR_FIELD}>
+                            {(Object.keys(GARDEN_BORDER_LABELS) as GardenBorder[]).map((id) => <option key={id} value={id}>{GARDEN_BORDER_LABELS[id]}</option>)}
+                          </select>
+                        </label>
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Chemin</span>
+                          <select value={g.path} onChange={(e) => setGarden({ path: e.target.value as GardenPath }, 'Chemin du jardin')} className={EDITOR_FIELD}>
+                            {(Object.keys(GARDEN_PATH_LABELS) as GardenPath[]).map((id) => <option key={id} value={id}>{GARDEN_PATH_LABELS[id]}</option>)}
+                          </select>
+                        </label>
+                        <DecorRangeField
+                          label="Fleurs"
+                          value={g.flowerDensity}
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          format={(v) => (v === 0 ? 'aucune' : `${Math.round(v * 100)} %`)}
+                          onChange={(v) => setGarden({ flowerDensity: v })}
+                        />
+                        {(g.flowerDensity > 0 || g.border === 'flowers') && (
+                          <label className="block text-xs space-y-1">
+                            <span className="font-semibold text-muted">Couleurs des fleurs</span>
+                            <select
+                              value={paletteId}
+                              onChange={(e) => {
+                                const pal = GARDEN_FLOWER_PALETTES[e.target.value];
+                                if (pal) setGarden({ flowerColors: pal.colors }, `Fleurs : ${pal.label}`);
+                              }}
+                              className={EDITOR_FIELD}
+                            >
+                              {Object.entries(GARDEN_FLOWER_PALETTES).map(([id, pal]) => <option key={id} value={id}>{pal.label}</option>)}
+                              {paletteId === 'custom' ? <option value="custom">Couleur choisie</option> : null}
+                            </select>
+                            <span className="flex items-center gap-2 pt-1">
+                              <input
+                                type="color"
+                                value={g.flowerColors[0]}
+                                onChange={(e) => setGarden({ flowerColors: [e.target.value] })}
+                                aria-label="Une seule couleur de fleurs"
+                                title="Une seule couleur de fleurs"
+                                className={EDITOR_SWATCH}
+                              />
+                              <span className="text-sm text-foreground">Ou une seule couleur</span>
+                            </span>
+                          </label>
+                        )}
+                        <DecorRangeField label="Arbustes" value={g.shrubs} min={0} max={16} step={1} format={(v) => String(v)} onChange={(v) => setGarden({ shrubs: v })} />
+                        <DecorRangeField label="Arbres" value={g.trees} min={0} max={6} step={1} format={(v) => String(v)} onChange={(v) => setGarden({ trees: v })} />
+                        <p className={EDITOR_HINT}>Les plantes évitent le chemin et restent au même endroit à chaque ouverture.</p>
+                      </div>
+                    );
+                  })() : null}
+                  {style !== 'pool' && style !== 'pond' && style !== 'firePit' && style !== 'garden' ? (
                     <label className="block text-xs space-y-1">
                       <span className="font-semibold text-muted">Hauteur (m)</span>
                       <input
@@ -6324,13 +7130,11 @@ export default function RoomLayoutEditor({
                   aria-label="Forme de la table"
                   className={EDITOR_FIELD}
                 >
-                  {caps.tableShapes.includes('round') ? <option value="round">Ronde</option> : null}
-                  {caps.tableShapes.includes('rectangular') ? <option value="rectangular">Rectangulaire</option> : null}
-                  {caps.tableShapes.includes('square') ? <option value="square">Carrée</option> : null}
-                  {caps.tableShapes.includes('oval') ? <option value="oval">Ovale</option> : null}
-                  {caps.tableShapes.includes('cocktail') ? <option value="cocktail">Cocktail (basse)</option> : null}
-                  {caps.tableShapes.includes('highTop') ? <option value="highTop">Mange-debout</option> : null}
-                  {caps.tableShapes.includes('arc') ? <option value="arc">Courbe (arc)</option> : null}
+                  {TABLE_SHAPE_OPTIONS.map(([shape, label]) => (
+                    <option key={shape} value={shape} disabled={!caps.tableShapes.includes(shape)}>
+                      {tableShapeOptionLabel(shape, label)}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="text-xs space-y-1">
@@ -6711,6 +7515,35 @@ export default function RoomLayoutEditor({
                 onChange={(tableSurface) => updateFurniture(selectedFurniture.id, { tableSurface }, 'Finition de table')}
               />
             </div>
+            {tableAcceptsBase(selectedFurniture.shape) ? (
+              <div className="space-y-1.5">
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Piètement</span>
+                  <select
+                    value={selectedFurniture.tableBase ?? ''}
+                    onChange={(e) => updateFurniture(
+                      selectedFurniture.id,
+                      { tableBase: e.target.value ? (e.target.value as TableBaseStyle) : undefined },
+                      e.target.value ? `Piètement : ${tableBaseLabels[e.target.value as TableBaseStyle]}` : 'Piètement d’origine',
+                    )}
+                    className={EDITOR_FIELD}
+                  >
+                    <option value="">D’origine ({selectedFurniture.shape === 'round' || selectedFurniture.shape === 'oval' ? 'pied central' : '4 pieds métal'})</option>
+                    {(Object.keys(tableBaseLabels) as TableBaseStyle[]).map((id) => (
+                      <option key={id} value={id}>{tableBaseLabels[id]}</option>
+                    ))}
+                  </select>
+                </label>
+                {selectedFurniture.tableBase ? (
+                  <DecorColorField
+                    label="Teinte du piètement"
+                    value={selectedFurniture.tableBaseColor}
+                    fallback={tableBaseDefaultColor[selectedFurniture.tableBase]}
+                    onChange={(next) => updateFurniture(selectedFurniture.id, { tableBaseColor: next })}
+                  />
+                ) : null}
+              </div>
+            ) : null}
             <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
               <input
                 type="checkbox"
@@ -6805,37 +7638,31 @@ export default function RoomLayoutEditor({
                 />
               </div>
             </div>
-            {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
-            {caps.canCustomImages ? renderTableImageUpload(selectedFurniture.id, selectedFurniture.tableImageUrl) : null}
-            {caps.canRotate ? (
-              <ElementRotationControls
+            <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}</Gate>
+            <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderTableImageUpload(selectedFurniture.id, selectedFurniture.tableImageUrl)}</Gate>
+            <Gate allowed={caps.canRotate} need={{ feature: 'canRotate' }}><ElementRotationControls
                 rotation={selectedFurniture.rotation ?? 0}
                 onChange={(rot, msg) => updateFurniture(selectedFurniture.id, { rotation: rot }, msg || 'Rotation de table')}
                 onDelta={(delta, msg) => updateFurniture(selectedFurniture.id, { rotation: ((selectedFurniture.rotation ?? 0) + delta + 360) % 360 }, msg)}
                 onSmartOrient={(target, msg) => updateBlueprint(orientSelectionTowards(blueprint, [{ kind: 'table', id: selectedFurniture.id }], target), { message: msg, kind: 'edit' })}
                 title="Rotation & Orientation de la table"
-              />
-            ) : null}
+              /></Gate>
             <div className="flex gap-2">
-              {caps.canLock ? (
-                <button
+              <Gate allowed={caps.canLock} need={{ feature: 'canLock' }}><button
                   type="button"
                   onClick={() => updateFurniture(selectedFurniture.id, { locked: !selectedFurniture.locked }, selectedFurniture.locked ? 'Table déverrouillée' : 'Table verrouillée')}
                   className={cn(EDITOR_PANEL_BTN, 'flex-1 border-border')}
                 >
                   {selectedFurniture.locked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                   {selectedFurniture.locked ? 'Déverrouiller' : 'Verrouiller'}
-                </button>
-              ) : null}
-              {caps.canDuplicate ? (
-                <button
+                </button></Gate>
+              <Gate allowed={caps.canDuplicate} need={{ feature: 'canDuplicate' }}><button
                   type="button"
                   onClick={duplicateSelectedTable}
                   className={cn(EDITOR_PANEL_BTN, 'flex-1 border-primary/30 bg-primary/10 text-primary')}
                 >
                   <Copy className="w-3 h-3" /> Dupliquer
-                </button>
-              ) : null}
+                </button></Gate>
             </div>
             {selectedFurniture.attachedChairs !== false ? (
               <div className="space-y-1.5">
@@ -7170,9 +7997,8 @@ export default function RoomLayoutEditor({
                 />
               </div>
             </div>
-            {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
-            {caps.canRotate ? (
-              <div className="pt-2">
+            <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}</Gate>
+            <Gate allowed={caps.canRotate} need={{ feature: 'canRotate' }}><div className="pt-2">
                 <ElementRotationControls
                   rotation={selectedFurniture.rotation ?? 0}
                   onChange={(rot, msg) => updateFurniture(selectedFurniture.id, { rotation: rot }, msg || 'Orientation rangée')}
@@ -7180,8 +8006,7 @@ export default function RoomLayoutEditor({
                   onSmartOrient={(target, msg) => updateBlueprint(orientSelectionTowards(blueprint, [{ kind: 'row', id: selectedFurniture.id }], target), { message: msg, kind: 'edit' })}
                   title="Orientation de la rangée"
                 />
-              </div>
-            ) : null}
+              </div></Gate>
             <div className="grid grid-cols-2 gap-1.5 pt-1">
               <button
                 type="button"
@@ -7209,7 +8034,7 @@ export default function RoomLayoutEditor({
         <div className="space-y-3">
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
             <p className="text-xs font-bold uppercase text-muted">
-              {selectedFurniture.zoneKind === 'dance' ? 'Piste de danse' : selectedFurniture.zoneKind === 'carpet' ? 'Moquette' : 'Zone'}
+              {selectedFurniture.zoneKind === 'dance' ? 'Piste de danse' : selectedFurniture.zoneKind === 'carpet' ? 'Moquette' : selectedFurniture.zoneKind === 'plot' ? 'Emplacement sans murs' : 'Zone'}
             </p>
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Libellé</span>
@@ -7227,31 +8052,167 @@ export default function RoomLayoutEditor({
                 ))}
               </select>
             </label>
-            <label className="block text-xs space-y-1">
-              <span className="font-semibold text-muted">Matériau / sol</span>
-              <ZoneMaterialPicker
-                value={selectedFurniture.material ?? 'vinyl'}
-                onChange={(material) => updateFurniture(selectedFurniture.id, { material }, 'Matériau de zone modifié')}
-              />
-            </label>
-            <label className="block text-xs space-y-1">
-              <span className="font-semibold text-muted">Teinte</span>
-              <input
-                type="color"
-                value={selectedFurniture.color ?? '#312e81'}
-                onChange={(e) => updateFurniture(selectedFurniture.id, { color: e.target.value }, 'Couleur de zone')}
-                aria-label="Teinte de la zone"
-                className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
-              />
-            </label>
+            {selectedFurniture.zoneKind === 'plot' ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-1.5" role="group" aria-label="Bordure de l’emplacement">
+                  {(Object.keys(plotBorderLabels) as PlotBorderStyle[]).map((b) => {
+                    const active = (selectedFurniture.plotBorder ?? 'paint') === b;
+                    return (
+                      <button
+                        key={b}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => updateFurniture(selectedFurniture.id, { plotBorder: b }, `Bordure : ${plotBorderLabels[b]}`)}
+                        className={cn(
+                          'min-h-11 rounded-[var(--radius-button)] border px-2 py-1.5 text-xs font-semibold leading-snug transition-colors',
+                          active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-foreground hover:border-primary/40',
+                        )}
+                      >
+                        {plotBorderLabels[b]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Couleur de l’emplacement">
+                  <button
+                    type="button"
+                    onClick={() => updateFurniture(selectedFurniture.id, { color: undefined }, 'Couleur par défaut')}
+                    aria-pressed={!selectedFurniture.color}
+                    className={cn('size-8 rounded-full border-2 bg-surface text-xs font-bold', !selectedFurniture.color ? 'border-primary' : 'border-border')}
+                    title="Blanc (par défaut)"
+                  >
+                    –
+                  </button>
+                  {PLOT_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => updateFurniture(selectedFurniture.id, { color: c }, 'Couleur de l’emplacement')}
+                      aria-pressed={selectedFurniture.color === c}
+                      aria-label={`Couleur ${c}`}
+                      className={cn('size-8 rounded-full border-2', selectedFurniture.color === c ? 'border-foreground' : 'border-transparent')}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+                {!openSpace ? (
+                  <button type="button" onClick={toggleOpenSpace} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'w-full justify-center')}>
+                    <Fence className="w-3.5 h-3.5" aria-hidden /> Passer en espace ouvert (sans murs)
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Matériau / sol</span>
+                  <ZoneMaterialPicker
+                    value={selectedFurniture.material ?? 'vinyl'}
+                    onChange={(material) => updateFurniture(selectedFurniture.id, { material }, 'Matériau de zone modifié')}
+                  />
+                </label>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Teinte</span>
+                  <input
+                    type="color"
+                    value={selectedFurniture.color ?? '#312e81'}
+                    onChange={(e) => updateFurniture(selectedFurniture.id, { color: e.target.value }, 'Couleur de zone')}
+                    aria-label="Teinte de la zone"
+                    className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
+                  />
+                </label>
+              </>
+            )}
+            {selectedFurniture.zoneKind === 'dance' ? (
+              <div className="space-y-2 rounded-[var(--radius-button)] border border-border bg-surface p-2.5">
+                <p className="text-sm font-semibold text-foreground">Habillage de la piste</p>
+                <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Style de piste">
+                  {(Object.keys(DANCE_FLOOR_STYLE_LABELS) as DanceFloorStyle[]).map((style) => {
+                    const active = (selectedFurniture.danceStyle ?? 'classic') === style;
+                    return (
+                      <button
+                        key={style}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => updateFurniture(selectedFurniture.id, { danceStyle: style }, `Piste : ${DANCE_FLOOR_STYLE_LABELS[style]}`)}
+                        className={cn(
+                          'min-h-11 rounded-[var(--radius-button)] border px-2 py-1.5 text-left text-xs font-semibold leading-snug transition-colors',
+                          active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-foreground hover:border-primary/40',
+                        )}
+                      >
+                        {DANCE_FLOOR_STYLE_LABELS[style]}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedFurniture.danceStyle === 'ledTiles' ? (
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Animation des dalles</span>
+                    <select
+                      value={selectedFurniture.danceLedPattern ?? 'rainbow'}
+                      onChange={(e) => updateFurniture(selectedFurniture.id, { danceLedPattern: e.target.value as DanceLedPattern }, 'Animation de la piste LED')}
+                      className={EDITOR_FIELD}
+                    >
+                      {(Object.keys(DANCE_LED_PATTERN_LABELS) as DanceLedPattern[]).map((p) => (
+                        <option key={p} value={p}>{DANCE_LED_PATTERN_LABELS[p]}</option>
+                      ))}
+                    </select>
+                    <span className="block text-muted">La teinte ci-dessus colore la vague, le damier et l’onde.</span>
+                  </label>
+                ) : null}
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Monogramme au centre</span>
+                  <input
+                    value={selectedFurniture.danceMonogram ?? ''}
+                    maxLength={12}
+                    placeholder="Ex. A & J"
+                    onChange={(e) => updateFurniture(selectedFurniture.id, { danceMonogram: e.target.value || undefined }, 'Monogramme de la piste')}
+                    className={EDITOR_FIELD}
+                  />
+                </label>
+                <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedFurniture.danceMirrorBall === true}
+                    onChange={(e) => updateFurniture(selectedFurniture.id, { danceMirrorBall: e.target.checked }, e.target.checked ? 'Boule à facettes ajoutée' : 'Boule à facettes retirée')}
+                    className="rounded border-border size-4"
+                  />
+                  <span>Boule à facettes au-dessus</span>
+                </label>
+              </div>
+            ) : null}
             <div className="grid grid-cols-2 gap-2">
+              {/* Cotes en mètres réels (stockées en % du plan). */}
               <label className="text-xs space-y-1">
-                <span className="font-semibold text-muted">Largeur %</span>
-                <input type="number" min={8} max={90} value={selectedFurniture.w} onChange={(e) => updateFurniture(selectedFurniture.id, { w: parseInt(e.target.value, 10) || 20 })} className={EDITOR_FIELD} />
+                <span className="font-semibold text-muted">Largeur (m)</span>
+                <input
+                  type="number"
+                  min={0.5}
+                  max={blueprint.canvas.widthM}
+                  step={0.1}
+                  value={Math.round((selectedFurniture.w / 100) * blueprint.canvas.widthM * 10) / 10}
+                  onChange={(e) => {
+                    const m = Number(e.target.value);
+                    if (!Number.isFinite(m) || m <= 0) return;
+                    updateFurniture(selectedFurniture.id, { w: Math.round(Math.min(100, (m / blueprint.canvas.widthM) * 100) * 100) / 100 });
+                  }}
+                  className={EDITOR_FIELD}
+                />
               </label>
               <label className="text-xs space-y-1">
-                <span className="font-semibold text-muted">Profondeur %</span>
-                <input type="number" min={8} max={90} value={selectedFurniture.h} onChange={(e) => updateFurniture(selectedFurniture.id, { h: parseInt(e.target.value, 10) || 16 })} className={EDITOR_FIELD} />
+                <span className="font-semibold text-muted">Profondeur (m)</span>
+                <input
+                  type="number"
+                  min={0.5}
+                  max={blueprint.canvas.heightM}
+                  step={0.1}
+                  value={Math.round((selectedFurniture.h / 100) * blueprint.canvas.heightM * 10) / 10}
+                  onChange={(e) => {
+                    const m = Number(e.target.value);
+                    if (!Number.isFinite(m) || m <= 0) return;
+                    updateFurniture(selectedFurniture.id, { h: Math.round(Math.min(100, (m / blueprint.canvas.heightM) * 100) * 100) / 100 });
+                  }}
+                  className={EDITOR_FIELD}
+                />
               </label>
             </div>
             <div className="space-y-2 pt-1 border-t border-border">
@@ -7322,7 +8283,9 @@ export default function RoomLayoutEditor({
                   </button>
                 ))}
               </div>
-              <p className={EDITOR_HINT}>La flèche jaune dans la vue 3D indique l’orientation de la zone.</p>
+              {selectedFurniture.zoneKind !== 'plot' ? (
+                <p className={EDITOR_HINT}>La flèche jaune dans la vue 3D indique l’orientation de la zone.</p>
+              ) : null}
             </div>
             <p className={EDITOR_HINT}>Glissez aussi la zone dans la vue 3D.</p>
             <div className="grid grid-cols-2 gap-1.5 pt-1">
@@ -7386,17 +8349,15 @@ export default function RoomLayoutEditor({
                 />
               </div>
             </div>
-            {caps.canRotate ? (
-              <ElementRotationControls
+            <Gate allowed={caps.canRotate} need={{ feature: 'canRotate' }}><ElementRotationControls
                 rotation={selectedFurniture.rotation ?? 0}
                 onChange={(rot, msg) => updateFurniture(selectedFurniture.id, { rotation: rot }, msg || 'Orientation chaise')}
                 onDelta={(delta, msg) => updateFurniture(selectedFurniture.id, { rotation: ((selectedFurniture.rotation ?? 0) + delta + 360) % 360 }, msg)}
                 onSmartOrient={(target, msg) => updateBlueprint(orientSelectionTowards(blueprint, [{ kind: 'chair', id: selectedFurniture.id }], target), { message: msg, kind: 'edit' })}
                 isChair={true}
                 title="Orientation de la chaise"
-              />
-            ) : null}
-            {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
+              /></Gate>
+            <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}</Gate>
             <div className="pt-1">
               <button
                 type="button"
@@ -7507,8 +8468,10 @@ export default function RoomLayoutEditor({
             onChange={(e) => setTplParams((p) => ({ ...p, tableShape: e.target.value as TableShape }))}
             className={EDITOR_FIELD}
           >
-            {(Object.keys(tableShapeLabels) as TableShape[]).filter((shape) => caps.tableShapes.includes(shape)).map((shape) => (
-              <option key={shape} value={shape}>{tableShapeLabels[shape]}</option>
+            {(Object.keys(tableShapeLabels) as TableShape[]).map((shape) => (
+              <option key={shape} value={shape} disabled={!caps.tableShapes.includes(shape)}>
+                {tableShapeOptionLabel(shape, tableShapeLabels[shape])}
+              </option>
             ))}
           </select>
         </label>
@@ -7612,6 +8575,7 @@ export default function RoomLayoutEditor({
       <button
         type="button"
         onClick={() => setClearanceModalOpen(true)}
+        data-tour="verify"
         title="Gérer et optimiser les espacements réels (Ctrl+Alt+O)"
         className={cn(
           EDITOR_TOOL,
@@ -7633,6 +8597,7 @@ export default function RoomLayoutEditor({
         onClick={() => setShortcutsModalOpen(true)}
         title="Consulter les raccourcis clavier"
         aria-label="Raccourcis clavier"
+        data-tour="shortcuts"
         className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'px-0 min-w-11')}
       >
         <Keyboard className="w-4 h-4" aria-hidden />
@@ -7663,11 +8628,109 @@ export default function RoomLayoutEditor({
     </>
   ) : null;
 
+  const runTourAction = (kind: EditorTourAction) => {
+    if (kind === 'openQuickAdd') openQuickAdd();
+    else if (kind === 'addTable') addTable();
+    else if (kind === 'toggle3d') setDepthAmount(depthAmount > 0 ? 0 : 60);
+    else if (kind === 'openTemplates') setTemplatesOpen(true);
+    else if (kind === 'openShortcuts') setShortcutsModalOpen(true);
+    else if (kind === 'openStudio') setStudioOpen(true);
+  };
+
+  /** Tout ce que la barre « Ajouter » sait poser, pour la palette de recherche (Ctrl+K). */
+  const buildQuickAddActions = (): QuickAddAction[] => {
+    const out: QuickAddAction[] = [];
+    const can = (kind: string) => caps.canFixtures && caps.fixtureKinds.includes(kind as (typeof caps.fixtureKinds)[number]);
+    const push = (id: string, label: string, group: string, run: () => void, keywords?: string) => out.push({ id, label, group, run, keywords });
+    push('table', 'Table', 'Mobilier', addTable, 'ronde banquet invités');
+    push('free-chair', 'Fauteuil', 'Mobilier', addFreeChair, 'chaise siège');
+    push('wall-art', 'Image ou graffiti sur un mur', 'Murs', selectWallForArt, 'photo affiche logo tableau tag graffiti mural décor');
+    if (caps.tableShapes.includes('arc')) push('arc-ring', 'Anneau d’arcs', 'Mobilier', addArcRing, 'tables arc');
+    if (caps.canAddRows) {
+      push('row', 'Rangée de chaises', 'Mobilier', addRow, 'conférence théâtre');
+      push('amphitheater', 'Amphithéâtre…', 'Mobilier', () => setQuickCreate('amphitheater'), 'gradins');
+      push('chair-groups', 'Groupes de chaises…', 'Mobilier', () => setQuickCreate('chairs'), 'rangées');
+    }
+    if (caps.canZones) {
+      push('zone-dance', 'Piste de danse', 'Zones', () => addZone('Piste de danse', { zoneKind: 'dance', material: 'vinyl' }), 'dancefloor');
+      push('zone-vip', 'Espace VIP', 'Zones', () => addZone('Espace VIP', { zoneKind: 'vip', material: 'marble' }));
+      push('zone-buffet', 'Zone buffet', 'Zones', () => addZone('Zone buffet', { zoneKind: 'buffet', material: 'wood' }));
+      push('carpet', 'Moquette', 'Zones', addCarpet, 'tapis sol');
+      push('zone-plot', 'Emplacement sans murs', 'Zones', addPlot, 'stand lot espace ouvert marquage');
+      push('zone-plots', 'Grille d’emplacements numérotés', 'Zones', () => setQuickCreate('plots'), 'stands lots marché exposants');
+    }
+    if (can('bar')) {
+      (Object.keys(barStyleLabels) as BarStyle[]).forEach((style) => push(`bar-${style}`, barStyleLabels[style], 'Bars', () => addBarFixture(style), `bar comptoir ${barStyleHints[style]}`));
+    }
+    if (can('podium')) {
+      (Object.keys(podiumStyleLabels) as PodiumStyle[]).forEach((style) => push(`podium-${style}`, podiumStyleLabels[style], 'Podiums', () => addPodiumFixture(style), 'podium estrade'));
+    }
+    if (can('instrument')) {
+      (Object.keys(instrumentStyleLabels) as InstrumentStyle[]).forEach((style) => push(`instrument-${style}`, instrumentStyleLabels[style], 'Instruments', () => addInstrumentFixture(style), 'musique concert'));
+    }
+    if (can('chandelier')) {
+      (Object.keys(chandelierFixtureStyleLabels) as ChandelierFixtureStyle[]).forEach((style) => push(`chandelier-${style}`, chandelierFixtureStyleLabels[style], 'Lustres', () => addChandelierFixture(style), 'lustre suspension lumière'));
+    }
+    if (can('door')) {
+      (Object.keys(doorStyleLabels) as DoorStyle[]).forEach((style) => push(`door-${style}`, doorStyleLabels[style], 'Portes', () => addDoorFixture(style), 'porte entrée'));
+    }
+    if (can('aisle')) {
+      (Object.keys(aisleStyleLabels) as AisleStyle[]).forEach((style) => push(`aisle-${style}`, aisleStyleLabels[style], 'Allées', () => addAisleCustomStyle(style), 'allée tapis cérémonie'));
+    }
+    if (can('screen')) {
+      (Object.keys(screenKindLabels) as ScreenKind[]).forEach((kind) => push(`screen-${kind}`, screenKindLabels[kind], 'Écrans', () => addScreenFixture(kind), 'écran vidéo'));
+    }
+    if (can('homeFurniture')) {
+      HOME_FURNITURE_ORDER.forEach((style) => push(`home-${style}`, HOME_FURNITURE_META[style].label, HOME_FURNITURE_GROUP_LABELS[HOME_FURNITURE_META[style].group], () => addHomeFurniture(style), `maison ${HOME_FURNITURE_META[style].hint}`));
+    }
+    if (can('landscape')) {
+      LANDSCAPE_STYLE_ORDER.forEach((style) => push(`landscape-${style}`, LANDSCAPE_STYLE_META[style].label, 'Extérieur', () => addLandscapeFixture(style), `jardin ${LANDSCAPE_STYLE_META[style].hint}`));
+    }
+    const simple: Array<[string, string, string, string?]> = [
+      ['stage', 'Scène', 'Décor', 'estrade spectacle'],
+      ['djBooth', 'Cabine DJ', 'Décor', 'musique platines'],
+      ['buffet', 'Buffet + couverts', 'Décor', 'repas traiteur'],
+      ['arch', 'Arche', 'Décor', 'cérémonie mariage fleurs'],
+      ['flower', 'Fleurs', 'Décor', 'bouquet composition'],
+      ['pedestal', 'Colonne fleurie', 'Décor', 'piédestal'],
+      ['stringLight', 'Guirlande lumineuse', 'Décor', 'guinguette'],
+      ['partition', 'Cloison', 'Décor', 'paravent séparation'],
+      ['decal', 'Sticker de sol', 'Décor', 'logo monogramme'],
+      ['fountain', 'Fontaine', 'Extérieur', 'eau'],
+      ['gazebo', 'Tonnelle', 'Extérieur', 'pergola'],
+      ['parasol', 'Parasol', 'Extérieur', 'ombre'],
+      ['column', 'Colonne', 'Bâtiment', 'pilier poteau'],
+      ['perimeter', 'Périmètre', 'Bâtiment', 'contour limite'],
+      ['orderCounter', 'Caisse POS', 'Resto & Shop', 'comptoir commande'],
+      ['pickupCounter', 'Comptoir de retrait', 'Resto & Shop', 'commande'],
+      ['pizzaOven', 'Four à pizza', 'Resto & Shop', 'cuisine'],
+      ['loungeSofa', 'Canapé lounge', 'Resto & Shop', 'sofa salon'],
+    ];
+    simple.forEach(([kind, label, group, keywords]) => {
+      if (can(kind)) push(`fixture-${kind}`, label, group, () => addFixture(kind as RoomLayoutBlueprint['fixtures'][number]['kind']), keywords);
+    });
+    if (can('corridor')) push('corridor', 'Couloir', 'Bâtiment', addCorridor, 'circulation passage');
+    push('booth', 'Cabine Booth', 'Resto & Shop', addBoothAssembly, 'banquette restaurant');
+    push('parasol-table', 'Table parasol', 'Resto & Shop', addParasolTable, 'terrasse');
+    return out;
+  };
+
+  useEffect(() => {
+    buildQuickAddRef.current = buildQuickAddActions;
+  });
+
   const toolbar = !readOnly && (
     <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-4 lg:gap-y-2" role="toolbar" aria-label="Outils du plan">
       <ToolbarCluster label="Ajouter">
+      <button type="button" onClick={openQuickAdd} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Rechercher un élément à ajouter">
+        <Search className="w-3.5 h-3.5" aria-hidden /> Rechercher
+      </button>
+      <button type="button" onClick={startTour} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Visite guidée de l’éditeur">
+        <GraduationCap className="w-3.5 h-3.5" aria-hidden /> Guide
+      </button>
       <EditorToolGroup
         id="furniture"
+        closeOnPick
         label="Mobilier"
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
@@ -7675,18 +8738,15 @@ export default function RoomLayoutEditor({
       <button type="button" onClick={addTable} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
         <Plus className="w-3.5 h-3.5" aria-hidden /> Table
       </button>
-      {caps.tableShapes.includes('arc') ? (
-        <button
+      <Gate allowed={caps.tableShapes.includes('arc')} need={{ shape: 'arc' }}><button
           type="button"
           onClick={addArcRing}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Six tables en arc autour d’un centre"
         >
           Anneau d’arcs
-        </button>
-      ) : null}
-      {caps.canAddRows ? (
-        <>
+        </button></Gate>
+      <Gate allowed={caps.canAddRows} need={{ feature: 'canAddRows' }}><>
           <button type="button" onClick={addRow} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
             <Plus className="w-3.5 h-3.5" aria-hidden /> Rangée
           </button>
@@ -7706,8 +8766,7 @@ export default function RoomLayoutEditor({
           >
             Groupes chaises
           </button>
-        </>
-      ) : null}
+        </></Gate>
       <button type="button" onClick={addFreeChair} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Fauteuil</button>
       <button
         type="button"
@@ -7728,6 +8787,7 @@ export default function RoomLayoutEditor({
 
       <EditorToolGroup
         id="hospitality"
+        closeOnPick
         label="Resto & Shop"
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
@@ -7742,36 +8802,30 @@ export default function RoomLayoutEditor({
         >
           <Sparkles className="w-3.5 h-3.5" aria-hidden /> Resto & Shop…
         </button>
-        {caps.fixtureKinds.includes('orderCounter') ? (
-          <button
+        <Gate allowed={caps.fixtureKinds.includes('orderCounter')} need={{ fixture: 'orderCounter' }}><button
             type="button"
             onClick={() => addFixture('orderCounter')}
             className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
             title="Comptoir de commande avec terminal POS"
           >
             Caisse POS
-          </button>
-        ) : null}
-        {caps.fixtureKinds.includes('pickupCounter') ? (
-          <button
+          </button></Gate>
+        <Gate allowed={caps.fixtureKinds.includes('pickupCounter')} need={{ fixture: 'pickupCounter' }}><button
             type="button"
             onClick={() => addFixture('pickupCounter')}
             className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
             title="Comptoir de retrait des commandes"
           >
             Retrait
-          </button>
-        ) : null}
-        {caps.fixtureKinds.includes('pizzaOven') ? (
-          <button
+          </button></Gate>
+        <Gate allowed={caps.fixtureKinds.includes('pizzaOven')} need={{ fixture: 'pizzaOven' }}><button
             type="button"
             onClick={() => addFixture('pizzaOven')}
             className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
             title="Four à pizza au feu de bois circulaire"
           >
             Four pizza
-          </button>
-        ) : null}
+          </button></Gate>
         <button
           type="button"
           onClick={addBoothAssembly}
@@ -7788,42 +8842,92 @@ export default function RoomLayoutEditor({
         >
           Table Parasol
         </button>
-        {caps.fixtureKinds.includes('loungeSofa') ? (
-          <button
+        <Gate allowed={caps.fixtureKinds.includes('loungeSofa')} need={{ fixture: 'loungeSofa' }}><button
             type="button"
             onClick={() => addFixture('loungeSofa')}
             className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
             title="Canapé lounge confortable"
           >
             Canapé Lounge
-          </button>
-        ) : null}
+          </button></Gate>
       </EditorToolGroup>
+
+      {caps.fixtureKinds.includes('homeFurniture') ? (
+        <EditorToolGroup
+          id="home"
+          closeOnPick
+          label="Maison"
+          openId={toolbarGroup}
+          onToggle={toggleToolbarGroup}
+        >
+          {(['bedroom', 'living', 'kitchen', 'bathroom'] as HomeFurnitureGroup[]).map((group) => (
+            <React.Fragment key={group}>
+              <span className="basis-full text-xs font-semibold text-muted pt-1">{HOME_FURNITURE_GROUP_LABELS[group]}</span>
+              {HOME_FURNITURE_ORDER.filter((style) => HOME_FURNITURE_META[style].group === group).map((style) => (
+                <button
+                  key={style}
+                  type="button"
+                  onClick={() => addHomeFurniture(style)}
+                  className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+                  title={HOME_FURNITURE_META[style].hint}
+                >
+                  {HOME_FURNITURE_META[style].label}
+                </button>
+              ))}
+            </React.Fragment>
+          ))}
+        </EditorToolGroup>
+      ) : null}
 
       <EditorToolGroup
         id="zones"
+        closeOnPick
         label="Zones"
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
       >
-      {caps.canZones ? (
-        <>
+      <Gate allowed={caps.canZones} need={{ feature: 'canZones' }}><>
           <button type="button" onClick={() => addZone('Piste de danse', { zoneKind: 'dance', material: 'vinyl' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Piste</button>
           <button type="button" onClick={() => addZone('Espace VIP', { zoneKind: 'vip', material: 'marble' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>VIP</button>
           <button type="button" onClick={() => addZone('Zone buffet', { zoneKind: 'buffet', material: 'wood' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Zone buffet</button>
           <button type="button" onClick={addCarpet} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Moquette</button>
-        </>
-      ) : null}
+          <button type="button" onClick={addPlot} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Surface délimitée au sol, sans murs ni revêtement">
+            <SquareDashed className="w-3.5 h-3.5" aria-hidden /> Emplacement
+          </button>
+          <button
+            type="button"
+            onClick={() => setQuickCreate(quickCreate === 'plots' ? null : 'plots')}
+            className={cn(EDITOR_TOOL, quickCreate === 'plots' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+            aria-expanded={quickCreate === 'plots'}
+            title="Plusieurs emplacements numérotés, avec allées"
+          >
+            <LayoutGrid className="w-3.5 h-3.5" aria-hidden /> Emplacements…
+          </button>
+        </></Gate>
+        <button
+          type="button"
+          onClick={toggleOpenSpace}
+          aria-pressed={openSpace}
+          className={cn(EDITOR_TOOL, openSpace ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+          title={openSpace ? 'Réafficher les murs et le toit' : 'Masquer murs et toit : espace ouvert (rien n’est supprimé)'}
+        >
+          <Fence className="w-3.5 h-3.5" aria-hidden /> {openSpace ? 'Espace ouvert ✓' : 'Espace ouvert'}
+        </button>
       </EditorToolGroup>
 
       <EditorToolGroup
         id="building"
+        closeOnPick
         label="Bâtiment"
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
       >
-      {caps.canCustomImages ? (
-        <label className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'cursor-pointer')}>
+      {!readOnly ? (
+        <button type="button" onClick={() => addStoryFromHeader()} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Ajouter un étage au bâtiment">
+          <Plus className="w-3.5 h-3.5" aria-hidden /> Étage
+        </button>
+      ) : null}
+      <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}><label className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'cursor-pointer')}>
           <ImagePlus className="w-3.5 h-3.5" aria-hidden />
           Repère photo (sol)
           <input
@@ -7837,10 +8941,8 @@ export default function RoomLayoutEditor({
               e.target.value = '';
             }}
           />
-        </label>
-      ) : null}
-      {caps.canPlanFromPhoto ? (
-        <button
+        </label></Gate>
+      <Gate allowed={caps.canPlanFromPhoto} need={{ feature: 'canPlanFromPhoto' }}><button
           type="button"
           disabled={readOnly || aiPlanReading}
           aria-busy={aiPlanReading || undefined}
@@ -7856,68 +8958,53 @@ export default function RoomLayoutEditor({
         >
           <Sparkles className="w-3.5 h-3.5" aria-hidden />
           {aiPlanReading ? 'Lecture IA…' : 'Lire avec l’IA'}
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('door') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('door')} need={{ fixture: 'door' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'doors' ? null : 'doors')}
           className={cn(EDITOR_TOOL, quickCreate === 'doors' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Ajouter une porte ouvrante ou grand portail"
         >
           <DoorOpen className="w-3.5 h-3.5" aria-hidden /> Portes…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('stairs') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('stairs')} need={{ fixture: 'stairs' }}><button
           type="button"
           onClick={openStairsQuickCreate}
           className={cn(EDITOR_TOOL, quickCreate === 'stairs' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Escalier vers un autre étage"
         >
           <StepForward className="w-3.5 h-3.5" aria-hidden /> Escalier vers…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('balcony') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('balcony')} need={{ fixture: 'balcony' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'balconies' ? null : 'balconies')}
           className={cn(EDITOR_TOOL, quickCreate === 'balconies' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
         >
           Balcons…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('column') ? (
-        <button type="button" onClick={() => addFixture('column')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('column')} need={{ fixture: 'column' }}><button type="button" onClick={() => addFixture('column')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           <Columns3 className="w-3.5 h-3.5" aria-hidden /> Colonne
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('corridor') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('corridor')} need={{ fixture: 'corridor' }}><button
           type="button"
           onClick={addCorridor}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Couloir structurant (circulation entre pièces)"
         >
           Couloir
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('perimeter') ? (
-        <button type="button" onClick={() => addFixture('perimeter')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Périmètre</button>
-      ) : null}
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('perimeter')} need={{ fixture: 'perimeter' }}><button type="button" onClick={() => addFixture('perimeter')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Périmètre</button></Gate>
       </EditorToolGroup>
 
       <EditorToolGroup
         id="scene"
+        closeOnPick
         label="Décor"
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
       >
-      {caps.fixtureKinds.includes('stage') ? (
-        <button type="button" onClick={() => addFixture('stage')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Scène</button>
-      ) : null}
-      {caps.fixtureKinds.includes('podium') ? (
-        <button
+      <Gate allowed={caps.fixtureKinds.includes('stage')} need={{ fixture: 'stage' }}><button type="button" onClick={() => addFixture('stage')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Scène</button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('podium')} need={{ fixture: 'podium' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'podiums' ? null : 'podiums')}
           className={cn(EDITOR_TOOL, quickCreate === 'podiums' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
@@ -7926,10 +9013,8 @@ export default function RoomLayoutEditor({
           aria-controls={QUICK_PANEL.podiums.id}
         >
           Podiums…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('instrument') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('instrument')} need={{ fixture: 'instrument' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'instruments' ? null : 'instruments')}
           className={cn(EDITOR_TOOL, quickCreate === 'instruments' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
@@ -7938,10 +9023,8 @@ export default function RoomLayoutEditor({
           aria-controls={QUICK_PANEL.instruments.id}
         >
           <Music2 className="w-3.5 h-3.5" aria-hidden /> Instruments…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('bar') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('bar')} need={{ fixture: 'bar' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'bars' ? null : 'bars')}
           className={cn(EDITOR_TOOL, quickCreate === 'bars' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
@@ -7950,10 +9033,8 @@ export default function RoomLayoutEditor({
           aria-controls={QUICK_PANEL.bars.id}
         >
           <Wine className="w-3.5 h-3.5" aria-hidden /> Bars…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('chandelier') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('chandelier')} need={{ fixture: 'chandelier' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'chandeliers' ? null : 'chandeliers')}
           className={cn(EDITOR_TOOL, quickCreate === 'chandeliers' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
@@ -7962,10 +9043,8 @@ export default function RoomLayoutEditor({
           aria-controls={QUICK_PANEL.chandeliers.id}
         >
           <Sparkles className="w-3.5 h-3.5" aria-hidden /> Lustres…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('aisle') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('aisle')} need={{ fixture: 'aisle' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'aisles' ? null : 'aisles')}
           className={cn(EDITOR_TOOL, quickCreate === 'aisles' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
@@ -7974,68 +9053,50 @@ export default function RoomLayoutEditor({
           aria-controls={QUICK_PANEL.aisles.id}
         >
           <Sparkles className="w-3.5 h-3.5" aria-hidden /> Allées VIP…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('buffet') ? (
-        <button type="button" onClick={() => addFixture('buffet')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Buffet + couverts</button>
-      ) : null}
-      {caps.fixtureKinds.includes('flower') ? (
-        <button type="button" onClick={() => addFixture('flower')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('buffet')} need={{ fixture: 'buffet' }}><button type="button" onClick={() => addFixture('buffet')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Buffet + couverts</button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('flower')} need={{ fixture: 'flower' }}><button type="button" onClick={() => addFixture('flower')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           <Flower2 className="w-3.5 h-3.5" aria-hidden /> Fleurs
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('arch') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('arch')} need={{ fixture: 'arch' }}><button
           type="button"
           onClick={() => addFixture('arch')}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Arche florale (cérémonie, fond de salle)"
         >
           <Flower2 className="w-3.5 h-3.5" aria-hidden /> Arche
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('partition') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('partition')} need={{ fixture: 'partition' }}><button
           type="button"
           onClick={() => addFixture('partition')}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Cloison basse courbe végétalisée"
         >
           Cloison
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('pedestal') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('pedestal')} need={{ fixture: 'pedestal' }}><button
           type="button"
           onClick={() => addFixture('pedestal')}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Colonne carrée + bouquet (cérémonie)"
         >
           Piédestal
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('decal') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('decal')} need={{ fixture: 'decal' }}><button
           type="button"
           onClick={() => addFixture('decal')}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Motif au sol : roses ou papillons"
         >
           Motif sol
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('stringLight') ? (
-        <button type="button" onClick={() => addFixture('stringLight')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Guirlandes Edison sur poteaux">
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('stringLight')} need={{ fixture: 'stringLight' }}><button type="button" onClick={() => addFixture('stringLight')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Guirlandes Edison sur poteaux">
           Guirlandes
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('djBooth') ? (
-        <button type="button" onClick={() => addFixture('djBooth')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('djBooth')} need={{ fixture: 'djBooth' }}><button type="button" onClick={() => addFixture('djBooth')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           Régie DJ
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('screen') ? (
-        <>
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('screen')} need={{ fixture: 'screen' }}><>
           <button type="button" onClick={() => addScreenFixture('stageLedWall')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
             Mur LED
           </button>
@@ -8051,19 +9112,18 @@ export default function RoomLayoutEditor({
           <button type="button" onClick={() => addScreenFixture('desktopPc')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Ordinateur fixe tout-en-un">
             PC Fixe
           </button>
-        </>
-      ) : null}
+        </></Gate>
       </EditorToolGroup>
 
       <EditorToolGroup
         id="outdoor"
+        closeOnPick
         label="Extérieur"
         icon={<Trees className="w-3.5 h-3.5" aria-hidden />}
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
       >
-      {caps.canFixtures ? (
-        <label className="flex items-center gap-1.5 text-xs font-bold text-foreground" title="Terrain et décor autour du plan en 3D">
+      <Gate allowed={caps.canFixtures} need={{ feature: 'canFixtures' }}><label className="flex items-center gap-1.5 text-xs font-bold text-foreground" title="Terrain et décor autour du plan en 3D">
           <span className="shrink-0">Abords</span>
           <select
             value={outdoorSurroundings}
@@ -8075,10 +9135,8 @@ export default function RoomLayoutEditor({
               <option key={id} value={id}>{id === 'none' ? 'Aucun (salle seule)' : OUTDOOR_SURROUNDINGS_META[id].label}</option>
             ))}
           </select>
-        </label>
-      ) : null}
-      {caps.canFixtures ? (
-        <button
+        </label></Gate>
+      <Gate allowed={caps.canFixtures} need={{ feature: 'canFixtures' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'environment' ? null : 'environment')}
           className={cn(EDITOR_TOOL, quickCreate === 'environment' ? EDITOR_TOOL_ON : EDITOR_TOOL_PRIMARY)}
@@ -8086,8 +9144,7 @@ export default function RoomLayoutEditor({
           title="Terrain, végétation, soleil, ciel et brouillard"
         >
           <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden /> Environnement sur mesure
-        </button>
-      ) : null}
+        </button></Gate>
       {caps.fixtureKinds.includes('landscape')
         ? (['vegetation', 'water', 'ambiance'] as LandscapeGroup[]).map((group) => (
           <React.Fragment key={group}>
@@ -8106,25 +9163,20 @@ export default function RoomLayoutEditor({
           </React.Fragment>
         ))
         : null}
-      {caps.fixtureKinds.includes('fountain') ? (
-        <button type="button" onClick={() => addFixture('fountain')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+      <Gate allowed={caps.fixtureKinds.includes('fountain')} need={{ fixture: 'fountain' }}><button type="button" onClick={() => addFixture('fountain')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           Fontaine
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('gazebo') ? (
-        <button type="button" onClick={() => addFixture('gazebo')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('gazebo')} need={{ fixture: 'gazebo' }}><button type="button" onClick={() => addFixture('gazebo')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           Gloriette
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('parasol') ? (
-        <button type="button" onClick={() => addFixture('parasol')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('parasol')} need={{ fixture: 'parasol' }}><button type="button" onClick={() => addFixture('parasol')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           Parasol
-        </button>
-      ) : null}
+        </button></Gate>
       </EditorToolGroup>
       {canCustomElements ? (
         <EditorToolGroup
           id="custom"
+          closeOnPick
           label="Importer"
           icon={<ImagePlus className="w-3.5 h-3.5" aria-hidden />}
           openId={toolbarGroup}
@@ -8283,15 +9335,44 @@ export default function RoomLayoutEditor({
           className="bg-transparent text-xs font-bold text-foreground outline-none"
           title="Qualité de rendu"
         >
-          {(Object.keys(renderQualityLabels) as RenderQuality[])
-            .filter((q) => q !== 'showcase' || caps.canShowcaseRender)
-            .map((q) => (
-            <option key={q} value={q}>{renderQualityLabels[q]}</option>
+          {(Object.keys(renderQualityLabels) as RenderQuality[]).map((q) => {
+            const locked = q === 'showcase' && !caps.canShowcaseRender;
+            const plan = locked ? describeEditorUpsell(renderQualityLabels[q], { feature: 'canShowcaseRender' }, parsedEditorLevel).planLabel : null;
+            return (
+              <option key={q} value={q} disabled={locked}>
+                {locked ? `${renderQualityLabels[q]} — ${plan ?? 'non inclus'}` : renderQualityLabels[q]}
+              </option>
+            );
+          })}
+        </select>
+      </label>
+      <label
+        className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')}
+        title="Découverte du plan : la perspective par laquelle vos visiteurs arrivent sur la salle en 3D"
+      >
+        <Video className="w-3.5 h-3.5" aria-hidden />
+        <span className="sr-only sm:not-sr-only">Découverte :</span>
+        <select
+          value={resolveIntroView(blueprint.metadata.introView)}
+          onChange={(e) => setIntroView(e.target.value as RoomIntroView)}
+          className="bg-transparent text-xs font-bold text-foreground outline-none"
+          aria-label="Découverte du plan : perspective d’arrivée"
+        >
+          {ROOM_INTRO_VIEWS.map((v) => (
+            <option key={v.id} value={v.id}>{v.label}</option>
           ))}
         </select>
       </label>
-      {caps.canShowcaseRender ? (
       <button
+        type="button"
+        onClick={replayIntro}
+        disabled={walkthroughActive || resolveIntroView(blueprint.metadata.introView) === 'none'}
+        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+        title="Rejouer l’arrivée telle que la verront vos visiteurs"
+      >
+        <RotateCcw className="w-3.5 h-3.5" aria-hidden /> Revoir l’arrivée
+      </button>
+      <Gate allowed={caps.canShowcaseRender} need={{ feature: 'canShowcaseRender' }}><button
         type="button"
         onClick={() => {
           const next = !blueprint.metadata.presentationMode;
@@ -8300,8 +9381,8 @@ export default function RoomLayoutEditor({
             metadata: {
               ...blueprint.metadata,
               presentationMode: next,
+              // Les lustres restent ceux que l’on a choisis : la présentation n’en ajoute pas.
               ...(next ? {
-                showChandeliers: true,
                 showUplights: true,
                 renderQuality: 'showcase' as RenderQuality,
               } : {}),
@@ -8317,8 +9398,7 @@ export default function RoomLayoutEditor({
       >
         <Presentation className="w-3.5 h-3.5" aria-hidden />
         {blueprint.metadata.presentationMode ? 'Présentation ON' : 'Présentation'}
-      </button>
-      ) : null}
+      </button></Gate>
       <button
         type="button"
         onClick={exportShowcasePng}
@@ -8589,6 +9669,9 @@ export default function RoomLayoutEditor({
                 ['botanicalHalo', 'Couronne Florale', 'Roses & feuillages'],
                 ['fairyCanopy', 'Ciel Étoilé', 'Micro-LEDs féériques'],
                 ['candleCandelabra', 'Candélabre Grand Siècle', 'Bougies château'],
+                ['modernMinimal', 'Cylindres Épurés', 'Trio contemporain'],
+                ['lantern', 'Lanterne Fer Forgé', 'Classique intemporel'],
+                ['industrialDome', 'Dômes Industriels', 'Émail & filament'],
               ] as const
             ).map(([style, label, hint]) => (
               <button
@@ -9083,6 +10166,60 @@ export default function RoomLayoutEditor({
           ) : null}
         </>
       )}
+      {quickCreate === 'plots' && (
+        <>
+          {([
+            ['count', 'Nombre', 1, 60, 1],
+            ['columns', 'Par rangée', 1, 12, 1],
+            ['widthM', 'Largeur (m)', 0.5, 50, 0.5],
+            ['depthM', 'Profondeur (m)', 0.5, 50, 0.5],
+            ['aisleM', 'Allée (m)', 0, 20, 0.5],
+          ] as const).map(([key, label, min, max, step]) => (
+            <label key={key} className="text-xs font-semibold text-foreground space-y-1">
+              <span>{label}</span>
+              <input
+                type="number"
+                min={min}
+                max={max}
+                step={step}
+                value={plotGrid[key]}
+                onChange={(e) => setPlotGrid((g) => normalizePlotGrid({ ...g, [key]: e.target.value === '' ? min : Number(e.target.value) }))}
+                className="block w-20 px-2 py-1.5 rounded border border-border text-sm font-bold text-foreground bg-surface"
+              />
+            </label>
+          ))}
+          <label className="text-xs font-semibold text-foreground space-y-1">
+            <span>Bordure</span>
+            <select
+              value={plotGrid.border ?? 'paint'}
+              onChange={(e) => setPlotGrid((g) => ({ ...g, border: e.target.value as PlotBorderStyle }))}
+              className="block px-2 py-1.5 rounded border border-border text-sm font-semibold text-foreground bg-surface"
+            >
+              {(Object.keys(plotBorderLabels) as PlotBorderStyle[]).map((b) => (
+                <option key={b} value={b}>{plotBorderLabels[b]}</option>
+              ))}
+            </select>
+          </label>
+          {(() => {
+            const foot = plotGridFootprint(plotGrid);
+            const fits = foot.widthM <= blueprint.canvas.widthM && foot.depthM <= blueprint.canvas.heightM;
+            return (
+              <p className={cn('text-xs self-center', fits ? 'text-muted' : 'text-danger font-semibold')}>
+                {foot.rows} rangée{foot.rows > 1 ? 's' : ''} · emprise {foot.widthM} × {foot.depthM} m
+                {fits ? '' : ` : dépasse l’espace (${blueprint.canvas.widthM} × ${blueprint.canvas.heightM} m)`}
+              </p>
+            );
+          })()}
+          <button type="button" onClick={addPlotGridQuick} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
+            Créer {plotGrid.count} emplacement{plotGrid.count > 1 ? 's' : ''}
+          </button>
+          {!openSpace ? (
+            <button type="button" onClick={toggleOpenSpace} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Masquer murs et toit">
+              <Fence className="w-3.5 h-3.5" aria-hidden /> Sans murs
+            </button>
+          ) : null}
+        </>
+      )}
       {quickCreate === 'balconies' && (
         <>
           <p className="text-xs text-muted self-center">Balcon sur l’étage actif :</p>
@@ -9123,8 +10260,12 @@ export default function RoomLayoutEditor({
 
   const stories = resolveStories(blueprint);
   const activeStory = stories.find((s) => s.id === resolveActiveStoryId(blueprint));
+  // Un seul étage : sur grand écran, la barre d’étages laisse sa place au plan (bouton « + Étage » dans l’en-tête).
+  const compactStories = stories.length < 2 && !blueprint.metadata.stackView;
   const storyBar = (
-    <div className="flex flex-wrap items-center gap-2 px-2.5 py-2 rounded-[var(--radius-card)] border border-border bg-surface-muted/50">
+    // Un seul étage : la barre ne sert à rien et mange la hauteur du plan (surtout sur mobile).
+    // « + Étage » reste dans l’en-tête (grand écran) et dans Ajouter › Bâtiment (partout).
+    <div className={cn('flex flex-wrap items-center gap-2 px-2.5 py-2 rounded-[var(--radius-card)] border border-border bg-surface-muted/50', compactStories && 'hidden')}>
       <span className="text-xs font-bold text-muted shrink-0">Étage</span>
       <div className="flex flex-wrap gap-1">
         {stories.map((story) => (
@@ -9215,6 +10356,44 @@ export default function RoomLayoutEditor({
       <div className="flex items-center gap-1.5 shrink-0">
         {!readOnly ? (
           <div className="hidden lg:flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={startTour}
+              className={cn(EDITOR_TOOL, tourOpen ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+              title="Visite guidée de l’éditeur, adaptée à votre forfait"
+            >
+              <GraduationCap className="w-3.5 h-3.5" aria-hidden /> Guide
+            </button>
+            <button
+              type="button"
+              onClick={openQuickAdd}
+              className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'gap-2')}
+              title="Rechercher un élément à ajouter (Ctrl+K ou /)"
+              aria-keyshortcuts="Control+K /"
+              data-tour="quick-add"
+            >
+              <Search className="w-3.5 h-3.5" aria-hidden />
+              Ajouter…
+              <kbd className="px-1.5 py-0.5 rounded border border-border bg-surface-muted font-mono text-xs leading-none text-muted">Ctrl K</kbd>
+            </button>
+            {caps.canTemplates ? (
+              <button
+                type="button"
+                onClick={() => setTemplatesOpen((v) => !v)}
+                aria-expanded={templatesOpen}
+                aria-controls="editor-templates"
+                data-tour="templates"
+                className={cn(EDITOR_TOOL, templatesOpen ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+                title="Partir d’un modèle de salle (banquet, conférence, cocktail…)"
+              >
+                <LayoutTemplate className="w-3.5 h-3.5" aria-hidden /> Modèles
+              </button>
+            ) : null}
+            {compactStories ? (
+              <button type="button" onClick={addStoryFromHeader} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Ajouter un étage au bâtiment">
+                <Plus className="w-3.5 h-3.5" aria-hidden /> Étage
+              </button>
+            ) : null}
             {verifyTools}
             <span className="h-6 w-px bg-border mx-0.5" aria-hidden />
             <button
@@ -9244,6 +10423,7 @@ export default function RoomLayoutEditor({
             type="button"
             disabled={aiPlanReading}
             onClick={() => setStudioOpen(true)}
+            data-tour="studio-ai"
             className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY, 'px-3.5')}
             title="Décrire la salle ou importer une photo : l’IA compose le plan"
           >
@@ -9292,9 +10472,11 @@ export default function RoomLayoutEditor({
           }}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'shrink-0')}
           title="Recentrer la caméra"
+          aria-label="Recentrer la caméra"
         >
           <Crosshair className="w-3.5 h-3.5" aria-hidden />
-          Recentrer
+          {/* Petit écran : icône seule, pour que Annuler / Rétablir restent visibles sans défiler. */}
+          <span className="max-sm:hidden">Recentrer</span>
         </button>
         <div role="group" aria-label="Mode d’affichage" className="flex items-center gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted shrink-0">
           {([
@@ -9365,6 +10547,49 @@ export default function RoomLayoutEditor({
 
   const ambiencePreviewModal = (
     <>
+    {!readOnly ? (
+      <QuickAddPalette open={quickAddActions !== null} onClose={() => setQuickAddActions(null)} actions={quickAddActions ?? []} />
+    ) : null}
+    {!readOnly ? (
+      <EditorTour
+        open={tourOpen}
+        steps={tourOpen ? buildEditorTour(caps) : []}
+        summary={editorTourSummary(caps)}
+        upgradeHref={user ? '/dashboard/billing' : '/tarifs'}
+        onClose={() => {
+          markTourSeen();
+          setTourOpen(false);
+          clearGuideParam();
+        }}
+        onAction={runTourAction}
+      />
+    ) : null}
+    {!readOnly && tourOffer && !tourOpen ? (
+      <div
+        role="status"
+        className="fixed bottom-4 left-4 z-[11900] w-[min(20rem,calc(100vw-2rem))] rounded-[var(--radius-card)] border border-border bg-surface p-3.5 shadow-xl animate-in fade-in slide-in-from-bottom-2"
+      >
+        <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+          <GraduationCap className="h-4 w-4 text-primary" aria-hidden /> Première fois dans l’éditeur ?
+        </p>
+        <p className="mt-1 text-xs text-muted">Une visite de 2 minutes, adaptée à votre forfait {caps.label}.</p>
+        <div className="mt-2.5 flex gap-2">
+          <button type="button" onClick={startTour} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
+            Faire la visite
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              markTourSeen();
+              setTourOffer(false);
+            }}
+            className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}
+          >
+            Plus tard
+          </button>
+        </div>
+      </div>
+    ) : null}
     <Modal
       open={shortcutsModalOpen}
       onClose={() => setShortcutsModalOpen(false)}
@@ -9417,11 +10642,46 @@ export default function RoomLayoutEditor({
           </div>
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
             <span className="text-muted font-medium">Déplacement précis</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Flèches (↑ ↓ ← →)</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Flèches · Maj ×2,5 · Alt fin</kbd>
           </div>
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
-            <span className="text-muted font-medium">Pivoter l'élément</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">R</kbd>
+            <span className="text-muted font-medium">Rechercher et ajouter un élément</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+K</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">/</kbd>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Copier / Couper / Coller</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+C</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+X</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+V</kbd>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Afficher cette aide</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">?</kbd>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Pivoter de 90° / −90°</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">R</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Maj+R</kbd>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Ajouter à la sélection</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Maj+clic</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+clic</kbd>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Tout désélectionner</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Échap</kbd>
           </div>
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
             <span className="text-muted font-medium">Optimiser les espacements</span>
@@ -9817,7 +11077,7 @@ export default function RoomLayoutEditor({
             <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 border-b border-border-subtle shrink-0">
               {header}
               <div className="hidden lg:block space-y-2">
-                {templateBar}
+                {templatesOpen ? templateBar : null}
                 {toolbar}
                 {quickCreatePanel}
               </div>
@@ -9868,10 +11128,11 @@ export default function RoomLayoutEditor({
       : 'sticky bottom-0 z-20 -mx-1';
 
   return (
-    <>
+    <EditorGateProvider level={parsedEditorLevel} readOnly={readOnly} onUpsell={setUpsell}>
       {aiPlanFileInput}
       {ambiencePreviewModal}
       {elementCreatorModal}
+      <EditorUpsellDialog upsell={upsell} onClose={() => setUpsell(null)} />
       <ImageCropModal
         open={Boolean(cropTarget)}
         onClose={() => setCropTarget(null)}
@@ -9884,7 +11145,7 @@ export default function RoomLayoutEditor({
         <div className="sticky top-0 z-20 -mx-1 px-1 pb-2 space-y-2 bg-background/95 md:static md:bg-transparent md:mx-0 md:px-0 md:pb-0">
           {header}
           <div className="hidden lg:block space-y-2">
-            {templateBar}
+            {templatesOpen ? templateBar : null}
             {toolbar}
           </div>
         </div>
@@ -9963,6 +11224,6 @@ export default function RoomLayoutEditor({
           ]}
         />
       </div>
-    </>
+    </EditorGateProvider>
   );
 }

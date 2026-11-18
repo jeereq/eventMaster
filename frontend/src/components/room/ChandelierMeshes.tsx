@@ -6,7 +6,7 @@
  * du lustre (y = 0), le lustre descend vers les y négatifs. Dimensions réelles en mètres.
  */
 
-import React, { useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
 import type { ChandelierFixtureStyle } from '@/lib/roomLayoutUtils';
@@ -51,24 +51,37 @@ function beadChain(a: THREE.Vector3, b: THREE.Vector3, n: number, sag: number): 
   return out;
 }
 
-function useCrystalMaterial(tint = '#f8fbff', glow = '#fff1c9', glowIntensity = 0.18) {
-  return useMemo(
+/**
+ * Cristal taillé (même recette que la finition « crystal » de SurfaceMat) :
+ * diélectrique à IOR élevé (cristal au plomb ≈ 2), reflets d’environnement
+ * forts et légère irisation pour les feux colorés des pampilles. Pas de
+ * « transmission » : aucune passe de rendu en plus, fluide sur mobile.
+ */
+function useCrystalMaterial(tint = '#eef4ff', glow = '#fff1c9', glowIntensity = 0.18) {
+  const mat = useMemo(
     () =>
       new THREE.MeshPhysicalMaterial({
         color: tint,
         roughness: 0.02,
-        metalness: 0.15,
+        metalness: 0,
+        ior: 2,
+        specularIntensity: 1,
         clearcoat: 1,
         clearcoatRoughness: 0.02,
-        envMapIntensity: 2.6,
+        iridescence: 0.35,
+        iridescenceIOR: 1.6,
+        envMapIntensity: 3.4,
         emissive: glow,
         emissiveIntensity: glowIntensity,
         transparent: true,
-        opacity: 0.88,
+        // Assez dense pour que les facettes se lisent sur un plafond clair.
+        opacity: 0.9,
         flatShading: true,
       }),
     [tint, glow, glowIntensity],
   );
+  useEffect(() => () => mat.dispose(), [mat]);
+  return mat;
 }
 
 function useFlameMaterial(color: string, intensity = 2.4) {
@@ -120,7 +133,7 @@ function CandleCup({ p, color, flame, sleeve = 0.09 }: { p: THREE.Vector3; color
 
 /** Lustre Marie-Thérèse : fût en balustre, 8 + 6 bras en volute, guirlandes et pendeloques de cristal. */
 export function CrystalChandelier({ scale = 1, lightColor = '#ffd79a', frame = '#c9a227', selected = false }: { scale?: number; lightColor?: string; frame?: string; selected?: boolean }) {
-  const crystal = useCrystalMaterial('#f8fbff', lightColor, 0.22);
+  const crystal = useCrystalMaterial('#eef4ff', lightColor, 0.26);
   const flame = useFlameMaterial(lightColor);
   const metal = selected ? '#c7d2fe' : frame;
   const lower = 8;
@@ -209,10 +222,11 @@ export function CrystalChandelier({ scale = 1, lightColor = '#ffd79a', frame = '
         </group>
       ))}
       <Instances matrices={beads} material={crystal}>
-        <octahedronGeometry args={[0.014, 0]} />
+        <octahedronGeometry args={[0.017, 0]} />
       </Instances>
+      {/* Pendeloques en poire allongée, plus lisibles que des octaèdres réguliers */}
       <Instances matrices={drops} material={crystal}>
-        <octahedronGeometry args={[0.03, 0]} />
+        <octahedronGeometry args={[0.034, 0]} />
       </Instances>
       {/* Boule et pampille finale */}
       <mesh position={[0, -0.9, 0]} material={crystal}>
@@ -558,6 +572,116 @@ function LanternChandelier({ lightColor, selected }: { lightColor: string; selec
   );
 }
 
+/** Trio de dômes en émail noir, intérieur blanc, ampoules à filament et douilles laiton. */
+function IndustrialDomeChandelier({ ceilingDrop, lightColor, selected }: { ceilingDrop: number; lightColor: string; selected: boolean }) {
+  const filament = useFlameMaterial(lightColor, 3);
+  const bulbGlass = useMemo(
+    () => new THREE.MeshPhysicalMaterial({ color: '#fff4dc', roughness: 0.05, transmission: 0, transparent: true, opacity: 0.35, emissive: lightColor, emissiveIntensity: 0.35 }),
+    [lightColor],
+  );
+  useEffect(() => () => bulbGlass.dispose(), [bulbGlass]);
+  const outer: Array<[number, number]> = useMemo(
+    () => [[0.018, 0], [0.03, -0.012], [0.045, -0.04], [0.1, -0.095], [0.16, -0.16], [0.195, -0.205], [0.205, -0.222]],
+    [],
+  );
+  // Profil parcouru de bas en haut : faces tournées vers l’extérieur. L’intérieur garde le sens inverse.
+  const outerUp = useMemo(() => [...outer].reverse(), [outer]);
+  const inner: Array<[number, number]> = useMemo(() => outer.map(([r, y]) => [r * 0.96, y - 0.004] as [number, number]), [outer]);
+  const domes: Array<[number, number, number]> = [[-0.3, -0.36, -0.16], [0.3, -0.36, -0.16], [0, -0.52, 0.24]];
+  return (
+    <group>
+      {domes.map(([x, y, z], i) => (
+        <group key={i} position={[x, y, z]}>
+          <mesh position={[0, (ceilingDrop - y) / 2, 0]}>
+            <cylinderGeometry args={[0.003, 0.003, ceilingDrop - y, 5]} />
+            <meshStandardMaterial color="#18181b" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.03, 0]} castShadow>
+            <cylinderGeometry args={[0.022, 0.026, 0.06, 16]} />
+            <SurfaceMat color="#b08d3a" finish="brass" metalness={0.9} roughness={0.3} />
+          </mesh>
+          <Lathe profile={outerUp} segments={32} castShadow>
+            <SurfaceMat color={selected ? '#c7d2fe' : '#1d1d1f'} finish="metal" metalness={0.35} roughness={0.32} />
+          </Lathe>
+          <Lathe profile={inner} segments={32}>
+            <meshStandardMaterial color="#f4f1ea" roughness={0.55} emissive={lightColor} emissiveIntensity={0.12} />
+          </Lathe>
+          <mesh position={[0, -0.205, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.204, 0.004, 6, 40]} />
+            <SurfaceMat color="#b08d3a" finish="brass" />
+          </mesh>
+          {/* Ampoule globe et filament */}
+          <mesh position={[0, -0.12, 0]} material={bulbGlass}>
+            <sphereGeometry args={[0.05, 20, 14]} />
+          </mesh>
+          <mesh position={[0, -0.12, 0]} material={filament}>
+            <torusGeometry args={[0.016, 0.0025, 6, 16]} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** Chaîne à maillons alternés, du plafond (y = top) jusqu’au corps du lustre (y = 0). */
+function SuspensionChain({ top, color }: { top: number; color: string }) {
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color, metalness: 0.9, roughness: 0.32 }), [color]);
+  useEffect(() => () => mat.dispose(), [mat]);
+  const links = useMemo(() => {
+    const out: Mat4List = [];
+    const step = 0.032;
+    const n = Math.max(0, Math.floor(top / step));
+    for (let i = 0; i < n; i += 1) {
+      out.push(at(new THREE.Vector3(0, top - 0.04 - i * step, 0), 1, new THREE.Euler(0, (i % 2) * (Math.PI / 2), 0)));
+    }
+    return out;
+  }, [top]);
+  return (
+    <Instances matrices={links} material={mat}>
+      <torusGeometry args={[0.014, 0.0042, 6, 12]} />
+    </Instances>
+  );
+}
+
+/** Cache-piton tourné au plafond. */
+function CeilingCanopy({ y, color, finish }: { y: number; color: string; finish: 'brass' | 'metal' }) {
+  const profile: Array<[number, number]> = useMemo(
+    () => [[0, 0], [0.085, 0], [0.085, -0.01], [0.072, -0.026], [0.04, -0.045], [0.016, -0.058], [0.012, -0.07], [0, -0.07]],
+    [],
+  );
+  return (
+    <Lathe profile={profile} segments={28} position={[0, y, 0]}>
+      <SurfaceMat color={color} finish={finish} metalness={0.9} roughness={0.3} />
+    </Lathe>
+  );
+}
+
+type Suspension = 'chain' | 'cord' | 'own';
+/** Comment chaque lustre tient au plafond : chaîne (lustres classiques), cordon unique, ou ses propres câbles. */
+const SUSPENSION: Record<ChandelierFixtureStyle, Suspension> = {
+  crystalCascade: 'chain',
+  candleCandelabra: 'chain',
+  lantern: 'chain',
+  bohoPampas: 'cord',
+  fairyCanopy: 'cord',
+  brassRings: 'own',
+  botanicalHalo: 'own',
+  modernMinimal: 'own',
+  industrialDome: 'own',
+};
+
+const HARDWARE: Record<ChandelierFixtureStyle, { color: string; finish: 'brass' | 'metal' }> = {
+  crystalCascade: { color: '#c9a227', finish: 'brass' },
+  candleCandelabra: { color: '#8a6d2f', finish: 'brass' },
+  lantern: { color: '#1c1917', finish: 'metal' },
+  bohoPampas: { color: '#b08d5a', finish: 'brass' },
+  fairyCanopy: { color: '#e7e5e4', finish: 'metal' },
+  brassRings: { color: '#c9a227', finish: 'brass' },
+  botanicalHalo: { color: '#c9a227', finish: 'brass' },
+  modernMinimal: { color: '#18181b', finish: 'metal' },
+  industrialDome: { color: '#18181b', finish: 'metal' },
+};
+
 /** Hauteur du corps (m) sous le point d’accroche, par style — sert à caler la suspension. */
 export const CHANDELIER_BODY_DROP: Record<ChandelierFixtureStyle, number> = {
   crystalCascade: 1.0,
@@ -568,6 +692,7 @@ export const CHANDELIER_BODY_DROP: Record<ChandelierFixtureStyle, number> = {
   fairyCanopy: 1.1,
   modernMinimal: 0.65,
   lantern: 1.05,
+  industrialDome: 0.78,
 };
 
 /**
@@ -587,18 +712,17 @@ export function ChandelierModel({
 }) {
   const hangY = chandelierHangY(style, ceilingM);
   const drop = Math.max(0, ceilingM - hangY);
-  const suspendedByOwnCables = style === 'brassRings' || style === 'botanicalHalo' || style === 'modernMinimal';
+  const suspension = SUSPENSION[style] ?? 'cord';
+  const hardware = HARDWARE[style] ?? HARDWARE.crystalCascade;
   return (
     <group position={[0, hangY, 0]}>
-      {/* Rosace de plafond */}
-      <mesh position={[0, drop - 0.02, 0]}>
-        <cylinderGeometry args={[0.07, 0.09, 0.04, 20]} />
-        <SurfaceMat color={style === 'crystalCascade' || style === 'candleCandelabra' ? '#c9a227' : '#1f1f1f'} finish="metal" roughness={0.35} />
-      </mesh>
-      {!suspendedByOwnCables && drop > 0.02 ? (
+      {/* Cache-piton : seulement pour une suspension centrale (les halos ont leurs propres câbles). */}
+      {suspension !== 'own' ? <CeilingCanopy y={drop} color={selected ? '#c7d2fe' : hardware.color} finish={hardware.finish} /> : null}
+      {suspension === 'chain' && drop > 0.08 ? <SuspensionChain top={drop} color={selected ? '#c7d2fe' : hardware.color} /> : null}
+      {suspension === 'cord' && drop > 0.02 ? (
         <mesh position={[0, drop / 2, 0]}>
-          <cylinderGeometry args={[0.005, 0.005, drop, 6]} />
-          <SurfaceMat color="#3f3f46" finish="metal" roughness={0.3} />
+          <cylinderGeometry args={[0.004, 0.004, drop, 6]} />
+          <meshStandardMaterial color={style === 'fairyCanopy' ? '#d6d3d1' : '#3f3f46'} roughness={0.7} />
         </mesh>
       ) : null}
       {style === 'crystalCascade' ? <CrystalChandelier lightColor={lightColor} selected={selected} /> : null}
@@ -609,6 +733,7 @@ export function ChandelierModel({
       {style === 'fairyCanopy' ? <FairyCanopyChandelier lightColor={lightColor} /> : null}
       {style === 'modernMinimal' ? <ModernTrioChandelier ceilingDrop={drop} lightColor={lightColor} selected={selected} /> : null}
       {style === 'lantern' ? <LanternChandelier lightColor={lightColor} selected={selected} /> : null}
+      {style === 'industrialDome' ? <IndustrialDomeChandelier ceilingDrop={drop} lightColor={lightColor} selected={selected} /> : null}
     </group>
   );
 }
@@ -621,6 +746,7 @@ export function chandelierHangY(style: ChandelierFixtureStyle, ceilingM: number)
 }
 
 export function chandelierLightY(style: ChandelierFixtureStyle, ceilingM: number): number {
-  // Sous le corps : une source ponctuelle au cœur du lustre brûlerait le fût et les bras.
-  return chandelierHangY(style, ceilingM) - (CHANDELIER_BODY_DROP[style] ?? 0.9) - 0.15;
+  // Sous les bras (une source au cœur du lustre brûlerait le fût), mais pas trop bas : à 1,8 m du sol
+  // la lampe faisait une tache dure sur le parquet.
+  return chandelierHangY(style, ceilingM) - (CHANDELIER_BODY_DROP[style] ?? 0.9) * 0.85;
 }

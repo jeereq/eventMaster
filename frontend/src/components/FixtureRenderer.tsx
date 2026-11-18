@@ -14,15 +14,37 @@ import {
   instrumentStyleLabels,
   podiumStyleLabels,
 } from '@/lib/roomLayoutUtils';
-import { ZONE_MATERIAL_COLORS } from '@/lib/roomWebGLMaterials';
+import { ZONE_MATERIAL_COLORS } from '@/lib/roomZoneSurface';
+import { planRotationScreenDeg } from '@/lib/tablePlanUtils';
 import { LANDSCAPE_STYLE_META, poolOutlineSvgPath, type LandscapeStyle, type PoolShape } from '@/lib/roomOutdoorUtils';
+import { resolveGardenOptions, type GardenOptions } from '@/lib/roomGardenLayout';
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
+import { HOME_FURNITURE_META, type HomeFurnitureStyle } from '@/lib/roomHomeFurniture';
 import FlowerRenderer from '@/components/FlowerRenderer';
-import { Sparkles, DoorOpen, ShieldAlert } from '@/components/icons';
+import { Sparkles, ShieldAlert } from '@/components/icons';
 
 type Fixture = RoomLayoutBlueprint['fixtures'][number];
 
 /** Vue de dessus des aménagements extérieurs (arbres, eau, feu…). */
+function GardenPlanGlyph({ garden }: { garden?: Partial<GardenOptions> }) {
+  const g = resolveGardenOptions(garden);
+  const lawn = g.lawn === 'dry' ? '#b9b071' : g.lawn === 'meadow' ? '#7aa04a' : g.lawn === 'synthetic' ? '#3f9a3a' : '#5f9a3c';
+  const border = g.border === 'hedge' ? '#2f5a26' : g.border === 'stone' ? '#d6d0c4' : g.border === 'wood' ? '#a47a45' : g.border === 'flowers' ? '#8a6a4f' : null;
+  return (
+    <div className="w-full h-full rounded-sm overflow-hidden relative" style={{ background: lawn, boxShadow: border ? `inset 0 0 0 4px ${border}` : undefined }}>
+      {g.border === 'flowers' ? <div className="absolute inset-[2px] rounded-sm" style={{ border: `2px dotted ${g.flowerColors[0]}` }} /> : null}
+      {g.path !== 'none' ? (
+        <div className="absolute left-[6%] right-[6%] top-1/2 -translate-y-1/2 h-[16%] flex items-center justify-around" style={{ background: g.path === 'gravel' ? '#e7e2d6' : 'transparent' }}>
+          {g.path === 'stones' ? Array.from({ length: 6 }, (_, i) => <span key={i} className="block h-full aspect-square rounded-full bg-[#d6d0c4] border border-black/10" />) : null}
+        </div>
+      ) : null}
+      {g.flowerDensity > 0 ? (
+        <div className="absolute inset-0 opacity-90" style={{ backgroundImage: g.flowerColors.slice(0, 3).map((c, i) => `radial-gradient(circle at ${20 + i * 27}% ${25 + (i % 2) * 45}%, ${c} 0 3px, transparent 4px)`).join(', '), backgroundSize: '22px 22px' }} />
+      ) : null}
+    </div>
+  );
+}
+
 function LandscapePlanGlyph({ style, poolShape = 'rectangle' }: { style: LandscapeStyle; poolShape?: PoolShape }) {
   switch (style) {
     case 'oak':
@@ -235,6 +257,8 @@ interface FixtureRendererProps {
   showLabel?: boolean;
   /** Si true, remplit le conteneur parent (pas de position absolue) */
   fill?: boolean;
+  /** Plateau de scène (texture à l’échelle de la 3D) pour le plan vu du dessus. */
+  deckStyle?: React.CSSProperties;
 }
 
 export default function FixtureRenderer({
@@ -242,6 +266,7 @@ export default function FixtureRenderer({
   className = '',
   showLabel = true,
   fill = false,
+  deckStyle,
 }: FixtureRendererProps) {
   const isColumn = fixture.kind === 'pillar' || fixture.kind === 'column';
   const isStage = fixture.kind === 'stage' || fixture.kind === 'podium';
@@ -273,14 +298,14 @@ export default function FixtureRenderer({
     ? {
         width: '100%',
         height: '100%',
-        transform: fixture.rotation ? `rotate(${fixture.rotation}deg)` : undefined,
+        transform: fixture.rotation ? `rotate(${planRotationScreenDeg(fixture.rotation)}deg)` : undefined,
       }
     : {
         left: `${fixture.x}%`,
         top: `${fixture.y}%`,
         width: `${fixture.w}%`,
         height: `${fixture.h}%`,
-        transform: fixture.rotation ? `rotate(${fixture.rotation}deg)` : undefined,
+        transform: fixture.rotation ? `rotate(${planRotationScreenDeg(fixture.rotation)}deg)` : undefined,
       };
 
   // ─────────────────────────────────────────────────────────────
@@ -330,7 +355,7 @@ export default function FixtureRenderer({
   if (isStringLight) {
     return (
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
-        <div className="w-full h-full border border-dashed border-amber-400/70 rounded-[var(--radius-button)] bg-amber-50/40" />
+        <div className="w-full h-full border border-dashed border-amber-400/70 rounded-[var(--radius-button)] bg-amber-100/10" />
         {showLabel && fixture.label ? (
           <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap bg-surface/80 px-1 rounded shadow-xs">
             {fixture.label}
@@ -523,7 +548,7 @@ export default function FixtureRenderer({
             {doorStyle === 'grandPortal' && (
               <div className="w-full h-full bg-gradient-to-r from-amber-700 via-amber-400 to-amber-700 rounded flex items-center justify-between px-2 text-stone-900 shadow-inner">
                 <span className="w-1.5 h-full bg-amber-900/40 rounded-full" />
-                <div className="flex items-center gap-1 font-black text-[9px] uppercase tracking-wider text-amber-950">
+                <div className="flex items-center gap-1 font-black text-[9px] text-amber-950">
                   <Sparkles className="w-3 h-3 text-amber-200" />
                   {fixture.label || 'Portail Royal'}
                 </div>
@@ -572,7 +597,7 @@ export default function FixtureRenderer({
                   <span className="w-1 h-1 rounded-full bg-stone-400 -mt-0.5" />
                 </div>
                 {/* Croix en bois */}
-                <div className="text-[8px] font-bold text-amber-200/90 uppercase tracking-wide">
+                <div className="text-[8px] font-bold text-amber-200/90 ">
                   {fixture.label || 'Porte Grange'}
                 </div>
               </div>
@@ -581,11 +606,11 @@ export default function FixtureRenderer({
             {/* Style : Rideau de velours VIP */}
             {doorStyle === 'velvetCurtain' && (
               <div className="w-full h-full bg-gradient-to-r from-red-950 via-red-800 to-red-950 rounded flex items-center justify-between px-2 text-amber-300 border border-amber-500/40">
-                <span className="text-[10px]">⚜</span>
-                <span className="text-[8px] font-bold uppercase tracking-wider text-amber-200">
+                <span className="text-xs">⚜</span>
+                <span className="text-[8px] font-bold text-amber-200">
                   {fixture.label || 'Sas VIP'}
                 </span>
-                <span className="text-[10px]">⚜</span>
+                <span className="text-xs">⚜</span>
               </div>
             )}
 
@@ -593,7 +618,7 @@ export default function FixtureRenderer({
             {doorStyle === 'fireExit' && (
               <div className="w-full h-full bg-emerald-700 text-white rounded border border-emerald-400 flex items-center justify-between px-2 shadow-inner">
                 <ShieldAlert className="w-3.5 h-3.5 text-emerald-200 shrink-0" />
-                <span className="text-[8px] font-black uppercase tracking-wider">
+                <span className="text-[8px] font-black ">
                   {fixture.label || 'SORTIE SECOURS'}
                 </span>
                 <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
@@ -631,8 +656,9 @@ export default function FixtureRenderer({
   if (isAisle || isCarpet) {
     const aisleStyle: AisleStyle = fixture.aisleStyle ?? (isAisle ? 'royalRed' : 'damaskGold');
     const hasGoldBorder = fixture.hasGoldBorder !== false;
-    const hasLanterns = fixture.hasSideLanterns !== false;
-    const hasPetals = fixture.hasPetals !== false;
+    // Comme la vue 3D : lanternes et pétales seulement s’ils sont cochés.
+    const hasLanterns = fixture.hasSideLanterns === true;
+    const hasPetals = fixture.hasPetals === true;
 
     return (
       <div
@@ -689,11 +715,16 @@ export default function FixtureRenderer({
             <div className="absolute inset-0 bg-gradient-to-b from-amber-50 via-stone-100 to-amber-50 border border-stone-200 shadow-inner" />
           )}
 
+          {/* Couleur choisie : remplace la teinte du thème, garde son relief */}
+          {isAisle && fixture.aisleColor && (
+            <div className="absolute inset-0 shadow-inner" style={{ background: `linear-gradient(to right, rgba(0,0,0,0.25), transparent 30%, transparent 70%, rgba(0,0,0,0.25)), ${fixture.aisleColor}` }} />
+          )}
+
           {/* Bordure Dorée / Liseré Prestige */}
           {hasGoldBorder && (
             <>
-              <div className="absolute inset-y-0 left-0.5 w-[2px] bg-gradient-to-b from-amber-400 via-amber-200 to-amber-400 opacity-90" />
-              <div className="absolute inset-y-0 right-0.5 w-[2px] bg-gradient-to-b from-amber-400 via-amber-200 to-amber-400 opacity-90" />
+              <div className="absolute inset-y-0 left-0.5 w-[2px] bg-gradient-to-b from-amber-400 via-amber-200 to-amber-400 opacity-90" style={fixture.aisleBorderColor ? { background: fixture.aisleBorderColor } : undefined} />
+              <div className="absolute inset-y-0 right-0.5 w-[2px] bg-gradient-to-b from-amber-400 via-amber-200 to-amber-400 opacity-90" style={fixture.aisleBorderColor ? { background: fixture.aisleBorderColor } : undefined} />
             </>
           )}
 
@@ -729,7 +760,7 @@ export default function FixtureRenderer({
           {showLabel && fixture.label && (
             <div className="relative z-10 my-auto text-center">
               <span
-                className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded shadow-xs ${
+                className={`text-[8px] font-black px-1.5 py-0.5 rounded shadow-xs ${
                   aisleStyle === 'whiteMirror' || aisleStyle === 'botanicalRunner'
                     ? 'bg-black/60 text-white'
                     : 'bg-black/40 text-amber-200'
@@ -826,7 +857,7 @@ export default function FixtureRenderer({
         <div className="relative w-full h-full rounded-md border-2 border-zinc-700 bg-zinc-900 text-zinc-100 flex flex-col items-center justify-center overflow-hidden shadow-xs">
           <InstrumentPlanGlyph style={style} />
           {showLabel ? (
-            <span className="absolute bottom-0.5 text-[9px] font-black uppercase tracking-wide text-zinc-200">
+            <span className="absolute bottom-0.5 text-[9px] font-black text-zinc-200">
               {fixture.label || instrumentStyleLabels[style]}
             </span>
           ) : null}
@@ -865,7 +896,7 @@ export default function FixtureRenderer({
             ))}
           </div>
           {showLabel ? (
-            <span className="absolute inset-x-0 bottom-0.5 text-center text-[9px] font-black uppercase tracking-wide text-amber-950">
+            <span className="absolute inset-x-0 bottom-0.5 text-center text-[9px] font-black text-amber-950">
               {fixture.label || barStyleLabels[style]}
             </span>
           ) : null}
@@ -888,7 +919,7 @@ export default function FixtureRenderer({
             <span className="w-4 h-2.5 bg-black/60 rounded-xs border border-white/30" />
           </div>
           {showLabel && (
-            <span className="text-[8px] font-black uppercase tracking-wide text-center text-amber-200 truncate">
+            <span className="text-[8px] font-black text-center text-amber-200 truncate">
               {fixture.label || 'Comptoir Commande'}
             </span>
           )}
@@ -910,7 +941,7 @@ export default function FixtureRenderer({
             <span className="w-5 h-2 bg-amber-200/40 rounded-xs border border-amber-300/40" />
           </div>
           {showLabel && (
-            <span className="text-[8px] font-black uppercase tracking-wide text-center text-sky-200 truncate">
+            <span className="text-[8px] font-black text-center text-sky-200 truncate">
               {fixture.label || 'Retrait / Pick-up'}
             </span>
           )}
@@ -965,7 +996,7 @@ export default function FixtureRenderer({
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
         <div className="relative w-full h-full rounded-md border-2 border-cyan-500/80 bg-gradient-to-b from-cyan-950/80 via-slate-900 to-cyan-900 text-white flex flex-col justify-between p-1 shadow-xs overflow-hidden">
           <div className="flex items-center justify-between border-b border-cyan-400/40 pb-0.5">
-            <span className="text-[7.5px] font-bold text-cyan-300 uppercase tracking-wider">Vitrine Réfrigérée</span>
+            <span className="text-[7.5px] font-bold text-cyan-300 ">Vitrine Réfrigérée</span>
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
           </div>
           <div className="flex justify-around items-center opacity-90 py-0.5">
@@ -995,7 +1026,7 @@ export default function FixtureRenderer({
             <span className="w-3 h-2 rounded-t-sm bg-indigo-200" />
           </div>
           {showLabel && (
-            <span className="text-[7.5px] font-bold text-indigo-200 uppercase tracking-wide truncate">
+            <span className="text-[7.5px] font-bold text-indigo-200 truncate">
               {fixture.label || 'Poste Coiffure'}
             </span>
           )}
@@ -1033,7 +1064,7 @@ export default function FixtureRenderer({
             <span className="w-1.5 h-2.5 rounded-t-xs bg-amber-500" title="Moutarde" />
             <span className="w-2 h-2 rounded-xs bg-stone-300 border border-stone-400" title="Serviettes" />
           </div>
-          <span className="text-[7.5px] font-bold text-center text-stone-700 uppercase tracking-wider truncate">
+          <span className="text-[7.5px] font-bold text-center text-stone-700 truncate">
             {fixture.label || 'Condiments & Eau'}
           </span>
         </div>
@@ -1070,7 +1101,7 @@ export default function FixtureRenderer({
           <div className="w-3/4 h-2 rounded-t-lg bg-sky-200/80 border border-teal-300 shadow-inner" />
           {/* Toit */}
           <div className="w-4/5 flex-1 rounded-sm bg-teal-900 border border-teal-700/60 my-0.5 flex items-center justify-center">
-            <span className="text-[7px] font-black uppercase tracking-wider text-teal-300">Véhicule</span>
+            <span className="text-[7px] font-black text-teal-300">Véhicule</span>
           </div>
           {/* Lunette arrière */}
           <div className="w-3/4 h-1.5 rounded-b-md bg-sky-200/80 border border-teal-300" />
@@ -1102,12 +1133,28 @@ export default function FixtureRenderer({
     );
   }
 
+  if (fixture.kind === 'homeFurniture') {
+    const style: HomeFurnitureStyle = fixture.homeStyle ?? 'bed';
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className={`relative w-full h-full overflow-hidden border border-amber-700/50 shadow-sm ${style === 'coffeeTable' ? 'rounded-full' : style === 'bathtub' || style === 'clawfootTub' || style === 'armchair' ? 'rounded-xl' : 'rounded-sm'}`} style={{ background: HOME_FURNITURE_META[style].color }}>
+          <HomeFurniturePlanGlyph style={style} />
+          {showLabel && style !== 'rug' ? (
+            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 z-10 text-[7px] font-black uppercase text-amber-950 bg-white/85 px-1 rounded shadow-xs whitespace-nowrap">
+              {fixture.label || HOME_FURNITURE_META[style].label}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   if (fixture.kind === 'landscape') {
     const style: LandscapeStyle = fixture.landscapeStyle ?? 'oak';
     return (
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
         <div className="relative w-full h-full flex items-center justify-center">
-          <LandscapePlanGlyph style={style} poolShape={fixture.poolShape} />
+          {style === 'garden' ? <GardenPlanGlyph garden={fixture.garden} /> : <LandscapePlanGlyph style={style} poolShape={fixture.poolShape} />}
           {showLabel && style !== 'fence' && style !== 'hedge' ? (
             <span className="absolute bottom-0 translate-y-1/2 z-10 text-[7px] font-black uppercase text-emerald-950 bg-white/85 px-1 rounded shadow-xs whitespace-nowrap">
               {fixture.label || LANDSCAPE_STYLE_META[style].label}
@@ -1152,6 +1199,7 @@ export default function FixtureRenderer({
           style={{
             backgroundColor: podiumTint,
             ...imageStyle,
+            ...(!hasImage && deckStyle ? deckStyle : {}),
           }}
         >
           {style === 'runway' ? <span className="absolute inset-y-1 left-0.5 w-0.5 bg-pink-400" /> : null}
@@ -1167,7 +1215,7 @@ export default function FixtureRenderer({
             <span className="absolute w-[28%] h-[42%] rounded-sm bg-stone-800/80 border border-stone-600" />
           ) : null}
           {showLabel ? (
-            <span className="relative z-10 text-[9px] font-black uppercase tracking-wide px-1">
+            <span className="relative z-10 text-[9px] font-black px-1">
               {fixture.label || podiumStyleLabels[style]}
             </span>
           ) : null}
@@ -1236,6 +1284,7 @@ export default function FixtureRenderer({
         ...positionStyle,
         backgroundColor: materialTint ?? (!hasImage && isColumn && fixture.color ? fixture.color : undefined),
         ...imageStyle,
+        ...(isStage && !hasImage && deckStyle ? deckStyle : {}),
       }}
     >
       {hasImage && <div className="absolute inset-0 bg-black/10" />}
@@ -1247,4 +1296,91 @@ export default function FixtureRenderer({
       )}
     </div>
   );
+}
+
+/** Pictogramme vu de dessus pour le mobilier résidentiel (plan 2D). */
+function HomeFurniturePlanGlyph({ style }: { style: HomeFurnitureStyle }) {
+  if (style === 'bed') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="4" y="2" width="92" height="10" fill="#e8dcc6" />
+        <rect x="8" y="14" width="84" height="84" rx="4" fill="#f3eee4" />
+        <rect x="14" y="17" width="32" height="14" rx="4" fill="#fbf8f2" stroke="#d6cbb6" />
+        <rect x="54" y="17" width="32" height="14" rx="4" fill="#fbf8f2" stroke="#d6cbb6" />
+        <rect x="8" y="50" width="84" height="48" rx="3" fill="#d9c7a7" />
+      </svg>
+    );
+  }
+  if (style === 'wardrobe' || style === 'kitchenRun' || style === 'tvUnit') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <line key={i} x1={(i + 1) * (100 / 7)} y1="0" x2={(i + 1) * (100 / 7)} y2="100" stroke="#8a6a45" strokeWidth="1.2" />
+        ))}
+      </svg>
+    );
+  }
+  if (style === 'kitchenIsland') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="3" y="3" width="94" height="70" fill="#ece7dd" />
+        <rect x="14" y="18" width="24" height="30" rx="3" fill="#9ca3af" />
+      </svg>
+    );
+  }
+  if (style === 'bathtub' || style === 'clawfootTub') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="6" y="8" width="88" height="84" rx="40" fill="#f8f6f1" />
+        <rect x="14" y="18" width="72" height="64" rx="30" fill="#cfe3ea" />
+      </svg>
+    );
+  }
+  if (style === 'bathtubBuiltIn') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="2" y="2" width="96" height="96" fill="#f4f1ea" stroke="#d6d3d1" />
+        <rect x="14" y="16" width="72" height="68" rx="30" fill="#cfe3ea" />
+      </svg>
+    );
+  }
+  if (style === 'vanity') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="0" y="0" width="100" height="100" fill="#ece7dd" />
+        <ellipse cx="50" cy="55" rx="18" ry="30" fill="#fbfaf7" stroke="#d6d3d1" strokeWidth="2" />
+        <circle cx="50" cy="55" r="3" fill="#9ca3af" />
+      </svg>
+    );
+  }
+  if (style === 'toilet') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="8" y="2" width="84" height="26" rx="4" fill="#f8f6f1" stroke="#d6d3d1" strokeWidth="2" />
+        <ellipse cx="50" cy="62" rx="38" ry="34" fill="#f8f6f1" stroke="#d6d3d1" strokeWidth="2" />
+        <ellipse cx="50" cy="64" rx="24" ry="22" fill="#cfe3ea" />
+      </svg>
+    );
+  }
+  if (style === 'shower') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="0" y="0" width="100" height="100" fill="#d9d4cb" />
+        <rect x="10" y="84" width="80" height="4" fill="#9ca3af" />
+        <line x1="60" y1="0" x2="60" y2="100" stroke="#93c5fd" strokeWidth="3" />
+        <circle cx="30" cy="22" r="10" fill="none" stroke="#9ca3af" strokeWidth="2" />
+      </svg>
+    );
+  }
+  if (style === 'towelRail') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        {[16, 36, 56, 76].map((x) => <line key={x} x1="0" y1="50" x2="100" y2="50" stroke="#9ca3af" strokeWidth="6" transform={`translate(0 ${x - 50})`} />)}
+      </svg>
+    );
+  }
+  if (style === 'coffeeTable') {
+    return <span className="absolute inset-[22%] rounded-full bg-[#b98d5c]/40" />;
+  }
+  return null;
 }

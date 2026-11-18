@@ -1,10 +1,12 @@
-import { LANDSCAPE_STYLE_META, landscapeFootprintPct, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
-import { concentricRowCurvePercent, rowSeatCode, seatsGrownForTier } from '@/lib/roomAmphitheaterGeom';
-import { getTableSeatPlacement3D, tablePlateSizeMeters, type TableSeatingSide } from '@/lib/tablePlanUtils';
+import type { RoomWallArt } from './roomWallArt.ts';
+import { LANDSCAPE_STYLE_META, landscapeFootprintPct, type LandscapeStyle } from './roomOutdoorUtils.ts';
+import { HOME_FURNITURE_META } from './roomHomeFurniture.ts';
+import { concentricRowCurvePercent, rowSeatCode, seatsGrownForTier } from './roomAmphitheaterGeom.ts';
+import { getTableSeatPlacement3D, tablePlateSizeMeters, type TableSeatingSide } from './tablePlanUtils.ts';
 export type { TableSeatingSide } from '@/lib/tablePlanUtils';
-import { enforceRealLayoutClearances } from './roomLayoutClearance';
+import { enforceRealLayoutClearances } from './roomLayoutClearance.ts';
 
-export { estimateAmphitheaterSeats, rowCurveFactor, rowCurvePercent, rowSeatCode } from '@/lib/roomAmphitheaterGeom';
+export { estimateAmphitheaterSeats, rowCurveFactor, rowCurvePercent, rowSeatCode } from './roomAmphitheaterGeom.ts';
 
 export type RoomType = 'SIMPLE' | 'BANQUET' | 'CONFERENCE' | 'AMPHITHEATER' | 'TENT' | 'CUSTOM';
 export type ChairType =
@@ -20,6 +22,27 @@ export type ChairType =
   | 'BARSTOOL'
   | 'POUF';
 export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'cocktail' | 'highTop' | 'arc';
+/** Piètement de table (banquet, rectangulaire, ovale). */
+export type TableBaseStyle = 'pedestal' | 'fourLegs' | 'trestle' | 'hairpin' | 'cross';
+export const tableBaseLabels: Record<TableBaseStyle, string> = {
+  pedestal: 'Pied central',
+  fourLegs: '4 pieds bois',
+  trestle: 'Tréteaux',
+  hairpin: 'Pieds épingle (métal)',
+  cross: 'Croisillon',
+};
+/** Teinte par défaut de chaque piètement. */
+export const tableBaseDefaultColor: Record<TableBaseStyle, string> = {
+  pedestal: '#6b7280',
+  fourLegs: '#7a5536',
+  trestle: '#9a7552',
+  hairpin: '#1f1f1f',
+  cross: '#b08d57',
+};
+/** Les formes qui acceptent un piètement au choix. */
+export function tableAcceptsBase(shape: TableShape): boolean {
+  return shape === 'round' || shape === 'rectangular' || shape === 'square' || shape === 'oval';
+}
 /** Finition du plateau de table (3D). */
 export type TableSurfaceStyle = 'wood' | 'linen' | 'walnut' | 'marble' | 'darkWood' | 'whiteLacquer' | 'glass';
 /** Style de fauteuil / chaise (surtout fauteuils). */
@@ -39,7 +62,10 @@ export type ChairStyle =
   | 'ovalBack'
   | 'wishbone'
   | 'tiffany'
-  | 'phoenix';
+  | 'phoenix'
+  | 'windsor'
+  | 'bistro'
+  | 'scandi';
 /** Matériau d’assise. */
 export type SeatMaterial =
   | 'velvet'
@@ -124,7 +150,10 @@ export type RoofStyle =
   | 'pergola'
   | 'mansard'
   | 'skylight'
-  | 'fabricStretch';
+  | 'fabricStretch'
+  | 'clearTent'
+  | 'barrel'
+  | 'sawtooth';
 
 export type ScreenKind = 'stageLedWall' | 'wallTv' | 'tableMonitor' | 'laptop' | 'desktopPc';
 export type ScreenRatio = '16:9' | '21:9' | '9:16' | '32:9';
@@ -184,11 +213,19 @@ export type RoomFixtureKind =
   | 'car'
   | 'parasol'
   | 'landscape'
+  | 'homeFurniture'
   | 'customElement';
 export type FloorDecalKind = 'rose' | 'butterfly' | 'custom' | 'path';
 export type PedestalStyle = 'squareWhite' | 'columnGold';
 export type CenterpieceStyle = 'floral' | 'greeneryRunner' | 'candleCluster';
 export type StageRoofStyle = 'none' | 'gabled';
+export type StageRig = 'none' | 'truss' | 'concert' | 'wedding';
+export const stageRigLabels: Record<StageRig, string> = {
+  none: 'Aucun',
+  truss: 'Portique truss + lumières',
+  concert: 'Concert (truss, sono, écran LED)',
+  wedding: 'Mariage (drapé et rideau lumineux)',
+};
 
 export type RoomOutlineShape =
   | 'rectangle'
@@ -211,7 +248,17 @@ export type ColumnShape = 'round' | 'square' | 'fluted';
 export type FlowerType = 'rose' | 'tulipe' | 'orchidee' | 'tournesol' | 'lavande' | 'boquet' | 'personnalise';
 
 /** Type de zone au sol (piste, VIP, moquette…). */
-export type ZoneKind = 'dance' | 'vip' | 'buffet' | 'carpet' | 'custom';
+export type ZoneKind = 'dance' | 'vip' | 'buffet' | 'carpet' | 'custom' | 'plot';
+/**
+ * Emplacement (zoneKind « plot ») : surface délimitée sans murs ni revêtement posé,
+ * pour découper un espace ouvert (stands, lots, coins). Seule la bordure change.
+ */
+export type PlotBorderStyle = 'paint' | 'rope' | 'none';
+export const plotBorderLabels: Record<PlotBorderStyle, string> = {
+  paint: 'Marquage au sol',
+  rope: 'Piquets et cordon',
+  none: 'Teinte seule',
+};
 /** Matériau de surface pour zones / moquettes. */
 export type ZoneMaterial = 'wood' | 'carpet' | 'vinyl' | 'led' | 'marble' | 'concrete' | 'parquet' | 'epoxy' | 'grass' | 'gravel' | 'brick';
 
@@ -247,7 +294,9 @@ export type DoorStyle =
   | 'frenchDoor'
   | 'barnDoor'
   | 'grandPortal'
-  | 'velvetCurtain';
+  | 'velvetCurtain'
+  | 'atelier'
+  | 'cassette';
 
 export const doorStyleLabels: Record<DoorStyle, string> = {
   single: 'Simple battante',
@@ -263,6 +312,8 @@ export const doorStyleLabels: Record<DoorStyle, string> = {
   pivot: 'Pivotante XXL',
   folding: 'Baie accordéon',
   fireExit: 'Issue de secours (sécurisée)',
+  atelier: 'Verrière d’atelier (acier)',
+  cassette: 'Porte à cassettes moulurées',
 };
 
 export const doorStyleHints: Record<DoorStyle, string> = {
@@ -279,6 +330,8 @@ export const doorStyleHints: Record<DoorStyle, string> = {
   pivot: 'Design minimaliste de prestige',
   folding: 'Ouverture panoramique',
   fireExit: 'Signalétique réglementaire rétroéclairée',
+  atelier: 'Profils acier noir et petits carreaux vitrés, esprit loft',
+  cassette: 'Six panneaux moulurés laqués, esprit haussmannien',
 };
 
 /** Styles d’allées centrales et tapis d’honneur (inspiré Pinterest & Galas). */
@@ -335,7 +388,8 @@ export type ChandelierFixtureStyle =
   | 'fairyCanopy'
   | 'candleCandelabra'
   | 'modernMinimal'
-  | 'lantern';
+  | 'lantern'
+  | 'industrialDome';
 
 export const chandelierFixtureStyleLabels: Record<ChandelierFixtureStyle, string> = {
   crystalCascade: 'Cascade de cristal royal',
@@ -346,6 +400,7 @@ export const chandelierFixtureStyleLabels: Record<ChandelierFixtureStyle, string
   candleCandelabra: 'Candélabre grand siècle (bougies)',
   modernMinimal: 'Cylindre épuré architectural',
   lantern: 'Lanterne suspendue fer forgé',
+  industrialDome: 'Trio de dômes industriels',
 };
 
 export const chandelierFixtureStyleHints: Record<ChandelierFixtureStyle, string> = {
@@ -357,6 +412,7 @@ export const chandelierFixtureStyleHints: Record<ChandelierFixtureStyle, string>
   candleCandelabra: 'Ambiance château et lueurs chaudes',
   modernMinimal: 'Lumière ciblée contemporaine',
   lantern: 'Élégance classique intemporelle',
+  industrialDome: 'Émail noir et ampoules à filament',
 };
 
 /** Styles de disposition pour amphithéâtre / gradins. */
@@ -404,6 +460,8 @@ export interface RoomWallOpening {
   /** Paillasson devant la porte. */
   hasMat?: boolean;
   matColor?: string;
+  /** Porte : finition des poignées et paumelles. */
+  hardwareFinish?: import('@/lib/roomHomeFurniture').HomeMetalFinish;
   /** Rideaux (fenêtres). */
   hasCurtains?: boolean;
   curtainColor?: string;
@@ -419,6 +477,8 @@ export interface RoomWallSegment {
   texture: WallTextureStyle;
   color?: string;
   openings?: RoomWallOpening[];
+  /** Images et graffitis posés sur la face intérieure. */
+  art?: RoomWallArt[];
   /** Étage (maison multi-niveaux). */
   storyId?: string;
 }
@@ -485,6 +545,10 @@ export interface RoomLayoutBlueprint {
     color?: string;
     imageUrl?: string;
     imageCrop?: ImageCropRect;
+    /** Guirlande : style d’ampoules, tracé et accroche. */
+    stringLightStyle?: import('./roomStringLights.ts').StringLightStyle;
+    stringLightLayout?: import('./roomStringLights.ts').StringLightLayout;
+    stringLightMount?: import('./roomStringLights.ts').StringLightMount;
     flowerType?: FlowerType;
     flowerColor?: string;
     /** Matériau / texture pour moquette, scène, podium, buffet… */
@@ -497,10 +561,24 @@ export interface RoomLayoutBlueprint {
     podiumStyle?: PodiumStyle;
     /** Instrument de concert (piano, batterie, micro…). */
     instrumentStyle?: InstrumentStyle;
+    /** Instrument : teinte du corps (laque, fûts, bois, cuivre). */
+    instrumentFinish?: string;
     /** Type de bar (cocktail, vin, champagne…). */
     barStyle?: BarStyle;
+    /** Bar : habillage choisi (sinon celui du type de bar, voir roomBarDesign). */
+    barFront?: import('@/lib/roomBarDesign').BarFront;
+    barTop?: import('@/lib/roomBarDesign').BarTop;
+    barBack?: import('@/lib/roomBarDesign').BarBack;
+    barStool?: import('@/lib/roomBarDesign').BarStool;
+    barMetal?: import('@/lib/roomBarDesign').BarMetal;
     /** Aménagement extérieur (arbre, haie, piscine, brasero…). */
     landscapeStyle?: import('@/lib/roomOutdoorUtils').LandscapeStyle;
+    /** Mobilier résidentiel (lit, dressing, mur TV, îlot, baignoire…). */
+    homeStyle?: import('@/lib/roomHomeFurniture').HomeFurnitureStyle;
+    /** Espace vert (`landscapeStyle: 'garden'`) : gazon, bordure, fleurs, arbustes, arbres, chemin. */
+    garden?: Partial<import('@/lib/roomGardenLayout').GardenOptions>;
+    /** Salle de bain : finition de la robinetterie (chrome, laiton, noir). */
+    homeMetalFinish?: import('@/lib/roomHomeFurniture').HomeMetalFinish;
     /** Piscine : forme du bassin (rectangulaire, haricot, ovale, en L…). */
     poolShape?: import('@/lib/roomOutdoorUtils').PoolShape;
     /** Élément créé à partir d’une image ou d’une vidéo (découpe 3D, panneau, bloc, écran…). */
@@ -529,6 +607,8 @@ export interface RoomLayoutBlueprint {
     /** Essence / finition du vantail (portes fixture). */
     openingMaterial?: OpeningMaterial;
     frameColor?: string;
+    /** Porte : finition des poignées et paumelles. */
+    hardwareFinish?: import('@/lib/roomHomeFurniture').HomeMetalFinish;
     couvertStyle?: 'classic' | 'gold' | 'festive';
     /** Style d’allée centrale / tapis d’honneur (Pinterest). */
     aisleStyle?: AisleStyle;
@@ -538,12 +618,37 @@ export interface RoomLayoutBlueprint {
     hasSideLanterns?: boolean;
     /** Pétales de roses éparpillés sur l’allée. */
     hasPetals?: boolean;
+    /** Allée : couleur du tapis choisie (sinon celle du thème). */
+    aisleColor?: string;
+    /** Allée : couleur de la ganse (sinon dorée). */
+    aisleBorderColor?: string;
+    /** Allée : couleur des pétales. */
+    petalColor?: string;
+    /** Allée : quantité de pétales (0–1). */
+    petalDensity?: number;
+    /** Allée : écart entre deux lanternes (m). */
+    lanternSpacingM?: number;
+    /** Allée ou couloir : taille du motif de la photo importée (m). */
+    surfaceImageTileM?: number;
+    /** Couloir : murs latéraux (oui par défaut). */
+    corridorWalls?: boolean;
+    corridorWallHeightM?: number;
+    corridorWallColor?: string;
+    /** Couloir : plinthes au pied des murs (oui par défaut). */
+    corridorPlinths?: boolean;
+    /** Couloir : appliques murales. */
+    corridorSconces?: boolean;
+    corridorSconceSpacingM?: number;
     /** Motif de décalcomanie au sol (roses, papillons, image). */
     decalKind?: FloorDecalKind;
     /** Piédestal floral : colonne blanche ou or. */
     pedestalStyle?: PedestalStyle;
     /** Toit de scène (amphithéâtre jardin). */
     stageRoof?: StageRoofStyle;
+    /** Habillage de scène : portique truss lumière, concert, mariage. */
+    stageRig?: StageRig;
+    /** Escalier d’accès en façade (oui par défaut dès 30 cm de haut). */
+    stageStairs?: boolean;
     /** Style de lustre / suspension au plafond. */
     chandelierStyle?: ChandelierFixtureStyle;
     /** Rayon de diffusion de la lumière (en % ou mètres). */
@@ -604,6 +709,10 @@ export interface RoomLayoutBlueprint {
         customRadiusM?: number;
         /** Rayon d'arrondi des angles (coins) en mètres pour tables rectangulaires / carrées. */
         cornerRadiusM?: number;
+        /** Piètement : pied central, 4 pieds, tréteaux, épingles, croisillon (sinon celui de la forme). */
+        tableBase?: TableBaseStyle;
+        /** Teinte du piètement. */
+        tableBaseColor?: string;
         x: number;
         y: number;
         locked?: boolean;
@@ -681,6 +790,16 @@ export interface RoomLayoutBlueprint {
         zoneKind?: ZoneKind;
         material?: ZoneMaterial;
         color?: string;
+        /** Piste de danse : rendu (classique, dalles LED, ciel étoilé, laqué). */
+        danceStyle?: import('./roomDanceFloor.ts').DanceFloorStyle;
+        /** Motif des dalles LED animées. */
+        danceLedPattern?: import('./roomDanceFloor.ts').DanceLedPattern;
+        /** Initiales au centre de la piste (mariage). */
+        danceMonogram?: string;
+        /** Boule à facettes suspendue au-dessus de la piste. */
+        danceMirrorBall?: boolean;
+        /** Emplacement : façon de délimiter la surface (marquage, cordon, teinte). */
+        plotBorder?: PlotBorderStyle;
         x: number;
         y: number;
         w: number;
@@ -705,6 +824,8 @@ export interface RoomLayoutBlueprint {
      * - tile = texture répétée
      */
     floorImageFit?: 'cover' | 'tile';
+    /** Image de sol en mosaïque : taille réelle d’une répétition (m, défaut 3,5). */
+    floorImageTileM?: number;
     /** Teinte / couleur dominante du sol (architecture). */
     floorColor?: string;
     /** Afficher le toit / plafond en 3D. */
@@ -745,6 +866,8 @@ export interface RoomLayoutBlueprint {
     showChandeliers?: boolean;
     /** Uplights le long des murs. */
     showUplights?: boolean;
+    /** Jeux de lumière LED (uplights colorés, bandeau en corniche, animations). */
+    ledShow?: Partial<import('./roomLedShow.ts').LedShowSettings>;
     /** Rideaux décoratifs. */
     showCurtains?: boolean;
     /** Teinte des rideaux muraux (ivoire, bordeaux…). */
@@ -757,6 +880,10 @@ export interface RoomLayoutBlueprint {
     environment?: import('@/lib/roomOutdoorUtils').EnvironmentSettings;
     /** Mode présentation (orbit auto, labels masqués). */
     presentationMode?: boolean;
+    /** Ouvrir la 3D en vue maquette (murs coupés à mi-hauteur). */
+    dollhouseView?: boolean;
+    /** Découverte du plan : perspective d’arrivée de la caméra (survol, vue de dessus, depuis l’entrée…). */
+    introView?: import('@/lib/roomIntroView').RoomIntroView;
     /** Modèle de structure multi-étages appliqué. */
     buildingPresetId?: import('@/lib/roomBuildingUtils').BuildingStoryPresetId;
     /** Étages du bâtiment (RDC, 1er…). */
@@ -858,7 +985,7 @@ export function refreshBlueprintMetadata(blueprint: RoomLayoutBlueprint): RoomLa
 export function isTentVenue(blueprint: Pick<RoomLayoutBlueprint, 'roomType' | 'metadata'>): boolean {
   if (blueprint.roomType === 'TENT') return true;
   const roof = blueprint.metadata?.roofStyle;
-  return blueprint.metadata?.tentVenue === true && (roof === 'tentSwag' || roof === 'pagoda');
+  return blueprint.metadata?.tentVenue === true && (roof === 'tentSwag' || roof === 'pagoda' || roof === 'clearTent');
 }
 
 export function createBlueprintTable(
@@ -980,10 +1107,13 @@ export function createBlueprintZone(
           ? 'buffet'
           : label.toLowerCase().includes('moquette') || label.toLowerCase().includes('tapis')
             ? 'carpet'
-            : 'custom');
+            : label.toLowerCase().includes('emplacement')
+              ? 'plot'
+              : 'custom');
+  // Emplacement : pas de revêtement, le sol de la salle (ou le terrain) reste visible.
   const material =
     opts.material ??
-    (zoneKind === 'dance' ? 'vinyl' : zoneKind === 'carpet' ? 'carpet' : zoneKind === 'vip' ? 'marble' : 'wood');
+    (zoneKind === 'plot' ? undefined : zoneKind === 'dance' ? 'vinyl' : zoneKind === 'carpet' ? 'carpet' : zoneKind === 'vip' ? 'marble' : 'wood');
   return {
     id: makeLayoutId('zone'),
     kind: 'zone',
@@ -991,6 +1121,7 @@ export function createBlueprintZone(
     zoneKind,
     material,
     color: opts.color,
+    ...(zoneKind === 'plot' ? { plotBorder: 'paint' as const } : {}),
     x: 18 + (index % 3) * 10,
     y: 28 + (index % 2) * 8,
     w: opts.w ?? (zoneKind === 'dance' ? 32 : zoneKind === 'carpet' ? 28 : 26),
@@ -1123,6 +1254,8 @@ export function resolveFurnitureSurfaceAt(
 
   for (const item of blueprint.furniture) {
     if (item.kind !== 'zone' || item.id === ignoreId) continue;
+    // Emplacement : simple marquage, le mobilier reste posé sur le sol.
+    if (item.zoneKind === 'plot') continue;
     if (!pointInLayoutRect(xPct, yPct, { x: item.x, y: item.y, w: item.w, h: item.h })) continue;
     const kind =
       item.zoneKind === 'dance' ? 'dance' :
@@ -1307,6 +1440,7 @@ export const FIXTURE_REAL_SIZE_M: Partial<Record<RoomFixtureKind, { w: number; d
   loungeSofa: { w: 2.6, d: 0.95 },
   car: { w: 1.9, d: 4.6 },
   parasol: { w: 2.8, d: 2.8 },
+  homeFurniture: { w: HOME_FURNITURE_META.bed.widthM, d: HOME_FURNITURE_META.bed.depthM },
 };
 
 /** Convertit une empreinte en mètres en % du plan (bornée pour rester sélectionnable). */
@@ -1383,6 +1517,7 @@ export function createBlueprintFixture(
     car: { x: 45, y: 75, w: 14, h: 24, label: 'Emplacement véhicule' },
     parasol: { x: 50, y: 50, w: 12, h: 12, label: 'Parasol terrasse' },
     landscape: { x: 44, y: 44, w: 12, h: 12, label: LANDSCAPE_STYLE_META.oak.label },
+    homeFurniture: { x: 42, y: 40, w: 10, h: 14, label: HOME_FURNITURE_META.bed.label },
   };
   const base = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
   const real = canvas ? realFixtureFootprintPct(kind, canvas) : null;
@@ -1432,6 +1567,7 @@ export function createBlueprintFixture(
       kind === 'car' ? '#0f766e' :
       kind === 'parasol' ? '#f59e0b' :
       kind === 'landscape' ? LANDSCAPE_STYLE_META.oak.color :
+      kind === 'homeFurniture' ? HOME_FURNITURE_META.bed.color :
       undefined,
     flowerType: kind === 'arch' || kind === 'pedestal' ? 'rose' as FlowerType : kind === 'flower' ? 'boquet' as FlowerType : undefined,
     flowerColor: kind === 'arch' || kind === 'pedestal' ? '#f4e8e4' : kind === 'flower' ? '#e11d48' : undefined,
@@ -1476,8 +1612,10 @@ export function createBlueprintFixture(
       kind === 'car' ? 1.5 :
       kind === 'parasol' ? 2.6 :
       kind === 'landscape' ? LANDSCAPE_STYLE_META.oak.heightM :
+      kind === 'homeFurniture' ? HOME_FURNITURE_META.bed.heightM :
       undefined,
     landscapeStyle: kind === 'landscape' ? 'oak' : undefined,
+    homeStyle: kind === 'homeFurniture' ? 'bed' : undefined,
     steps: kind === 'podium' ? 2 : kind === 'stairs' ? 6 : undefined,
     hasCouverts: kind === 'buffet' ? true : undefined,
     buffetStyle: kind === 'buffet' ? 'straight' : undefined,
@@ -1578,7 +1716,8 @@ export function estimateTableFootprint(
 
 function furnitureLayoutBox(item: RoomLayoutBlueprint['furniture'][number]): LayoutBox | null {
   if (item.kind === 'zone') {
-    if (item.zoneKind === 'dance' || item.zoneKind === 'carpet') return null;
+    // Piste, tapis et emplacements se meublent : ils ne gênent pas la pose.
+    if (item.zoneKind === 'dance' || item.zoneKind === 'carpet' || item.zoneKind === 'plot') return null;
     return { x: item.x, y: item.y, w: item.w, h: item.h };
   }
   if (item.kind === 'table') {
@@ -1927,6 +2066,9 @@ export const chairStyleLabels: Record<ChairStyle, string> = {
   wishbone: 'Wishbone (Y)',
   tiffany: 'Tiffany or',
   phoenix: 'Phoenix prestige',
+  windsor: 'Windsor (barreaux)',
+  bistro: 'Bistrot cannée',
+  scandi: 'Coque scandinave',
 };
 
 export const seatMaterialLabels: Record<SeatMaterial, string> = {
@@ -1961,6 +2103,7 @@ export const zoneKindLabels: Record<ZoneKind, string> = {
   buffet: 'Buffet',
   carpet: 'Moquette / tapis',
   custom: 'Zone libre',
+  plot: 'Emplacement (sans murs)',
 };
 
 export const zoneMaterialLabels: Record<ZoneMaterial, string> = {
@@ -3206,6 +3349,185 @@ function dressTemplate(templateId: string, blueprint: RoomLayoutBlueprint): Room
   return dressing ? dressBlueprint(blueprint, dressing(blueprint)) : blueprint;
 }
 
+/**
+ * Appartement témoin (≈ 18 × 8 m utiles) dans l’esprit d’une visite immobilière
+ * en maquette : façade nord entièrement vitrée, cloisons intérieures, bois clair.
+ * De gauche à droite : chambre + dressing, salle de bain, séjour, salle à manger,
+ * cuisine ouverte. S’ouvre en vue maquette.
+ */
+function buildShowFlatTemplate(): RoomLayoutBlueprint {
+  const canvas = { widthM: 20, heightM: 9 };
+  const pctX = (m: number) => (m / canvas.widthM) * 100;
+  const pctY = (m: number) => (m / canvas.heightM) * 100;
+  const WALL = '#f6f2ea';
+  const OAK = '#d8b98c';
+
+  const home = (
+    style: import('@/lib/roomHomeFurniture').HomeFurnitureStyle,
+    cx: number,
+    cy: number,
+    rotation = 0,
+    label?: string,
+  ): BlueprintFixture => {
+    const meta = HOME_FURNITURE_META[style];
+    const w = pctX(meta.widthM);
+    const h = pctY(meta.depthM);
+    return {
+      ...createBlueprintFixture('homeFurniture'),
+      id: makeLayoutId('home'),
+      x: cx - w / 2,
+      y: cy - h / 2,
+      w,
+      h,
+      rotation,
+      label: label ?? meta.label,
+      color: meta.color,
+      heightM: meta.heightM,
+      homeStyle: style,
+    };
+  };
+
+  const glass = (t: number, widthM = 2.3) => createWallOpening('window', {
+    t,
+    widthM,
+    heightM: 2.45,
+    sillM: 0.12,
+    style: 'rectangular',
+    frameColor: '#e7e0d3',
+  });
+  const innerDoor = (t: number) => createWallOpening('door', {
+    t,
+    style: 'sliding',
+    widthM: 0.9,
+    material: 'oak',
+    color: OAK,
+    frameColor: '#c9a273',
+    hasMat: false,
+  });
+  const wall = (
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    openings: RoomWallOpening[] = [],
+    thicknessM = 0.2,
+  ) => createWallSegment({ start, end, heightM: 2.8, thicknessM, texture: 'plaster', color: WALL, openings });
+
+  const walls: RoomWallSegment[] = [
+    // façade vitrée (haut du plan)
+    wall({ x: 5, y: 5 }, { x: 95, y: 5 }, [0.08, 0.22, 0.36, 0.5, 0.64, 0.78, 0.92].map((t) => glass(t))),
+    wall({ x: 95, y: 5 }, { x: 95, y: 95 }, [glass(0.3, 1.8)]),
+    // façade palier : porte d’entrée côté cuisine
+    wall({ x: 95, y: 95 }, { x: 5, y: 95 }, [createWallOpening('door', { t: 0.3, style: 'panel', material: 'oak', color: OAK, frameColor: '#c9a273', hasMat: true, matColor: '#a98b63' })]),
+    wall({ x: 5, y: 95 }, { x: 5, y: 5 }, [glass(0.75, 1.6)]),
+    // cloisons intérieures
+    wall({ x: 28, y: 5 }, { x: 28, y: 95 }, [innerDoor(0.48), innerDoor(0.86)], 0.12), // chambre | séjour & sdb
+    wall({ x: 5, y: 64 }, { x: 22, y: 64 }, [], 0.12), // chambre | dressing (passage ouvert côté cloison)
+    wall({ x: 28, y: 64 }, { x: 46, y: 64 }, [innerDoor(0.75)], 0.12), // séjour | salle de bain
+    wall({ x: 46, y: 64 }, { x: 46, y: 95 }, [], 0.12),
+  ];
+
+  const room = (label: string, x0: number, y0: number, x1: number, y1: number, material: ZoneMaterial, color: string) => ({
+    ...createBlueprintZone(label, 1, { zoneKind: 'custom', material, color }),
+    x: x0,
+    y: y0,
+    w: x1 - x0,
+    h: y1 - y0,
+  });
+
+  const furniture: RoomLayoutBlueprint['furniture'] = [
+    room('Chambre parentale', 5, 5, 28, 64, 'parquet', '#e2c9a2'),
+    room('Dressing', 5, 64, 28, 95, 'parquet', '#e2c9a2'),
+    room('Salle de bain', 28, 64, 46, 95, 'concrete', '#ddd3c4'),
+    room('Entrée', 46, 64, 58, 95, 'parquet', '#e2c9a2'),
+    room('Séjour', 28, 5, 58, 64, 'parquet', '#e2c9a2'),
+    room('Cuisine ouverte', 58, 5, 95, 95, 'parquet', '#e2c9a2'),
+    {
+      ...createBlueprintTable(1, { shape: 'rectangular', capacity: 6, chairType: 'CROSSBACK' }),
+      name: 'Table à manger',
+      x: 64,
+      y: 40,
+      tableSurface: 'wood',
+      tableColor: OAK,
+      hasCenterpiece: true,
+      centerpieceStyle: 'greeneryRunner',
+    },
+  ];
+
+  const bedCx = 5 + 0.5 + pctX(HOME_FURNITURE_META.bed.depthM) / 2;
+  const fixtures: BlueprintFixture[] = [
+    // chambre : lit tête contre le mur ouest, chevets, bureau face à la baie
+    { ...home('rug', bedCx + pctX(0.35), 32, 90, 'Tapis de chambre'), color: '#cdb99b' },
+    home('bed', bedCx, 32, 90),
+    home('nightstand', 5 + 0.6 + pctX(0.21), 32 - pctY(1.25), 90),
+    home('nightstand', 5 + 0.6 + pctX(0.21), 32 + pctY(1.25), 90),
+    home('armchair', 22, 16, 225),
+    home('desk', 20, 10, 180),
+    // dressing ouvert le long de la cloison et du mur ouest
+    home('wardrobe', 28 - 0.6 - pctX(0.31), 79, 270, 'Dressing'),
+    home('wardrobe', 5 + 0.6 + pctX(0.31), 79, 90, 'Dressing'),
+    // salle de bain : baignoire encastrée au fond, WC contre la cloison, vasque laiton et sèche-serviettes
+    { ...home('bathtubBuiltIn', 35.5, 95 - 0.8 - pctY(0.375), 0), homeMetalFinish: 'brass' },
+    { ...home('toilet', 28 + 0.4 + pctX(0.33), 72, 90), homeMetalFinish: 'brass' },
+    { ...home('vanity', 46 - 0.5 - pctX(0.25), 76, 270), homeMetalFinish: 'brass' },
+    { ...home('towelRail', 37, 64 + 0.5 + pctY(0.08), 180), homeMetalFinish: 'brass' },
+    // séjour : mur TV contre la salle de bain, canapé face à l’écran
+    { ...home('rug', 43, 38, 0), color: '#b9a383' },
+    home('tvUnit', 43, 64 - 0.6 - pctY(0.22), 180),
+    {
+      ...createBlueprintFixture('loungeSofa'),
+      id: makeLayoutId('loungeSofa'),
+      x: 43 - pctX(2.6) / 2,
+      y: 22 - pctY(0.95) / 2,
+      w: pctX(2.6),
+      h: pctY(0.95),
+      label: 'Canapé',
+      color: '#e8dcc6',
+    },
+    home('coffeeTable', 43, 38, 0),
+    home('armchair', 34, 40, 90),
+    home('armchair', 52, 40, 270),
+    // cuisine ouverte : linéaire contre le mur est, îlot avec tabourets
+    home('kitchenRun', 95 - 0.6 - pctX(0.33), 52, 270),
+    home('kitchenIsland', 80, 50, 270),
+    {
+      ...createBlueprintFixture('flower'),
+      id: makeLayoutId('flower'),
+      x: 55,
+      y: 10,
+      w: pctX(0.7),
+      h: pctY(0.7),
+      label: 'Olivier en pot',
+      flowerType: 'boquet',
+      flowerColor: '#7d8c62',
+    },
+    // plantes en bac (coordonnées relatives au contour 5–95 %) : chambre, entrée et cuisine
+    landscapeFixture(canvas, { style: 'planter', x: 22, y: 59, w: pctX(0.9), h: pctY(0.4) }),
+    landscapeFixture(canvas, { style: 'planter', x: 52, y: 96, w: pctX(1.2), h: pctY(0.4) }),
+    landscapeFixture(canvas, { style: 'planter', x: 95, y: 3, w: pctX(1.2), h: pctY(0.4) }),
+  ];
+
+  return refreshBlueprintMetadata({
+    version: 1,
+    roomType: 'CUSTOM',
+    templateId: 'appartement-temoin-maquette',
+    canvas,
+    roomOutline: defaultRoomOutline('rectangle'),
+    walls,
+    furniture,
+    fixtures,
+    metadata: {
+      totalSeats: 0,
+      floorType: 'boisBlond',
+      wallPaintColor: WALL,
+      lightingPreset: 'day',
+      showRoof: false,
+      dollhouseView: true,
+      // Jardin autour de la maquette plutôt qu’un fond uni ; pas d’uplights scéniques dans un logement.
+      outdoorSurroundings: 'garden',
+      showUplights: false,
+    },
+  });
+}
+
 export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
   {
     id: 'banquet-classic',
@@ -4214,7 +4536,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Comptoir bar avec tabourets, banquettes murales, tables carrées 4 places, tables 2 places et zone cuisine',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       for (let i = 0; i < 4; i++) {
         furniture.push({
@@ -4315,7 +4637,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Comptoir commande & retrait, grandes tables d’hôtes rectangulaires, banquettes et station condiments',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       furniture.push({
         ...createBlueprintTable(1, { shape: 'rectangular', capacity: 10, chairType: 'BANQUET' }),
@@ -4414,7 +4736,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Comptoir barista avec tabourets, salon lounge avec canapé et tables bistrot',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       furniture.push({
         ...createBlueprintRow(1, { seatCount: 4, chairType: 'ARMCHAIR', x: 74, y: 32, label: 'Canapé Lounge' }),
@@ -4510,7 +4832,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Salle intérieure avec bar et baie vitrée donnant sur terrasse extérieure avec tables parasols',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       for (let i = 0; i < 4; i++) {
         furniture.push({
@@ -4592,7 +4914,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Postes de coiffage circulaires avec fauteuils, espace bacs de lavage, accueil caisse et salon d’attente',
     roomType: 'CUSTOM',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       for (let c = 0; c < 2; c++) {
         for (let r = 0; r < 4; r++) {
@@ -4676,7 +4998,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Parcours client fluide inspiré des fast-casuals : comptoir commande POS, retrait, grandes tables d’hôtes, banquettes, station condiments et cuisine inox',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       for (let i = 0; i < 2; i++) {
         furniture.push({
@@ -4804,7 +5126,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Aménagement authentique avec four à pizza en pierre 6\', comptoir ondulé avec tabourets, banquettes cabines et tables de salle',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // Cabines / Booths le long du mur gauche (numérotées 1 à 8)
       for (let i = 0; i < 6; i++) {
@@ -4933,7 +5255,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Architecture modulaire conteneur maritime : guichet commande, tabourets hauts, escalier d’accès et terrasse rooftop panoramique',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // Tabourets rez-de-chaussée devant le comptoir container
       for (let s = 0; s < 6; s++) {
@@ -5037,7 +5359,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Grand bar central rond à 360°, pods banquettes courbes semi-circulaires, salons VIP lounge et ambiance feutrée',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // 12 Tabourets concentriques autour du grand bar circulaire
       for (let i = 0; i < 12; i++) {
@@ -5145,7 +5467,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Disposition professionnelle complète : 16 postes coiffeuses avec miroirs, 5 bacs de lavage, tables de préparation, cabines de soins et accueil',
     roomType: 'CUSTOM',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // 6 Postes centraux double face
       for (let r = 0; r < 3; r++) {
@@ -5273,7 +5595,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Ambiance chaleureuse avec grande terrasse extérieure abritée sous pergola acier, guirlandes Edison, bar traversant et tables parasols',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // 6 Tables sous la pergola avec chaises bistrot
       for (let r = 0; r < 2; r++) {
@@ -5406,7 +5728,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Café moderne raffiné avec grand comptoir espresso, vitrines pâtisseries, coin canapé lounge cosy et verrière avec tables de terrasse',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // Tabourets de comptoir
       for (let s = 0; s < 4; s++) {
@@ -5516,12 +5838,20 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     },
   },
   {
+    id: 'appartement-temoin-maquette',
+    name: 'Appartement témoin — Maquette bois & baies vitrées',
+    description: 'Appartement de standing vu en maquette : chambre avec dressing, séjour mur TV, salle à manger, cuisine ouverte avec îlot, salle de bain, grande façade vitrée et bois clair',
+    roomType: 'CUSTOM',
+    outlineShape: 'rectangle',
+    build: () => buildShowFlatTemplate(),
+  },
+  {
     id: 'loft-organique-residentiel',
     name: 'Loft Contemporain — Courbes Organiques & Patio',
     description: 'Design architectural organique inspiré des appartements modernes : grand canapé courbe, table à manger ronde 8 places, porche voiture et patio',
     roomType: 'CUSTOM',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // Grande table à manger ronde 8 places
       furniture.push({
@@ -5833,6 +6163,7 @@ function mergeTemplateStyle(
       floorType: previous.metadata.floorType,
       floorImageUrl: previous.metadata.floorImageUrl,
       floorImageFit: previous.metadata.floorImageFit,
+      floorImageTileM: previous.metadata.floorImageTileM,
       depthView: previous.metadata.depthView,
       depthAmount: previous.metadata.depthAmount,
       defaultTableColor: previous.metadata.defaultTableColor,
@@ -5950,6 +6281,8 @@ export function applyTableStyleToAll(
       customDepthM: fields.includes('dimensions') ? source.customDepthM : item.customDepthM,
       customRadiusM: fields.includes('dimensions') ? source.customRadiusM : item.customRadiusM,
       cornerRadiusM: fields.includes('dimensions') ? source.cornerRadiusM : item.cornerRadiusM,
+      tableBase: fields.includes('tableColor') ? source.tableBase : item.tableBase,
+      tableBaseColor: fields.includes('tableColor') ? source.tableBaseColor : item.tableBaseColor,
       hasPmrAccess: fields.includes('pmr') ? source.hasPmrAccess : item.hasPmrAccess,
       pmrSeatIndices: fields.includes('pmr') ? (source.pmrSeatIndices ? [...source.pmrSeatIndices] : undefined) : item.pmrSeatIndices,
     };
@@ -6001,6 +6334,7 @@ export function applyFixtureStyleToSameKind(
         frameColor: source.frameColor,
         hasMat: source.hasMat,
         matColor: source.matColor,
+        hardwareFinish: source.hardwareFinish,
       };
     }
     if (family === 'aisle') {
@@ -6012,6 +6346,14 @@ export function applyFixtureStyleToSameKind(
         hasGoldBorder: source.hasGoldBorder,
         hasSideLanterns: source.hasSideLanterns,
         hasPetals: source.hasPetals,
+        aisleColor: source.aisleColor,
+        aisleBorderColor: source.aisleBorderColor,
+        petalColor: source.petalColor,
+        petalDensity: source.petalDensity,
+        lanternSpacingM: source.lanternSpacingM,
+        imageUrl: source.imageUrl,
+        imageCrop: source.imageCrop,
+        surfaceImageTileM: source.surfaceImageTileM,
       };
     }
     if (family === 'chandelier') {
@@ -6047,6 +6389,7 @@ export function applyFixtureStyleToSameKind(
       return {
         ...item,
         instrumentStyle: source.instrumentStyle,
+        instrumentFinish: source.instrumentFinish,
         color: source.color,
       };
     }
@@ -6054,6 +6397,11 @@ export function applyFixtureStyleToSameKind(
       return {
         ...item,
         barStyle: source.barStyle,
+        barFront: source.barFront,
+        barTop: source.barTop,
+        barBack: source.barBack,
+        barStool: source.barStool,
+        barMetal: source.barMetal,
         color: source.color,
         material: source.material,
       };
@@ -6892,6 +7240,8 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
           locked: item.locked ?? false,
           hiddenSeatIndices: item.hiddenSeatIndices,
           pmrSeatIndices: item.pmrSeatIndices,
+          ...(item.seatingSide === 'oneSide' ? { seatingSide: 'oneSide' as const } : {}),
+          ...(item.rotation ? { rotation: item.rotation } : {}),
         };
       }
 
@@ -6909,6 +7259,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
         seats,
         locked: true,
         pmrSeatIndices: item.pmrSeatIndices,
+        ...(item.rotation ? { rotation: item.rotation } : {}),
         rowMeta: {
           tier: item.tier,
           curve: item.curve ?? 0,
@@ -7172,17 +7523,17 @@ export const barStyleHints: Record<BarStyle, string> = {
 
 export const barStylePresets: Record<BarStyle, { w: number; h: number; label: string; color: string }> = {
   cocktail: { w: 28, h: 10, label: 'Bar cocktail', color: '#4a3728' },
-  wine: { w: 26, h: 10, label: 'Bar à vins', color: '#3f2a22' },
-  champagne: { w: 24, h: 10, label: 'Bar champagne', color: '#5c4a32' },
+  wine: { w: 26, h: 10, label: 'Bar à vins', color: '#8a5a34' },
+  champagne: { w: 24, h: 10, label: 'Bar champagne', color: '#ece3d0' },
   beer: { w: 26, h: 10, label: 'Bar bières', color: '#5b4030' },
-  coffee: { w: 22, h: 9, label: 'Coffee bar', color: '#2c2118' },
-  whiskey: { w: 24, h: 10, label: 'Bar whisky', color: '#3b2416' },
+  coffee: { w: 22, h: 9, label: 'Coffee bar', color: '#2f5d4e' },
+  whiskey: { w: 24, h: 10, label: 'Bar whisky', color: '#5a2418' },
   island: { w: 18, h: 16, label: 'Îlot bar', color: '#3d2b1f' },
   lShaped: { w: 32, h: 16, label: 'Bar en L', color: '#4a3728' },
-  juice: { w: 22, h: 9, label: 'Bar à jus', color: '#3f4a28' },
-  mocktail: { w: 24, h: 10, label: 'Bar mocktails', color: '#3a3048' },
-  tapas: { w: 26, h: 10, label: 'Bar tapas', color: '#4a3020' },
-  tea: { w: 22, h: 9, label: 'Salon de thé', color: '#4a4034' },
+  juice: { w: 22, h: 9, label: 'Bar à jus', color: '#f4ede4' },
+  mocktail: { w: 24, h: 10, label: 'Bar mocktails', color: '#f6a5c9' },
+  tapas: { w: 26, h: 10, label: 'Bar tapas', color: '#f3dccb' },
+  tea: { w: 22, h: 9, label: 'Salon de thé', color: '#8b6a47' },
 };
 
 /** Tailles réelles (m) des podiums : largeur × profondeur. */
@@ -7268,6 +7619,9 @@ export const roofStyleLabels: Record<RoofStyle, string> = {
   mansard: 'Combles mansardés (Pans coupés)',
   skylight: 'Puits de lumière contemporain',
   fabricStretch: 'Velum tendu architectural',
+  clearTent: 'Tente cristal transparente',
+  barrel: 'Voûte en berceau (Hangar)',
+  sawtooth: 'Sheds industriels (Dents de scie)',
 };
 
 export const centerpieceStyleLabels: Record<CenterpieceStyle, string> = {
@@ -7390,6 +7744,8 @@ export function getFixtureClass(kind: string): string {
       return 'bg-yellow-50 border-yellow-400 text-yellow-900';
     case 'landscape':
       return 'bg-transparent border-transparent';
+    case 'homeFurniture':
+      return 'bg-amber-50 border-amber-300 text-amber-900';
     case 'perimeter':
       return 'bg-sky-50 border-sky-300 border-dashed text-sky-600';
     default:

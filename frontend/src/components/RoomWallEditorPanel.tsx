@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { HOME_METAL_FINISH_LABELS, type HomeMetalFinish } from '@/lib/roomHomeFurniture';
 import { DoorOpen, Plus, Trash2, BrickWall } from '@/components/icons';
 import {
   DoorStyle,
@@ -492,6 +493,21 @@ export default function RoomWallEditorPanel({
                     </select>
                   </label>
                 </div>
+                {op.kind === 'door' && (
+                  <label className="block text-xs space-y-1">
+                    <span className="text-muted">Poignées et paumelles</span>
+                    <select
+                      value={op.hardwareFinish ?? ''}
+                      onChange={(e) => updateOpening(selected.id, op.id, { hardwareFinish: (e.target.value || undefined) as HomeMetalFinish | undefined })}
+                      className="w-full min-h-11 px-2 py-2 rounded border text-xs"
+                    >
+                      <option value="">Selon le modèle</option>
+                      {(Object.keys(HOME_METAL_FINISH_LABELS) as HomeMetalFinish[]).map((k) => (
+                        <option key={k} value={k}>{HOME_METAL_FINISH_LABELS[k]}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <div className="flex flex-wrap gap-1.5">
                   {(Object.keys(openingMaterialLabels) as OpeningMaterial[]).map((mat) => (
                     <button

@@ -39,6 +39,7 @@ export type SeatSelection3DRow = {
   chairMeta?: SeatChairMeta | null;
   isPmr?: boolean;
   seatCode?: string | null;
+  rotation?: number | null;
 };
 
 export type SeatSelection3DMeta = {
@@ -149,6 +150,7 @@ export default function SeatSelection3DViewer({
       pricingZoneName: string | null;
       rowMeta?: SeatRowMeta | null;
       chairMeta?: SeatChairMeta | null;
+      rotation?: number | null;
     }>();
 
     for (const s of seats) {
@@ -169,6 +171,7 @@ export default function SeatSelection3DViewer({
           pricingZoneName: s.pricingZoneName,
           rowMeta: s.rowMeta ?? null,
           chairMeta: s.chairMeta ?? null,
+          rotation: s.rotation ?? null,
         });
       }
     }
@@ -207,6 +210,7 @@ export default function SeatSelection3DViewer({
         tableColor: zoneColor,
         rowMeta: t.rowMeta ?? undefined,
         chairMeta: t.chairMeta ?? undefined,
+        rotation: t.rotation ?? undefined,
       };
     });
   }, [tablesList, zoneColorById]);
@@ -267,7 +271,7 @@ export default function SeatSelection3DViewer({
           {pricingZones.map((z) => (
             <span
               key={z.id}
-              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface border border-border text-[10px] font-semibold text-foreground shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface border border-border text-xs font-semibold text-foreground shadow-2xs"
             >
               <span
                 className="w-2.5 h-2.5 rounded-full border border-black/10"
@@ -333,7 +337,7 @@ export default function SeatSelection3DViewer({
                   <h4 className="font-bold text-sm text-foreground">{activeTable.name}</h4>
                   {activeTable.pricingZoneName && (
                     <span
-                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-2xs"
+                      className="px-2 py-0.5 rounded-full text-xs font-bold text-white shadow-2xs"
                       style={{
                         backgroundColor:
                           (activeTable.pricingZoneId && zoneColorById?.get(activeTable.pricingZoneId)) ||
@@ -344,7 +348,7 @@ export default function SeatSelection3DViewer({
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-muted">
+                <p className="text-xs text-muted">
                   {activeTable.seats.filter((s) => s.available).length} place{activeTable.seats.filter((s) => s.available).length > 1 ? 's' : ''} libre{activeTable.seats.filter((s) => s.available).length > 1 ? 's' : ''} sur {activeTable.capacity}
                   {activeTable.seats[0]?.priceFc > 0 && (
                     <span className="ml-1 text-emerald-600 dark:text-emerald-400 font-semibold">
@@ -367,7 +371,7 @@ export default function SeatSelection3DViewer({
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="text-[10px] font-semibold text-muted px-1 tabular-nums">
+                <span className="text-xs font-semibold text-muted px-1 tabular-nums">
                   {currentTableIndex + 1}/{tablesList.length}
                 </span>
                 <button
@@ -423,7 +427,7 @@ export default function SeatSelection3DViewer({
 
                   <span
                     className={cn(
-                      'text-[10px] leading-tight',
+                      'text-xs leading-tight',
                       isSelected ? 'text-primary-foreground/90' : 'text-muted'
                     )}
                   >
@@ -442,7 +446,7 @@ export default function SeatSelection3DViewer({
 
           {/* Raccourci de sélection rapide */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border text-xs">
-            <span className="text-[11px] text-muted">
+            <span className="text-xs text-muted">
               Touchez un siège libre pour l&apos;ajouter ou le retirer
             </span>
             <div className="flex items-center gap-2">

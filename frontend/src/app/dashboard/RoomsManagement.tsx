@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import Link from 'next/link';
@@ -64,6 +64,8 @@ import {
 } from '@/lib/roomLayoutDraft';
 import { prependLayoutAction, sanitizeLayoutActions } from '@/lib/layoutActionLog';
 import PlanCreationPath from '@/components/PlanCreationPath';
+import RoomLayoutsPanel from '@/components/room/RoomLayoutsPanel';
+import { LockedSectionCard } from '@/components/room/EditorLocks';
 import RoomPublicPublicationForm, { type RoomPublicationDraft } from '@/components/room/RoomPublicPublicationForm';
 import { calculateBlueprintCapacity } from '@/lib/roomLayoutUtils';
 import { roomEditorCapabilities } from '@/lib/roomEditorAccess';
@@ -126,6 +128,12 @@ function RoomFactChip({ icon, children, tone = 'neutral' }: { icon: React.ReactN
   );
 }
 
+/** Réponse 409 du serveur : la salle a été enregistrée ailleurs depuis notre dernière lecture. */
+function isRoomConflictError(err: unknown): err is { message?: string; status: number; data?: { room?: RoomItem | null } } {
+  const e = err as { status?: number; data?: { code?: string } } | null;
+  return e?.status === 409 && e?.data?.code === 'ROOM_CONFLICT';
+}
+
 interface RoomStaffItem {
   id: string;
   staffRole: 'MANAGER' | 'PROTOCOL';
@@ -141,6 +149,8 @@ interface RoomItem {
   location: string | null;
   roomType: RoomType;
   layoutBlueprint: RoomLayoutBlueprint | null;
+  /** Date de dernière modification côté serveur (contrôle de version). */
+  updatedAt?: string;
   staff: RoomStaffItem[];
   venueListing?: {
     id: string;
@@ -416,12 +426,19 @@ export default function RoomsManagement() {
   const [viewingRoom, setViewingRoom] = useState<RoomItem | null>(null);
   const [editBlueprint, setEditBlueprint] = useState<RoomLayoutBlueprint | null>(null);
   const [editMeta, setEditMeta] = useState({ name: '', floor: '', location: '', description: '', hasPmrAccess: false });
-  const [editPane, setEditPane] = useState<'identite' | 'elements' | 'publication'>('identite');
+  const [editPane, setEditPane] = useState<'identite' | 'elements' | 'layouts' | 'publication'>('identite');
   const [editElementsReady, setEditElementsReady] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
   const [wizardDraftSavedAt, setWizardDraftSavedAt] = useState<string | null>(null);
   const [wizardDraftRestored, setWizardDraftRestored] = useState(false);
-  const [editSaveStatus, setEditSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [editSaveStatus, setEditSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error' | 'conflict'>('idle');
+  /** Plan modifié ailleurs pendant l’édition : version serveur en attente de décision. */
+  const [editConflict, setEditConflict] = useState<{ message: string; room: RoomItem | null } | null>(null);
+  const editConflictRef = useRef(false);
+  /** Version serveur sur laquelle repose le plan en cours d’édition. */
+  const serverUpdatedAtRef = useRef<string | null>(null);
+  /** Les sauvegardes partent l’une après l’autre : jamais de faux conflit avec soi-même. */
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
   const [editSavedAt, setEditSavedAt] = useState<string | null>(null);
   const editDirtyRef = useRef(false);
   const editSessionRef = useRef(0);
@@ -731,6 +748,71 @@ export default function RoomsManagement() {
     tenant?.id,
   ]);
 
+  const mergeServerRoom = useCallback((roomId: string, updated: RoomItem) => {
+    if (updated.updatedAt) serverUpdatedAtRef.current = updated.updatedAt;
+    const merge = (item: RoomItem): RoomItem => ({
+      ...item,
+      ...updated,
+      venueListing: updated.venueListing ?? item.venueListing,
+      staff: updated.staff ?? item.staff,
+    });
+    setRooms((prev) => prev.map((item) => (item.id === roomId ? merge(item) : item)));
+    setEditingRoom((current) => (current && current.id === roomId ? merge(current) : current));
+  }, []);
+
+  const openEditConflict = useCallback((err: { message?: string; data?: { room?: RoomItem | null } }) => {
+    editConflictRef.current = true;
+    setEditConflict({
+      message: err.message || 'Ce plan a été modifié ailleurs.',
+      room: err.data?.room ?? null,
+    });
+    setEditSaveStatus('conflict');
+  }, []);
+
+  /** Envoie le plan courant au serveur, à la suite des sauvegardes déjà en cours. */
+  const queueServerSave = useCallback((roomId: string, tenantId: string) => {
+    const run = async () => {
+      const snap = editSnapshotRef.current;
+      if (!snap.blueprint || !snap.room || snap.room.id !== roomId) return;
+      if (editConflictRef.current || !editDirtyRef.current) return;
+      const gen = editGenRef.current;
+      setEditSaveStatus('saving');
+      try {
+        const updated: RoomItem = await api.put(`/rooms/${roomId}`, {
+          name: snap.meta.name.trim() || snap.room.name,
+          description: snap.meta.description.trim() || undefined,
+          floor: snap.meta.floor.trim() || undefined,
+          location: snap.meta.location.trim() || undefined,
+          layoutBlueprint: snap.blueprint,
+          roomType: snap.blueprint.roomType,
+          expectedUpdatedAt: serverUpdatedAtRef.current ?? undefined,
+        });
+        if (editGenRef.current === gen) editDirtyRef.current = false;
+        setEditSaveStatus(editGenRef.current === gen ? 'saved' : 'saving');
+        setEditSavedAt(new Date().toISOString());
+        mergeServerRoom(roomId, updated);
+        await writeRoomLayoutDraft({
+          tenantId,
+          roomKey: roomId,
+          blueprint: snap.blueprint,
+          editMeta: snap.meta,
+          pendingServerSync: editDirtyRef.current,
+          serverUpdatedAt: serverUpdatedAtRef.current,
+        });
+      } catch (err) {
+        if (isRoomConflictError(err)) {
+          openEditConflict(err);
+          return;
+        }
+        setEditSaveStatus('error');
+        setError((err as { message?: string }).message || 'Le dernier changement n’a pas pu être enregistré sur le serveur.');
+      }
+    };
+    const next = saveChainRef.current.then(run, run);
+    saveChainRef.current = next;
+    return next;
+  }, [mergeServerRoom, openEditConflict]);
+
   useEffect(() => {
     if (!editingRoom || !editBlueprint || !tenant?.id || !editDirtyRef.current) return;
     const roomId = editingRoom.id;
@@ -744,61 +826,59 @@ export default function RoomsManagement() {
         blueprint: snap.blueprint,
         editMeta: snap.meta,
         pendingServerSync: true,
+        serverUpdatedAt: serverUpdatedAtRef.current,
       });
     }, 350);
     const serverTimer = window.setTimeout(() => {
-      const snap = editSnapshotRef.current;
-      if (!snap.blueprint || !snap.room || snap.room.id !== roomId) return;
-      const gen = editGenRef.current;
-      setEditSaveStatus('saving');
-      void api.put(`/rooms/${roomId}`, {
-        name: snap.meta.name.trim() || snap.room.name,
-        description: snap.meta.description.trim() || undefined,
-        floor: snap.meta.floor.trim() || undefined,
-        location: snap.meta.location.trim() || undefined,
-        layoutBlueprint: snap.blueprint,
-        roomType: snap.blueprint.roomType,
-      }).then((updated: RoomItem) => {
-        if (editGenRef.current === gen) editDirtyRef.current = false;
-        setEditSaveStatus(editGenRef.current === gen ? 'saved' : 'saving');
-        setEditSavedAt(new Date().toISOString());
-        setRooms((prev) => prev.map((item) => (
-          item.id === roomId
-            ? {
-              ...item,
-              ...updated,
-              venueListing: updated.venueListing ?? item.venueListing,
-              staff: updated.staff ?? item.staff,
-            }
-            : item
-        )));
-        setEditingRoom((current) => (
-          current && current.id === roomId
-            ? {
-              ...current,
-              ...updated,
-              venueListing: updated.venueListing ?? current.venueListing,
-              staff: updated.staff ?? current.staff,
-            }
-            : current
-        ));
-        return writeRoomLayoutDraft({
-          tenantId,
-          roomKey: roomId,
-          blueprint: snap.blueprint!,
-          editMeta: snap.meta,
-          pendingServerSync: false,
-        });
-      }).catch((err: { message?: string }) => {
-        setEditSaveStatus('error');
-        setError(err.message || 'Le dernier changement n’a pas pu être enregistré sur le serveur.');
-      });
+      if (editConflictRef.current) return;
+      void queueServerSave(roomId, tenantId);
     }, 1400);
     return () => {
       window.clearTimeout(localTimer);
       window.clearTimeout(serverTimer);
     };
-  }, [editingRoom, editBlueprint, editMeta, tenant?.id]);
+  }, [editingRoom, editBlueprint, editMeta, tenant?.id, queueServerSave]);
+
+  /** Conflit : on abandonne ses changements et on repart de la version du serveur. */
+  const resolveConflictWithServer = () => {
+    const room = editConflict?.room;
+    editConflictRef.current = false;
+    setEditConflict(null);
+    if (!room) {
+      closeEditLayout();
+      void load();
+      return;
+    }
+    mergeServerRoom(room.id, room);
+    const bp = room.layoutBlueprint as RoomLayoutBlueprint | null;
+    setEditMeta({
+      name: room.name,
+      floor: room.floor || '',
+      location: room.location || '',
+      description: room.description || '',
+      hasPmrAccess: bp?.metadata?.hasPmrAccess ?? false,
+    });
+    setEditBlueprint(bp
+      ? refreshBlueprintMetadata({ ...bp })
+      : refreshBlueprintMetadata(generateRoomBlueprint(room.roomType || 'SIMPLE')));
+    editGenRef.current += 1;
+    editDirtyRef.current = false;
+    setEditSaveStatus('idle');
+    setEditSavedAt(null);
+    void clearRoomLayoutDraft(tenant?.id, room.id);
+  };
+
+  /** Conflit : on garde sa version et elle remplace celle du serveur. */
+  const resolveConflictWithMine = () => {
+    const room = editConflict?.room;
+    serverUpdatedAtRef.current = room?.updatedAt ?? null;
+    editConflictRef.current = false;
+    setEditConflict(null);
+    if (!editingRoom || !tenant?.id) return;
+    editGenRef.current += 1;
+    editDirtyRef.current = true;
+    void queueServerSave(editingRoom.id, tenant.id);
+  };
 
   const markEditDirty = () => {
     editGenRef.current += 1;
@@ -807,6 +887,8 @@ export default function RoomsManagement() {
 
   const closeEditLayout = () => {
     editSessionRef.current += 1;
+    editConflictRef.current = false;
+    setEditConflict(null);
     setEditingRoom(null);
     setEditBlueprint(null);
     setEditNameAttempted(false);
@@ -971,14 +1053,30 @@ export default function RoomsManagement() {
         },
       };
 
-      await api.put(`/rooms/${editingRoom.id}`, {
-        name: editMeta.name.trim() || editingRoom.name,
-        description: editMeta.description.trim() || undefined,
-        floor: editMeta.floor.trim() || undefined,
-        location: editMeta.location.trim() || undefined,
-        layoutBlueprint: updatedBlueprint,
-        roomType: editBlueprint.roomType,
-      });
+      // Attendre la sauvegarde automatique en cours : sa réponse porte la version à jour.
+      await saveChainRef.current;
+      if (editConflictRef.current) {
+        setError('Ce plan a été modifié ailleurs : choisissez la version à garder avant d’enregistrer.');
+        return;
+      }
+      try {
+        const updated: RoomItem = await api.put(`/rooms/${editingRoom.id}`, {
+          name: editMeta.name.trim() || editingRoom.name,
+          description: editMeta.description.trim() || undefined,
+          floor: editMeta.floor.trim() || undefined,
+          location: editMeta.location.trim() || undefined,
+          layoutBlueprint: updatedBlueprint,
+          roomType: editBlueprint.roomType,
+          expectedUpdatedAt: serverUpdatedAtRef.current ?? undefined,
+        });
+        if (updated?.updatedAt) serverUpdatedAtRef.current = updated.updatedAt;
+      } catch (err) {
+        if (isRoomConflictError(err)) {
+          openEditConflict(err);
+          return;
+        }
+        throw err;
+      }
 
       if (canCatalogPublish) {
         try {
@@ -1091,6 +1189,9 @@ export default function RoomsManagement() {
       : refreshBlueprintMetadata(generateRoomBlueprint(room.roomType || 'SIMPLE'));
     setEditBlueprint(serverBlueprint);
     editDirtyRef.current = false;
+    editConflictRef.current = false;
+    setEditConflict(null);
+    serverUpdatedAtRef.current = room.updatedAt ?? null;
     setEditSaveStatus('idle');
     setEditSavedAt(null);
     const session = ++editSessionRef.current;
@@ -1106,6 +1207,9 @@ export default function RoomsManagement() {
         hasPmrAccess: draft.editMeta?.hasPmrAccess ?? Boolean(room.layoutBlueprint?.metadata?.hasPmrAccess),
       });
       setEditBlueprint(refreshBlueprintMetadata(draft.blueprint));
+      // Le brouillon repose sur la version du serveur qu’il a connue : si la
+      // salle a changé depuis, la prochaine sauvegarde signalera le conflit.
+      if (draft.serverUpdatedAt) serverUpdatedAtRef.current = draft.serverUpdatedAt;
       editDirtyRef.current = true;
       setEditSaveStatus('error');
       setEditSavedAt(draft.savedAt);
@@ -1678,6 +1782,22 @@ export default function RoomsManagement() {
                 </li>
               );
             })}
+            {!canCatalogPublish ? (
+              <li className="flex items-center gap-1 sm:gap-2 min-w-0 flex-none">
+                <div className="h-px w-3 sm:w-6 bg-border" aria-hidden />
+                <Link
+                  href="/dashboard/billing"
+                  aria-disabled="true"
+                  title="Publication sur le catalogue — non incluse dans votre forfait. Voir les forfaits"
+                  className="inline-flex items-center gap-2 min-h-11 px-2.5 sm:px-3 rounded-[var(--radius-button)] text-sm font-medium text-muted opacity-60 hover:opacity-100 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center border border-border bg-surface" aria-hidden>
+                    <Lock className="w-3 h-3" />
+                  </span>
+                  <span>Publication</span>
+                </Link>
+              </li>
+            ) : null}
           </ol>
         </nav>
 
@@ -2840,7 +2960,7 @@ export default function RoomsManagement() {
         onClose={closeEditLayout}
         title={editingRoom ? `Salle — ${editingRoom.name}` : 'Plan'}
         description="Identité d’abord, plan 2D, puis publication sur le catalogue public."
-        size={editPane === 'elements' ? 'full' : editPane === 'publication' ? 'xl' : 'lg'}
+        size={editPane === 'elements' ? 'full' : editPane === 'publication' || editPane === 'layouts' ? 'xl' : 'lg'}
         className={
           editPane === 'elements'
             ? 'h-[100dvh] max-h-[100dvh] sm:h-auto sm:max-h-[96vh] rounded-none sm:rounded-2xl'
@@ -2851,7 +2971,9 @@ export default function RoomsManagement() {
             <p className="text-xs text-muted min-w-0 truncate" role="status">
               {editSaveStatus === 'saving'
                 ? 'Enregistrement en cours…'
-                : editSaveStatus === 'error'
+                : editSaveStatus === 'conflict'
+                  ? 'Plan modifié ailleurs — sauvegarde en pause.'
+                  : editSaveStatus === 'error'
                   ? 'Brouillon conservé — nouvel essai automatique.'
                   : editSavedAt
                     ? `Enregistré · ${formatDraftClock(editSavedAt)}`
@@ -2880,6 +3002,30 @@ export default function RoomsManagement() {
             {error && editingRoom && (
               <Alert variant="error">{error}</Alert>
             )}
+            {editConflict && (
+              <div
+                role="alert"
+                className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3"
+              >
+                <div className="flex items-start gap-2 min-w-0 flex-1">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" aria-hidden />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">{editConflict.message}</p>
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
+                      La sauvegarde automatique est en pause. Vos changements restent dans ce brouillon tant que vous n’avez pas choisi.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button type="button" variant="secondary" size="sm" onClick={resolveConflictWithServer}>
+                    Charger la version du serveur
+                  </Button>
+                  <Button type="button" variant="primary" size="sm" onClick={resolveConflictWithMine}>
+                    Garder ma version
+                  </Button>
+                </div>
+              </div>
+            )}
             <div
               role="tablist"
               aria-label="Édition de la salle"
@@ -2887,7 +3033,7 @@ export default function RoomsManagement() {
               onKeyDown={(e) => {
                 if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
                 e.preventDefault();
-                const tabs = canCatalogPublish ? ['identite', 'elements', 'publication'] as const : ['identite', 'elements'] as const;
+                const tabs = ['identite', 'elements', 'layouts', 'publication'] as const;
                 const i = tabs.indexOf(editPane as any);
                 const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
                 setEditPane(next);
@@ -2900,25 +3046,34 @@ export default function RoomsManagement() {
               {([
                 { id: 'identite' as const, label: 'Identité' },
                 { id: 'elements' as const, label: 'Plan & Mobilier' },
-                ...(canCatalogPublish
-                  ? [
-                      {
-                        id: 'publication' as const,
-                        label: (
-                          <span className="inline-flex items-center gap-1.5">
-                            <span>Publication</span>
-                            <span
-                              className={cn(
-                                'w-2 h-2 rounded-full',
-                                editListingDraft.isPublic ? 'bg-emerald-500' : 'bg-muted/50',
-                              )}
-                              aria-hidden
-                            />
-                          </span>
-                        ),
-                      },
-                    ]
-                  : []),
+                {
+                  id: 'layouts' as const,
+                  label: canCatalogPublish ? 'Dispositions' : (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>Dispositions</span>
+                      <Lock className="w-3 h-3" aria-hidden />
+                    </span>
+                  ),
+                },
+                {
+                  id: 'publication' as const,
+                  label: (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>Publication</span>
+                      {canCatalogPublish ? (
+                        <span
+                          className={cn(
+                            'w-2 h-2 rounded-full',
+                            editListingDraft.isPublic ? 'bg-emerald-500' : 'bg-muted/50',
+                          )}
+                          aria-hidden
+                        />
+                      ) : (
+                        <Lock className="w-3 h-3" aria-hidden />
+                      )}
+                    </span>
+                  ),
+                },
               ]).map((tab) => {
                 const selected = editPane === tab.id;
                 return (
@@ -3083,22 +3238,54 @@ export default function RoomsManagement() {
             />
             ) : null}
             </div>
-            {canCatalogPublish && (
+            {editingRoom && editBlueprint && (
               <div
+                role="tabpanel"
+                id="edit-panel-layouts"
+                aria-labelledby="edit-tab-layouts"
+                hidden={editPane !== 'layouts'}
+                className="pt-1"
+              >
+                {!canCatalogPublish ? (
+                  <LockedSectionCard
+                    title="Dispositions de la salle"
+                    description="Enregistrez plusieurs agencements (conférence, banquet, cocktail…) et laissez vos visiteurs les parcourir en 3D sur la fiche publique. Cette fonction est liée à la publication sur le catalogue, non incluse dans votre forfait actuel."
+                  />
+                ) : editPane === 'layouts' ? (
+                  <RoomLayoutsPanel
+                    roomId={editingRoom.id}
+                    currentBlueprint={editBlueprint}
+                    onLoadBlueprint={(blueprint) => {
+                      markEditDirty();
+                      setEditBlueprint(blueprint);
+                      setEditElementsReady(true);
+                      setEditPane('elements');
+                    }}
+                  />
+                ) : null}
+              </div>
+            )}
+            <div
                 role="tabpanel"
                 id="edit-panel-publication"
                 aria-labelledby="edit-tab-publication"
                 hidden={editPane !== 'publication'}
                 className="space-y-4 pt-1"
               >
-                <RoomPublicPublicationForm
-                  draft={editListingDraft}
-                  onChange={setEditListingDraft}
-                  calculatedCapacity={editBlueprint ? calculateBlueprintCapacity(editBlueprint) : undefined}
-                  publicSlug={editingRoom?.venueListing?.isPublic ? editingRoom.venueListing.slug : undefined}
-                />
+                {canCatalogPublish ? (
+                  <RoomPublicPublicationForm
+                    draft={editListingDraft}
+                    onChange={setEditListingDraft}
+                    calculatedCapacity={editBlueprint ? calculateBlueprintCapacity(editBlueprint) : undefined}
+                    publicSlug={editingRoom?.venueListing?.isPublic ? editingRoom.venueListing.slug : undefined}
+                  />
+                ) : (
+                  <LockedSectionCard
+                    title="Publication sur le catalogue"
+                    description="Rendez votre salle visible des organisateurs : fiche publique, visite 3D, demandes de devis et réservations. Cette fonction n’est pas incluse dans votre forfait actuel."
+                  />
+                )}
               </div>
-            )}
           </div>
         )}
       </Modal>

@@ -73,6 +73,7 @@ const FIXTURE_LABELS: Partial<Record<RoomFixtureKind, string>> = {
   car: 'Véhicule d’honneur / Exposition',
   parasol: 'Grand parasol de terrasse',
   landscape: 'Aménagement extérieur (arbre, haie, eau…)',
+  homeFurniture: 'Mobilier résidentiel (lit, dressing, cuisine…)',
   customElement: 'Élément personnalisé (image / vidéo)',
 };
 

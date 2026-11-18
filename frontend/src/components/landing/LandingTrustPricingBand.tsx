@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from '@/components/icons';
 import { usePlanCatalog, type PlanCatalog } from '@/hooks/usePlanCatalog';
@@ -10,6 +10,7 @@ import {
   resolvePlanMonthlyFc,
   type PlanAudience,
 } from '@/config/landingPricing';
+import { useHideAiFabWhileVisible } from '@/components/landing/useHideAiFabWhileVisible';
 
 /**
  * Prix d’entrée d’une famille de forfaits : le moins cher des forfaits payants.
@@ -41,10 +42,12 @@ function entryPrice(audiences: PlanAudience[], dbPlans: PlanCatalog | null): num
  */
 export default function LandingTrustPricingBand() {
   const { plans: dbPlans, loading } = usePlanCatalog();
+  const sectionRef = useRef<HTMLElement>(null);
+  useHideAiFabWhileVisible(sectionRef);
 
   const offers = useMemo(() => {
-    const rows: Array<{ label: string; price: string | null; note: string }> = [
-      { label: 'Découverte', price: 'Gratuit', note: 'sans carte bancaire' },
+    const rows: Array<{ label: string; price: string | null; note: string; hint?: string; highlight?: boolean }> = [
+      { label: 'Découverte', price: 'Gratuit', note: 'sans carte bancaire', highlight: true },
     ];
     const families: Array<{ label: string; audiences: PlanAudience[]; note: string }> = [
       { label: 'Particulier', audiences: ['B2C'], note: 'par trimestre' },
@@ -60,16 +63,18 @@ export default function LandingTrustPricingBand() {
       const amountFc = entryPrice(family.audiences, dbPlans);
       if (amountFc == null) continue;
       // Forfaits Particulier facturés au trimestre : on donne aussi l’équivalent mensuel pour comparer avec les autres.
-      const note = family.audiences.includes('B2C')
-        ? `par trimestre, soit ${formatFc(Math.round(amountFc / 3))}/mois`
-        : family.note;
-      rows.push({ label: family.label, price: `dès ${formatFc(amountFc)}`, note });
+      const hint = family.audiences.includes('B2C')
+        ? `soit ${formatFc(Math.round(amountFc / 3))}/mois`
+        : undefined;
+      rows.push({ label: family.label, price: `dès ${formatFc(amountFc)}`, note: family.note, hint });
     }
     return rows;
   }, [dbPlans, loading]);
 
+
   return (
     <section
+      ref={sectionRef}
       id="tarifs"
       aria-labelledby="landing-trust-title"
       className="em-landing-defer scroll-mt-16 md:scroll-mt-24 py-14 sm:py-20 bg-surface border-y border-border"

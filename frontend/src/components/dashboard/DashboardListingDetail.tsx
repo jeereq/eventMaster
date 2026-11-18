@@ -276,13 +276,13 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           <MarketplaceActivityFeed
             scope={{ kind: 'venue', slug: venue.slug }}
             authorLabel={venue.headline || venue.orgName || 'Cette salle'}
-            className="max-w-2xl"
+            layout="grid"
           />
         ) : service?.orgSlug ? (
           <MarketplaceActivityFeed
             scope={{ kind: 'vendor', slug: service.orgSlug }}
             authorLabel={service.orgName || 'Ce prestataire'}
-            className="max-w-2xl"
+            layout="grid"
           />
         ) : null
       }

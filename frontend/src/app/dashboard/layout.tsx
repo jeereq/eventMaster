@@ -112,11 +112,12 @@ function navItemIsActive(pathname: string, search: string, item: NavItem, curren
  if (query) {
   const want = new URLSearchParams(query);
   for (const [key, value] of want.entries()) {
-    if (have.get(key) !== value) return false;
+   if (key === 'tab' && path === '/dashboard/bookings') continue;
+   if (have.get(key) !== value) return false;
   }
-  // Devis vs Réservations (même path /dashboard/bookings)
+  // Réservations vs packs/favoris (même path /dashboard/bookings)
   if (path === '/dashboard/bookings' && want.has('tab')) {
-   const haveTab = have.get('tab') || 'quotes';
+   const haveTab = have.get('tab') || 'bookings';
    if (haveTab !== want.get('tab')) return false;
   }
   // Onglets Catalogue (hub=plan vs tab=plan)
@@ -242,7 +243,7 @@ function buildB2bOrganizerNav(opts: {
    ...(!allStudiosBlocked
     ? [{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Budget IA, formules clés en main et devis' }]
     : []),
-   { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox, description: 'Devis demandés et reçus' },
+   { name: 'Demandes de devis', href: '/dashboard/quotes', tourId: 'nav-quotes', icon: Inbox, description: 'Devis demandés et reçus' },
    { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck, description: 'Réservations de salles et prestations' },
   ]),
   navSection('Vitrine', [
@@ -421,7 +422,7 @@ function buildDashboardNav(opts: {
    navSection('Marketplace', [
     { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires et matériel & équipements — comme le catalogue client' },
     { name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Photos et actualités des salles et prestations' },
-    { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
+    { name: 'Demandes de devis', href: '/dashboard/quotes', tourId: 'nav-quotes', icon: Inbox },
     { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
    ]),
    navSection('Suivi', [
@@ -440,7 +441,7 @@ function buildDashboardNav(opts: {
     ...(!allStudiosBlocked ? [{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator', icon: Sparkles, description: 'Simulateur budget IA, assemblage de packs et devis groupés' }] : []),
    ]),
    navSection('Mes activités', [
-    { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox, description: 'Devis reçus et échanges avec les prestataires' },
+    { name: 'Demandes de devis', href: '/dashboard/quotes', tourId: 'nav-quotes', icon: Inbox, description: 'Devis reçus et échanges avec les prestataires' },
     { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck, description: 'Dates confirmées et acomptes' },
     { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
     { name: 'Mes favoris', href: '/dashboard/catalogue?tab=favorites', tourId: 'nav-favorites', icon: Heart, description: 'Salles et prestataires mis de côté' },
@@ -457,7 +458,7 @@ function buildDashboardNav(opts: {
 		const activityItems: NavItem[] = [
 			{
 				name: 'Demandes de devis',
-				href: '/dashboard/bookings?tab=quotes',
+				href: '/dashboard/quotes',
 				tourId: 'nav-quotes',
 				icon: Inbox,
 				description: 'Demandes reçues des clients et organisateurs : répondre, chiffrer',
@@ -540,9 +541,6 @@ function buildDashboardNav(opts: {
 			]),
 			navSection('Activité', activityItems),
 			navSection('Ma vitrine', showcaseItems),
-			navSection('Suivi', [
-				{ name: 'Statistiques & revenus', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },
-			]),
 			navSection('Mes événements', eventItems),
 			navSection('Réseau', networkItems),
 			navSection('Organisation', [
@@ -576,7 +574,7 @@ function buildDashboardNav(opts: {
 			navSection('Prestataires', [
 				{ name: 'Salles & prestataires', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Traiteur, déco, DJ, photo, salles' },
 				...(!allStudiosBlocked ? [{ name: 'Budget IA', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA et 3 formules' }] : []),
-				{ name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
+				{ name: 'Demandes de devis', href: '/dashboard/quotes', tourId: 'nav-quotes', icon: Inbox },
 				{ name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
 			]),
 			navSection('Plus d’outils', [
@@ -655,7 +653,7 @@ function buildDashboardNav(opts: {
 			: []),
 		...(workspace.showEvents || workspace.showBrowseCatalogue || vendorOnly
 			? [
-					{ name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
+					{ name: 'Demandes de devis', href: '/dashboard/quotes', tourId: 'nav-quotes', icon: Inbox },
 					{ name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
 				]
 			: []),
@@ -1006,7 +1004,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  useEffect(() => {
  if (loading || !token || !user || !isClientAccount) return;
- const allowed = ['/dashboard', '/dashboard/bookings', '/dashboard/profile', '/dashboard/guide', '/dashboard/notifications', '/dashboard/catalogue', '/dashboard/tickets', '/dashboard/publications'].some(
+ const allowed = ['/dashboard', '/dashboard/bookings', '/dashboard/quotes', '/dashboard/profile', '/dashboard/guide', '/dashboard/notifications', '/dashboard/catalogue', '/dashboard/tickets', '/dashboard/publications'].some(
  (p) => pathname === p || (p !== '/dashboard' && pathname.startsWith(`${p}/`)),
  );
  if (pathname.startsWith('/dashboard') && !allowed) {
@@ -1041,6 +1039,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ) {
    router.replace(fallback);
   }
+  if (!workspace.showAnalytics && pathname.startsWith('/dashboard/analytics')) {
+   router.replace('/dashboard');
+  }
   if (!workspace.showRooms && pathname.startsWith('/dashboard/rooms')) {
    router.replace(fallback);
   }
@@ -1057,6 +1058,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   workspace.showEvents,
   workspace.showRooms,
   workspace.showMarketplace,
+  workspace.showAnalytics,
   pathname,
   router,
  ]);

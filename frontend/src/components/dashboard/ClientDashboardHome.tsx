@@ -265,7 +265,7 @@ const FIRST_STEPS = [
   },
   {
     title: 'Confirmez et réservez',
-    href: '/dashboard/bookings?tab=quotes',
+    href: '/dashboard/quotes',
   },
 ];
 
@@ -837,7 +837,7 @@ export default function ClientDashboardHome() {
                   )}
                   {followUp.quotesToReview.length > 0 && (
                     <FollowUpRow
-                      href="/dashboard/bookings?tab=quotes"
+                      href="/dashboard/quotes"
                       icon={<Inbox className="w-4 h-4" aria-hidden />}
                       tone="festive"
                       title={
@@ -872,7 +872,7 @@ export default function ClientDashboardHome() {
                   )}
                   {followUp.awaitingReply.length > 0 && (
                     <FollowUpRow
-                      href="/dashboard/bookings?tab=quotes"
+                      href="/dashboard/quotes"
                       icon={<Clock className="w-4 h-4" aria-hidden />}
                       tone="muted"
                       title={
@@ -911,7 +911,7 @@ export default function ClientDashboardHome() {
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
           {[
-            { label: 'Devis', value: stats.quotesCount, href: '/dashboard/bookings?tab=quotes', icon: Inbox },
+            { label: 'Devis', value: stats.quotesCount, href: '/dashboard/quotes', icon: Inbox },
             { label: 'Réservations', value: stats.bookingsCount, href: '/dashboard/bookings?tab=bookings', icon: CalendarCheck },
             { label: 'Billets', value: stats.ticketsCount, href: '/dashboard/tickets', icon: Ticket },
             { label: 'Packs', value: stats.packsCount, href: '/dashboard/catalogue?tab=packs', icon: Bookmark },

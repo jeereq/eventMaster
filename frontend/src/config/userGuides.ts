@@ -224,7 +224,7 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     navLinks: [
       { label: 'Tableau de bord', href: '/dashboard' },
-      { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+      { label: 'Demandes de devis', href: '/dashboard/quotes' },
       { label: 'Réservations & planning', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Mes salles', href: '/dashboard/rooms' },
       { label: 'Mes offres', href: '/dashboard/marketplace' },
@@ -248,8 +248,8 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'vendor-quote',
         title: 'Répondre à une demande de devis',
         content:
-          '1. Demandes de devis : les nouvelles demandes sont en tête.\n2. Ouvrez la demande, lisez date, nombre d’invités et message.\n3. Répondez par la messagerie et indiquez votre montant.\n4. Quand le client est d’accord, transformez le devis en réservation.\n5. Répondre vite compte : votre délai médian apparaît dans Statistiques.',
-        links: [{ label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' }],
+          '1. Demandes de devis : les nouvelles demandes sont en tête.\n2. Ouvrez la demande, lisez date, nombre d’invités et message.\n3. Répondez par la messagerie et indiquez votre montant.\n4. Quand le client est d’accord, transformez le devis en réservation.\n5. Répondez vite : les clients comparent souvent plusieurs prestataires.',
+        links: [{ label: 'Demandes de devis', href: '/dashboard/quotes' }],
       },
       {
         id: 'vendor-booking',
@@ -262,8 +262,8 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'vendor-commission',
         title: 'Commission EventMaster',
         content:
-          '1. Une commission de {commissionPercent} % s’applique à chaque réservation confirmée.\n2. Le montant à régler (hors commissions déjà payées) s’affiche sur l’accueil, dans Réservations et dans Statistiques.\n3. Versez-la à EventMaster ; elle est ensuite marquée « payée » sur chaque réservation.',
-        links: [{ label: 'Statistiques & revenus', href: '/dashboard/analytics' }],
+          '1. Une commission de {commissionPercent} % s’applique à chaque réservation confirmée.\n2. Le montant à régler (hors commissions déjà payées) s’affiche sur l’accueil et dans Réservations.\n3. Versez-la à EventMaster ; elle est ensuite marquée « payée » sur chaque réservation.',
+        links: [{ label: 'Réservations & planning', href: '/dashboard/bookings?tab=bookings' }],
       },
       {
         id: 'vendor-suspended',
@@ -312,7 +312,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Factures', href: '/dashboard/invoices' },
       { label: 'Salles', href: '/dashboard/rooms' },
       { label: 'Explorer', href: '/dashboard/catalogue' },
-      { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+      { label: 'Demandes de devis', href: '/dashboard/quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Mes offres', href: '/dashboard/marketplace' },
       { label: 'Équipe', href: '/dashboard/team' },
@@ -356,7 +356,7 @@ export const USER_GUIDES: UserGuide[] = [
           '1. Menu Explorer : même expérience que le client (filtres, carte, favoris, packs budget).\n2. Depuis une fiche, envoyez un devis ou une demande de date (lié à un événement si besoin).\n3. Menu Demandes de devis : réponses et conversion.\n4. Menu Réservations : acceptation, acompte hors plateforme, confirmation de date.',
         links: [
           { label: 'Explorer', href: '/dashboard/catalogue' },
-          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Demandes de devis', href: '/dashboard/quotes' },
           { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },
@@ -405,8 +405,9 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'room-editor-plans',
         title: 'Éditeur de salles selon le forfait',
         content:
-          'Niveau d’éditeur (Facturation) :\n1. Essentiel — tables simples.\n2. Business — rangées, entrées, allées, couloirs.\n3. Premium — thèmes, scène, buffet, zones, escaliers, balcons.\n4. Complet — + périmètre, tapis, thèmes / images perso.\n5. Duplex / Empiler : structure ; escalier / balcon = Premium+.\n6. FAQ publique : question dédiée à l’éditeur.',
+          'Niveau d’éditeur (Facturation) :\n1. Essentiel — tables simples.\n2. Business — rangées, entrées, allées, couloirs.\n3. Premium — thèmes, scène, buffet, zones, escaliers, balcons.\n4. Complet — + périmètre, tapis, thèmes / images perso.\n5. Duplex / Empiler : structure ; escalier / balcon = Premium+.\n6. Bouton « Guide » de l’éditeur : visite pas à pas adaptée à votre forfait (les fonctions non incluses y sont signalées avec le forfait qui les débloque).\n7. FAQ publique : question dédiée à l’éditeur.',
         links: [
+          { label: 'Visite guidée de l’éditeur', href: '/dashboard/rooms?guide=1' },
           { label: 'Facturation', href: '/dashboard/billing' },
           { label: 'Salles', href: '/dashboard/rooms' },
           { label: 'FAQ', href: '/faq' },
@@ -468,7 +469,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Explorer', href: '/dashboard/catalogue' },
       { label: 'Simulateur IA', href: '/dashboard/catalogue?tab=plan&planView=ai' },
       { label: 'Réalisations', href: '/dashboard/publications' },
-      { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+      { label: 'Demandes de devis', href: '/dashboard/quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Mes offres', href: '/dashboard/marketplace' },
       { label: 'Équipe', href: '/dashboard/team' },
@@ -508,8 +509,9 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'room-editor-plans',
         title: 'Éditeur de salles selon le forfait',
         content:
-          '1. Essentiel — tables.\n2. Business — allées / entrées.\n3. Premium — thèmes, escaliers, balcons.\n4. Complet — + perso.\n5. Le propriétaire monte de niveau dans Facturation.',
+          '1. Essentiel — tables.\n2. Business — allées / entrées.\n3. Premium — thèmes, escaliers, balcons.\n4. Complet — + perso.\n5. Le propriétaire monte de niveau dans Facturation.\n6. Bouton « Guide » dans l’éditeur : visite adaptée à votre forfait.',
         links: [
+          { label: 'Visite guidée de l’éditeur', href: '/dashboard/rooms?guide=1' },
           { label: 'Salles', href: '/dashboard/rooms' },
           { label: 'FAQ', href: '/faq' },
         ],
@@ -528,7 +530,7 @@ export const USER_GUIDES: UserGuide[] = [
           '1. Explorer : cherchez salles et prestataires.\n2. Envoyez un devis depuis une fiche.\n3. Demandes de devis → suivi.\n4. Réservations → acompte hors plateforme → confirmation.',
         links: [
           { label: 'Explorer', href: '/dashboard/catalogue' },
-          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Demandes de devis', href: '/dashboard/quotes' },
           { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },
@@ -602,7 +604,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Tâches', href: '/dashboard/protocol?view=tasks' },
       { label: 'Réalisations', href: '/dashboard/publications' },
       { label: 'Explorer', href: '/dashboard/catalogue' },
-      { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+      { label: 'Demandes de devis', href: '/dashboard/quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Guide', href: '/dashboard/guide' },
@@ -651,7 +653,7 @@ export const USER_GUIDES: UserGuide[] = [
           '1. Explorer : fiches salles / prestas liées à l’événement.\n2. Demandes de devis : statut des demandes.\n3. Réservations : dates bloquées / acomptes (info pour l’accueil).',
         links: [
           { label: 'Explorer', href: '/dashboard/catalogue' },
-          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Demandes de devis', href: '/dashboard/quotes' },
           { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },
@@ -773,7 +775,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Marketplace', href: '/dashboard/catalogue' },
       { label: 'Événements', href: '/dashboard/catalogue?kind=event' },
       { label: 'Mes billets', href: '/dashboard/tickets' },
-      { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+      { label: 'Demandes de devis', href: '/dashboard/quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Facturation', href: '/dashboard/billing?tab=plans' },
       { label: 'Guide utilisateur', href: '/dashboard/guide' },
@@ -786,7 +788,7 @@ export const USER_GUIDES: UserGuide[] = [
         content:
           '1. Demandes de devis et Réservations sont deux entrées séparées (plus un seul « Devis & réservations »).\n2. Marketplace = Explorer / Favoris / Préparer / Packs.\n3. Événements = événements publics uniquement.',
         links: [
-          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Demandes de devis', href: '/dashboard/quotes' },
           { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },
@@ -828,7 +830,7 @@ export const USER_GUIDES: UserGuide[] = [
           '1. Ouvrez une fiche (Marketplace, Favoris, Événements ou pack).\n2. Envoyez un devis ou une demande de date.\n3. Suivez dans Demandes de devis.\n4. Après acceptation, versez l’acompte ({depositPercent} %) hors EventMaster.\n5. Suivez dans Réservations.',
         links: [
           { label: 'Marketplace', href: '/dashboard/catalogue' },
-          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Demandes de devis', href: '/dashboard/quotes' },
           { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },

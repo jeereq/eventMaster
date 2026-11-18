@@ -78,6 +78,26 @@ export function distancePointToSegmentM(
  * - Dégagement scène / estrade : 1.40m
  * - Dégagement service bar / buffet : 1.50m
  */
+/** Distance minimale entre deux segments [A, B] et [C, D] (0 s’ils se croisent). */
+export function distanceSegmentToSegmentM(
+  ax: number, ay: number, bx: number, by: number,
+  cx: number, cy: number, dx: number, dy: number,
+): number {
+  const cross = (ox: number, oy: number, px: number, py: number, qx: number, qy: number) =>
+    (px - ox) * (qy - oy) - (py - oy) * (qx - ox);
+  const d1 = cross(cx, cy, dx, dy, ax, ay);
+  const d2 = cross(cx, cy, dx, dy, bx, by);
+  const d3 = cross(ax, ay, bx, by, cx, cy);
+  const d4 = cross(ax, ay, bx, by, dx, dy);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return 0;
+  return Math.min(
+    distancePointToSegmentM(ax, ay, cx, cy, dx, dy).distM,
+    distancePointToSegmentM(bx, by, cx, cy, dx, dy).distM,
+    distancePointToSegmentM(cx, cy, ax, ay, bx, by).distM,
+    distancePointToSegmentM(dx, dy, ax, ay, bx, by).distM,
+  );
+}
+
 export const REAL_CLEARANCE_METERS = {
   /** Distance minimale centre-à-centre entre deux chaises (0.50m largeur + 0.20m espace libre) */
   chairToChair: 0.70,
@@ -609,8 +629,6 @@ export function detectLayoutClearanceConflicts(
       const sz1 = estimateTableSizeMeters(t1.shape, t1.capacity, t1.rotation, t1);
       const sz2 = estimateTableSizeMeters(t2.shape, t2.capacity, t2.rotation, t2);
 
-      const dxM = Math.abs(pctToM_X(t2.x) - pctToM_X(t1.x));
-      const dyM = Math.abs(pctToM_Y(t2.y) - pctToM_Y(t1.y));
       const dist = Math.hypot(pctToM_X(t2.x) - pctToM_X(t1.x), pctToM_Y(t2.y) - pctToM_Y(t1.y));
       const targetCenter = sz1.radiusM + sz2.radiusM + clearances.tableToTable;
 
@@ -720,8 +738,24 @@ export function detectLayoutClearanceConflicts(
           ? estimateRowSizeMeters(item.seatCount, item.rotation)
           : { radiusM: 0.25, halfWM: 0.25, effectiveRadiusM: 0.25 };
 
-      const { distM } = distancePointToSegmentM(itemX, itemY, wall.x1M, wall.y1M, wall.x2M, wall.y2M);
-      const physicalCoreDist = sz.radiusM + wall.thicknessM / 2;
+      let { distM } = distancePointToSegmentM(itemX, itemY, wall.x1M, wall.y1M, wall.x2M, wall.y2M);
+      let physicalCoreDist = sz.radiusM + wall.thicknessM / 2;
+      if (item.kind === 'row') {
+        // Une rangée est longue et étroite : on mesure depuis son axe réel
+        // (orienté comme à l’écran) plutôt qu’avec un cercle englobant, qui
+        // signalait à tort les rangées parallèles à un mur.
+        // Capsule : axe raccourci d’une demi-profondeur, bouts arrondis.
+        const halfDepth = 0.75 / 2;
+        const halfLen = Math.max(0, Math.max(1.5, (item.seatCount ?? 10) * 0.5) / 2 - halfDepth);
+        const rad = (-(Number(item.rotation) || 0) * Math.PI) / 180;
+        const ux = Math.cos(rad) * halfLen;
+        const uy = Math.sin(rad) * halfLen;
+        distM = distanceSegmentToSegmentM(
+          itemX - ux, itemY - uy, itemX + ux, itemY + uy,
+          wall.x1M, wall.y1M, wall.x2M, wall.y2M,
+        );
+        physicalCoreDist = halfDepth + wall.thicknessM / 2;
+      }
       const chairOuterDist = (sz.effectiveRadiusM ?? sz.radiusM) + wall.thicknessM / 2;
 
       if (distM < physicalCoreDist) {
@@ -1010,6 +1044,23 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
   const wallSegments = extractWallSegmentsMeters(blueprint, widthM, heightM);
 
   const sameStory = (s1?: string, s2?: string) => !s1 || !s2 || s1 === s2;
+
+  /** Élément hors du rectangle englobant les murs de son étage (il a traversé la paroi). */
+  const outsideWallEnvelope = (xM: number, yM: number, storyId?: string) => {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const w of wallSegments) {
+      if (!sameStory(storyId, w.storyId)) continue;
+      minX = Math.min(minX, w.x1M, w.x2M);
+      maxX = Math.max(maxX, w.x1M, w.x2M);
+      minY = Math.min(minY, w.y1M, w.y2M);
+      maxY = Math.max(maxY, w.y1M, w.y2M);
+    }
+    if (!Number.isFinite(minX)) return false;
+    return xM < minX || xM > maxX || yM < minY || yM > maxY;
+  };
 
   // Passes de relaxation physique pour séparer les éléments et garantir les écarts
   for (let it = 0; it < iterations; it++) {
@@ -1321,7 +1372,9 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
     }
 
     // 11. Dégagement strict et anti-incorporation des cloisons / murs intérieurs et périphériques
+    // (les zones sont des revêtements de sol : une pièce, un tapis, un parquet bordent les murs sans les « traverser »).
     for (const item of mutableItems) {
+      if (item.kind === 'zone') continue;
       for (const wall of wallSegments) {
         if (!sameStory(item.storyId, wall.storyId)) continue;
 
@@ -1340,6 +1393,10 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
         if (nx * centerDirX + ny * centerDirY < 0) {
           nx = -nx;
           ny = -ny;
+          // Élément sorti de l'enveloppe des murs : il a traversé la paroi. On
+          // le ramène de toute la distance qui l'en sépare en plus du
+          // dégagement (sinon il glissait un peu plus dehors à chaque passe).
+          if (outsideWallEnvelope(item.cxM, item.cyM, item.storyId)) distM = -distM;
         }
 
         // Une rangée est une bande longue et fine : son encombrement vers le mur dépend de la
@@ -1363,7 +1420,7 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
         if (!sameStory(fx.storyId, wall.storyId) || wall.id.startsWith('boundary_wall_')) continue;
         const fxCx = fx.xM + fx.wM / 2;
         const fxCy = fx.yM + fx.hM / 2;
-        let { distM, nx, ny } = distancePointToSegmentM(fxCx, fxCy, wall.x1M, wall.y1M, wall.x2M, wall.y2M);
+        const { distM, nx, ny } = distancePointToSegmentM(fxCx, fxCy, wall.x1M, wall.y1M, wall.x2M, wall.y2M);
         const minReq = Math.min(fx.wM, fx.hM) / 2 + wall.thicknessM / 2;
         if (distM < minReq) {
           const pushM = minReq - distM;
@@ -1375,6 +1432,7 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
 
     // 12. Circulation périphérique le long des murs extérieurs
     for (const item of mutableItems) {
+      if (item.kind === 'zone') continue;
       const minX = clearances.wallMargin + item.halfWM;
       const maxX = widthM - clearances.wallMargin - item.halfWM;
       const minY = clearances.wallMargin + item.halfHM;

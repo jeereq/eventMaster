@@ -7,6 +7,7 @@ import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
 import LandingToolsGrid from '@/components/landing/LandingToolsGrid';
 import LandingFeatureBlocks from '@/components/landing/LandingFeatureBlocks';
+import LandingRoomEditorSection from '@/components/landing/LandingRoomEditorSection';
 import LandingWhyCards from '@/components/landing/LandingWhyCards';
 import LandingDashboardQuickAccess from '@/components/landing/LandingDashboardQuickAccess';
 import { Button } from '@/components/ui';
@@ -22,6 +23,7 @@ export default function LandingBelowFold() {
     <>
       <LandingToolsGrid />
       <LandingFeatureBlocks />
+      <LandingRoomEditorSection />
       <LandingWhyCards />
       <LandingTrustPricingBand />
       <PublicCtaBand

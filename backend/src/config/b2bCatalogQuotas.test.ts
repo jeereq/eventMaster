@@ -59,6 +59,16 @@ describe('B2B catalogue salle + prestations', () => {
     assert.equal(limits.maxEvents, 12);
   });
 
+  it('retire la salle d’essai au prestataire inscrit sur la voie prestations', () => {
+    const service = getPlanLimitsForTenant('FREE', 'VENDOR', 'SERVICE');
+    assert.equal(service.maxRooms, 0);
+    assert.equal(service.maxServices, 1);
+    assert.equal(service.maxEvents, 0);
+    assert.equal(getPlanLimitsForTenant('FREE', 'VENDOR', 'VENUE').maxRooms, 1);
+    assert.equal(getPlanLimitsForTenant('FREE', 'VENDOR').maxRooms, 1);
+    assert.equal(getPlanLimitsForTenant('FREE', 'ORGANIZER', 'SERVICE').maxRooms, 1);
+  });
+
   it('aligne getDefaultPlans avec getPlanLimits pour Business', () => {
     assert.equal(getDefaultPlans().STANDARD.maxServices, getPlanLimits('STANDARD').maxServices);
   });

@@ -78,6 +78,8 @@ export type SurfaceMatProps = {
   map?: THREE.Texture | null;
   normalMap?: THREE.Texture | null;
   normalScale?: number;
+  /** Rugosité variable (canal vert) : remplace celle de la finition. */
+  roughnessMap?: THREE.Texture | null;
   bumpMap?: THREE.Texture | null;
   bumpScale?: number;
   transparent?: boolean;
@@ -101,6 +103,7 @@ export function SurfaceMat({
   map,
   normalMap,
   normalScale,
+  roughnessMap,
   bumpMap,
   bumpScale,
   transparent,
@@ -135,6 +138,7 @@ export function SurfaceMat({
   // Bois et tissus : albédo neutre multiplié par la couleur choisie.
   const colorMap = map ?? (resolved === 'metal' || resolved === 'brass' ? null : detail?.map ?? null);
   const nMap = normalMap ?? detail?.normalMap ?? null;
+  const rMap = roughnessMap ?? detail?.roughnessMap ?? null;
 
   if (resolved === 'crystal') {
     // Cristal taillé sans « transmission » : pas de passe de rendu supplémentaire (mobile),
@@ -190,6 +194,7 @@ export function SurfaceMat({
         map={colorMap ?? undefined}
         normalMap={nMap ?? undefined}
         normalScale={nMap ? normalScaleVec : undefined}
+        roughnessMap={roughnessMap ?? undefined}
         bumpMap={bumpMap ?? undefined}
         bumpScale={bumpScale}
         roughness={roughness ?? (resolved === 'lacquer' ? 0.22 : 0.3)}
@@ -214,7 +219,7 @@ export function SurfaceMat({
       map={colorMap ?? undefined}
       normalMap={nMap ?? undefined}
       normalScale={nMap ? normalScaleVec : undefined}
-      roughnessMap={detail?.roughnessMap ?? undefined}
+      roughnessMap={rMap ?? undefined}
       bumpMap={bumpMap ?? undefined}
       bumpScale={bumpScale}
       roughness={roughness ?? (isMetal ? 0.28 : resolved === 'wood' ? 0.55 : 0.6)}

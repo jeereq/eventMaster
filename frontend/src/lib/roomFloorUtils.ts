@@ -340,6 +340,68 @@ export function resolveFloorStyle(
   return getFloorPatternStyle(floorType ?? 'parquet', accentColor);
 }
 
+/**
+ * Sol du plan 2D vu du dessus, à la même échelle que la vue 3D : une tuile
+ * couvre `FLOOR_TEXTURE_REPEAT_M` mètres, la teinte `floorColor` multiplie la
+ * texture comme le matériau 3D, et un plan importé est étiré sur tout le canevas.
+ * `proceduralUrl` remplace l’image des sols dessinés en 3D (miroir, LED, Versailles).
+ */
+export function resolveFloorTopViewStyle({
+  floorType,
+  floorImageUrl,
+  floorImageFit,
+  floorImageTileM,
+  floorColor,
+  widthM,
+  heightM,
+  proceduralUrl,
+}: {
+  floorType: FloorType | undefined;
+  floorImageUrl?: string;
+  floorImageFit?: 'cover' | 'tile';
+  /** Sol importé en mosaïque : taille d’une répétition (m), comme en 3D. */
+  floorImageTileM?: number;
+  floorColor?: string;
+  widthM: number;
+  heightM: number;
+  proceduralUrl?: string | null;
+}): React.CSSProperties {
+  const tilePct = (tileM: number) => {
+    const w = widthM > 0 ? (tileM / widthM) * 100 : 100;
+    const h = heightM > 0 ? (tileM / heightM) * 100 : 100;
+    return `${Math.round(w * 1000) / 1000}% ${Math.round(h * 1000) / 1000}%`;
+  };
+  const tint = floorColor && floorColor.toLowerCase() !== '#ffffff' ? floorColor : undefined;
+  const withTint = (style: React.CSSProperties): React.CSSProperties => (tint
+    ? {
+        ...style,
+        backgroundColor: tint,
+        backgroundBlendMode: 'multiply' as React.CSSProperties['backgroundBlendMode'],
+      }
+    : style);
+
+  if (floorImageUrl) {
+    const tiled = floorImageFit === 'tile';
+    return withTint({
+      backgroundColor: '#8b6840',
+      backgroundImage: `url(${floorImageUrl})`,
+      backgroundSize: tiled ? tilePct(floorImageTileM && floorImageTileM > 0 ? floorImageTileM : 3.5) : '100% 100%',
+      backgroundRepeat: tiled ? 'repeat' : 'no-repeat',
+      backgroundPosition: '0 0',
+    });
+  }
+  const type = floorType && floorType !== 'custom' ? floorType : 'parquet';
+  const asset = FLOOR_ASSETS[type] ?? FLOOR_ASSETS.parquet;
+  const tileM = FLOOR_TEXTURE_REPEAT_M[type] ?? 2;
+  return withTint({
+    backgroundColor: asset.fallback,
+    backgroundImage: `url(${proceduralUrl || asset.url})`,
+    backgroundSize: tilePct(tileM),
+    backgroundRepeat: 'repeat',
+    backgroundPosition: '0 0',
+  });
+}
+
 /** 0 = plat, 100 = perspective 2,5D max. `depthView` historique = 55. */
 export function resolveDepthAmount(meta?: {
   depthView?: boolean;

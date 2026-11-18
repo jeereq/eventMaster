@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import type { PodiumStyle, ZoneKind, ZoneMaterial } from '@/lib/roomLayoutUtils';
 import { deckUsesSkirt, getStairWoodMap, loadTiledTexture, resolveDeckSurface, resolveZoneMaterialMap } from '@/lib/roomWebGLMaterials';
 import { rowArcZ, rowCurveFactor, rowSeatLocalX } from '@/lib/roomAmphitheaterGeom';
+import { PleatedDrape, StageStairs, usePleatMap } from '@/components/room/StageDressing';
 
 /** Profondeur de marche derrière le siège quand aucune rangée ne suit (dos + passage). */
 const RISER_TREAD_M = 0.78;
@@ -328,6 +329,9 @@ function DeckMaterials({
   const sideX = useMemo(() => resolveDeckSurface(material, d, h), [material, d, h]);
   const sideZ = useMemo(() => resolveDeckSurface(material, w, h), [material, w, h]);
   const skirt = deckUsesSkirt(material);
+  // Jupe de scène en molleton plissé : un pli tous les ~12 cm sur chaque flanc.
+  const pleatX = usePleatMap(d);
+  const pleatZ = usePleatMap(w);
   // Ordre des faces BoxGeometry : +X, -X, +Y, -Y, +Z, -Z.
   const faces = [sideX, sideX, top, top, sideZ, sideZ];
   return (
@@ -340,7 +344,8 @@ function DeckMaterials({
               key={i}
               attach={`material-${i}`}
               color={selected ? '#c7d2fe' : skirtColor}
-              roughness={0.93}
+              map={(i < 2 ? pleatX : pleatZ) ?? undefined}
+              roughness={0.88}
               metalness={0}
             />
           );
@@ -352,6 +357,7 @@ function DeckMaterials({
             color={selected ? '#c7d2fe' : m.color}
             map={m.map ?? undefined}
             normalMap={m.normalMap ?? undefined}
+            roughnessMap={m.roughnessMap ?? undefined}
             roughness={m.roughness}
             metalness={m.metalness}
             emissive={m.emissive}
@@ -382,6 +388,7 @@ function DeckTopMaterial({
       color={selected ? '#c7d2fe' : top.color}
       map={top.map ?? undefined}
       normalMap={top.normalMap ?? undefined}
+      roughnessMap={top.roughnessMap ?? undefined}
       roughness={top.roughness}
       metalness={top.metalness}
     />
@@ -389,7 +396,7 @@ function DeckTopMaterial({
 }
 
 /** Petite composition florale basse (bord d’estrade, podium des mariés). */
-function StageFlowerCluster({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+export function StageFlowerCluster({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
   const blooms: Array<[number, number, number, string]> = [
     [0, 0.1, 0, '#fdf2f8'],
     [0.09, 0.07, 0.03, '#f9d5e0'],
@@ -428,6 +435,8 @@ export function EventStage({
   podiumStyle,
   material,
   skirtColor,
+  stairs = true,
+  dressed = false,
 }: {
   w: number;
   d: number;
@@ -437,6 +446,10 @@ export function EventStage({
   baseColor: string;
   selected: boolean;
   kind: 'stage' | 'podium';
+  /** Escalier d’accès (scènes de 30 cm et plus). */
+  stairs?: boolean;
+  /** Un habillage complet (truss, concert, mariage) remplace le rideau et les spots de base. */
+  dressed?: boolean;
   shape?: 'rect' | 'semiCircle';
   podiumStyle?: PodiumStyle;
   /** Matière du plateau (texture à l’échelle réelle). */
@@ -452,6 +465,9 @@ export function EventStage({
   const isRunway = kind === 'podium' && style === 'runway';
   const isBand = kind === 'podium' && style === 'bandRiser';
   const showLectern = kind === 'podium' && (style === 'speaker' || style === 'lectern');
+  const withStairs = (isStage || style === 'honor') && stairs && height >= 0.3;
+  const roundPleat = usePleatMap(Math.PI * Math.min(w, d));
+  const halfPleat = usePleatMap((Math.PI * w) / 2);
 
 
   if (isCircular || isCouple) {
@@ -460,7 +476,7 @@ export function EventStage({
       <group>
         <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[r, r * 1.02, height, 48]} />
-          <meshStandardMaterial attach="material-0" color={selected ? '#c7d2fe' : skirtColor ?? STAGE_SKIRT} roughness={0.93} />
+          <meshStandardMaterial attach="material-0" color={selected ? '#c7d2fe' : skirtColor ?? STAGE_SKIRT} map={roundPleat ?? undefined} roughness={0.88} />
           <DeckTopMaterial attach="material-1" material={material} size={r * 2} selected={selected} />
           <meshStandardMaterial attach="material-2" color="#111" />
         </mesh>
@@ -502,7 +518,7 @@ export function EventStage({
             </mesh>
           );
         })}
-        <mesh position={[0, 0.05, d * 0.5 + 0.04]}>
+        <mesh position={[0, 0.05, d * 0.44 + 0.03]}>
           <boxGeometry args={[w * 0.92, 0.03, 0.03]} />
           <meshStandardMaterial color="#fbbf24" emissive="#d97706" emissiveIntensity={0.4} />
         </mesh>
@@ -520,13 +536,21 @@ export function EventStage({
           <meshStandardMaterial
             attach="material-0"
             color={selected ? '#c7d2fe' : deckUsesSkirt(material) ? skirtColor ?? STAGE_SKIRT : map ? '#ffffff' : baseColor}
-            map={deckUsesSkirt(material) ? undefined : map ?? undefined}
-            roughness={0.8}
+            map={deckUsesSkirt(material) ? halfPleat ?? undefined : map ?? undefined}
+            roughness={0.85}
           />
           <DeckTopMaterial attach="material-1" material={material} size={half * 2} selected={selected} />
           <meshStandardMaterial attach="material-2" color="#111" />
           <meshStandardMaterial attach="material-3" color={selected ? '#c7d2fe' : skirtColor ?? STAGE_SKIRT} roughness={0.9} />
         </mesh>
+        {withStairs ? (
+          // Escalier au centre de l’arrondi, face au public (repère non étiré).
+          <group scale={[1, 1, Math.max(0.01, half) / d]} position={[0, 0, half]}>
+            <group rotation={[0, -Math.PI / 2, 0]}>
+              <StageStairs height={height} width={Math.min(1.4, w * 0.25)} />
+            </group>
+          </group>
+        ) : null}
       </group>
     );
   }
@@ -561,8 +585,13 @@ export function EventStage({
           metalness={0.4}
         />
       </mesh>
+      {withStairs ? (
+        <group position={[w / 2, 0, d * 0.18]}>
+          <StageStairs height={height} width={Math.min(1.3, d * 0.4)} />
+        </group>
+      ) : null}
       {/* Spots de scène */}
-      {isStage && ([-0.35, 0, 0.35] as const).map((x, i) => (
+      {isStage && !dressed && ([-0.35, 0, 0.35] as const).map((x, i) => (
         <group key={i} position={[x * w, height + 0.15, -d * 0.35]}>
           <mesh castShadow>
             <cylinderGeometry args={[0.06, 0.08, 0.12, 12]} />
@@ -583,11 +612,15 @@ export function EventStage({
         </group>
       ))}
       {/* Rideau / fond léger pour grande scène */}
-      {isStage && w > 3 && (
-        <mesh position={[0, height + 1.1, -d * 0.48]} castShadow>
-          <boxGeometry args={[w * 0.85, 2.2, 0.06]} />
-          <meshStandardMaterial color="#450a0a" roughness={0.9} metalness={0.02} />
-        </mesh>
+      {isStage && !dressed && w > 3 && (
+        <group position={[0, height, -d * 0.47]}>
+          <PleatedDrape width={w * 0.85} height={2.4} color="#5b0f12" />
+          {/* Tringle */}
+          <mesh position={[0, 2.42, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.02, 0.02, w * 0.87, 8]} />
+            <meshStandardMaterial color="#1c1917" metalness={0.7} roughness={0.3} />
+          </mesh>
+        </group>
       )}
       {isRunway ? (
         <>
@@ -705,7 +738,7 @@ export function EventZoneSurface({
   // multipliée qui salit le rendu ; moquette / vinyle / LED gardent leur rendu procédural teinté.
   const metric = material !== undefined && material !== 'carpet' && material !== 'vinyl' && material !== 'led';
   const mat = useMemo(
-    () => (metric ? resolveDeckSurface(material, w, h) : { ...resolveZoneMaterialMap(material), normalMap: null }),
+    () => (metric ? resolveDeckSurface(material, w, h) : { normalMap: null, ...resolveZoneMaterialMap(material) }),
     [metric, material, w, h],
   );
   const isDance = material === 'vinyl' || material === 'led' || zoneKind === 'dance';
@@ -738,6 +771,7 @@ export function EventZoneSurface({
           }
           map={mat.map ?? undefined}
           normalMap={mat.normalMap ?? undefined}
+          roughnessMap={'roughnessMap' in mat ? (mat.roughnessMap ?? undefined) : undefined}
           roughness={mat.roughness}
           metalness={mat.metalness}
           emissive={mat.emissive ?? '#000000'}

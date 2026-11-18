@@ -1,3 +1,4 @@
+import { getPublicVenueLayout } from '../controllers/venueLayoutController';
 import { Router, Request, Response } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { prisma } from '../db';
@@ -205,6 +206,7 @@ router.get('/showcase-plans', optionalAuth, getPublicShowcasePlans);
 router.get('/venues', listPublicVenues);
 router.get('/venues/:slug', optionalAuth, getPublicVenue);
 router.get('/venues/:slug/feed', getPublicVenueFeed);
+router.get('/venues/:slug/layouts/:layoutId', getPublicVenueLayout);
 router.post('/venues/:slug/inquire', requireAuth, createVenueInquiry);
 router.get('/services', listPublicServices);
 router.get('/services/:slug', optionalAuth, getPublicService);

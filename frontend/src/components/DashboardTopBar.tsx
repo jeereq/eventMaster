@@ -36,11 +36,11 @@ export function useDashboardTitle(): { title: string } {
     if (pathname.startsWith('/dashboard/rooms')) return isPersonal ? 'Plans de salle' : 'Salles';
     if (pathname.startsWith('/dashboard/team')) return isPersonal ? 'Co-organisateurs' : 'Équipe';
     if (pathname.startsWith('/dashboard/marketplace')) return 'Mes offres';
+    if (pathname.startsWith('/dashboard/quotes')) return 'Demandes de devis';
     if (pathname.startsWith('/dashboard/bookings')) {
-      if (tab === 'bookings') return 'Réservations';
       if (tab === 'packs') return 'Mes packs';
       if (tab === 'favorites') return 'Favoris';
-      return 'Demandes de devis';
+      return 'Réservations';
     }
     if (pathname.startsWith('/dashboard/profile')) return 'Mon compte';
     if (pathname.startsWith('/dashboard/guide')) return 'Guide utilisateur';

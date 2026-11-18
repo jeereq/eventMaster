@@ -179,6 +179,7 @@ const FLOOR_FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kin
   'car',
   'parasol',
   'landscape',
+  'homeFurniture',
   'customElement',
 ]);
 
@@ -562,6 +563,54 @@ export function duplicateLayoutSelection(
   return {
     blueprint: refreshBlueprintMetadata(sanitized as RoomLayoutBlueprint),
     selection: copied,
+  };
+}
+
+/** Éléments copiés (Ctrl+C) : instantané figé, indépendant des modifications suivantes. */
+export type LayoutClipboard = {
+  furniture: RoomLayoutBlueprint['furniture'];
+  fixtures: RoomLayoutBlueprint['fixtures'];
+};
+
+/** Copie la sélection (groupes compris) dans un presse-papier interne. */
+export function copyLayoutSelection(blueprint: RoomLayoutBlueprint, selection: LayoutSelectionItem[]): LayoutClipboard | null {
+  const items = expandSelectionWithGroups(blueprint, selection).filter((s) => s.kind !== 'wall');
+  const furnitureIds = new Set(items.filter((s) => s.kind !== 'fixture').map((s) => s.id));
+  const fixtureIds = new Set(items.filter((s) => s.kind === 'fixture').map((s) => s.id));
+  const clip: LayoutClipboard = {
+    furniture: structuredClone(blueprint.furniture.filter((f) => furnitureIds.has(f.id))),
+    fixtures: structuredClone(blueprint.fixtures.filter((f) => fixtureIds.has(f.id))),
+  };
+  return clip.furniture.length + clip.fixtures.length > 0 ? clip : null;
+}
+
+/**
+ * Colle le presse-papier sur l’étage `storyId` (décalé comme une duplication) : fonctionne même si
+ * les originaux ont été supprimés ou modifiés depuis, ou si l’on a changé d’étage.
+ */
+export function pasteLayoutClipboard(blueprint: RoomLayoutBlueprint, clip: LayoutClipboard, storyId?: string): DuplicateLayoutResult {
+  const tag = makeLayoutId('clip');
+  const tempFurniture = clip.furniture.map((f, i) => ({ ...structuredClone(f), id: `${tag}-f${i}`, storyId: storyId ?? f.storyId }));
+  const tempFixtures = clip.fixtures.map((f, i) => ({ ...structuredClone(f), id: `${tag}-x${i}`, storyId: storyId ?? f.storyId }));
+  const staged = {
+    ...blueprint,
+    furniture: [...blueprint.furniture, ...tempFurniture],
+    fixtures: [...blueprint.fixtures, ...tempFixtures],
+  } as RoomLayoutBlueprint;
+  const selection: LayoutSelectionItem[] = [
+    ...tempFurniture.map((f) => ({ kind: f.kind as LayoutSelectionItem['kind'], id: f.id })),
+    ...tempFixtures.map((f) => ({ kind: 'fixture' as const, id: f.id })),
+  ];
+  const result = duplicateLayoutSelection(staged, selection);
+  if (result.blueprint === staged) return { blueprint, selection: [] };
+  const isTemp = (id: string) => id.startsWith(`${tag}-`);
+  return {
+    blueprint: refreshBlueprintMetadata({
+      ...result.blueprint,
+      furniture: result.blueprint.furniture.filter((f) => !isTemp(f.id)),
+      fixtures: result.blueprint.fixtures.filter((f) => !isTemp(f.id)),
+    } as RoomLayoutBlueprint),
+    selection: result.selection,
   };
 }
 

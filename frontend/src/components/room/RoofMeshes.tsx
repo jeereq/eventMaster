@@ -274,23 +274,107 @@ function maxRadius(center: RoofPoint, ring: RoofPoint[]): number {
   return ring.reduce((m, p) => Math.max(m, Math.hypot(p.x - center.x, p.z - center.z)), 1);
 }
 
+// ───────────────────────── ancrages et drapés de tente ─────────────────────────
+
+/** Pied de tente (haut du poteau) avec la direction extérieure (unitaire, plan XZ). */
+type TentLeg = { x: number; z: number; ox: number; oz: number };
+
+/**
+ * Tente en plein air : platines au sol, haubans tendus vers des piquets (à ~1,4 m du pied).
+ * `top` = haut des poteaux, `ground` = sol.
+ */
+function TentAnchors({ legs, top, ground }: { legs: TentLeg[]; top: number; ground: number }) {
+  const rope = usePlainMaterial('#e7e5e4', 0.8);
+  const steel = usePlainMaterial('#3f3f46', 0.45, 0.5);
+  const reach = Math.min(1.8, Math.max(1, (top - ground) * 0.55));
+  return (
+    <group>
+      {legs.map((l, i) => {
+        const a = new THREE.Vector3(l.x + l.ox * 0.05, top - 0.15, l.z + l.oz * 0.05);
+        const b = new THREE.Vector3(l.x + l.ox * reach, ground + 0.06, l.z + l.oz * reach);
+        return (
+          <group key={i}>
+            <mesh position={[l.x, ground + 0.01, l.z]} material={steel} receiveShadow>
+              <boxGeometry args={[0.3, 0.02, 0.3]} />
+            </mesh>
+            <Beam a={a} b={b} w={0.012} h={0.012} material={rope} />
+            <mesh position={[b.x, ground + 0.04, b.z]} rotation={[l.oz * 0.35, 0, -l.ox * 0.35]} material={steel} castShadow>
+              <cylinderGeometry args={[0.018, 0.012, 0.16, 6]} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/**
+ * Drapés noués à chaque poteau (voilage de mariage) : panneau froncé, resserré par une embrasse
+ * à ~45 % de la hauteur, qui s’évase au sol. `ax, az` = direction de la gouttière.
+ */
+function tieBackDrapeGeometry(legs: Array<TentLeg & { ax: number; az: number }>, top: number, ground: number): THREE.BufferGeometry | null {
+  if (!legs.length) return null;
+  const H = top - ground;
+  const full = 1.15;
+  const waistV = 0.42;
+  const parts = legs.map((l) =>
+    paramGeometry(
+      18,
+      22,
+      (u, v) => {
+        // v = 0 au sol, 1 en haut.
+        const t = v < waistV ? (waistV - v) / waistV : (v - waistV) / (1 - waistV);
+        const width = v < waistV ? 0.12 + 0.38 * Math.pow(t, 1.6) : 0.12 + (full - 0.12) * Math.pow(t, 1.3);
+        const along = (u - 0.5) * width;
+        const pleat = 0.035 * Math.sin(u * Math.PI * 9) * (width / full + 0.2);
+        const inset = 0.09 + pleat;
+        return [l.x + l.ax * along - l.ox * inset, ground + v * (H - 0.05), l.z + l.az * along - l.oz * inset];
+      },
+      (u, v) => [u * 1.2, v * H],
+    ),
+  );
+  return mergeGeometries(parts);
+}
+
+/** Toile cristal (PVC transparent) pour les tentes de réception vitrées. */
+function useClearTentMaterial(opacity: number) {
+  return useMemo(
+    () =>
+      new THREE.MeshPhysicalMaterial({
+        color: '#f1f5f9',
+        roughness: 0.06,
+        metalness: 0,
+        clearcoat: 1,
+        clearcoatRoughness: 0.05,
+        transparent: true,
+        opacity: Math.min(0.32, Math.max(0.14, opacity * 0.28)),
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    [opacity],
+  );
+}
+
 // ───────────────────────── tente de réception ─────────────────────────
 
 const TENT_PITCH = 20;
 const TENT_OVERHANG = 0.22;
 
 /** Tente à faîtage (structure alu, toile PVC tendue entre les fermes, pignons, lambrequins, voilage intérieur). */
-function MarqueeRect({ rect, props, lining }: { rect: RoofRect; props: RoofBuildProps; lining: boolean }) {
+function MarqueeRect({ rect, props, lining, clear = false }: { rect: RoofRect; props: RoofBuildProps; lining: boolean; clear?: boolean }) {
   const { y, color, opacity, withLegs, wallHeightM } = props;
   const { length: L, span: S, rotationY } = ridgeFrame(rect);
   const rise = ridgeRise(S, TENT_PITCH);
   const tan = Math.tan((TENT_PITCH * Math.PI) / 180);
   const bays = frameBays(L);
   const bay = L / bays;
-  const skin = useFabricMaterial(color, opacity, 0.55, 0.22);
+  const fabric = useFabricMaterial(clear ? '#ffffff' : color, clear ? 1 : opacity, 0.55, 0.22);
+  const clearSkin = useClearTentMaterial(opacity);
+  const skin = clear ? clearSkin : fabric;
   const liningMat = useFabricMaterial('#fbf8f1', Math.min(0.92, opacity + 0.1), 0.85, 0.42);
-  const alu = usePlainMaterial(ALU, 0.35, 0.75);
+  const alu = usePlainMaterial(ALU, 0.3, 0.45);
   const bulbs = useLightBulbMaterial();
+  const lit = lining || clear;
 
   const geos = useMemo(() => {
     const slopeLen = (S / 2 + TENT_OVERHANG) / Math.cos((TENT_PITCH * Math.PI) / 180);
@@ -372,7 +456,7 @@ function MarqueeRect({ rect, props, lining }: { rect: RoofRect; props: RoofBuild
     beams.push([P(-L / 2, rise - 0.14, 0), P(L / 2, rise - 0.14, 0), 0.08, 0.12]);
     beams.push([P(-L / 2, -0.04, -S / 2), P(L / 2, -0.04, -S / 2), 0.08, 0.12]);
     beams.push([P(-L / 2, -0.04, S / 2), P(L / 2, -0.04, S / 2), 0.08, 0.12]);
-    if (lining) {
+    if (lit) {
       // Guirlande guinguette le long du faîtage et festons de micro-LED sous chaque ferme.
       const n = Math.max(8, Math.round(L / 0.6));
       for (let k = 0; k <= n; k += 1) lights.push(P(-L / 2 + (k / n) * L, rise - 0.36 - 0.12 * Math.sin((Math.PI * ((k / n) * L % bay)) / bay), 0));
@@ -385,13 +469,29 @@ function MarqueeRect({ rect, props, lining }: { rect: RoofRect; props: RoofBuild
         }
       }
     }
-    return { beams, lights };
-  }, [rotationY, rect, y, bays, L, bay, S, rise, withLegs, wallHeightM, lining, tan]);
+    // Poteaux de rive (plein air) : direction extérieure et direction de la gouttière.
+    const legs: Array<TentLeg & { ax: number; az: number }> = [];
+    if (withLegs) {
+      const along = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY);
+      for (let i = 0; i <= bays; i += 1) {
+        ([-1, 1] as const).forEach((s) => {
+          const p = P(-L / 2 + i * bay, 0, s * (S / 2));
+          const out = new THREE.Vector3(0, 0, s).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY);
+          legs.push({ x: p.x, z: p.z, ox: out.x, oz: out.z, ax: along.x, az: along.z });
+        });
+      }
+    }
+    return { beams, lights, legs };
+  }, [rotationY, rect, y, bays, L, bay, S, rise, withLegs, wallHeightM, lit, tan]);
+
+  const drapes = useMemo(() => (lining && !clear ? tieBackDrapeGeometry(frame.legs, y - 0.04, y - wallHeightM) : null), [lining, clear, frame.legs, y, wallHeightM]);
 
   return (
     <group>
       <mesh geometry={geos.skinGeo} material={skin} receiveShadow />
-      <mesh geometry={geos.valGeo} material={skin} />
+      <mesh geometry={geos.valGeo} material={fabric} />
+      {drapes ? <mesh geometry={drapes} material={liningMat} castShadow /> : null}
+      {frame.legs.length ? <TentAnchors legs={frame.legs} top={y} ground={y - wallHeightM} /> : null}
       {geos.liningGeo ? <mesh geometry={geos.liningGeo} material={liningMat} receiveShadow /> : null}
       {frame.beams.map(([a, b, w, h], i) => (
         <Beam key={i} a={a} b={b} w={w} h={h} material={alu} />
@@ -408,7 +508,7 @@ function BigTop({ center, ring, props, lining, peak = 1 }: { center: RoofPoint; 
   const rise = (R * Math.tan((24 * Math.PI) / 180) + 0.8) * peak;
   const skin = useFabricMaterial(color, opacity, 0.55, 0.22);
   const liningMat = useFabricMaterial('#fbf8f1', Math.min(0.92, opacity + 0.1), 0.85, 0.42);
-  const alu = usePlainMaterial(ALU, 0.35, 0.75);
+  const alu = usePlainMaterial(ALU, 0.3, 0.45);
   const white = usePlainMaterial('#f5f5f4', 0.5, 0.1);
   const bulbs = useLightBulbMaterial();
 
@@ -480,8 +580,22 @@ function BigTop({ center, ring, props, lining, peak = 1 }: { center: RoofPoint; 
         }
       }
     });
-    return { beams, lights, apex };
+    const legs: Array<TentLeg & { ax: number; az: number }> = withLegs
+      ? ring.map((p, i) => {
+          const dx = p.x - center.x;
+          const dz = p.z - center.z;
+          const r = Math.hypot(dx, dz) || 1;
+          const prev = ring[(i - 1 + ring.length) % ring.length];
+          const next = ring[(i + 1) % ring.length];
+          const tx = next.x - prev.x;
+          const tz = next.z - prev.z;
+          const tl = Math.hypot(tx, tz) || 1;
+          return { x: p.x, z: p.z, ox: dx / r, oz: dz / r, ax: tx / tl, az: tz / tl };
+        })
+      : [];
+    return { beams, lights, apex, legs };
   }, [ring, center, y, rise, withLegs, wallHeightM, lining, geos]);
+  const drapes = useMemo(() => (lining ? tieBackDrapeGeometry(extras.legs, y - 0.04, y - wallHeightM) : null), [lining, extras.legs, y, wallHeightM]);
 
   return (
     <group>
@@ -502,6 +616,8 @@ function BigTop({ center, ring, props, lining, peak = 1 }: { center: RoofPoint; 
         <torusGeometry args={[0.16, 0.035, 8, 20]} />
       </mesh>
       <PointsInstanced points={extras.lights} radius={0.03} material={bulbs} />
+      {drapes ? <mesh geometry={drapes} material={liningMat} castShadow /> : null}
+      {extras.legs.length ? <TentAnchors legs={extras.legs} top={y} ground={y - wallHeightM} /> : null}
     </group>
   );
 }
@@ -515,7 +631,7 @@ function PagodaRect({ rect, props }: { rect: RoofRect; props: RoofBuildProps }) 
   const md = rect.d / nz;
   const peak = Math.min(3.2, Math.max(1.8, Math.min(mw, md) * 0.5));
   const skin = useFabricMaterial(color, opacity, 0.55, 0.22);
-  const alu = usePlainMaterial(ALU, 0.35, 0.75);
+  const alu = usePlainMaterial(ALU, 0.3, 0.45);
 
   const geos = useMemo(() => {
     const parts: THREE.BufferGeometry[] = [];
@@ -574,6 +690,16 @@ function PagodaRect({ rect, props }: { rect: RoofRect; props: RoofBuildProps }) 
     }
     return pts;
   }, [withLegs, nx, nz, rect, mw, md, y, wallHeightM]);
+  const anchors = useMemo<TentLeg[]>(
+    () =>
+      legs.map(([, b]) => {
+        const ox = Math.abs(b.x - (rect.cx - rect.w / 2)) < 1e-3 ? -1 : Math.abs(b.x - (rect.cx + rect.w / 2)) < 1e-3 ? 1 : 0;
+        const oz = Math.abs(b.z - (rect.cz - rect.d / 2)) < 1e-3 ? -1 : Math.abs(b.z - (rect.cz + rect.d / 2)) < 1e-3 ? 1 : 0;
+        const l = Math.hypot(ox, oz) || 1;
+        return { x: b.x, z: b.z, ox: ox / l, oz: oz / l };
+      }),
+    [legs, rect],
+  );
 
   return (
     <group>
@@ -587,6 +713,7 @@ function PagodaRect({ rect, props }: { rect: RoofRect; props: RoofBuildProps }) 
       {legs.map(([a, b], i) => (
         <Beam key={i} a={a} b={b} w={0.1} h={0.1} material={alu} />
       ))}
+      {anchors.length ? <TentAnchors legs={anchors} top={y} ground={y - wallHeightM} /> : null}
     </group>
   );
 }
@@ -611,6 +738,7 @@ function GableRect({ rect, props, glass }: { rect: RoofRect; props: RoofBuildPro
   const trim = usePlainMaterial(glass ? STEEL : '#f5f5f4', glass ? 0.3 : 0.6, glass ? 0.7 : 0);
   const ridgeMat = usePlainMaterial(glass ? STEEL : '#9a4a2c', 0.7, glass ? 0.7 : 0);
   const gutter = usePlainMaterial('#9ca3af', 0.35, 0.8);
+  const louvreMat = usePlainMaterial('#2a2522', 0.85);
 
   const geo = useMemo(() => {
     const thick = glass ? 0.02 : 0.14;
@@ -681,6 +809,33 @@ function GableRect({ rect, props, glass }: { rect: RoofRect; props: RoofBuildPro
           </mesh>
         </group>
       ))}
+      {!glass && rise > 1.1
+        ? ([-1, 1] as const).map((sx) => {
+            // Œil-de-bœuf à persiennes sur chaque pignon.
+            const r = Math.min(0.55, rise * 0.16);
+            return (
+              <group key={`oc${sx}`} position={pos} rotation={[0, rotationY, 0]}>
+                <group position={[sx * (L / 2 + 0.01), rise * 0.42, 0]} rotation={[0, (sx * Math.PI) / 2, 0]}>
+                  <mesh material={louvreMat}>
+                    <circleGeometry args={[r, 28]} />
+                  </mesh>
+                  <mesh position={[0, 0, 0.03]} material={trim} castShadow>
+                    <torusGeometry args={[r, Math.max(0.05, r * 0.14), 8, 32]} />
+                  </mesh>
+                  {[-0.5, -0.17, 0.17, 0.5].map((k) => (
+                    <mesh key={k} position={[0, k * r * 1.2, 0.02]} rotation={[-0.5, 0, 0]} material={trim}>
+                      <boxGeometry args={[2 * r * Math.sqrt(Math.max(0.05, 1 - (k * 1.2) ** 2)) * 0.95, 0.035, 0.06]} />
+                    </mesh>
+                  ))}
+                  {/* Clé de voûte */}
+                  <mesh position={[0, r + 0.06, 0.04]} material={trim}>
+                    <boxGeometry args={[0.14, 0.18, 0.08]} />
+                  </mesh>
+                </group>
+              </group>
+            );
+          })
+        : null}
       <group position={pos} rotation={[0, rotationY, 0]}>
         {/* Faîtière */}
         <mesh position={[0, rise + (glass ? 0.05 : 0.14), 0]} rotation={[Math.PI / 4, 0, 0]} material={ridgeMat} castShadow>
@@ -1095,6 +1250,237 @@ function RoofLantern({ x, z, w, d, y }: { x: number; z: number; w: number; d: nu
 
 // ───────────────────────── point d’entrée ─────────────────────────
 
+
+// ───────────────────────── voûte et sheds ─────────────────────────
+
+let seamCache: THREE.Texture | null = null;
+/** Bac acier à joint debout : bandes claires / sombres répétées (1 motif = 0,5 m). */
+function seamTexture(): THREE.Texture | null {
+  if (seamCache || typeof document === 'undefined') return seamCache;
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 8;
+  const ctx = c.getContext('2d');
+  if (ctx) {
+    const g = ctx.createLinearGradient(0, 0, 64, 0);
+    g.addColorStop(0, '#9a9a9a');
+    g.addColorStop(0.06, '#ffffff');
+    g.addColorStop(0.12, '#c8c8c8');
+    g.addColorStop(0.9, '#d2d2d2');
+    g.addColorStop(1, '#9a9a9a');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 8);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  seamCache = t;
+  return t;
+}
+
+function useSeamMaterial(color: string, opacity: number) {
+  return useMemo(() => {
+    const transparent = opacity < 0.97;
+    return new THREE.MeshStandardMaterial({
+      color,
+      map: seamTexture(),
+      roughness: 0.42,
+      metalness: 0.55,
+      side: THREE.DoubleSide,
+      transparent,
+      opacity: transparent ? opacity : 1,
+      depthWrite: !transparent,
+    });
+  }, [color, opacity]);
+}
+
+/** Voûte en berceau : couverture cintrée en bac acier, arcs de structure, pignons en lunette vitrée. */
+function BarrelRect({ rect, props }: { rect: RoofRect; props: RoofBuildProps }) {
+  const { y, color, opacity, withLegs, wallHeightM, wallColor } = props;
+  const { length: L, span: S, rotationY } = ridgeFrame(rect);
+  const rise = Math.min(4.5, Math.max(1.2, S * 0.24));
+  const R = (S * S) / 4 / (2 * rise) + rise / 2;
+  const cy = rise - R;
+  const oh = 0.3;
+  const zMax = S / 2 + oh;
+  const skin = useSeamMaterial(styleColor(color, '#9aa5b1'), opacity);
+  const gableMat = usePlainMaterial(wallColor ?? '#ece7df', 0.9, 0, 1);
+  const rib = usePlainMaterial(STEEL, 0.4, 0.6);
+  const glass = useGlassMaterial(0.7);
+
+  const geos = useMemo(() => {
+    const arcY = (z: number) => cy + Math.sqrt(Math.max(0, R * R - z * z));
+    const arcLen = 2 * R * Math.asin(Math.min(1, zMax / R));
+    const shell = paramGeometry(
+      Math.max(2, Math.round(L / 2)),
+      40,
+      (u, v) => {
+        const z = -zMax + v * 2 * zMax;
+        return [-L / 2 - 0.15 + u * (L + 0.3), arcY(z) + 0.02, z];
+      },
+      (u, v) => [(v * arcLen) / 0.5, (u * L) / 4],
+    );
+    const ribs: THREE.BufferGeometry[] = [];
+    const n = Math.max(2, Math.round(L / 3));
+    for (let i = 0; i <= n; i += 1) {
+      const x = -L / 2 + (i / n) * L;
+      const pts = Array.from({ length: 25 }, (_, k) => {
+        const z = -S / 2 + (k / 24) * S;
+        return new THREE.Vector3(x, arcY(z) - 0.08, z);
+      });
+      ribs.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.05, 6, false));
+    }
+    const shape = new THREE.Shape();
+    shape.moveTo(-S / 2, 0);
+    for (let k = 0; k <= 32; k += 1) {
+      const z = -S / 2 + (k / 32) * S;
+      shape.lineTo(z, arcY(z));
+    }
+    shape.lineTo(S / 2, 0);
+    shape.closePath();
+    return {
+      shell: placeInRect(shell, rect, rotationY, y),
+      ribs: placeInRect(mergeGeometries(ribs), rect, rotationY, y),
+      shape,
+    };
+  }, [L, S, R, cy, zMax, rect, rotationY, y]);
+
+  const pos = useMemo(() => new THREE.Vector3(rect.cx, y, rect.cz), [rect, y]);
+  const lunR = Math.min(rise * 0.7, S * 0.2);
+
+  return (
+    <group>
+      <mesh geometry={geos.shell} material={skin} castShadow receiveShadow />
+      <mesh geometry={geos.ribs} material={rib} castShadow />
+      {([-1, 1] as const).map((sx) => (
+        <group key={sx} position={pos} rotation={[0, rotationY, 0]}>
+          <mesh position={[sx * (L / 2) - (sx > 0 ? 0.2 : 0), 0, 0]} rotation={[0, Math.PI / 2, 0]} material={gableMat} castShadow receiveShadow>
+            <extrudeGeometry args={[geos.shape, { depth: 0.2, bevelEnabled: false }]} />
+          </mesh>
+          {/* Lunette vitrée en demi-cercle, à rayons */}
+          <group position={[sx * (L / 2 + 0.012), 0.15, 0]} rotation={[0, (sx * Math.PI) / 2, 0]}>
+            <mesh material={glass}>
+              <circleGeometry args={[lunR, 32, 0, Math.PI]} />
+            </mesh>
+            <mesh material={rib}>
+              <torusGeometry args={[lunR, 0.05, 6, 32, Math.PI]} />
+            </mesh>
+            {[1, 2, 3, 4, 5].map((k) => {
+              const a = (k / 6) * Math.PI;
+              return (
+                <mesh key={k} position={[(Math.cos(a) * lunR) / 2, (Math.sin(a) * lunR) / 2, 0.01]} rotation={[0, 0, a]} material={rib}>
+                  <boxGeometry args={[lunR, 0.04, 0.04]} />
+                </mesh>
+              );
+            })}
+            <mesh position={[0, 0.02, 0.01]} material={rib}>
+              <boxGeometry args={[lunR * 2, 0.06, 0.05]} />
+            </mesh>
+          </group>
+        </group>
+      ))}
+      {withLegs
+        ? Array.from({ length: Math.max(2, Math.round(L / 3)) + 1 }).flatMap((_, i, arr) =>
+            ([-1, 1] as const).map((s) => {
+              const p = new THREE.Vector3(-L / 2 + (i / (arr.length - 1)) * L, 0, s * (S / 2)).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY).add(pos);
+              return (
+                <mesh key={`${i}${s}`} position={[p.x, y - wallHeightM / 2, p.z]} material={rib} castShadow>
+                  <boxGeometry args={[0.16, wallHeightM, 0.16]} />
+                </mesh>
+              );
+            }),
+          )
+        : null}
+    </group>
+  );
+}
+
+/** Toiture en sheds : dents de scie, pans en bac acier et verrières verticales orientées au nord. */
+function SawtoothRect({ rect, props }: { rect: RoofRect; props: RoofBuildProps }) {
+  const { y, color, opacity, wallColor, withLegs, wallHeightM } = props;
+  const { length: L, span: S, rotationY } = ridgeFrame(rect);
+  const n = Math.max(1, Math.round(S / 4.5));
+  const tw = S / n;
+  const h = Math.min(2.4, Math.max(1, tw * 0.42));
+  const skin = useSeamMaterial(styleColor(color, '#b8c0c8'), opacity);
+  const glass = useGlassMaterial(0.8);
+  const endMat = usePlainMaterial(wallColor ?? '#ece7df', 0.9, 0, 1);
+  const frame = usePlainMaterial(STEEL, 0.4, 0.6);
+
+  const geos = useMemo(() => {
+    const slopes: THREE.BufferGeometry[] = [];
+    const glazes: THREE.BufferGeometry[] = [];
+    const ends: THREE.BufferGeometry[] = [];
+    const slopeLen = Math.hypot(tw, h);
+    for (let k = 0; k < n; k += 1) {
+      const z0 = -S / 2 + k * tw;
+      const z1 = z0 + tw;
+      slopes.push(
+        paramGeometry(
+          2,
+          2,
+          (u, v) => [-L / 2 - 0.12 + u * (L + 0.24), v * h + 0.01, z0 + v * (tw - 0.02)],
+          (u, v) => [(v * slopeLen) / 0.5, (u * L) / 4],
+        ),
+      );
+      glazes.push(
+        paramGeometry(1, 1, (u, v) => [-L / 2 + u * L, v * h, z1 - 0.02], (u, v) => [u, v]),
+      );
+      ([-1, 1] as const).forEach((sx) => {
+        const g = new THREE.BufferGeometry();
+        const x = sx * (L / 2);
+        g.setAttribute('position', new THREE.Float32BufferAttribute([x, 0, z0, x, 0, z1, x, h, z1], 3));
+        g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1], 2));
+        g.setIndex([0, 1, 2]);
+        ends.push(g);
+      });
+    }
+    const end = mergeGeometries(ends);
+    end.computeVertexNormals();
+    return {
+      slopes: placeInRect(mergeGeometries(slopes), rect, rotationY, y),
+      glazes: placeInRect(mergeGeometries(glazes), rect, rotationY, y),
+      ends: placeInRect(end, rect, rotationY, y),
+    };
+  }, [n, tw, h, L, S, rect, rotationY, y]);
+
+  const mullions = useMemo(() => {
+    const out: Array<[THREE.Vector3, THREE.Vector3]> = [];
+    const m = new THREE.Matrix4().makeRotationY(rotationY);
+    m.setPosition(rect.cx, y, rect.cz);
+    const P = (x: number, yy: number, z: number) => new THREE.Vector3(x, yy, z).applyMatrix4(m);
+    const cols = Math.max(2, Math.round(L / 1.5));
+    for (let k = 0; k < n; k += 1) {
+      const z1 = -S / 2 + (k + 1) * tw - 0.01;
+      for (let c = 0; c <= cols; c += 1) {
+        const x = -L / 2 + (c / cols) * L;
+        out.push([P(x, 0, z1), P(x, h, z1)]);
+      }
+      out.push([P(-L / 2, h, z1), P(L / 2, h, z1)]);
+      out.push([P(-L / 2, 0.02, z1), P(L / 2, 0.02, z1)]);
+    }
+    if (withLegs) {
+      for (let c = 0; c <= Math.max(1, Math.round(L / 4)); c += 1) {
+        const x = -L / 2 + (c / Math.max(1, Math.round(L / 4))) * L;
+        ([-1, 1] as const).forEach((s) => out.push([P(x, -wallHeightM, s * (S / 2)), P(x, 0, s * (S / 2))]));
+      }
+    }
+    return out;
+  }, [rotationY, rect, y, L, n, S, tw, h, withLegs, wallHeightM]);
+
+  return (
+    <group>
+      <mesh geometry={geos.slopes} material={skin} castShadow receiveShadow />
+      <mesh geometry={geos.glazes} material={glass} />
+      <mesh geometry={geos.ends} material={endMat} castShadow />
+      {mullions.map(([a, b], i) => (
+        <Beam key={i} a={a} b={b} w={0.05} h={0.07} material={frame} />
+      ))}
+    </group>
+  );
+}
+
 export function StyledRoof({ style, props }: { style: RoofStyle; props: RoofBuildProps }) {
   const fp = props.footprint;
   switch (style) {
@@ -1130,6 +1516,20 @@ export function StyledRoof({ style, props }: { style: RoofStyle; props: RoofBuil
       );
     case 'pergola':
       return <>{rectsOf(fp).map((r, i) => <PergolaRect key={i} rect={r} props={props} />)}</>;
+    case 'clearTent':
+      return fp.kind === 'radial' ? (
+        <BigTop center={fp.center} ring={fp.ring} props={{ ...props, opacity: Math.min(props.opacity, 0.6) }} lining={false} />
+      ) : (
+        <>{fp.rects.map((r, i) => <MarqueeRect key={i} rect={r} props={props} lining={false} clear />)}</>
+      );
+    case 'barrel':
+      return <>{rectsOf(fp).map((r, i) => <BarrelRect key={i} rect={r} props={props} />)}</>;
+    case 'sawtooth':
+      return fp.kind === 'radial' ? (
+        <HipRadial center={fp.center} ring={fp.ring} props={props} pitch={20} material="slate" />
+      ) : (
+        <>{fp.rects.map((r, i) => <SawtoothRect key={i} rect={r} props={props} />)}</>
+      );
     case 'fabricStretch':
       return fp.kind === 'radial' ? (
         <TensileCone center={fp.center} ring={fp.ring} props={props} />

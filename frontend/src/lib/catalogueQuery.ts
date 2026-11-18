@@ -54,6 +54,7 @@ export function catalogueReturnBackLabel(href: string): string {
 
   if (path === '/dashboard/tickets') return 'Mes billets';
   if (path === '/dashboard/bookings') return 'Réservations';
+  if (path === '/dashboard/quotes') return 'Devis';
   if (path === '/dashboard/rooms') return 'Salles';
   if (path === '/dashboard/marketplace') return 'Prestations';
   if (path === '/dashboard/admin/catalogue') return 'Catalogue';
@@ -117,6 +118,7 @@ export function isCatalogueListPath(pathname: string): boolean {
     || pathname === '/dashboard/rooms'
     || pathname === '/dashboard/marketplace'
     || pathname === '/dashboard/bookings'
+    || pathname === '/dashboard/quotes'
     || pathname === '/dashboard/tickets'
     || pathname === '/dashboard/catalogue'
   );

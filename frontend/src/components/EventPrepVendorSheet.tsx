@@ -327,7 +327,7 @@ export default function EventPrepVendorSheet({
                 {extras.inquiries.map((item) => (
                   <li key={item.id}>
                     <Link
-                      href={`${followHref}&tab=quotes`}
+                      href={`/dashboard/quotes?event=${encodeURIComponent(eventId)}`}
                       className="flex items-center justify-between gap-2 text-xs rounded-[var(--radius-button)] border border-border px-3 py-2 hover:border-primary/40"
                     >
                       <span className="truncate">{item.title}</span>

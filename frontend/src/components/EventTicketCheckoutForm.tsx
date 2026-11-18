@@ -56,6 +56,8 @@ type SeatRow = {
     seatCodes?: string[];
   } | null;
   chairMeta?: { standalone?: boolean; rotation?: number; isPmr?: boolean } | null;
+  /** Rotation de la table / rangée (degrés, convention de la vue 3D). */
+  rotation?: number | null;
   isPmr?: boolean;
   seatCode?: string | null;
 };

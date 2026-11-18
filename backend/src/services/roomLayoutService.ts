@@ -85,6 +85,8 @@ export interface RoomLayoutBlueprint {
         pmrSeatIndices?: number[];
         /** 'oneSide' : tous les convives du même côté, face à la salle. */
         seatingSide?: 'around' | 'oneSide';
+        /** Rotation en degrés (même convention que la vue 3D). */
+        rotation?: number;
       }
     | {
         id: string;
@@ -112,6 +114,9 @@ export interface RoomLayoutBlueprint {
         focusX?: number;
         focusY?: number;
         pmrSeatIndices?: number[];
+        aisleWidthPct?: number;
+        rowName?: string;
+        rotation?: number;
       }
     | {
         id: string;
@@ -188,6 +193,7 @@ function furnitureToPlanTable(item: Extract<RoomLayoutBlueprint['furniture'][num
       hiddenSeatIndices: item.hiddenSeatIndices,
       pmrSeatIndices: item.pmrSeatIndices,
       ...(item.seatingSide === 'oneSide' ? { seatingSide: 'oneSide' as const } : {}),
+      ...(item.rotation ? { rotation: item.rotation } : {}),
     };
   }
 
@@ -203,15 +209,17 @@ function furnitureToPlanTable(item: Extract<RoomLayoutBlueprint['furniture'][num
     seats: emptySeats(item.seatCount),
     locked: true,
     pmrSeatIndices: item.pmrSeatIndices,
+    ...(item.rotation ? { rotation: item.rotation } : {}),
     rowMeta: {
       tier: item.tier,
       curve: item.curve ?? 0,
       elevationM: item.elevationM,
       aisleSplit: item.aisleSplit === true,
+      aisleWidthPct: item.aisleWidthPct,
       focusX: item.focusX,
       focusY: item.focusY,
-      rowName: item.label,
-      seatCodes: Array.from({ length: item.seatCount }, (_, i) => rowSeatCode(item.label, i)),
+      rowName: item.rowName || item.label,
+      seatCodes: Array.from({ length: item.seatCount }, (_, i) => rowSeatCode(item.rowName || item.label, i)),
     },
   };
 }

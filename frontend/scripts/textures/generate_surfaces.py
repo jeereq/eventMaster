@@ -965,6 +965,115 @@ def pool_mosaic(seed: int = 831, n: int = 20):
     return np.clip(albedo, 0, 1), np.clip(height, 0, 1)
 
 
+
+# ───────────────────────── murs décoratifs ─────────────────────────
+
+def ring_shadow(m: np.ndarray) -> np.ndarray:
+    """Liseré sombre au bord d’un motif (impression en léger relief)."""
+    return np.clip(blur(m, 2.0) - m, 0, 1) * 3
+
+
+def wallpaper_damask(seed: int = 761, cols=('#e3ded4', '#ece8e0', '#f5f2ec')):
+    """Papier peint damassé ton sur ton (teinté par la couleur du mur) : médaillons en quinconce,
+    motif légèrement en relief (impression gaufrée), fibres du papier."""
+    size = SIZE
+    yy, xx = np.mgrid[0:size, 0:size].astype(np.float64) / size
+    motif = np.zeros((size, size))
+    # Deux colonnes de médaillons par répétition, la seconde décalée d’une demi-hauteur.
+    for cx, cy in [(0.25, 0.25), (0.25, 0.75), (0.75, 0.0), (0.75, 0.5), (0.75, 1.0)]:
+        dx = (xx - cx + 0.5) % 1 - 0.5
+        dy = (yy - cy + 0.5) % 1 - 0.5
+        r = np.sqrt((dx * 1.0) ** 2 + (dy * 0.78) ** 2)
+        th = np.arctan2(dy, dx)
+        # Contour en rosace (pétales) + cœur en losange.
+        edge = 0.17 + 0.035 * np.cos(4 * th) + 0.018 * np.cos(8 * th + 0.6)
+        petal = smoothstep(0.012, 0.0, r - edge) - smoothstep(0.01, 0.0, r - edge + 0.03)
+        heart = smoothstep(0.01, 0.0, np.abs(dx) + np.abs(dy) * 0.9 - 0.06)
+        ring = np.exp(-((r - edge * 0.62) ** 2) / (2 * 0.006 ** 2))
+        motif = np.maximum(motif, np.clip(petal * 0.9 + heart + ring * 0.7, 0, 1))
+    # Rinceaux entre médaillons : vagues fines croisées.
+    vine = np.exp(-((np.sin(2 * np.pi * (xx * 2 + 0.25 * np.sin(2 * np.pi * yy * 2))) * 0.5) ** 2) / 0.0035) * 0.35
+    motif = np.clip(motif + vine * (1 - motif), 0, 1)
+    fiber = band_noise(size, seed, 160, 512, sx=1.0, sy=0.35)
+    cloud = spectral_noise(size, seed + 1, beta=3.2)
+    t = np.clip(0.3 + 0.12 * (fiber - 0.5) + 0.1 * (cloud - 0.5), 0, 1)
+    albedo = colorize(t, [(0, cols[0]), (0.5, cols[1]), (1, cols[2])])
+    # Motif imprimé un ton plus clair et légèrement nacré sur le fond.
+    albedo = mix(albedo, rgb(cols[2]) * 1.06, motif * 0.85)
+    albedo *= (1 - 0.12 * blur(ring_shadow(motif), 1.0))[..., None]
+    height = 0.5 + 0.28 * blur(motif, 1.2) + 0.05 * fiber
+    return albedo, height
+
+
+def tadelakt(seed: int = 771, cols=('#ddd6ca', '#e8e2d8', '#f3efe8')):
+    """Tadelakt (chaux polie au galet) : nuages de chaux, passes de polissage brillantes, micro-pores."""
+    size = SIZE
+    cloud = spectral_noise(size, seed, beta=3.6)
+    mid = spectral_noise(size, seed + 1, beta=2.6)
+    yy, xx = np.mgrid[0:size, 0:size].astype(np.float64) / size
+    # Passes de galet : arcs courts et serrés, orientés au hasard par zones.
+    ang = (spectral_noise(size, seed + 2, beta=4.0) - 0.5) * 2.4
+    u = xx * np.cos(ang) + yy * np.sin(ang)
+    burnish = 0.5 + 0.5 * np.sin(2 * np.pi * (u * 22 + (mid - 0.5) * 3))
+    rng = np.random.default_rng(seed + 3)
+    pores = blur((rng.random((size, size)) > 0.9985).astype(float), 0.8)
+    pores = pores / max(1e-6, pores.max())
+    t = np.clip(0.5 + 0.55 * (cloud - 0.5) + 0.15 * (mid - 0.5) + 0.06 * (burnish - 0.5), 0, 1)
+    albedo = colorize(t, [(0, cols[0]), (0.5, cols[1]), (1, cols[2])])
+    albedo *= (1 - 0.25 * pores)[..., None]
+    height = 0.6 + 0.06 * burnish + 0.08 * mid - 0.3 * pores
+    return albedo, np.clip(height, 0, 1)
+
+
+def fluted_panel(seed: int = 781, flutes: int = 7, cols=('#d9d4ca', '#e7e3db', '#f2efe9')):
+    """Panneau cannelé peint (teinté par la couleur du mur) : cannelures creuses verticales,
+    arêtes vives, voile de peinture et traces de rouleau."""
+    size = SIZE
+    yy, xx = np.mgrid[0:size, 0:size].astype(np.float64) / size
+    ph = (xx * flutes) % 1.0
+    # Gorge en demi-cercle entre deux méplats étroits.
+    land = 0.12
+    g = np.clip((ph - land / 2) / (1 - land), 0, 1)
+    groove = np.where((ph > land / 2) & (ph < 1 - land / 2), np.sqrt(np.clip(1 - (2 * g - 1) ** 2, 0, 1)), 0.0)
+    roller = band_noise(size, seed, 4, 24, sx=1.0, sy=0.15)
+    paint = band_noise(size, seed + 1, 150, 512)
+    cloud = spectral_noise(size, seed + 2, beta=3.4)
+    # Le fond des gorges reçoit moins de lumière ambiante.
+    t = np.clip(0.55 + 0.1 * (cloud - 0.5) + 0.08 * (paint - 0.5) + 0.06 * (roller - 0.5), 0, 1)
+    albedo = colorize(t, [(0, cols[0]), (0.5, cols[1]), (1, cols[2])])
+    albedo *= (1 - 0.14 * groove)[..., None]
+    height = 0.85 - 0.6 * groove + 0.02 * paint
+    return albedo, height
+
+
+def corrugated_metal(seed: int = 791, waves: int = 5):
+    """Tôle ondulée galvanisée : ondes sinusoïdales, fleurs de zinc, coulures et légère oxydation."""
+    size = SIZE
+    yy, xx = np.mgrid[0:size, 0:size].astype(np.float64) / size
+    wave = 0.5 + 0.5 * np.sin(2 * np.pi * xx * waves)
+    # Fleurs de zinc : cellules de Voronoï aux reflets légèrement différents.
+    rng = np.random.default_rng(seed)
+    pts = rng.uniform(0, size, (900, 2))
+    idx, d1, d2, _, _ = voronoi(size, pts)
+    spangle = rng.uniform(-1, 1, len(pts))[idx]
+    streak = band_noise(size, seed + 1, 2, 40, sx=1.0, sy=0.08)
+    cloud = spectral_noise(size, seed + 2, beta=3.2)
+    t = np.clip(0.5 + 0.06 * spangle + 0.18 * (cloud - 0.5) + 0.12 * (streak - 0.5), 0, 1)
+    albedo = colorize(t, [(0, '#7d848a'), (0.5, '#a3aab0'), (1, '#c4cace')])
+    # Coulures et rouille légère dans le creux des ondes.
+    rust = np.clip((streak - 0.62) * 3, 0, 1) * (1 - wave) * 0.35
+    albedo = mix(albedo, rgb('#8a6a4f'), rust)
+    height = 0.2 + 0.7 * wave + 0.01 * spangle
+    return np.clip(albedo, 0, 1), height
+
+
+def soften(pair, k: float):
+    """Atténue les nuances d’albédo (texture destinée à être teintée) sans toucher au relief."""
+    albedo, height = pair
+    mean = albedo.mean(axis=(0, 1))
+    return mean + (albedo - mean) * k, height
+
+
 JOBS = {
     # Gazons & végétal
     'grass-lawn': lambda: (grass(501, LAWN, '#2a2a16', 170000, dry=0.12), 7),
@@ -983,7 +1092,7 @@ JOBS = {
     # Minéraux
     'concrete': lambda: (concrete(591), 5),
     'epoxy-grey': lambda: (concrete(595, ('#bcc3cc', '#c9cfd6', '#d6dbe1'), joints=0), 1.2),
-    'herringbone-honey': lambda: (herringbone('herringbone-honey', ['#c8955a', '#b9864c', '#d3a26a', '#ad7a42', '#c08d52'], 181), 6),
+    'herringbone-honey': lambda: (herringbone('herringbone-honey', ['#c8955a', '#b9864c', '#d3a26a', '#ad7a42', '#c08d52'], 181, figure=0.25), 6),
     'concrete-polished': lambda: (concrete(601, ('#7f7c76', '#95928b', '#a9a59d'), polished=True, joints=1), 2.5),
     'terrazzo-classic': lambda: (terrazzo(611, 2600, ['#9a9690', '#c9c3b8', '#5d5a55', '#d8d2c6', '#b7a58c', '#7d7a74']), 2),
     'terrazzo-venetian': lambda: (terrazzo(621, 1100, ['#b3746a', '#e2ddd3', '#6e6a63', '#c9a77d', '#8e3d33', '#f0ece4', '#355e58'], ('#e2dcd0', '#ece7de'), (6, 18)), 2),
@@ -997,6 +1106,8 @@ JOBS = {
     # Textiles
     'carpet-navy': lambda: (carpet(661, ['#171a33', '#232749', '#303660']), 2.5),
     'carpet-red': lambda: (carpet(671, ['#4d0a12', '#6e1019', '#8c1a22']), 2.5),
+    # Moquette claire, teintée par la couleur choisie (zones, couloirs).
+    'carpet-neutral': lambda: (soften(carpet(681, ['#c6c3bd', '#cfccc6', '#d9d7d2']), 0.45), 2.5),
     # Eau & végétation (aménagements extérieurs)
     'water': lambda: (water(), 4),
     'foliage': lambda: (foliage(), 6),
@@ -1010,6 +1121,10 @@ JOBS = {
     'wall-plaster': lambda: (plaster(741), 2.5),
     'wall-limewash': lambda: (plaster(751, ('#e2ddd4', '#efebe4', '#faf8f3'), trowel=0.9, mottle=0.55), 2),
     'wall-metro': lambda: (metro_tile(), 5),
+    'wall-wallpaper': lambda: (wallpaper_damask(), 3),
+    'wall-tadelakt': lambda: (tadelakt(), 1.5),
+    'wall-fluted': lambda: (fluted_panel(), 6),
+    'wall-corrugated': lambda: (corrugated_metal(), 7),
     # Toitures, toiles de tente, bassins
     'roof-tiles': lambda: (roof_tiles(), 8),
     'roof-slate': lambda: (roof_slate(), 6),

@@ -231,7 +231,7 @@ export default function VendorStatsView({ isVenue }: { isVenue: boolean }) {
           label="Demandes de devis"
           value={String(inquiries.total)}
           hint={inquiries.pending > 0 ? `${inquiries.pending} sans réponse` : 'Toutes traitées'}
-          href="/dashboard/bookings?tab=quotes"
+          href="/dashboard/quotes"
         />
         <Tile
           icon={Clock}

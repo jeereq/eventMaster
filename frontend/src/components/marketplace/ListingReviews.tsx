@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { MessageSquareQuote, Store } from '@/components/icons';
+import { MessageSquareQuote, Star, Store } from '@/components/icons';
+import { cn } from '@/lib/cn';
 import { api } from '@/lib/api';
 import { ratingLabel, type MarketplaceReview, type RatingSummary } from '@/lib/marketplaceReviews';
 import { ReviewStars } from '@/components/marketplace/ReviewStars';
@@ -22,12 +23,17 @@ export default function ListingReviews({
   vendorSlug,
   vendorName,
   showSubject = false,
+  prominent = false,
+  id,
 }: {
   kind: 'venue' | 'service' | 'vendor';
   slug: string;
   vendorSlug?: string | null;
   vendorName?: string | null;
   showSubject?: boolean;
+  /** Section de page (vitrine) : titre plus grand et état vide illustré. */
+  prominent?: boolean;
+  id?: string;
 }) {
   const [summary, setSummary] = useState<RatingSummary | null>(null);
   const [reviews, setReviews] = useState<MarketplaceReview[]>([]);
@@ -64,19 +70,36 @@ export default function ListingReviews({
   if (!loaded) return vitrineLink;
 
   return (
-    <section aria-labelledby={`reviews-${kind}-${slug}`} className="space-y-3">
+    <section id={id} aria-labelledby={`reviews-${kind}-${slug}`} className={cn('space-y-3', id && 'scroll-mt-32')}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <h2 id={`reviews-${kind}-${slug}`} className="text-sm font-semibold text-foreground">Avis clients</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2
+            id={`reviews-${kind}-${slug}`}
+            className={cn('font-semibold text-foreground', prominent ? 'font-display text-lg sm:text-xl' : 'text-sm')}
+          >
+            Avis clients
+          </h2>
           {summary?.average != null ? <ReviewStars rating={summary.average} /> : null}
-          <span className="text-xs text-muted">{ratingLabel(summary)}</span>
+          {prominent && !summary?.count ? null : <span className="text-xs text-muted">{ratingLabel(summary)}</span>}
         </div>
         {vitrineLink}
       </div>
       {reviews.length === 0 ? (
-        <p className="text-xs text-muted">
-          Les avis sont laissés par des clients après une réservation terminée sur EventMaster.
-        </p>
+        prominent ? (
+          <div className="space-y-2 rounded-2xl border border-dashed border-border bg-surface/30 px-4 py-10 text-center">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Star className="h-5 w-5" aria-hidden />
+            </div>
+            <p className="text-sm font-bold text-foreground">Pas encore d’avis</p>
+            <p className="mx-auto max-w-sm text-xs text-muted">
+              Les avis sont laissés par des clients après une réservation terminée sur EventMaster : ils sont tous vérifiés.
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-muted">
+            Les avis sont laissés par des clients après une réservation terminée sur EventMaster.
+          </p>
+        )
       ) : (
         <ul className="space-y-3">
           {reviews.map((review) => (
