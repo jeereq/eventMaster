@@ -936,6 +936,8 @@ interface RoomLayoutEditorProps {
   allowThemesFixtures?: boolean;
   /** Invités avec photo (option du forfait) : visage de la personne sur son avatar 3D. */
   allowGuestPhotos?: boolean;
+  /** Invités simulés (option du forfait) : avatars assis, debout et danseurs dans la salle. */
+  allowGuestAvatars?: boolean;
   /** Niveau d’éditeur selon le forfait (basic / standard / advanced / complete). */
   editorLevel?: string | null;
   /** Coupe le rendu 3D sans démonter l’éditeur (historique conservé). */
@@ -1008,6 +1010,7 @@ export default function RoomLayoutEditor({
   readOnly = false,
   allowThemesFixtures = true,
   allowGuestPhotos = false,
+  allowGuestAvatars = true,
   editorLevel = 'complete',
   paused = false,
   focusPlanImport = false,
@@ -1065,9 +1068,6 @@ export default function RoomLayoutEditor({
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   // Aperçu de la « découverte du plan » : chaque incrément rejoue l’arrivée choisie.
   const [introReplayKey, setIntroReplayKey] = useState(0);
-  // Simulation des invités : vue de travail de l’organisateur, non enregistrée sur le plan
-  // (les visiteurs et la billetterie ne voient pas de faux invités sur les places).
-  const [guestSim, setGuestSim] = useState<GuestSimulationSettings | null>(null);
   const [portraitsOpen, setPortraitsOpen] = useState(false);
   const [portraitBusy, setPortraitBusy] = useState(false);
   const [portraitError, setPortraitError] = useState('');
@@ -2637,12 +2637,30 @@ export default function RoomLayoutEditor({
 
   const replayIntro = () => setIntroReplayKey((k) => k + 1);
 
+  // Simulation des invités : réglage enregistré avec le plan (l’éditeur la rouvre telle quelle),
+  // réservé aux forfaits qui l’incluent. Les visiteurs et la billetterie ne voient jamais ces avatars.
+  const guestSim: GuestSimulationSettings | null = allowGuestAvatars ? (blueprint.metadata.guestSimulation ?? null) : null;
+  const setGuestSim = (next: GuestSimulationSettings | null, message?: string) => {
+    const current = ensureBlueprintDefaults(latestBlueprintRef.current);
+    updateBlueprint(
+      { ...current, metadata: { ...current.metadata, guestSimulation: next ?? undefined } },
+      { message: message ?? (next ? 'Invités simulés réglés' : 'Invités simulés masqués'), kind: 'settings' },
+    );
+  };
+  const guestAvatarsUpsell = () => setUpsell({
+    planLabel: 'Business',
+    label: 'Invités simulés',
+    message: '« Invités simulés » (avatars dans la salle) n’est pas inclus dans votre forfait actuel. Choisissez un forfait qui l’inclut pour remplir la salle d’invités en 3D.',
+  });
   const guestSummary = guestSim ? buildGuestSimulation(blueprint, guestSim) : null;
   const hasDanceFloor = blueprint.furniture.some((f) => f.kind === 'zone' && f.zoneKind === 'dance');
   const toggleGuestSim = () => {
+    if (!allowGuestAvatars) {
+      guestAvatarsUpsell();
+      return;
+    }
     const next = guestSim ? null : DEFAULT_GUEST_SIMULATION;
-    setGuestSim(next);
-    log(next ? 'Invités simulés affichés' : 'Invités simulés masqués', 'info');
+    setGuestSim(next, next ? 'Invités simulés affichés' : 'Invités simulés masqués');
   };
 
   // Thème de la soirée : enregistré sur le plan, il habille les invités simulés.
@@ -2667,6 +2685,10 @@ export default function RoomLayoutEditor({
     );
   };
   const openGuestPortraits = () => {
+    if (!allowGuestAvatars) {
+      guestAvatarsUpsell();
+      return;
+    }
     if (!allowGuestPhotos) {
       setUpsell({
         planLabel: 'Premium',
@@ -9357,10 +9379,12 @@ export default function RoomLayoutEditor({
         type="button"
         onClick={toggleGuestSim}
         aria-pressed={Boolean(guestSim)}
-        title="Asseoir des invités sur les chaises et les faire danser sur la piste, pour se représenter la salle pleine (non enregistré sur le plan)"
-        className={cn(EDITOR_TOOL, guestSim ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+        title={allowGuestAvatars
+          ? 'Asseoir des invités sur les chaises et les faire danser sur la piste, pour se représenter la salle pleine (visible dans l’éditeur seulement)'
+          : 'Invités simulés : option non incluse dans votre forfait'}
+        className={cn(EDITOR_TOOL, guestSim ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED, !allowGuestAvatars && 'opacity-70')}
       >
-        <Users className="w-3.5 h-3.5" aria-hidden />
+        {allowGuestAvatars ? <Users className="w-3.5 h-3.5" aria-hidden /> : <Lock className="w-3.5 h-3.5" aria-hidden />}
         {guestSummary
           ? `Invités : ${guestSummary.seated + guestSummary.standing + guestSummary.dancing}`
           : 'Invités simulés'}
@@ -9370,7 +9394,7 @@ export default function RoomLayoutEditor({
           <span>Remplissage</span>
           <select
             value={String(guestSim.fill)}
-            onChange={(e) => setGuestSim({ ...guestSim, fill: Number(e.target.value) })}
+            onChange={(e) => setGuestSim({ ...guestSim, fill: Number(e.target.value) }, `Remplissage : ${Math.round(Number(e.target.value) * 100)} %`)}
             className="bg-transparent text-xs font-bold text-foreground outline-none"
             aria-label="Remplissage de la salle"
           >
@@ -9386,7 +9410,7 @@ export default function RoomLayoutEditor({
       {guestSim && hasDanceFloor ? (
         <button
           type="button"
-          onClick={() => setGuestSim({ ...guestSim, dancing: !guestSim.dancing })}
+          onClick={() => setGuestSim({ ...guestSim, dancing: !guestSim.dancing }, guestSim.dancing ? 'Danse arrêtée' : 'Invités sur la piste de danse')}
           aria-pressed={guestSim.dancing}
           title="Des invités dansent sur la piste"
           className={cn(EDITOR_TOOL, guestSim.dancing ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
@@ -9402,9 +9426,9 @@ export default function RoomLayoutEditor({
           title={allowGuestPhotos
             ? 'Mettre la photo d’une personne sur son avatar, à sa place (enregistré avec le plan)'
             : 'Invités avec photo : option des forfaits Premium, Enterprise, Particulier et Salle'}
-          className={cn(EDITOR_TOOL, guestPortraits.length > 0 ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED, !allowGuestPhotos && 'opacity-70')}
+          className={cn(EDITOR_TOOL, guestPortraits.length > 0 ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED, !(allowGuestPhotos && allowGuestAvatars) && 'opacity-70')}
         >
-          {allowGuestPhotos ? <Camera className="w-3.5 h-3.5" aria-hidden /> : <Lock className="w-3.5 h-3.5" aria-hidden />}
+          {allowGuestPhotos && allowGuestAvatars ? <Camera className="w-3.5 h-3.5" aria-hidden /> : <Lock className="w-3.5 h-3.5" aria-hidden />}
           {guestPortraits.length > 0 ? `Photos : ${guestPortraits.length}` : 'Invités avec photo'}
         </button>
       ) : null}

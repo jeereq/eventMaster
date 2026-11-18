@@ -886,6 +886,8 @@ export interface RoomLayoutBlueprint {
     guestPortraits?: import('@/lib/roomGuestSimulation').GuestPortrait[];
     /** Thème de la soirée : habille les invités simulés (soirée blanche, gala, couleurs de la fête…). */
     guestDressCode?: import('@/lib/roomGuestSimulation').GuestDressCodeSetting;
+    /** Invités simulés affichés dans l’éditeur (remplissage, danse) ; absent = masqués. Jamais montrés aux visiteurs. */
+    guestSimulation?: import('@/lib/roomGuestSimulation').GuestSimulationSettings;
     /** Découverte du plan : perspective d’arrivée de la caméra (survol, vue de dessus, depuis l’entrée…). */
     introView?: import('@/lib/roomIntroView').RoomIntroView;
     /** Modèle de structure multi-étages appliqué. */

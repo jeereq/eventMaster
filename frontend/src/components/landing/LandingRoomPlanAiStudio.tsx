@@ -324,6 +324,7 @@ export default function LandingRoomPlanAiStudio({
         // Le thème et les invités avec photo suivent le plan dans l’éditeur.
         guestDressCode: dressCode.id === 'mixte' ? undefined : dressCode,
         guestPortraits: portraits.length > 0 ? portraits : undefined,
+        guestSimulation: guestSim ?? undefined,
       });
     }
     if (user) {
