@@ -74,6 +74,7 @@ async function seedSubscriptionPlans() {
         protocolQr: def.protocolQr,
         seatNotifications: def.seatNotifications,
         roomThemesFixtures: def.roomThemesFixtures,
+        guestPhotoAvatars: def.guestPhotoAvatars,
         adminReports: def.adminReports,
         roomEditorLevel: def.roomEditorLevel,
         commercialNetwork: def.commercialNetwork,

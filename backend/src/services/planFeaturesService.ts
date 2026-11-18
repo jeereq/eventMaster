@@ -9,6 +9,7 @@ export type PlanFeatureKey =
   | 'customRsvpFields'
   | 'mockupOcr'
   | 'roomThemesFixtures'
+  | 'guestPhotoAvatars'
   | 'commercialNetwork'
   | 'adminReports';
 
@@ -186,6 +187,24 @@ export async function assertThemesFixturesForBlueprint(tenantId: string, bluepri
   await assertPlanFeature(tenantId, 'roomThemesFixtures');
 }
 
+/** Le plan contient-il des invités personnalisés avec photo ? */
+export function blueprintUsesGuestPhotos(blueprint: unknown): boolean {
+  if (!blueprint || typeof blueprint !== 'object') return false;
+  const portraits = (blueprint as { metadata?: { guestPortraits?: unknown } }).metadata?.guestPortraits;
+  return Array.isArray(portraits) && portraits.length > 0;
+}
+
+export async function assertGuestPhotosForBlueprint(tenantId: string, blueprint: unknown) {
+  if (!blueprintUsesGuestPhotos(blueprint)) return;
+  const snapshot = await getTenantPlanSnapshot(tenantId);
+  if (!snapshot) throw new PlanFeatureError('Organisation introuvable.');
+  if (!planHasFeature(snapshot.features, 'guestPhotoAvatars')) {
+    throw new PlanFeatureError(
+      `Les avatars d’invités avec photo ne sont pas inclus dans votre forfait ${snapshot.planName}. Retirez les photos ou passez à un forfait supérieur.`,
+    );
+  }
+}
+
 export async function assertRoomTypeForPlan(tenantId: string, roomType: string): Promise<PlanDefinition> {
   const snapshot = await getTenantPlanSnapshot(tenantId);
   if (!snapshot) throw new PlanFeatureError('Organisation introuvable.');
@@ -221,6 +240,7 @@ export function formatPlanFeaturesResponse(snapshot: TenantPlanSnapshot) {
       customRsvpFields: f.customRsvpFields,
       mockupOcr: f.mockupOcr,
       roomThemesFixtures: f.roomThemesFixtures,
+      guestPhotoAvatars: f.guestPhotoAvatars,
       commercialNetwork: f.commercialNetwork,
       adminReports: f.adminReports,
       roomEditorLevel: f.roomEditorLevel,

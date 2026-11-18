@@ -36,7 +36,41 @@ export interface SimulatedGuest {
   scale: number;
   /** Décalage de phase pour l'animation (danse). */
   phase: number;
+  /** Invité personnalisé : photo de la personne posée sur le visage de l'avatar. */
+  photoUrl?: string;
+  /** Nom de la personne (invité personnalisé). */
+  name?: string;
+  /** Identifiant de la fiche personnalisée d'où vient l'invité. */
+  portraitId?: string;
 }
+
+/**
+ * Invité personnalisé, enregistré sur le plan (`metadata.guestPortraits`) :
+ * une personne réelle, avec sa photo, assise à une place précise.
+ */
+export interface GuestPortrait {
+  id: string;
+  name: string;
+  /** Photo recadrée (carrée) : URL hébergée ou image intégrée. */
+  photoUrl: string;
+  /** Place : `${idMeuble}:${index}`, même clé que la simulation. */
+  seatKey: string;
+  style?: GuestStyle;
+  /** Couleur de la tenue (sinon tirée au hasard). */
+  outfit?: string;
+}
+
+/** Nombre maximal d'invités personnalisés sur un plan. */
+export const MAX_GUEST_PORTRAITS = 50;
+
+export const GUEST_STYLE_LABELS: Record<GuestStyle, string> = {
+  suit: 'Costume',
+  dress: 'Robe',
+  boubou: 'Boubou',
+};
+
+/** Couleurs de tenue proposées pour un invité personnalisé. */
+export const PORTRAIT_OUTFIT_COLORS = ['#1b1b1f', '#1f2a44', '#f4f1de', '#7a1f2b', '#0f5c4d', '#c8a24a', '#5b2a86', '#b5179e', '#118ab2', '#d62828', '#fb8500', '#2d6a4f'] as const;
 
 export interface GuestSimulationSettings {
   /** Part des places occupées (0 – 1). */
@@ -107,15 +141,27 @@ function rotateY(x: number, z: number, rot: number): [number, number] {
 }
 
 /** Apparence d'un invité, tirée de son identifiant. */
-function dressGuest(id: string, pose: GuestPose, x: number, y: number, z: number, rotY: number): SimulatedGuest {
+function dressGuest(
+  id: string,
+  pose: GuestPose,
+  x: number,
+  y: number,
+  z: number,
+  rotY: number,
+  portrait?: GuestPortrait,
+): SimulatedGuest {
   const r = rng(`guest:${id}`);
   const roll = r();
-  const style: GuestStyle = roll < 0.42 ? 'suit' : roll < 0.82 ? 'dress' : 'boubou';
-  const outfit = style === 'suit' ? pick(SUITS, r()) : pick(OUTFITS, r());
+  const style: GuestStyle = portrait?.style ?? (roll < 0.42 ? 'suit' : roll < 0.82 ? 'dress' : 'boubou');
+  const randomOutfit = style === 'suit' ? pick(SUITS, r()) : pick(OUTFITS, r());
+  const outfit = portrait?.outfit || randomOutfit;
   const bottom = style === 'suit' ? pick(TROUSERS, r()) : outfit;
   const headwrapRoll = r();
-  const headwrap = style !== 'suit' && headwrapRoll < 0.38 ? pick(HEADWRAPS, r()) : null;
+  // La photo montre déjà la coiffure de la personne : pas de foulard ajouté.
+  const headwrap = !portrait && style !== 'suit' && headwrapRoll < 0.38 ? pick(HEADWRAPS, r()) : null;
+  const extra = portrait ? { photoUrl: portrait.photoUrl, name: portrait.name, portraitId: portrait.id } : {};
   return {
+    ...extra,
     id,
     pose,
     x,
@@ -141,6 +187,8 @@ export interface GuestSimulationOptions extends Partial<GuestSimulationSettings>
   /** Étage affiché ? (sinon ses invités ne sont pas dessinés). */
   storyVisible?: (storyId: string | undefined) => boolean;
   maxGuests?: number;
+  /** Invités personnalisés (par défaut ceux du plan). Toujours présents, quel que soit le remplissage. */
+  portraits?: GuestPortrait[] | null;
 }
 
 export interface GuestSimulationResult {
@@ -150,6 +198,8 @@ export interface GuestSimulationResult {
   dancing: number;
   /** Places assises disponibles sur le plan (pour afficher « 96 / 128 »). */
   seats: number;
+  /** Invités personnalisés effectivement placés (leur place existe toujours). */
+  portraits: number;
 }
 
 /**
@@ -169,8 +219,19 @@ export function buildGuestSimulation(blueprint: RoomLayoutBlueprint, options: Gu
   let seats = 0;
   let standing = 0;
   let dancers = 0;
-  const occupied = (key: string) => rng(`seat:${key}`)() < fill;
-  const full = () => guests.length >= maxGuests;
+  const portraitsBySeat = new Map<string, GuestPortrait>();
+  for (const p of options.portraits ?? blueprint.metadata?.guestPortraits ?? []) {
+    if (p?.seatKey && p.photoUrl && !portraitsBySeat.has(p.seatKey)) portraitsBySeat.set(p.seatKey, p);
+  }
+  let portraits = 0;
+  const occupied = (key: string) => portraitsBySeat.has(key) || rng(`seat:${key}`)() < fill;
+  // Les invités personnalisés passent même quand le plafond d'avatars est atteint.
+  const full = (key?: string) => guests.length >= maxGuests && !(key && portraitsBySeat.has(key));
+  const dress = (key: string, pose: GuestPose, x: number, y: number, z: number, rotY: number) => {
+    const portrait = portraitsBySeat.get(key);
+    if (portrait) portraits += 1;
+    return dressGuest(key, pose, x, y, z, rotY, portrait);
+  };
 
   for (const item of blueprint.furniture ?? []) {
     if (!visible(item.storyId)) continue;
@@ -190,14 +251,13 @@ export function buildGuestSimulation(blueprint: RoomLayoutBlueprint, options: Gu
         const n = Math.min(Math.max(1, Math.round(item.capacity) || 1), 6);
         const radius = Math.max(size[0], size[1]) / 2 + 0.32;
         for (let i = 0; i < n; i += 1) {
-          if (full()) break;
           const key = `${item.id}:${i}`;
-          if (!occupied(key)) continue;
+          if (full(key) || !occupied(key)) continue;
           const a = (i / n) * Math.PI * 2 + Math.PI / 4;
           const lx = Math.sin(a) * radius;
           const lz = Math.cos(a) * radius;
           const [dx, dz] = rotateY(lx, lz, rot);
-          guests.push(dressGuest(key, 'standing', wx + dx, y, wz + dz, a + Math.PI + rot));
+          guests.push(dress(key, 'standing', wx + dx, y, wz + dz, a + Math.PI + rot));
           standing += 1;
         }
         continue;
@@ -208,12 +268,11 @@ export function buildGuestSimulation(blueprint: RoomLayoutBlueprint, options: Gu
       for (let i = 0; i < count; i += 1) {
         if (hidden.has(i)) continue;
         seats += 1;
-        if (full()) continue;
         const key = `${item.id}:${i}`;
-        if (!occupied(key)) continue;
+        if (full(key) || !occupied(key)) continue;
         const seat = getTableSeatPlacement3D(item.shape, item.capacity, i, size, item.seatingSide);
         const [dx, dz] = rotateY(seat.x, seat.z, rot);
-        guests.push(dressGuest(key, 'seated', wx + dx, y, wz + dz, seat.rotationY + rot));
+        guests.push(dress(key, 'seated', wx + dx, y, wz + dz, seat.rotationY + rot));
       }
       continue;
     }
@@ -238,22 +297,21 @@ export function buildGuestSimulation(blueprint: RoomLayoutBlueprint, options: Gu
       const focusLocal = { x: Math.cos(rot) * dx0 - Math.sin(rot) * dz0, z: Math.sin(rot) * dx0 + Math.cos(rot) * dz0 };
       for (let i = 0; i < count; i += 1) {
         seats += 1;
-        if (full()) continue;
         const key = `${item.id}:${i}`;
-        if (!occupied(key)) continue;
+        if (full(key) || !occupied(key)) continue;
         const p = computeRowSeatPose(i, count, 0.55, item.curve, elevation, focusLocal, item.aisleSplit === true, item.aisleWidthPct);
         const [dx, dz] = rotateY(p.localX, p.localZ, rot);
-        guests.push(dressGuest(key, 'seated', wx + dx, floorY + p.y, wz + dz, p.faceY + rot));
+        guests.push(dress(key, 'seated', wx + dx, floorY + p.y, wz + dz, p.faceY + rot));
       }
       continue;
     }
 
     if (item.kind === 'chair') {
       seats += 1;
-      if (full() || !occupied(`${item.id}:0`)) continue;
+      if (full(`${item.id}:0`) || !occupied(`${item.id}:0`)) continue;
       const [wx, wz] = pctToWorld(item.x, item.y, widthM, depthM);
       const rot = ((item.rotation ?? 0) * Math.PI) / 180;
-      guests.push(dressGuest(`${item.id}:0`, 'seated', wx, floorY + elevAt(item.x, item.y, item.id), wz, rot));
+      guests.push(dress(`${item.id}:0`, 'seated', wx, floorY + elevAt(item.x, item.y, item.id), wz, rot));
       continue;
     }
 
@@ -279,5 +337,71 @@ export function buildGuestSimulation(blueprint: RoomLayoutBlueprint, options: Gu
     }
   }
 
-  return { guests, seated: guests.length - standing - dancers, standing, dancing: dancers, seats };
+  return { guests, seated: guests.length - standing - dancers, standing, dancing: dancers, seats, portraits };
+}
+
+export interface GuestSeat {
+  /** Clé de la place (`${idMeuble}:${index}`). */
+  key: string;
+  /** Libellé lisible : « Table 3 · place 2 ». */
+  label: string;
+  /** Meuble auquel appartient la place. */
+  furnitureId: string;
+  /** Place debout (mange-debout) plutôt qu'assise. */
+  standing: boolean;
+}
+
+/** Toutes les places où l'on peut installer un invité personnalisé, dans l'ordre du plan. */
+export function listGuestSeats(blueprint: RoomLayoutBlueprint): GuestSeat[] {
+  const out: GuestSeat[] = [];
+  let tableNo = 0;
+  let chairNo = 0;
+  for (const item of blueprint.furniture ?? []) {
+    if (item.kind === 'table') {
+      tableNo += 1;
+      const name = item.name?.trim() || `Table ${tableNo}`;
+      if (item.shape === 'cocktail' || item.shape === 'highTop') {
+        const n = Math.min(Math.max(1, Math.round(item.capacity) || 1), 6);
+        for (let i = 0; i < n; i += 1) {
+          out.push({ key: `${item.id}:${i}`, label: `${name} · debout ${i + 1}`, furnitureId: item.id, standing: true });
+        }
+        continue;
+      }
+      if (item.attachedChairs === false) continue;
+      const hidden = new Set(item.hiddenSeatIndices ?? []);
+      const count = Math.min(Math.max(0, Math.round(item.capacity) || 0), 40);
+      for (let i = 0; i < count; i += 1) {
+        if (hidden.has(i)) continue;
+        out.push({ key: `${item.id}:${i}`, label: `${name} · place ${i + 1}`, furnitureId: item.id, standing: false });
+      }
+    } else if (item.kind === 'row') {
+      const count = clampRowSeatCount(item.seatCount);
+      const name = item.label?.trim() || 'Rangée';
+      for (let i = 0; i < count; i += 1) {
+        out.push({ key: `${item.id}:${i}`, label: `${name} · siège ${i + 1}`, furnitureId: item.id, standing: false });
+      }
+    } else if (item.kind === 'chair') {
+      chairNo += 1;
+      out.push({ key: `${item.id}:0`, label: `Chaise ${chairNo}`, furnitureId: item.id, standing: false });
+    }
+  }
+  return out;
+}
+
+/**
+ * Première place libre pour un nouvel invité personnalisé : d'abord autour du
+ * meuble sélectionné (s'il en a), puis sur tout le plan. `null` si tout est pris.
+ */
+export function firstFreeGuestSeat(
+  blueprint: RoomLayoutBlueprint,
+  taken: Iterable<string>,
+  preferFurnitureId?: string | null,
+): GuestSeat | null {
+  const used = new Set(taken);
+  const seats = listGuestSeats(blueprint).filter((s) => !used.has(s.key));
+  if (preferFurnitureId) {
+    const near = seats.find((s) => s.furnitureId === preferFurnitureId);
+    if (near) return near;
+  }
+  return seats.find((s) => !s.standing) ?? seats[0] ?? null;
 }

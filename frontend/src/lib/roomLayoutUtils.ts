@@ -882,6 +882,8 @@ export interface RoomLayoutBlueprint {
     presentationMode?: boolean;
     /** Ouvrir la 3D en vue maquette (murs coupés à mi-hauteur). */
     dollhouseView?: boolean;
+    /** Invités personnalisés (photo de la personne sur son avatar), à une place précise. */
+    guestPortraits?: import('@/lib/roomGuestSimulation').GuestPortrait[];
     /** Découverte du plan : perspective d’arrivée de la caméra (survol, vue de dessus, depuis l’entrée…). */
     introView?: import('@/lib/roomIntroView').RoomIntroView;
     /** Modèle de structure multi-étages appliqué. */

@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { RoomLayoutBlueprint } from './roomLayoutUtils.ts';
-import { buildGuestSimulation } from './roomGuestSimulation.ts';
+import { buildGuestSimulation, firstFreeGuestSeat, listGuestSeats } from './roomGuestSimulation.ts';
 
 function blueprint(furniture: unknown[], extra: Partial<RoomLayoutBlueprint> = {}): RoomLayoutBlueprint {
   return {
@@ -90,5 +90,45 @@ describe('buildGuestSimulation', () => {
     assert.ok(new Set(res.guests.map((g) => g.skin)).size >= 5);
     assert.ok(new Set(res.guests.map((g) => g.style)).size === 3);
     assert.ok(res.guests.some((g) => g.headwrap));
+  });
+
+  it('installe les invités personnalisés à leur place, même salle peu remplie', () => {
+    const portraits = [
+      { id: 'p1', name: 'Awa', photoUrl: 'data:image/jpeg;base64,AAA', seatKey: 't1:3', style: 'dress' as const, outfit: '#c8a24a' },
+      { id: 'p2', name: 'Fantôme', photoUrl: 'data:image/jpeg;base64,BBB', seatKey: 'absent:0' },
+    ];
+    const res = buildGuestSimulation(blueprint([round10], { metadata: { totalSeats: 0, guestPortraits: portraits } } as never), { fill: 0 });
+    assert.equal(res.guests.length, 1);
+    assert.equal(res.portraits, 1);
+    const awa = res.guests[0];
+    assert.equal(awa.id, 't1:3');
+    assert.equal(awa.name, 'Awa');
+    assert.equal(awa.photoUrl, 'data:image/jpeg;base64,AAA');
+    assert.equal(awa.style, 'dress');
+    assert.equal(awa.outfit, '#c8a24a');
+    assert.equal(awa.headwrap, null);
+  });
+
+  it('garde les invités personnalisés au-delà du plafond d’avatars', () => {
+    const tables = Array.from({ length: 5 }, (_, i) => ({ ...round10, id: `t${i}` }));
+    const portraits = [{ id: 'p', name: 'Jo', photoUrl: 'x', seatKey: 't4:9' }];
+    const res = buildGuestSimulation(blueprint(tables), { fill: 1, maxGuests: 10, portraits });
+    assert.equal(res.guests.length, 11);
+    assert.ok(res.guests.some((g) => g.portraitId === 'p'));
+  });
+
+  it('liste les places et propose la première libre près du meuble choisi', () => {
+    const t2 = { ...round10, id: 't2', name: '', capacity: 4, hiddenSeatIndices: [1] };
+    const row = { id: 'r', kind: 'row', label: 'Rang A', seatCount: 3, tier: 0, x: 50, y: 70 };
+    const seats = listGuestSeats(blueprint([round10, t2, row]));
+    assert.equal(seats.length, 10 + 3 + 3);
+    assert.equal(seats[0].label, 'Table 1 · place 1');
+    assert.equal(seats[10].label, 'Table 2 · place 1');
+    assert.equal(seats[11].key, 't2:2');
+    assert.equal(seats[13].label, 'Rang A · siège 1');
+    const bp = blueprint([round10, t2, row]);
+    assert.equal(firstFreeGuestSeat(bp, ['t1:0'])?.key, 't1:1');
+    assert.equal(firstFreeGuestSeat(bp, [], 't2')?.key, 't2:0');
+    assert.equal(firstFreeGuestSeat(bp, ['t2:0', 't2:2', 't2:3'], 't2')?.key, 't1:0');
   });
 });
