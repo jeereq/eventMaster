@@ -3864,6 +3864,7 @@ function SceneContent({
   simulatedGuests = [],
   avatarViewGuest = null,
   avatarLookRef,
+  onPickGuest,
 }: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode' | 'introFlyIn' | 'introView' | 'introReplayKey'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
@@ -3897,6 +3898,8 @@ function SceneContent({
   /** Vue à la place d’un invité : la caméra est posée dans ses yeux. */
   avatarViewGuest?: SimulatedGuest | null;
   avatarLookRef?: React.MutableRefObject<AvatarLook>;
+  /** Clic sur un avatar : prendre son point de vue. */
+  onPickGuest?: (guest: SimulatedGuest) => void;
 }) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
   const pendingIntroRef = useRef<IntroPath | null>(null);
@@ -4856,6 +4859,7 @@ function SceneContent({
           animate={!reduceMotion}
           castShadow={qualitySettings.quality !== 'draft'}
           hiddenGuestId={avatarViewGuest?.id ?? null}
+          onPickGuest={walkthroughActive || filmActive ? undefined : onPickGuest}
         />
       ) : null}
       {avatarViewGuest && avatarLookRef ? (
@@ -5276,7 +5280,12 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     setAvatarViewId(viewer.id);
   }, []);
 
-  const enterAvatarView = useCallback(() => {
+  const enterAvatarView = useCallback((guest?: SimulatedGuest) => {
+    // Déjà dans les yeux d'un invité : un clic sur un autre avatar fait passer dans sa tête.
+    if (avatarActive) {
+      if (guest) showAvatar(guest);
+      return;
+    }
     const controls = orbitControlsRef.current;
     cameraBeforeAvatarRef.current = controls
       ? { pos: controls.object.position.clone(), target: controls.target.clone() }
@@ -5287,10 +5296,12 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     setFocusedSpaceId(null);
     setActivePreset(null);
     setCameraTargetPose(null);
-    setAvatarViewId(null);
+    setAvatarViewId(guest?.id ?? null);
+    // Un avatar cliqué hors du filtre courant : on repasse sur « Tous » pour le garder.
+    if (guest) setAvatarFilter('all');
     avatarLookRef.current = { yaw: 0, pitch: AVATAR_START_PITCH };
     setAvatarActive(true);
-  }, [film, stopFilm]);
+  }, [avatarActive, showAvatar, film, stopFilm]);
 
   const exitAvatarView = useCallback(() => {
     setAvatarActive(false);
@@ -5489,7 +5500,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
           {avatarAvailable ? (
             <button
               type="button"
-              onClick={enterAvatarView}
+              onClick={() => enterAvatarView()}
               aria-pressed={false}
               title="Vue invité : voir la salle avec les yeux d’un invité, depuis sa place"
               className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11 text-foreground/80 hover:text-foreground hover:bg-surface-muted"
@@ -5782,6 +5793,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             simulatedGuests={simulatedGuests}
             avatarViewGuest={avatarViewer}
             avatarLookRef={avatarLookRef}
+            onPickGuest={enterAvatarView}
             filmActive={film !== null}
             frameTrackRef={frameTrackRef}
           />
