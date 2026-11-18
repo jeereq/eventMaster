@@ -5,14 +5,17 @@ import { useHideAiFabWhileVisible } from '@/components/landing/useHideAiFabWhile
 import { ROOM_INTRO_VIEWS, introViewLabel, resolveIntroView, type RoomIntroView } from '@/lib/roomIntroView';
 import {
   DEFAULT_GUEST_SIMULATION,
+  GUEST_DRESS_CODES,
   GUEST_FILL_CHOICES,
   MAX_GUEST_PORTRAITS,
   buildGuestSimulation,
   firstFreeGuestSeat,
   listGuestSeats,
+  type GuestDressCode,
   type GuestPortrait,
   type GuestSimulationSettings,
 } from '@/lib/roomGuestSimulation';
+import GuestDressCodePicker from '@/components/room/GuestDressCodePicker';
 import GuestPortraitsModal, { preparePortraitPhoto } from '@/components/room/GuestPortraitsModal';
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
@@ -2640,6 +2643,17 @@ export default function RoomLayoutEditor({
     const next = guestSim ? null : DEFAULT_GUEST_SIMULATION;
     setGuestSim(next);
     log(next ? 'Invités simulés affichés' : 'Invités simulés masqués', 'info');
+  };
+
+  // Thème de la soirée : enregistré sur le plan, il habille les invités simulés.
+  const guestDressCode = blueprint.metadata.guestDressCode ?? { id: 'mixte' as GuestDressCode };
+  const setGuestDressCode = (next: { id: GuestDressCode; colors?: string[] }) => {
+    const current = ensureBlueprintDefaults(latestBlueprintRef.current);
+    const label = GUEST_DRESS_CODES.find((d) => d.id === next.id)?.label ?? next.id;
+    updateBlueprint(
+      { ...current, metadata: { ...current.metadata, guestDressCode: next.id === 'mixte' ? undefined : next } },
+      { message: `Thème de la soirée : ${label}`, kind: 'settings' },
+    );
   };
 
   // Invités avec photo : enregistrés sur le plan, réservés aux forfaits qui incluent l’option.
@@ -9365,6 +9379,9 @@ export default function RoomLayoutEditor({
             ))}
           </select>
         </label>
+      ) : null}
+      {guestSim ? (
+        <GuestDressCodePicker value={guestDressCode} onChange={setGuestDressCode} disabled={readOnly} />
       ) : null}
       {guestSim && hasDanceFloor ? (
         <button

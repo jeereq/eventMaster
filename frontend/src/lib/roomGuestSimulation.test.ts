@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { RoomLayoutBlueprint } from './roomLayoutUtils.ts';
-import { buildGuestSimulation, firstFreeGuestSeat, listGuestSeats } from './roomGuestSimulation.ts';
+import { buildGuestSimulation, detectDressCode, dressCodePalette, firstFreeGuestSeat, listGuestSeats } from './roomGuestSimulation.ts';
 
 function blueprint(furniture: unknown[], extra: Partial<RoomLayoutBlueprint> = {}): RoomLayoutBlueprint {
   return {
@@ -130,5 +130,33 @@ describe('buildGuestSimulation', () => {
     assert.equal(firstFreeGuestSeat(bp, ['t1:0'])?.key, 't1:1');
     assert.equal(firstFreeGuestSeat(bp, [], 't2')?.key, 't2:0');
     assert.equal(firstFreeGuestSeat(bp, ['t2:0', 't2:2', 't2:3'], 't2')?.key, 't1:0');
+  });
+
+  it('habille les invités selon le thème de la soirée', () => {
+    const tables = Array.from({ length: 6 }, (_, i) => ({ ...round10, id: `t${i}` }));
+    const white = buildGuestSimulation(blueprint(tables, { metadata: { totalSeats: 0, guestDressCode: { id: 'blanc' } } } as never), { fill: 1 });
+    const whites = new Set(['#f4f1de', '#ece6d6', '#f7f4ee', '#e8e2d0', '#fbf8f1', '#efe7d6', '#f6efe0', '#e9dcc0', '#fffdf8']);
+    assert.ok(white.guests.every((g) => whites.has(g.outfit)), 'soirée blanche : tout le monde en blanc');
+    const colors = buildGuestSimulation(blueprint(tables), { fill: 1, dressCode: { id: 'couleurs', colors: ['#c1121f', '#c8a24a'] } });
+    const dresses = colors.guests.filter((g) => g.style !== 'suit');
+    assert.ok(dresses.length > 10 && dresses.every((g) => g.outfit === '#c1121f' || g.outfit === '#c8a24a'));
+    const trad = buildGuestSimulation(blueprint(tables), { fill: 1, dressCode: { id: 'traditionnel' } });
+    assert.ok(trad.guests.filter((g) => g.style === 'boubou').length > trad.guests.length / 3);
+    // Mêmes invités, seule la tenue change : les places occupées ne bougent pas.
+    assert.deepEqual(white.guests.map((g) => g.id), colors.guests.map((g) => g.id));
+    // Couleurs absentes : on retombe sur les tenues variées.
+    assert.deepEqual(dressCodePalette({ id: 'couleurs', colors: [] }), dressCodePalette(null));
+  });
+
+  it('devine le thème de la soirée à partir de la description', () => {
+    assert.equal(detectDressCode('Mariage, soirée blanche pour 200 invités')?.id, 'blanc');
+    assert.equal(detectDressCode('Dîner de gala de fin d’année')?.id, 'gala');
+    assert.equal(detectDressCode('Dot et mariage coutumier à Kinshasa')?.id, 'traditionnel');
+    assert.equal(detectDressCode('Conférence de 300 personnes avec scène')?.id, 'business');
+    assert.deepEqual(detectDressCode('Anniversaire, thème rouge et or, piste de danse'), { id: 'couleurs', colors: ['#c1121f', '#c8a24a'] });
+    assert.deepEqual(detectDressCode('Dress code bleu roi et blanc'), { id: 'couleurs', colors: ['#1d4ed8', '#f4f1de'] });
+    // Les couleurs du décor ne sont pas un dress code.
+    assert.equal(detectDressCode('Tables rondes avec nappes blanches et chaises dorées'), null);
+    assert.equal(detectDressCode(''), null);
   });
 });

@@ -884,6 +884,8 @@ export interface RoomLayoutBlueprint {
     dollhouseView?: boolean;
     /** Invités personnalisés (photo de la personne sur son avatar), à une place précise. */
     guestPortraits?: import('@/lib/roomGuestSimulation').GuestPortrait[];
+    /** Thème de la soirée : habille les invités simulés (soirée blanche, gala, couleurs de la fête…). */
+    guestDressCode?: import('@/lib/roomGuestSimulation').GuestDressCodeSetting;
     /** Découverte du plan : perspective d’arrivée de la caméra (survol, vue de dessus, depuis l’entrée…). */
     introView?: import('@/lib/roomIntroView').RoomIntroView;
     /** Modèle de structure multi-étages appliqué. */

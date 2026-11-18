@@ -179,6 +179,10 @@ export type RoomPlanAiDraft = {
   widthM?: number;
   heightM?: number;
   imageUrl?: string;
+  /** Thème de la soirée choisi dans le simulateur. */
+  guestDressCode?: import('@/lib/roomGuestSimulation').GuestDressCodeSetting;
+  /** Invités avec photo ajoutés dans le simulateur. */
+  guestPortraits?: import('@/lib/roomGuestSimulation').GuestPortrait[];
   savedAt: string;
 };
 

@@ -58,6 +58,22 @@ import { cn } from '@/lib/cn';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 import { isStudioJobAccepted, onStudioJob } from '@/lib/studioJobs';
 import { useStudioJobs, useStudioLoaderOverlay } from '@/context/StudioJobsContext';
+import {
+  DEFAULT_GUEST_SIMULATION,
+  GUEST_FILL_CHOICES,
+  MAX_GUEST_PORTRAITS,
+  buildGuestSimulation,
+  detectDressCode,
+  firstFreeGuestSeat,
+  listGuestSeats,
+  type GuestDressCodeSetting,
+  type GuestPortrait,
+  type GuestSimulationSettings,
+} from '@/lib/roomGuestSimulation';
+import GuestDressCodePicker from '@/components/room/GuestDressCodePicker';
+import GuestPortraitsModal, { preparePortraitPhoto } from '@/components/room/GuestPortraitsModal';
+import { EditorUpsellDialog, type LockedUpsell } from '@/components/room/EditorLocks';
+import { Camera, Lock, Users } from 'lucide-react';
 
 const ROOM_TYPES: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
 /** Types proposés au choix dans le studio (le type libre reste accessible via l’éditeur). */
@@ -88,7 +104,7 @@ export default function LandingRoomPlanAiStudio({
   onBlueprintChange?: (blueprint: RoomLayoutBlueprint | null) => void;
   className?: string;
 }) {
-  const { user, access } = useAuth();
+  const { user, access, planFeatures } = useAuth();
   const { trackJob } = useStudioJobs();
   const { runningJob: roomStudioJob, isHidden: roomLoaderHidden, hideOverlay: hideRoomLoader, showOverlay: showRoomLoader } = useStudioLoaderOverlay('room');
   const { site } = usePlatformSite();
@@ -112,6 +128,15 @@ export default function LandingRoomPlanAiStudio({
   const [history, setHistory] = useState<AiRoomPlanComposeHistoryItem[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [studioTab, setStudioTab] = useState<StudioAiTabId>('create');
+  // Invités simulés sur le plan généré : habillés selon le thème de la soirée.
+  const [guestSim, setGuestSim] = useState<GuestSimulationSettings | null>(DEFAULT_GUEST_SIMULATION);
+  const [dressOverride, setDressOverride] = useState<GuestDressCodeSetting | null>(null);
+  const [portraits, setPortraits] = useState<GuestPortrait[]>([]);
+  const [portraitsOpen, setPortraitsOpen] = useState(false);
+  const [portraitBusy, setPortraitBusy] = useState(false);
+  const [portraitError, setPortraitError] = useState('');
+  const [upsell, setUpsell] = useState<LockedUpsell | null>(null);
+  const allowGuestPhotos = planFeatures?.guestPhotoAvatars === true;
 
   useEffect(() => {
     void fetchAiRoomPlanComposeHistory().then(setHistory);
@@ -146,6 +171,66 @@ export default function LandingRoomPlanAiStudio({
     if (!draft) return null;
     return previewRoomPlanDraft(draft, roomType, { imageUrl: lastImageUrl });
   }, [draft, roomType, lastImageUrl]);
+
+  /** Thème deviné dans la description (« soirée blanche », « thème rouge et or »…), sauf choix manuel. */
+  const detectedDressCode = useMemo(() => detectDressCode(prompt), [prompt]);
+  const dressCode = useMemo<GuestDressCodeSetting>(
+    () => dressOverride ?? detectedDressCode ?? { id: 'mixte' },
+    [dressOverride, detectedDressCode],
+  );
+  const shownBlueprint = useMemo(() => {
+    if (!preview) return null;
+    const meta = preview.blueprint.metadata;
+    return {
+      ...preview.blueprint,
+      metadata: {
+        ...meta,
+        guestDressCode: dressCode.id === 'mixte' ? undefined : dressCode,
+        guestPortraits: portraits.length > 0 ? portraits : undefined,
+      },
+    } as RoomLayoutBlueprint;
+  }, [preview, dressCode, portraits]);
+  const guestCount = useMemo(() => {
+    if (!shownBlueprint || !guestSim) return 0;
+    const r = buildGuestSimulation(shownBlueprint, guestSim);
+    return r.seated + r.standing + r.dancing;
+  }, [shownBlueprint, guestSim]);
+
+  const openGuestPortraits = () => {
+    if (!allowGuestPhotos) {
+      setUpsell({
+        planLabel: 'Premium',
+        label: 'Invités avec photo',
+        message: '« Invités avec photo » est inclus dans les forfaits Premium, Enterprise, Particulier, Salle et Salle & presta.',
+      });
+      return;
+    }
+    setPortraitError('');
+    setPortraitsOpen(true);
+    if (!guestSim) setGuestSim(DEFAULT_GUEST_SIMULATION);
+  };
+  const addGuestPortrait = async (photo: File) => {
+    if (!preview) return;
+    setPortraitError('');
+    setPortraitBusy(true);
+    try {
+      const photoUrl = await preparePortraitPhoto(photo);
+      if (portraits.length >= MAX_GUEST_PORTRAITS) return;
+      const seat = firstFreeGuestSeat(preview.blueprint, portraits.map((p) => p.seatKey));
+      if (!seat) {
+        setPortraitError('Toutes les places ont déjà une personne.');
+        return;
+      }
+      setPortraits((prev) => [
+        ...prev,
+        { id: `gp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, name: '', photoUrl, seatKey: seat.key },
+      ]);
+    } catch {
+      setPortraitError('Impossible de lire cette photo. Essayez une image JPG ou PNG.');
+    } finally {
+      setPortraitBusy(false);
+    }
+  };
 
   const setPhoto = (next: File | null) => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -229,7 +314,18 @@ export default function LandingRoomPlanAiStudio({
       setError(PROTOCOL_CREATIVE_DENIED);
       return;
     }
-    if (draft) saveRoomPlanAiDraft(draft, { prompt: prompt.trim(), roomType, widthM: 20, heightM: 16, imageUrl: lastImageUrl });
+    if (draft) {
+      saveRoomPlanAiDraft(draft, {
+        prompt: prompt.trim(),
+        roomType,
+        widthM: 20,
+        heightM: 16,
+        imageUrl: lastImageUrl,
+        // Le thème et les invités avec photo suivent le plan dans l’éditeur.
+        guestDressCode: dressCode.id === 'mixte' ? undefined : dressCode,
+        guestPortraits: portraits.length > 0 ? portraits : undefined,
+      });
+    }
     if (user) {
       router.push('/dashboard/rooms?aiDraft=1');
       return;
@@ -556,7 +652,8 @@ export default function LandingRoomPlanAiStudio({
               <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-stage aspect-[16/10] min-h-[260px]">
                 {preview ? (
                   <RoomLayoutPreview
-                    blueprint={preview.blueprint}
+                    blueprint={shownBlueprint ?? preview.blueprint}
+                    guestSimulation={guestSim}
                     quality="showcase"
                     force2d={force2d}
                     onForce2dChange={setForce2d}
@@ -577,6 +674,60 @@ export default function LandingRoomPlanAiStudio({
                   </div>
                 )}
               </div>
+
+              {preview ? (
+                <div className="flex flex-wrap items-center gap-1.5 rounded-[var(--radius-card)] border border-border bg-surface p-2" aria-label="Invités simulés">
+                  <button
+                    type="button"
+                    onClick={() => setGuestSim(guestSim ? null : DEFAULT_GUEST_SIMULATION)}
+                    aria-pressed={Boolean(guestSim)}
+                    title="Remplir la salle d’invités habillés selon le thème de la soirée"
+                    className={cn(
+                      'inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-button)] border px-3 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      guestSim ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border bg-surface text-muted hover:text-foreground',
+                    )}
+                  >
+                    <Users className="h-3.5 w-3.5" aria-hidden />
+                    {guestSim ? `Invités : ${guestCount}` : 'Invités simulés'}
+                  </button>
+                  {guestSim ? (
+                    <>
+                      <label className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 text-xs font-bold text-muted">
+                        <span>Remplissage</span>
+                        <select
+                          value={String(guestSim.fill)}
+                          onChange={(e) => setGuestSim({ ...guestSim, fill: Number(e.target.value) })}
+                          className="bg-transparent text-xs font-bold text-foreground outline-none"
+                          aria-label="Remplissage de la salle"
+                        >
+                          {GUEST_FILL_CHOICES.map((f) => (
+                            <option key={f} value={String(f)}>{Math.round(f * 100)} %</option>
+                          ))}
+                        </select>
+                      </label>
+                      <GuestDressCodePicker value={dressCode} onChange={setDressOverride} />
+                      {!dressOverride && detectedDressCode ? (
+                        <span className="text-xs text-muted">Thème deviné d’après votre description</span>
+                      ) : null}
+                    </>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={openGuestPortraits}
+                    title={allowGuestPhotos
+                      ? 'Mettre la photo d’une personne sur son avatar'
+                      : 'Invités avec photo : option des forfaits Premium, Enterprise, Particulier et Salle'}
+                    className={cn(
+                      'inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-button)] border px-3 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      portraits.length > 0 ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border bg-surface text-muted hover:text-foreground',
+                      !allowGuestPhotos && 'opacity-70',
+                    )}
+                  >
+                    {allowGuestPhotos ? <Camera className="h-3.5 w-3.5" aria-hidden /> : <Lock className="h-3.5 w-3.5" aria-hidden />}
+                    {portraits.length > 0 ? `Photos : ${portraits.length}` : 'Invités avec photo'}
+                  </button>
+                </div>
+              ) : null}
 
               {preview ? (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-3">
@@ -601,6 +752,18 @@ export default function LandingRoomPlanAiStudio({
         hasPhoto={Boolean(file)}
         stageHint={roomStudioJob ? 'La génération continue même si vous quittez cet écran.' : null}
         onContinueInBackground={hideRoomLoader}
+      />
+      <EditorUpsellDialog upsell={upsell} onClose={() => setUpsell(null)} />
+      <GuestPortraitsModal
+        open={portraitsOpen}
+        onClose={() => setPortraitsOpen(false)}
+        portraits={portraits}
+        seats={portraitsOpen && preview ? listGuestSeats(preview.blueprint) : []}
+        onAdd={addGuestPortrait}
+        onUpdate={(id, patch) => setPortraits((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)))}
+        onRemove={(id) => setPortraits((prev) => prev.filter((p) => p.id !== id))}
+        busy={portraitBusy}
+        error={portraitError}
       />
       <AiTokenPurchaseModal
         open={tokenModalOpen}
