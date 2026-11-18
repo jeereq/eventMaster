@@ -15,7 +15,7 @@ import {
   Keyboard,
   Palette,
   BrickWall,
-} from 'lucide-react';
+} from '@/components/icons';
 import {
   type LayoutActionEntry,
   type LayoutActionSource,
@@ -66,7 +66,7 @@ export default function LayoutActionPanel({ actions, className = '' }: LayoutAct
       <div className="px-3 py-2.5 border-b border-border flex items-center justify-between gap-2 bg-surface-muted/50">
         <div className="flex items-center gap-2">
           <History className="w-4 h-4 text-primary" />
-          <p className="text-xs font-bold text-foreground uppercase tracking-wider">Journal des actions</p>
+          <p className="text-xs font-bold text-foreground ">Journal des actions</p>
         </div>
         <span className="text-xs font-bold text-muted px-2 py-0.5 rounded-full bg-surface border border-border">
           {actions.length} action{actions.length > 1 ? 's' : ''}

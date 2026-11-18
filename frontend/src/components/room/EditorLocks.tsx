@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useMemo } from 'react';
-import { Lock } from 'lucide-react';
+import { Lock } from '@/components/icons';
 import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {

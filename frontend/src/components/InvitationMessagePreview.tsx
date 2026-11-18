@@ -172,7 +172,7 @@ export default function InvitationMessagePreview({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-bold uppercase tracking-wider text-muted">Aperçu en direct</p>
+        <p className="text-xs font-bold text-muted">Aperçu en direct</p>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -263,7 +263,7 @@ export default function InvitationMessagePreview({
             className="px-4 py-3.5 text-white text-center"
             style={{ background: `linear-gradient(135deg, ${primary}, ${accent})` }}
           >
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/80">{orgName}</p>
+            <p className="text-xs font-semibold text-white/80">{orgName}</p>
             <p className="text-base font-bold mt-0.5">{subject || 'Invitation'}</p>
           </div>
           <div className="bg-surface px-4 py-4 space-y-3 text-sm text-foreground/80 leading-relaxed border-t border-border/30">
@@ -289,7 +289,7 @@ export default function InvitationMessagePreview({
           className="rounded-2xl border border-border overflow-hidden bg-[#0b141a]"
         >
           <div className="bg-[#075e54] px-4 py-3 text-white">
-            <p className="text-xs uppercase tracking-wider text-white/70">WhatsApp</p>
+            <p className="text-xs text-white/70">WhatsApp</p>
             <p className="text-sm font-semibold truncate">{orgName || 'Organisation'}</p>
           </div>
           <div

@@ -6,7 +6,7 @@
  */
 
 import React, { useRef, useState } from 'react';
-import { ImagePlus, Lock, SprayCan, Trash2 } from 'lucide-react';
+import { ImagePlus, Lock, SprayCan, Trash2 } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import type { LayoutActionEntry } from '@/lib/layoutActionLog';
 import { wallLengthMeters, type RoomLayoutBlueprint, type RoomWallSegment } from '@/lib/roomLayoutUtils';

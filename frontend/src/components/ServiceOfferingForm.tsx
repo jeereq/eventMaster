@@ -198,7 +198,7 @@ function OptionalSection({
           <span className="block text-sm font-semibold text-foreground">{title}</span>
           {summary ? <span className="block text-xs text-muted truncate">{summary}</span> : null}
         </span>
-        <span className="text-[11px] font-medium text-muted">Facultatif</span>
+        <span className="text-xs font-medium text-muted">Facultatif</span>
         <ChevronDown className="w-4 h-4 text-muted transition-transform group-open:rotate-180" aria-hidden />
       </summary>
       <div className="space-y-3 border-t border-border px-3 pb-3 pt-3">{children}</div>
@@ -455,7 +455,7 @@ export default function ServiceOfferingForm({
           </FormSection>
 
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Pour aller plus loin</p>
+            <p className="text-xs font-semibold text-muted">Pour aller plus loin</p>
 
             <OptionalSection
               title="Promotion"

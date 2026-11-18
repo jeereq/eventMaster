@@ -21,7 +21,7 @@ import { resolveGardenOptions, type GardenOptions } from '@/lib/roomGardenLayout
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
 import { HOME_FURNITURE_META, type HomeFurnitureStyle } from '@/lib/roomHomeFurniture';
 import FlowerRenderer from '@/components/FlowerRenderer';
-import { Sparkles, ShieldAlert } from 'lucide-react';
+import { Sparkles, ShieldAlert } from '@/components/icons';
 
 type Fixture = RoomLayoutBlueprint['fixtures'][number];
 
@@ -548,7 +548,7 @@ export default function FixtureRenderer({
             {doorStyle === 'grandPortal' && (
               <div className="w-full h-full bg-gradient-to-r from-amber-700 via-amber-400 to-amber-700 rounded flex items-center justify-between px-2 text-stone-900 shadow-inner">
                 <span className="w-1.5 h-full bg-amber-900/40 rounded-full" />
-                <div className="flex items-center gap-1 font-black text-[9px] uppercase tracking-wider text-amber-950">
+                <div className="flex items-center gap-1 font-black text-[9px] text-amber-950">
                   <Sparkles className="w-3 h-3 text-amber-200" />
                   {fixture.label || 'Portail Royal'}
                 </div>
@@ -597,7 +597,7 @@ export default function FixtureRenderer({
                   <span className="w-1 h-1 rounded-full bg-stone-400 -mt-0.5" />
                 </div>
                 {/* Croix en bois */}
-                <div className="text-[8px] font-bold text-amber-200/90 uppercase tracking-wide">
+                <div className="text-[8px] font-bold text-amber-200/90 ">
                   {fixture.label || 'Porte Grange'}
                 </div>
               </div>
@@ -606,11 +606,11 @@ export default function FixtureRenderer({
             {/* Style : Rideau de velours VIP */}
             {doorStyle === 'velvetCurtain' && (
               <div className="w-full h-full bg-gradient-to-r from-red-950 via-red-800 to-red-950 rounded flex items-center justify-between px-2 text-amber-300 border border-amber-500/40">
-                <span className="text-[10px]">⚜</span>
-                <span className="text-[8px] font-bold uppercase tracking-wider text-amber-200">
+                <span className="text-xs">⚜</span>
+                <span className="text-[8px] font-bold text-amber-200">
                   {fixture.label || 'Sas VIP'}
                 </span>
-                <span className="text-[10px]">⚜</span>
+                <span className="text-xs">⚜</span>
               </div>
             )}
 
@@ -618,7 +618,7 @@ export default function FixtureRenderer({
             {doorStyle === 'fireExit' && (
               <div className="w-full h-full bg-emerald-700 text-white rounded border border-emerald-400 flex items-center justify-between px-2 shadow-inner">
                 <ShieldAlert className="w-3.5 h-3.5 text-emerald-200 shrink-0" />
-                <span className="text-[8px] font-black uppercase tracking-wider">
+                <span className="text-[8px] font-black ">
                   {fixture.label || 'SORTIE SECOURS'}
                 </span>
                 <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
@@ -760,7 +760,7 @@ export default function FixtureRenderer({
           {showLabel && fixture.label && (
             <div className="relative z-10 my-auto text-center">
               <span
-                className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded shadow-xs ${
+                className={`text-[8px] font-black px-1.5 py-0.5 rounded shadow-xs ${
                   aisleStyle === 'whiteMirror' || aisleStyle === 'botanicalRunner'
                     ? 'bg-black/60 text-white'
                     : 'bg-black/40 text-amber-200'
@@ -857,7 +857,7 @@ export default function FixtureRenderer({
         <div className="relative w-full h-full rounded-md border-2 border-zinc-700 bg-zinc-900 text-zinc-100 flex flex-col items-center justify-center overflow-hidden shadow-xs">
           <InstrumentPlanGlyph style={style} />
           {showLabel ? (
-            <span className="absolute bottom-0.5 text-[9px] font-black uppercase tracking-wide text-zinc-200">
+            <span className="absolute bottom-0.5 text-[9px] font-black text-zinc-200">
               {fixture.label || instrumentStyleLabels[style]}
             </span>
           ) : null}
@@ -896,7 +896,7 @@ export default function FixtureRenderer({
             ))}
           </div>
           {showLabel ? (
-            <span className="absolute inset-x-0 bottom-0.5 text-center text-[9px] font-black uppercase tracking-wide text-amber-950">
+            <span className="absolute inset-x-0 bottom-0.5 text-center text-[9px] font-black text-amber-950">
               {fixture.label || barStyleLabels[style]}
             </span>
           ) : null}
@@ -919,7 +919,7 @@ export default function FixtureRenderer({
             <span className="w-4 h-2.5 bg-black/60 rounded-xs border border-white/30" />
           </div>
           {showLabel && (
-            <span className="text-[8px] font-black uppercase tracking-wide text-center text-amber-200 truncate">
+            <span className="text-[8px] font-black text-center text-amber-200 truncate">
               {fixture.label || 'Comptoir Commande'}
             </span>
           )}
@@ -941,7 +941,7 @@ export default function FixtureRenderer({
             <span className="w-5 h-2 bg-amber-200/40 rounded-xs border border-amber-300/40" />
           </div>
           {showLabel && (
-            <span className="text-[8px] font-black uppercase tracking-wide text-center text-sky-200 truncate">
+            <span className="text-[8px] font-black text-center text-sky-200 truncate">
               {fixture.label || 'Retrait / Pick-up'}
             </span>
           )}
@@ -996,7 +996,7 @@ export default function FixtureRenderer({
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
         <div className="relative w-full h-full rounded-md border-2 border-cyan-500/80 bg-gradient-to-b from-cyan-950/80 via-slate-900 to-cyan-900 text-white flex flex-col justify-between p-1 shadow-xs overflow-hidden">
           <div className="flex items-center justify-between border-b border-cyan-400/40 pb-0.5">
-            <span className="text-[7.5px] font-bold text-cyan-300 uppercase tracking-wider">Vitrine Réfrigérée</span>
+            <span className="text-[7.5px] font-bold text-cyan-300 ">Vitrine Réfrigérée</span>
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
           </div>
           <div className="flex justify-around items-center opacity-90 py-0.5">
@@ -1026,7 +1026,7 @@ export default function FixtureRenderer({
             <span className="w-3 h-2 rounded-t-sm bg-indigo-200" />
           </div>
           {showLabel && (
-            <span className="text-[7.5px] font-bold text-indigo-200 uppercase tracking-wide truncate">
+            <span className="text-[7.5px] font-bold text-indigo-200 truncate">
               {fixture.label || 'Poste Coiffure'}
             </span>
           )}
@@ -1064,7 +1064,7 @@ export default function FixtureRenderer({
             <span className="w-1.5 h-2.5 rounded-t-xs bg-amber-500" title="Moutarde" />
             <span className="w-2 h-2 rounded-xs bg-stone-300 border border-stone-400" title="Serviettes" />
           </div>
-          <span className="text-[7.5px] font-bold text-center text-stone-700 uppercase tracking-wider truncate">
+          <span className="text-[7.5px] font-bold text-center text-stone-700 truncate">
             {fixture.label || 'Condiments & Eau'}
           </span>
         </div>
@@ -1101,7 +1101,7 @@ export default function FixtureRenderer({
           <div className="w-3/4 h-2 rounded-t-lg bg-sky-200/80 border border-teal-300 shadow-inner" />
           {/* Toit */}
           <div className="w-4/5 flex-1 rounded-sm bg-teal-900 border border-teal-700/60 my-0.5 flex items-center justify-center">
-            <span className="text-[7px] font-black uppercase tracking-wider text-teal-300">Véhicule</span>
+            <span className="text-[7px] font-black text-teal-300">Véhicule</span>
           </div>
           {/* Lunette arrière */}
           <div className="w-3/4 h-1.5 rounded-b-md bg-sky-200/80 border border-teal-300" />
@@ -1215,7 +1215,7 @@ export default function FixtureRenderer({
             <span className="absolute w-[28%] h-[42%] rounded-sm bg-stone-800/80 border border-stone-600" />
           ) : null}
           {showLabel ? (
-            <span className="relative z-10 text-[9px] font-black uppercase tracking-wide px-1">
+            <span className="relative z-10 text-[9px] font-black px-1">
               {fixture.label || podiumStyleLabels[style]}
             </span>
           ) : null}

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { HOME_METAL_FINISH_LABELS, type HomeMetalFinish } from '@/lib/roomHomeFurniture';
-import { DoorOpen, Plus, Trash2, BrickWall } from 'lucide-react';
+import { DoorOpen, Plus, Trash2, BrickWall } from '@/components/icons';
 import {
   DoorStyle,
   OpeningMaterial,

@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight, CheckCircle2, GraduationCap, LayoutGrid } from 'lucide-react';
+import { ArrowRight, CheckCircle2, GraduationCap, LayoutGrid } from '@/components/icons';
 import { Button } from '@/components/ui';
 import { roomEditorCapabilities } from '@/lib/roomEditorAccess';
 import { editorTourSummary } from '@/lib/roomEditorTour';
@@ -37,7 +37,7 @@ export default function RoomEditorPlanCard({ level, themesFixtures }: { level?: 
       className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
     >
       <div className="min-w-0 space-y-2">
-        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
+        <p className="flex items-center gap-2 text-xs font-bold text-primary">
           <LayoutGrid className="h-4 w-4" aria-hidden /> Éditeur de salles 2D / 3D
         </p>
         <h2 id="room-editor-plan-title" className="text-base font-bold text-foreground">

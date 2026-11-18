@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ArrowRight, CheckCircle2, GraduationCap, Lock, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, GraduationCap, Lock, Sparkles, X } from '@/components/icons';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { EditorTourAction, EditorTourStep } from '@/lib/roomEditorTour';
@@ -169,7 +169,7 @@ export default function EditorTour({
 
         {index === 0 ? (
           <div className="space-y-3 pr-8">
-            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-primary">
+            <p className="flex items-center gap-1.5 text-xs font-bold text-primary">
               <GraduationCap className="h-4 w-4" aria-hidden /> Guide de l’éditeur
             </p>
             <h2 id="editor-tour-title" className="text-base font-bold text-foreground">Bienvenue dans votre éditeur de salle</h2>
@@ -225,7 +225,7 @@ export default function EditorTour({
           </div>
         ) : (
           <div className="space-y-3 pr-8">
-            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-primary">
+            <p className="flex items-center gap-1.5 text-xs font-bold text-primary">
               <CheckCircle2 className="h-4 w-4" aria-hidden /> C’est parti
             </p>
             <h2 id="editor-tour-title" className="text-base font-bold text-foreground">Vous connaissez l’essentiel</h2>

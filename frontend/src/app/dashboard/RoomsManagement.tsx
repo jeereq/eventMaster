@@ -12,7 +12,7 @@ import {
   Building2, Plus, Trash2, Users, UserPlus, Check, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
   Globe, GlobeLock, Lock, Eye, AlertTriangle, AlertCircle, ExternalLink, Accessibility, Maximize2, Armchair, X,
-} from 'lucide-react';
+} from '@/components/icons';
 import {
   ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
   Button, Modal, EmptyState, Alert, Input, Pagination, usePaginateItems, usePageSize,
@@ -1511,12 +1511,9 @@ export default function RoomsManagement() {
             <Building2 className="w-5 h-5 text-primary" />
             Salles de l&apos;organisation
           </h2>
-          <p className="text-xs text-muted mt-1">
-            Créez une salle en 3 étapes : identité, type, puis structure.
-            {canCatalogPublish
-              ? ' Vous pouvez ensuite la publier pour la location.'
-              : ' Ces salles servent au plan de table — elles ne sont pas publiées sur le marketplace.'}
-          </p>
+          {!canCatalogPublish ? (
+            <p className="text-xs text-muted mt-1">Plan de table uniquement, sans publication au catalogue.</p>
+          ) : null}
           {planQuota && (() => {
             const max = planQuota.limits.maxRooms;
             const unlimited = max >= 9999;
@@ -1664,7 +1661,7 @@ export default function RoomsManagement() {
                   ? 'Importez une photo : l’IA reprend ce qui est visible, puis créez la salle.'
                   : 'Placez le mobilier avec les outils, puis créez la salle.'
                 : 'Créez le plan à la main ou depuis une photo.'
-              : 'Nommez la salle, choisissez le type, puis la structure — le plan reste modifiable.'
+              : undefined
         }
         size={
           wizardStep === 3 && wizardPlanTab === 'editeur'
@@ -1738,8 +1735,7 @@ export default function RoomsManagement() {
         )}
         {wizardDraftRestored && showWizard && (
           <Alert variant="info" title="Brouillon restauré" className="mb-4">
-            <p>Vos dernières actions ont été reprises. Rien n’a été perdu.</p>
-            <div className="flex flex-wrap gap-2 mt-3">
+            <div className="flex flex-wrap gap-2 mt-1">
               <Button
                 type="button"
                 size="sm"
@@ -2371,14 +2367,9 @@ export default function RoomsManagement() {
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
               <AlertTriangle className="w-5 h-5" aria-hidden />
             </div>
-            <div>
-              <span className="text-base font-semibold text-foreground block">
-                Fermer la création de la salle ?
-              </span>
-              <span className="text-xs text-muted block font-normal">
-                Votre travail est conservé en sécurité
-              </span>
-            </div>
+            <span className="text-base font-semibold text-foreground block">
+              Fermer la création de la salle ?
+            </span>
           </div>
         }
         footer={
@@ -2397,23 +2388,12 @@ export default function RoomsManagement() {
               onClick={closeWizard}
               className="touch-manipulation"
             >
-              Fermer (brouillon conservé)
+              Fermer
             </Button>
           </div>
         }
       >
-        <div className="space-y-3 pt-1">
-          <div className="p-3.5 rounded-xl border border-border bg-surface-muted/50 space-y-1.5 text-xs">
-            <p className="font-semibold text-foreground flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden />
-              Sauvegarde automatique active
-            </p>
-            <p className="text-muted leading-relaxed">
-              Toutes les données saisies (nom, dimensions, cloisons, agencements et tables) sont enregistrées automatiquement sur cet appareil.
-              Vous pourrez reprendre la configuration exactement là où vous l&apos;avez laissée dès votre prochaine visite.
-            </p>
-          </div>
-        </div>
+        <p className="text-sm text-muted">Le brouillon reste sur cet appareil.</p>
       </Modal>
 
       <Modal
@@ -2654,7 +2634,7 @@ export default function RoomsManagement() {
       {loading ? (
         <SkeletonRoomsView mode={roomsViewMode} />
       ) : rooms.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="rooms"
           icon={<Building2 className="w-5 h-5" />}
           title="Aucune salle configurée"
           description="Créez votre première salle pour le plan de table et le staff."
@@ -2667,7 +2647,7 @@ export default function RoomsManagement() {
           }
         />
       ) : filteredRooms.length === 0 ? (
-        <EmptyState
+        <EmptyState illustration="search"
           icon={<Building2 className="w-5 h-5" />}
           title="Aucune salle pour ces filtres"
           description="Élargissez le type, la ville ou la visibilité, ou créez une nouvelle salle."
@@ -2816,8 +2796,8 @@ export default function RoomsManagement() {
                 status={
                   isPublished ? (
                     <StatusPill tone="emerald">Publiée</StatusPill>
-                  ) : isList ? (
-                    <StatusPill tone="slate">Privée</StatusPill>
+                  ) : isList && canCatalogPublish ? (
+                    <StatusPill tone="slate">Brouillon</StatusPill>
                   ) : undefined
                 }
                 description={isList ? undefined : room.description}
@@ -2961,17 +2941,17 @@ export default function RoomsManagement() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
               <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-xs font-bold uppercase text-muted">Type</p>
+                <p className="text-xs font-semibold text-muted">Type</p>
                 <p className="font-semibold text-foreground">{roomTypeLabels[viewingRoom.roomType || 'SIMPLE']}</p>
               </div>
               <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-xs font-bold uppercase text-muted">Capacité</p>
+                <p className="text-xs font-semibold text-muted">Capacité</p>
                 <p className="font-semibold text-foreground">
                   {viewingRoom.layoutBlueprint?.metadata?.totalSeats || viewingRoom.capacity || '—'} places
                 </p>
               </div>
               <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-xs font-bold uppercase text-muted">Dimensions & Surface</p>
+                <p className="text-xs font-semibold text-muted">Dimensions & Surface</p>
                 <p className="font-semibold text-foreground">
                   {viewingRoom.layoutBlueprint?.canvas
                     ? `${viewingRoom.layoutBlueprint.canvas.widthM}×${viewingRoom.layoutBlueprint.canvas.heightM} m · ${viewingRoom.layoutBlueprint.canvas.widthM * viewingRoom.layoutBlueprint.canvas.heightM} m²`
@@ -2979,7 +2959,7 @@ export default function RoomsManagement() {
                 </p>
               </div>
               <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-xs font-bold uppercase text-muted">Accessibilité PMR</p>
+                <p className="text-xs font-semibold text-muted">Accessibilité PMR</p>
                 <p className="font-semibold text-foreground">
                   {viewingRoom.layoutBlueprint?.metadata?.hasPmrAccess || (viewingRoom.layoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0 ? (
                     <span className="text-primary font-bold flex items-center gap-1">
@@ -2991,7 +2971,7 @@ export default function RoomsManagement() {
                 </p>
               </div>
               <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-xs font-bold uppercase text-muted">Staff</p>
+                <p className="text-xs font-semibold text-muted">Staff</p>
                 <p className="font-semibold text-foreground">{viewingRoom.staff.length}</p>
               </div>
             </div>
@@ -3025,7 +3005,7 @@ export default function RoomsManagement() {
             {(viewingRoom.staff.length > 0 || canManage) && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1">
+                  <p className="text-xs font-semibold text-muted flex items-center gap-1">
                     <Users className="w-3.5 h-3.5" /> Staff
                   </p>
                   {canManage && (
@@ -3048,7 +3028,7 @@ export default function RoomsManagement() {
                 {viewingRoom.staff.map((s) => (
                   <div key={s.id} className="flex items-center justify-between text-xs bg-surface-muted rounded-[var(--radius-button)] px-2.5 py-1.5">
                     <span className="font-medium text-foreground">{s.user.name || s.user.email}</span>
-                    <span className="text-xs font-semibold uppercase text-primary">{roleLabels[s.staffRole]}</span>
+                    <span className="text-xs font-semibold text-primary">{roleLabels[s.staffRole]}</span>
                   </div>
                 ))}
               </div>
@@ -3436,6 +3416,7 @@ export default function RoomsManagement() {
             <RoomPublicPublicationForm
               draft={listingDraft}
               onChange={setListingDraft}
+              hideVisibilityToggle
               calculatedCapacity={
                 listingRoom.layoutBlueprint
                   ? calculateBlueprintCapacity(listingRoom.layoutBlueprint as RoomLayoutBlueprint)

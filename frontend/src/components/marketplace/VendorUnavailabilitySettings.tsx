@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarOff } from 'lucide-react';
+import { CalendarOff } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Alert, Button, Modal } from '@/components/ui';
 import BlockedDatesField from '@/components/BlockedDatesField';
@@ -89,12 +89,12 @@ export default function VendorUnavailabilitySettings({
             <CalendarOff className="w-3.5 h-3.5 text-amber-600" aria-hidden />
             Mes indisponibilités
             {upcoming.length ? (
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400">
+              <span className="px-1.5 py-0.5 rounded-md text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400">
                 {upcoming.length} jour{upcoming.length > 1 ? 's' : ''}
               </span>
             ) : null}
           </p>
-          <p className="text-[11px] text-muted mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             {upcoming.length
               ? `Aucun devis ni réservation possible ces jours-là sur vos fiches : ${preview}${upcoming.length > 4 ? '…' : ''}`
               : 'Marquez les jours où vous ne travaillez pas : vos clients ne pourront ni réserver ni demander de devis à ces dates.'}

@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Crosshair, Lock, MessageCircleQuestion, Send, X } from 'lucide-react';
+import { BookOpen, Crosshair, Lock, MessageCircle, Send, X } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import type { RoomEditorCapabilities } from '@/lib/roomEditorAccess';
 import {
@@ -256,7 +256,7 @@ export default function EditorAssistant({
       <style>{`.em-assistant-flash{outline:3px solid var(--color-primary,#2563eb)!important;outline-offset:3px;border-radius:10px;transition:outline-color .3s}`}</style>
       <div className="flex items-center justify-between gap-2 border-b border-border bg-surface-muted/60 px-3 py-2">
         <p id={titleId} className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-          <MessageCircleQuestion className="h-4 w-4 text-primary" aria-hidden /> Assistant de l’éditeur
+          <MessageCircle className="h-4 w-4 text-primary" aria-hidden /> Assistant de l’éditeur
         </p>
         <div className="flex items-center gap-1">
           <button

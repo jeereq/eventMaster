@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Shirt } from 'lucide-react';
+import { Shirt } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { GUEST_DRESS_CODES, type GuestDressCode, type GuestDressCodeSetting } from '@/lib/roomGuestSimulation';
 

@@ -23,7 +23,7 @@ export function StudioMobileDock<T extends string>({
   return (
     <nav
       className={cn(
-        'border-t border-border bg-surface/95 backdrop-blur-md',
+        'border-t border-border bg-surface/95',
         safeArea && 'pb-[max(0.5rem,env(safe-area-inset-bottom))]',
         className,
       )}

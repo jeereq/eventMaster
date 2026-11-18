@@ -24,7 +24,7 @@ import FixtureRenderer from '@/components/FixtureRenderer';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import { PlanSceneControls, PlanZoomControls } from '@/components/PlanViewChrome';
-import { MapPin, Sparkles } from 'lucide-react';
+import { MapPin, Sparkles } from '@/components/icons';
 import type { GuestPlanFixture, GuestRoomOutline, GuestTablePlanOverviewItem } from '@/app/rsvp/GuestTablePlanView';
 import type { PricingZone } from '@/lib/ticketPricing';
 
@@ -76,7 +76,7 @@ function TableDetailPopover({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="font-bold text-foreground text-xs truncate">{table.name}</p>
-            <p className="text-[10px] text-muted">{getTableShapeLabel(table.shape)} · {table.occupiedCount}/{table.capacity} places</p>
+            <p className="text-xs text-muted">{getTableShapeLabel(table.shape)} · {table.occupiedCount}/{table.capacity} places</p>
             {zone && (
               <span
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold mt-1 shadow-2xs"
@@ -113,7 +113,7 @@ function TableDetailPopover({
             {typeof effectiveSeatIndex === 'number' && (
               <div className="flex items-center justify-between text-xs font-bold text-foreground bg-surface/90 px-2 py-1.5 rounded-lg border border-border">
                 <span>Siège réservé :</span>
-                <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[11px] font-black shadow-xs">
+                <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-xs font-black shadow-xs">
                   Siège n°{effectiveSeatIndex + 1}
                 </span>
               </div>
@@ -121,7 +121,7 @@ function TableDetailPopover({
             {/* Schéma miniature de disposition des sièges */}
             <div className="relative w-36 h-28 mx-auto my-1 flex items-center justify-center">
               <div
-                className={`relative flex items-center justify-center font-bold text-[10px] text-center shadow-xs ${miniVisual.className}`}
+                className={`relative flex items-center justify-center font-bold text-xs text-center shadow-xs ${miniVisual.className}`}
                 style={{
                   ...miniVisual.style,
                   width: 58,
@@ -159,7 +159,7 @@ function TableDetailPopover({
 
         {guestNames && guestNames.length > 0 && (
           <div className="pt-1.5 border-t border-border">
-            <p className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1">Convives à cette table</p>
+            <p className="text-xs font-semibold text-muted mb-1">Convives à cette table</p>
             <ul className="text-xs text-foreground space-y-1 max-h-32 overflow-y-auto">
               {guestNames.map((n, i) => (
                 <li key={i} className="truncate flex items-center gap-1.5">
@@ -435,7 +435,7 @@ export default function GuestRoomPlanCanvas({
                   title={zone.name}
                 >
                   <span
-                    className="absolute top-1.5 left-2 text-[8.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded shadow-2xs tabular-nums"
+                    className="absolute top-1.5 left-2 text-[8.5px] font-extrabold px-2 py-0.5 rounded shadow-2xs tabular-nums"
                     style={{
                       backgroundColor: zone.color || '#c4a35a',
                       color: '#ffffff',
@@ -513,7 +513,7 @@ export default function GuestRoomPlanCanvas({
                   {/* Pin / Beacon flottant au-dessus de la table de l'invité */}
                   {isGuest && (
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center animate-pulse motion-reduce:animate-none">
-                      <div className="px-2.5 py-1 rounded-full bg-primary-solid text-primary-foreground text-[11px] font-extrabold tracking-tight whitespace-nowrap shadow-lg flex items-center gap-1.5 border border-white/40 ring-2 ring-primary-solid/40">
+                      <div className="px-2.5 py-1 rounded-full bg-primary-solid text-primary-foreground text-xs font-extrabold tracking-tight whitespace-nowrap shadow-lg flex items-center gap-1.5 border border-white/40 ring-2 ring-primary-solid/40">
                         <span className="relative flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75 motion-reduce:hidden"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-300"></span>
@@ -654,7 +654,7 @@ export default function GuestRoomPlanCanvas({
                         ★ {table.name}
                       </span>
                       {typeof mySeatIdx === 'number' && (
-                        <span className="mt-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-200 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30 whitespace-nowrap flex items-center gap-1">
+                        <span className="mt-0.5 text-[8px] font-black text-emerald-800 dark:text-emerald-200 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30 whitespace-nowrap flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                           Siège n°{mySeatIdx + 1}
                         </span>
@@ -677,7 +677,7 @@ export default function GuestRoomPlanCanvas({
         </div>
       </div>
 
-      <p className="text-[10px] text-muted text-center shrink-0">
+      <p className="text-xs text-muted text-center shrink-0">
         Touchez une table · Pincez pour zoomer
       </p>
     </div>

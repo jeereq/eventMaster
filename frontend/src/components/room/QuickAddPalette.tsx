@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, CornerDownLeft } from 'lucide-react';
+import { Search, CornerDownLeft } from '@/components/icons';
 import { Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { filterQuickAdd, type QuickAddEntry } from '@/lib/quickAddSearch';

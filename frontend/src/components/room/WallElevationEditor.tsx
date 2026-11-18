@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { AlignCenterHorizontal, AlignCenterVertical, AlignEndVertical, AlignStartVertical, Lock, Unlock } from 'lucide-react';
+import { AlignCenterHorizontal, AlignCenterVertical, AlignEndVertical, AlignStartVertical, Lock, Unlock, type LucideIcon } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import type { LayoutActionEntry } from '@/lib/layoutActionLog';
 import { wallLengthMeters, type RoomLayoutBlueprint, type RoomWallOpening, type RoomWallSegment } from '@/lib/roomLayoutUtils';
@@ -500,7 +500,7 @@ export default function WallElevationEditor({
   );
 }
 
-function AlignButton({ label, icon: Icon, onClick }: { label: string; icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>; onClick: () => void }) {
+function AlignButton({ label, icon: Icon, onClick }: { label: string; icon: LucideIcon; onClick: () => void }) {
   return (
     <button
       type="button"

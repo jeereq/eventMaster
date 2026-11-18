@@ -783,7 +783,7 @@ export default function MarketplaceBookingsPanel({
                   value: item.eventDate && (item.status === 'REQUESTED' || item.status === 'ACCEPTED' || item.status === 'CONFIRMED') ? (
                     <>
                       {periodLabel}
-                      <span className="block text-[11px] font-normal text-muted">{formatDayDistance(item.eventDate)}</span>
+                      <span className="block text-xs font-normal text-muted">{formatDayDistance(item.eventDate)}</span>
                     </>
                   ) : periodLabel,
                   onClick: item.eventDate ? focusPeriod : undefined,

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Breadcrumbs, Alert, Button, EmptyState, Card } from '@/components/ui';
+import { PageHeader, Alert, Button, EmptyState, Card } from '@/components/ui';
 import {
   dashboardServiceHref,
   dashboardVenueHref,
@@ -21,7 +21,6 @@ import {
   Bookmark,
   Building2,
   CalendarCheck,
-  FileText,
   Heart,
   Inbox,
   Loader2,
@@ -217,7 +216,6 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
     router.replace(qs ? `${basePath}?${qs}` : basePath, { scroll: false });
   };
 
-  const pendingQuotes = visibleInquiries.filter((item) => item.status === 'NEW' && !item.hasBooking).length;
   const openBookings = visibleBookings.filter((item) => item.status === 'REQUESTED' || item.status === 'ACCEPTED').length;
 
   useEffect(() => {
@@ -250,7 +248,7 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
             </Link>
           ) : (
             <Link href="/dashboard/catalogue" className="inline-flex">
-              <Button size="sm" leftIcon={<Store className="w-4 h-4" />}>
+              <Button size="sm" variant="secondary" leftIcon={<Store className="w-4 h-4" />}>
                 Explorer
               </Button>
             </Link>
@@ -274,11 +272,6 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
           >
             <Store className="w-4 h-4 shrink-0" aria-hidden />
             {section === 'quotes' ? 'Reçus' : 'Reçues'}
-            {role === 'vendor' && section === 'quotes' && pendingQuotes > 0 ? (
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-600 text-white">
-                {pendingQuotes}
-              </span>
-            ) : null}
           </button>
           <button
             type="button"
@@ -288,7 +281,7 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
             className={segmentedItem(role === 'organizer', 'flex-1 sm:flex-none inline-flex items-center justify-center gap-2 text-xs sm:text-sm')}
           >
             <Building2 className="w-4 h-4 shrink-0" aria-hidden />
-            {section === 'quotes' ? 'Mes demandes' : 'Mes réservations'}
+            {section === 'quotes' ? 'Envoyés' : 'Envoyées'}
           </button>
         </div>
       )}
@@ -307,7 +300,7 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
             {
               id: 'bookings' as const,
               label: 'Réservations',
-              count: openBookings > 0 ? `${openBookings} ouvertes` : visibleBookings.length,
+              count: openBookings > 0 ? openBookings : null,
               icon: CalendarCheck,
             },
             { id: 'packs' as const, label: 'Packs', count: packs.length, icon: Bookmark },
@@ -328,14 +321,16 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
             >
               <item.icon className="w-4 h-4 shrink-0" />
               <span>{item.label}</span>
-              <span
-                className={cn(
-                  'ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold',
-                  tab === item.id ? 'bg-primary/10 text-primary' : 'bg-surface text-muted',
-                )}
-              >
-                {item.count}
-              </span>
+              {item.count ? (
+                <span
+                  className={cn(
+                    'ml-1 px-1.5 py-0.5 rounded-md text-xs font-bold tabular-nums',
+                    tab === item.id ? 'bg-primary/10 text-primary' : 'bg-surface text-muted',
+                  )}
+                >
+                  {item.count}
+                </span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -397,7 +392,7 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
             {packs.map((pack) => (
               <li key={pack.id}>
                 <Card interactive className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                  <p className="text-xs font-semibold text-muted">
                     {eventTypeLabel(pack.eventType)}
                     {pack.city ? ` · ${pack.city}` : ''}
                   </p>
@@ -459,7 +454,7 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
                     </div>
                     <div className="min-w-0">
                       <p className={cn(
-                        'text-[10px] font-semibold uppercase tracking-wider',
+                        'text-xs font-semibold ',
                         item.kind === 'venue'
                           ? 'text-primary'
                           : isServiceRentalCategory(item.category)
@@ -469,7 +464,7 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
                         {item.kind === 'venue' ? 'Salle' : item.categoryLabel || (isServiceRentalCategory(item.category) ? 'Matériel' : 'Prestataire')}
                       </p>
                       <p className="text-sm font-semibold truncate">{item.title}</p>
-                      <p className="text-[11px] text-muted truncate">
+                      <p className="text-xs text-muted truncate">
                         {[item.orgName, item.location, item.priceFromFc != null ? formatFc(item.priceFromFc) : 'Sur devis'].filter(Boolean).join(' · ')}
                       </p>
                     </div>
@@ -489,14 +484,6 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
         </ul>
       )}
 
-      {!loading && (tab === 'quotes' || tab === 'bookings') && !isProtocol ? (
-        <p className="text-[11px] text-muted flex items-center gap-1.5">
-          {tab === 'quotes' ? <FileText className="w-3.5 h-3.5" /> : <CalendarCheck className="w-3.5 h-3.5" />}
-          {role === 'vendor'
-            ? 'Conseil : répondez rapidement aux devis pour maximiser vos réservations confirmées.'
-            : 'Astuce : sélectionnez une période sur la fiche salle ou prestataire, puis envoyez le devis ou la réservation.'}
-        </p>
-      ) : null}
     </div>
   );
 }

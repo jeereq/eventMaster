@@ -135,7 +135,7 @@ function InstallBadge({ busy, onClick }: { busy: boolean; onClick: () => void })
     >
       <PlatformLogo className="h-6 w-6 shrink-0" />
       <span className="flex flex-col justify-center leading-none">
-        {target ? <span className="block text-[10px] opacity-80 mb-0.5">Installer sur</span> : null}
+        {target ? <span className="block text-xs opacity-80 mb-0.5">Installer sur</span> : null}
         <span className="block text-sm font-semibold">{target ?? 'Installer l’app'}</span>
       </span>
     </button>

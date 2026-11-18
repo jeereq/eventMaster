@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Globe, GlobeLock, CheckCircle2, AlertCircle, MapPin, Sparkles,
   Camera, Calendar, Layers, Eye, ExternalLink, ShieldCheck, Tag, Info,
-} from 'lucide-react';
+} from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { Input, Badge, Button } from '@/components/ui';
 import EmbedCodeCard from '@/components/room/EmbedCodeCard';
@@ -54,6 +54,8 @@ export interface RoomPublicPublicationFormProps {
   publicSlug?: string | null;
   error?: string | null;
   compact?: boolean;
+  /** Masque l’interrupteur quand la fenêtre a ses propres boutons « Brouillon » / « Publier ». */
+  hideVisibilityToggle?: boolean;
 }
 
 export default function RoomPublicPublicationForm({
@@ -67,6 +69,7 @@ export default function RoomPublicPublicationForm({
   publicSlug,
   error,
   compact = false,
+  hideVisibilityToggle = false,
 }: RoomPublicPublicationFormProps) {
   const effectiveSlug = slug || publicSlug;
   const effectiveCapacity = calculatedCapacity ?? roomCapacity;
@@ -211,12 +214,12 @@ export default function RoomPublicPublicationForm({
                 {draft.isPublic ? (
                   <>
                     <Globe className="w-3.5 h-3.5" />
-                    En ligne (Public)
+                    Publiée
                   </>
                 ) : (
                   <>
                     <GlobeLock className="w-3.5 h-3.5" />
-                    Brouillon privé
+                    Brouillon
                   </>
                 )}
               </Badge>
@@ -239,6 +242,7 @@ export default function RoomPublicPublicationForm({
             </p>
           </div>
 
+          {!hideVisibilityToggle ? (
           <div className="flex items-center gap-3 shrink-0 self-start sm:self-center">
             <button
               type="button"
@@ -263,9 +267,10 @@ export default function RoomPublicPublicationForm({
               />
             </button>
             <span id={visibilityStatusId} className="text-xs font-semibold text-foreground">
-              {draft.isPublic ? 'Publiée' : 'Privée'}
+              {draft.isPublic ? 'Publiée' : 'Brouillon'}
             </span>
           </div>
+          ) : null}
         </div>
 
         {/* Readiness Checklist */}
@@ -275,7 +280,7 @@ export default function RoomPublicPublicationForm({
               <ShieldCheck className="w-3.5 h-3.5 text-primary" />
               Checklist de publication ({completedRequiredCount}/{requiredCount} critères obligatoires)
             </span>
-            <span className="text-[11px] font-medium text-muted">
+            <span className="text-xs font-medium text-muted">
               {isReadyToPublish ? (
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" /> Fiche prête pour le public
@@ -326,9 +331,9 @@ export default function RoomPublicPublicationForm({
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold flex items-center justify-between">
                     <span>{item.label}</span>
-                    <span className="text-[10px] opacity-70 group-hover:underline">Modifier &rarr;</span>
+                    <span className="text-xs opacity-70 group-hover:underline">Modifier &rarr;</span>
                   </div>
-                  <div className="text-[11px] truncate opacity-90">{item.detail}</div>
+                  <div className="text-xs truncate opacity-90">{item.detail}</div>
                 </div>
               </button>
             ))}
@@ -408,7 +413,7 @@ export default function RoomPublicPublicationForm({
                 placeholder={displayName ? `Ex. ${displayName} — Vue Panoramique` : 'Ex. Grand Salon Victoria — Climatisation & Scène'}
                 className="text-base sm:text-sm min-h-11"
               />
-              <p className="text-[11px] text-muted mt-1">
+              <p className="text-xs text-muted mt-1">
                 Laissez vide pour utiliser par défaut le nom de la salle (« {displayName || 'Sans titre'} »).
               </p>
             </div>
@@ -433,7 +438,7 @@ export default function RoomPublicPublicationForm({
                     FC
                   </div>
                 </div>
-                <p className="text-[11px] text-muted mt-1">
+                <p className="text-xs text-muted mt-1">
                   Aperçu : <strong className="text-foreground">{formatFc(Number(draft.priceFromFc) || 0)}</strong>
                 </p>
               </div>
@@ -454,7 +459,7 @@ export default function RoomPublicPublicationForm({
                     </option>
                   ))}
                 </select>
-                <p className="text-[11px] text-muted mt-1">
+                <p className="text-xs text-muted mt-1">
                   Ex: « Par événement » couvre toute la soirée ou journée.
                 </p>
               </div>
@@ -491,14 +496,14 @@ export default function RoomPublicPublicationForm({
                 />
                 {effectiveCapacity ? (
                   <div className="flex items-center justify-between gap-2 mt-1">
-                    <p className="text-[11px] text-muted">
+                    <p className="text-xs text-muted">
                       Capacité plan calculée : {effectiveCapacity} places assises.
                     </p>
                     {!draft.quotaMax && (
                       <button
                         type="button"
                         onClick={() => onChange((d) => ({ ...d, quotaMax: String(effectiveCapacity) }))}
-                        className="text-[11px] font-semibold text-primary hover:underline"
+                        className="text-xs font-semibold text-primary hover:underline"
                       >
                         Appliquer {effectiveCapacity}
                       </button>
@@ -578,7 +583,7 @@ export default function RoomPublicPublicationForm({
                   <MapPin className="w-3.5 h-3.5 text-primary" />
                   Positionnement GPS sur la carte <span className="text-rose-500">*</span>
                 </span>
-                <span className="text-[11px] text-muted">
+                <span className="text-xs text-muted">
                   {hasGps ? (
                     <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
                       ✓ Position enregistrée ({Number(draft.latitude).toFixed(4)}, {Number(draft.longitude).toFixed(4)})
@@ -716,14 +721,14 @@ export default function RoomPublicPublicationForm({
                 </div>
               )}
               <div className="absolute top-2.5 left-2.5">
-                <Badge variant={draft.isPublic ? 'success' : 'default'} className="shadow-xs backdrop-blur-md">
+                <Badge variant={draft.isPublic ? 'success' : 'default'} className="shadow-xs">
                   {draft.isPublic ? 'En ligne' : 'Brouillon'}
                 </Badge>
               </div>
               {hasPrice && (
-                <div className="absolute bottom-2.5 right-2.5 bg-background/90 backdrop-blur-md px-3 py-1 rounded-lg shadow-xs text-xs font-extrabold text-foreground border border-border/60">
+                <div className="absolute bottom-2.5 right-2.5 bg-background/90 px-3 py-1 rounded-lg shadow-xs text-xs font-extrabold text-foreground border border-border/60">
                   {formatFc(priceNum)}
-                  <span className="text-[10px] font-normal text-muted ml-1">
+                  <span className="text-xs font-normal text-muted ml-1">
                     / {PRICE_UNIT_OPTIONS.find((o) => o.id === draft.priceUnit)?.label.toLowerCase().replace('par ', '') || 'événement'}
                   </span>
                 </div>
@@ -753,7 +758,7 @@ export default function RoomPublicPublicationForm({
               {/* Capacité & Typologie */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 {(draft.quotaMin || draft.quotaMax || effectiveCapacity) && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-md bg-surface-muted border border-border text-foreground font-medium">
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-surface-muted border border-border text-foreground font-medium">
                     {draft.quotaMin && draft.quotaMax
                       ? `${draft.quotaMin} à ${draft.quotaMax} invités`
                       : draft.quotaMax
@@ -764,7 +769,7 @@ export default function RoomPublicPublicationForm({
                   </span>
                 )}
                 {roomType && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary font-medium">
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary font-medium">
                     {roomType}
                   </span>
                 )}
@@ -776,13 +781,13 @@ export default function RoomPublicPublicationForm({
                   {draft.details.amenities.slice(0, 4).map((amenity) => (
                     <span
                       key={amenity}
-                      className="text-[10px] px-1.5 py-0.5 rounded bg-surface border border-border text-muted"
+                      className="text-xs px-1.5 py-0.5 rounded bg-surface border border-border text-muted"
                     >
                       {amenity}
                     </span>
                   ))}
                   {draft.details.amenities.length > 4 && (
-                    <span className="text-[10px] text-muted self-center">
+                    <span className="text-xs text-muted self-center">
                       +{draft.details.amenities.length - 4}
                     </span>
                   )}
@@ -796,10 +801,10 @@ export default function RoomPublicPublicationForm({
               )}
 
               <div className="pt-2 border-t border-border flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-primary">
+                <span className="text-xs font-semibold text-primary">
                   Demande de devis & réservation
                 </span>
-                <span className="text-[11px] text-muted">EventMaster Marketplace</span>
+                <span className="text-xs text-muted">EventMaster Marketplace</span>
               </div>
             </div>
           </div>

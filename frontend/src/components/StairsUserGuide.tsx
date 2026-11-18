@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { BookOpen, ChevronDown, Lightbulb, ListOrdered } from 'lucide-react';
+import { BookOpen, ChevronDown, Lightbulb, ListOrdered } from '@/components/icons';
 import { STAIRS_USER_GUIDE } from '@/lib/roomStairsUtils';
 import { cn } from '@/lib/cn';
 
@@ -68,7 +68,7 @@ export default function StairsUserGuide({
 
           {!compact ? (
             <div className="rounded-[var(--radius-button)] border border-amber-200/70 bg-amber-50/80 px-2.5 py-2 space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wide text-amber-900 flex items-center gap-1">
+              <p className="text-xs font-bold text-amber-900 flex items-center gap-1">
                 <Lightbulb className="w-3 h-3" /> Astuces
               </p>
               <ul className="space-y-1">

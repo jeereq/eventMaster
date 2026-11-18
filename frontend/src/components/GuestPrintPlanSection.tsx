@@ -167,7 +167,7 @@ export default function GuestPrintPlanSection({
       >
         <div>
           <p
-            className="text-[10px] font-bold uppercase tracking-[0.18em]"
+            className="text-xs font-bold uppercase tracking-[0.18em]"
             style={{ color: primaryColor }}
           >
             Plan de la salle
@@ -178,7 +178,7 @@ export default function GuestPrintPlanSection({
         </div>
         {captureUrl ? (
           <span
-            className="text-[9px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full border"
+            className="text-[9px] font-semibold px-2 py-1 rounded-full border"
             style={{
               color: primaryColor,
               borderColor: `color-mix(in srgb, ${primaryColor} 35%, #e2e8f0)`,
@@ -227,7 +227,7 @@ export default function GuestPrintPlanSection({
 
       <div className={captureUrl ? 'border-t' : ''} style={{ borderColor: '#e2e8f0' }}>
         <div className="px-5 py-3 border-b bg-[#fafafa]" style={{ borderColor: '#eef2f6' }}>
-          <p className="text-[10px] font-semibold text-muted uppercase tracking-wider">
+          <p className="text-xs font-semibold text-muted ">
             Repère plan · votre table surlignée
           </p>
         </div>

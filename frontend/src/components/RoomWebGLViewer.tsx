@@ -28,7 +28,7 @@ import {
   Play,
   Square as StopIcon,
   Video,
-} from 'lucide-react';
+} from '@/components/icons';
 import * as THREE from 'three';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
 import {
@@ -1350,7 +1350,7 @@ function StoryStackDecks({
                     padding: '4px 8px',
                     borderRadius: 6,
                     fontSize: 11,
-                    fontWeight: 700,
+                    fontWeight: 600,
                     whiteSpace: 'nowrap',
                     background: active ? 'rgba(69,115,210,0.92)' : 'rgba(28,25,23,0.78)',
                     color: '#fff',
@@ -1358,7 +1358,7 @@ function StoryStackDecks({
                   }}
                 >
                   {story.label}
-                  <span style={{ opacity: 0.75, fontWeight: 500, marginLeft: 6 }}>
+                  <span style={{ opacity: 0.75, fontWeight: 400, marginLeft: 6 }}>
                     {elev.toFixed(1)} m
                   </span>
                 </div>
@@ -2445,7 +2445,7 @@ function TableMesh({
       })}
       {selected && !hideLabels && (
         <Html zIndexRange={[20, 0]} center distanceFactor={8} style={{ pointerEvents: 'none' }} position={[0, topY + 0.35, 0]}>
-          <div className="px-2.5 py-1 rounded-md bg-foreground/90 backdrop-blur-md text-white text-xs font-bold whitespace-nowrap shadow-md border border-white/20 flex items-center gap-1.5">
+          <div className="px-2.5 py-1 rounded-md bg-foreground/90 text-white text-xs font-bold whitespace-nowrap shadow-md border border-white/20 flex items-center gap-1.5">
             <span className="text-primary-solid font-black">{name}</span>
             {seatPicked ? (
               <span className="text-emerald-400 font-extrabold">· Siège n°{selectedSeatIndices.map((n) => n + 1).join(', ')} (Votre place)</span>
@@ -3718,7 +3718,7 @@ function SpaceHighlight({ space, reduceMotion }: { space: RoomSpace; reduceMotio
         </mesh>
       ))}
       <Html position={[0, Math.max(1.6, space.focusHeightM + 1.1), 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
-        <div className="whitespace-nowrap rounded-lg border border-amber-300/60 bg-stone-950/85 px-2.5 py-1.5 text-left shadow-lg backdrop-blur-sm">
+        <div className="whitespace-nowrap rounded-lg border border-amber-300/60 bg-stone-950/85 px-2.5 py-1.5 text-left shadow-lg">
           <div className="text-[13px] font-semibold leading-tight text-amber-100">{space.title}</div>
           <div className="text-xs leading-tight text-stone-300">{space.details}</div>
         </div>
@@ -5175,7 +5175,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       {!walkthroughActive && !wallEditMode && (
         <div
           className={cn(
-            'absolute top-2.5 left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 backdrop-blur-md border border-border/70 shadow-sm max-w-[calc(100%-4.5rem)] overflow-x-auto no-scrollbar pointer-events-auto',
+            'absolute top-2.5 left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 border border-border/70 shadow-sm max-w-[calc(100%-4.5rem)] overflow-x-auto no-scrollbar pointer-events-auto',
             // Assez large : une seule ligne à côté des boutons de l’éditeur ; sinon, juste en dessous.
             reserveTopRight && 'lg:@max-[62rem]:top-[3.6rem] @min-[62rem]:max-w-[calc(100%-18.5rem)]',
           )}
@@ -5312,7 +5312,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
 
       {filmMenuOpen && !film && !walkthroughActive && !wallEditMode ? (
         <div
-          className="absolute left-2.5 top-16 z-20 w-[min(17rem,calc(100%-1.25rem))] rounded-2xl border border-border/70 bg-background/95 p-2 shadow-lg backdrop-blur-md dark:bg-surface-elevated/95 pointer-events-auto"
+          className="absolute left-2.5 top-16 z-20 w-[min(17rem,calc(100%-1.25rem))] rounded-2xl border border-border/70 bg-background/95 p-2 shadow-lg dark:bg-surface-elevated/95 pointer-events-auto"
           role="menu"
           aria-label="Film de la salle"
         >
@@ -5344,9 +5344,9 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
 
       {film ? (
         <div className="absolute inset-x-2.5 bottom-12 z-20 flex justify-center pointer-events-none">
-          <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-full border border-white/15 bg-stone-950/85 py-1.5 pl-4 pr-1.5 text-white shadow-lg backdrop-blur-md">
+          <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-full border border-white/15 bg-stone-950/85 py-1.5 pl-4 pr-1.5 text-white shadow-lg">
             {film.recording ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-red-300">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-300">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden /> Rec
               </span>
             ) : (
@@ -5368,13 +5368,13 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       {/* Panneau « Espaces » : liste, survol = surlignage 3D, clic = la caméra s’envole vers l’espace. */}
       {spacesOpen && !walkthroughActive && !wallEditMode && spaces.length > 0 ? (
         <div
-          className="absolute inset-x-2.5 bottom-12 z-10 flex max-h-[46%] flex-col sm:inset-x-auto sm:right-2.5 sm:top-16 sm:max-h-none sm:w-72 overflow-hidden rounded-2xl border border-border/70 bg-background/90 shadow-lg backdrop-blur-md dark:bg-surface-elevated/90 pointer-events-auto"
+          className="absolute inset-x-2.5 bottom-12 z-10 flex max-h-[46%] flex-col sm:inset-x-auto sm:right-2.5 sm:top-16 sm:max-h-none sm:w-72 overflow-hidden rounded-2xl border border-border/70 bg-background/90 shadow-lg dark:bg-surface-elevated/90 pointer-events-auto"
           role="region"
           aria-label="Espaces de la salle"
         >
           <div className="flex items-center justify-between gap-2 border-b border-border/70 px-3.5 py-2.5">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">Explorer la salle</p>
+              <p className="text-xs font-semibold text-muted">Explorer la salle</p>
               <p className="truncate text-sm font-semibold text-foreground">
                 {focusedSpace ? focusedSpace.title : `${spaces.length} espace${spaces.length > 1 ? 's' : ''}`}
               </p>

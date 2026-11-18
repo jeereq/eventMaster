@@ -11,8 +11,20 @@ import type { ComponentType, SVGProps } from 'react';
 import type { Icon as PhosphorIcon, IconWeight } from '@phosphor-icons/react';
 import {
   AlignBottom as PhAlignBottom,
+  AlignCenterHorizontal as PhAlignCenterHorizontal,
   AlignCenterVertical as PhAlignCenterVertical,
   AlignTop as PhAlignTop,
+  CalendarX as PhCalendarX,
+  Code as PhCode,
+  ArrowElbowDownLeft as PhArrowElbowDownLeft,
+  Disc as PhDisc,
+  GraduationCap as PhGraduationCap,
+  ListDashes as PhListDashes,
+  Martini as PhMartini,
+  Microphone as PhMicrophone,
+  SprayBottle as PhSprayBottle,
+  Selection as PhSelection,
+  BoundingBox as PhBoundingBox,
   Aperture as PhAperture,
   Armchair as PhArmchair,
   ArrowArcLeft as PhArrowArcLeft,
@@ -276,6 +288,19 @@ function make(Base: PhosphorIcon, defaultWeight: IconWeight, name: string): Luci
   return EmIcon;
 }
 
+export const CalendarOff = make(PhCalendarX, 'duotone', 'CalendarOff');
+export const Code2 = make(PhCode, 'bold', 'Code2');
+export const CornerDownLeft = make(PhArrowElbowDownLeft, 'bold', 'CornerDownLeft');
+export const Disc3 = make(PhDisc, 'duotone', 'Disc3');
+export const GraduationCap = make(PhGraduationCap, 'duotone', 'GraduationCap');
+export const LayoutList = make(PhListDashes, 'bold', 'LayoutList');
+export const Martini = make(PhMartini, 'duotone', 'Martini');
+export const Mic2 = make(PhMicrophone, 'duotone', 'Mic2');
+export const PanelLeftOpen = make(PhSidebarSimple, 'duotone', 'PanelLeftOpen');
+export const SprayCan = make(PhSprayBottle, 'duotone', 'SprayCan');
+export const UtensilsCrossed = make(PhForkKnife, 'duotone', 'UtensilsCrossed');
+export const SquareDashed = make(PhSelection, 'bold', 'SquareDashed');
+export const Fence = make(PhBoundingBox, 'duotone', 'Fence');
 export const AlertCircle = make(PhWarningCircle, 'duotone', 'AlertCircle');
 export const AlignCenter = make(PhTextAlignCenter, 'bold', 'AlignCenter');
 export const AlignLeft = make(PhTextAlignLeft, 'bold', 'AlignLeft');
@@ -399,6 +424,7 @@ export const XCircle = make(PhXCircle, 'duotone', 'XCircle');
 export const Zap = make(PhLightning, 'duotone', 'Zap');
 export const Accessibility = make(PhPersonArmsSpread, 'duotone', 'Accessibility');
 export const AlertTriangle = make(PhWarning, 'duotone', 'AlertTriangle');
+export const AlignCenterHorizontal = make(PhAlignCenterHorizontal, 'bold', 'AlignCenterHorizontal');
 export const AlignCenterVertical = make(PhAlignCenterVertical, 'bold', 'AlignCenterVertical');
 export const AlignEndVertical = make(PhAlignBottom, 'bold', 'AlignEndVertical');
 export const AlignStartVertical = make(PhAlignTop, 'bold', 'AlignStartVertical');

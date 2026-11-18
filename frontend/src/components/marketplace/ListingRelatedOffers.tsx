@@ -60,7 +60,7 @@ function OfferCoverPlaceholder({ kind }: { kind: RelatedOfferKind }) {
       <span className="relative inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-surface/80 shadow-[var(--shadow-soft)]">
         <OfferIcon kind={kind} />
       </span>
-      <span className="relative text-[11px] font-medium text-muted">{PLACEHOLDER_LABEL[kind]}</span>
+      <span className="relative text-xs font-medium text-muted">{PLACEHOLDER_LABEL[kind]}</span>
     </div>
   );
 }
