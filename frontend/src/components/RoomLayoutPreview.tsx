@@ -22,7 +22,7 @@ import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import Room3DErrorBoundary from '@/components/Room3DErrorBoundary';
 import { cn } from '@/lib/cn';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
-import type { GuestSimulationSettings } from '@/lib/roomGuestSimulation';
+import { buildGuestSimulation, type GuestSimulationSettings } from '@/lib/roomGuestSimulation';
 
 const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
   ssr: false,
@@ -217,17 +217,24 @@ function ThumbPreview({
 function FlatShowcasePreview({
   blueprint,
   className,
+  guestSimulation = null,
 }: {
   blueprint: RoomLayoutBlueprint;
   className?: string;
+  /** Salle remplie : mêmes invités qu'en 3D, vus du dessus. */
+  guestSimulation?: GuestSimulationSettings | null;
 }) {
+  const guests = useMemo(
+    () => (guestSimulation ? buildGuestSimulation(blueprint, guestSimulation).guests : null),
+    [blueprint, guestSimulation],
+  );
   return (
     <div
       role="img"
       aria-label={`Plan 2D ${roomTypeLabels[blueprint.roomType]}, ${blueprint.canvas.widthM} × ${blueprint.canvas.heightM} mètres${blueprint.metadata.totalSeats ? `, ${blueprint.metadata.totalSeats} places` : ''}`}
       className={cn('relative aspect-[16/10] min-h-[260px] sm:min-h-[340px] rounded-2xl border border-border overflow-hidden bg-stage', className)}
     >
-      <RoomPlanTopView blueprint={blueprint} />
+      <RoomPlanTopView blueprint={blueprint} guests={guests} />
       <Room2DScaleCompass
         widthM={blueprint.canvas.widthM}
         heightM={blueprint.canvas.heightM}
@@ -395,6 +402,7 @@ export default function RoomLayoutPreview({
             <FlatShowcasePreview
               blueprint={viewBlueprint}
               className="absolute inset-0 h-full w-full rounded-2xl"
+              guestSimulation={guestSimulation}
             />
           )}
           {!mounted && !force2d ? (
@@ -507,6 +515,7 @@ export default function RoomLayoutPreview({
               <FlatShowcasePreview
                 blueprint={viewBlueprint}
                 className="absolute inset-0 h-full w-full rounded-none"
+                guestSimulation={guestSimulation}
               />
             )}
           </div>
