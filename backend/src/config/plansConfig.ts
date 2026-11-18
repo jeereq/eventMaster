@@ -45,6 +45,8 @@ export interface PlanDefinition {
   protocolQr: boolean;
   seatNotifications: boolean;
   roomThemesFixtures: boolean;
+  /** Invités simulés personnalisés : photo de la personne sur son avatar 3D. */
+  guestPhotoAvatars: boolean;
   adminReports: boolean;
   roomEditorLevel: 'basic' | 'standard' | 'advanced' | 'complete';
   commercialNetwork: boolean;
@@ -139,6 +141,7 @@ function personalPlan(
     protocolQr: true,
     seatNotifications: true,
     roomThemesFixtures: true,
+    guestPhotoAvatars: true,
     adminReports: true,
     roomEditorLevel: 'complete',
     commercialNetwork: false,
@@ -166,6 +169,7 @@ export function getDefaultPlans(): PlansConfiguration {
       protocolQr: true,
       seatNotifications: true,
       roomThemesFixtures: false,
+      guestPhotoAvatars: false,
       adminReports: false,
       roomEditorLevel: 'basic',
       commercialNetwork: false,
@@ -221,6 +225,7 @@ export function getDefaultPlans(): PlansConfiguration {
       protocolQr: true,
       seatNotifications: true,
       roomThemesFixtures: true,
+      guestPhotoAvatars: false,
       adminReports: false,
       roomEditorLevel: 'standard',
       commercialNetwork: false,
@@ -244,6 +249,7 @@ export function getDefaultPlans(): PlansConfiguration {
       protocolQr: true,
       seatNotifications: true,
       roomThemesFixtures: true,
+      guestPhotoAvatars: true,
       adminReports: false,
       roomEditorLevel: 'advanced',
       commercialNetwork: false,
@@ -267,6 +273,7 @@ export function getDefaultPlans(): PlansConfiguration {
       protocolQr: true,
       seatNotifications: true,
       roomThemesFixtures: true,
+      guestPhotoAvatars: true,
       adminReports: false,
       roomEditorLevel: 'advanced',
       commercialNetwork: false,
@@ -290,6 +297,7 @@ export function getDefaultPlans(): PlansConfiguration {
       protocolQr: true,
       seatNotifications: true,
       roomThemesFixtures: true,
+      guestPhotoAvatars: true,
       adminReports: true,
       roomEditorLevel: 'complete',
       commercialNetwork: false,
@@ -313,6 +321,7 @@ export function getDefaultPlans(): PlansConfiguration {
       protocolQr: true,
       seatNotifications: true,
       roomThemesFixtures: true,
+      guestPhotoAvatars: true,
       adminReports: true,
       roomEditorLevel: 'complete',
       commercialNetwork: false,
@@ -336,6 +345,7 @@ export function getDefaultPlans(): PlansConfiguration {
       protocolQr: true,
       seatNotifications: true,
       roomThemesFixtures: true,
+      guestPhotoAvatars: true,
       adminReports: true,
       roomEditorLevel: 'complete',
       commercialNetwork: false,
@@ -359,6 +369,7 @@ export function getDefaultPlans(): PlansConfiguration {
       protocolQr: false,
       seatNotifications: false,
       roomThemesFixtures: true,
+      guestPhotoAvatars: true,
       adminReports: false,
       roomEditorLevel: 'complete',
       commercialNetwork: false,
@@ -383,6 +394,7 @@ export function getDefaultPlans(): PlansConfiguration {
       protocolQr: false,
       seatNotifications: false,
       roomThemesFixtures: false,
+      guestPhotoAvatars: false,
       adminReports: false,
       roomEditorLevel: 'basic',
       commercialNetwork: false,
@@ -407,6 +419,7 @@ export function getDefaultPlans(): PlansConfiguration {
       protocolQr: false,
       seatNotifications: false,
       roomThemesFixtures: true,
+      guestPhotoAvatars: true,
       adminReports: false,
       roomEditorLevel: 'complete',
       commercialNetwork: false,
@@ -440,6 +453,7 @@ export function mergePlan(base: PlanDefinition, override?: Partial<PlanDefinitio
     protocolQr: override.protocolQr ?? base.protocolQr,
     seatNotifications: override.seatNotifications ?? base.seatNotifications,
     roomThemesFixtures: override.roomThemesFixtures ?? base.roomThemesFixtures,
+    guestPhotoAvatars: override.guestPhotoAvatars ?? base.guestPhotoAvatars ?? false,
     adminReports: override.adminReports ?? base.adminReports,
     roomEditorLevel: override.roomEditorLevel ?? base.roomEditorLevel,
     commercialNetwork: override.commercialNetwork ?? base.commercialNetwork,

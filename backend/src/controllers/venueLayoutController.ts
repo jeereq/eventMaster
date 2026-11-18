@@ -7,6 +7,7 @@ import {
   PlanFeatureError,
   allowsRoomBlueprint,
   assertThemesFixturesForBlueprint,
+  assertGuestPhotosForBlueprint,
   getTenantPlanSnapshot,
 } from '../services/planFeaturesService';
 import { isLayoutQuotaReached, maxSavedLayoutsForLevel } from '../config/venueLayoutQuota';
@@ -73,6 +74,7 @@ async function assertBlueprintAllowedByPlan(tenantId: string, roomType: string, 
     );
   }
   await assertThemesFixturesForBlueprint(tenantId, blueprint);
+  await assertGuestPhotosForBlueprint(tenantId, blueprint);
   return snapshot;
 }
 

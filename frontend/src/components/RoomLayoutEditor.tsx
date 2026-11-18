@@ -6,13 +6,18 @@ import { ROOM_INTRO_VIEWS, introViewLabel, resolveIntroView, type RoomIntroView 
 import {
   DEFAULT_GUEST_SIMULATION,
   GUEST_FILL_CHOICES,
+  MAX_GUEST_PORTRAITS,
   buildGuestSimulation,
+  firstFreeGuestSeat,
+  listGuestSeats,
+  type GuestPortrait,
   type GuestSimulationSettings,
 } from '@/lib/roomGuestSimulation';
+import GuestPortraitsModal, { preparePortraitPhoto } from '@/components/room/GuestPortraitsModal';
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
-  GraduationCap, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence, Users,
+  GraduationCap, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence, Users, Camera,
 } from 'lucide-react';
 import { buildPlotGrid, buildSinglePlot, findFreePlotSpot, isOpenSpace, nextPlotLabel, normalizePlotGrid, plotGridFootprint, PLOT_COLORS, PLOT_GRID_DEFAULTS, type PlotGridOptions } from '@/lib/roomPlots';
 import {
@@ -926,6 +931,8 @@ interface RoomLayoutEditorProps {
   readOnly?: boolean;
   /** Thèmes, textures de sol et fixtures décoratives (scène, fleurs…). */
   allowThemesFixtures?: boolean;
+  /** Invités avec photo (option du forfait) : visage de la personne sur son avatar 3D. */
+  allowGuestPhotos?: boolean;
   /** Niveau d’éditeur selon le forfait (basic / standard / advanced / complete). */
   editorLevel?: string | null;
   /** Coupe le rendu 3D sans démonter l’éditeur (historique conservé). */
@@ -997,6 +1004,7 @@ export default function RoomLayoutEditor({
   onRegenerate,
   readOnly = false,
   allowThemesFixtures = true,
+  allowGuestPhotos = false,
   editorLevel = 'complete',
   paused = false,
   focusPlanImport = false,
@@ -1057,6 +1065,9 @@ export default function RoomLayoutEditor({
   // Simulation des invités : vue de travail de l’organisateur, non enregistrée sur le plan
   // (les visiteurs et la billetterie ne voient pas de faux invités sur les places).
   const [guestSim, setGuestSim] = useState<GuestSimulationSettings | null>(null);
+  const [portraitsOpen, setPortraitsOpen] = useState(false);
+  const [portraitBusy, setPortraitBusy] = useState(false);
+  const [portraitError, setPortraitError] = useState('');
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
   const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors' | 'podiums' | 'instruments' | 'bars' | 'hospitality' | 'environment' | 'elements' | 'plots'>(null);
   const [elementCreatorOpen, setElementCreatorOpen] = useState(false);
@@ -2630,6 +2641,83 @@ export default function RoomLayoutEditor({
     setGuestSim(next);
     log(next ? 'Invités simulés affichés' : 'Invités simulés masqués', 'info');
   };
+
+  // Invités avec photo : enregistrés sur le plan, réservés aux forfaits qui incluent l’option.
+  const guestPortraits = blueprint.metadata.guestPortraits ?? [];
+  const guestSeats = portraitsOpen ? listGuestSeats(blueprint) : [];
+  const setGuestPortraits = (next: GuestPortrait[], message: string) => {
+    const current = ensureBlueprintDefaults(latestBlueprintRef.current);
+    updateBlueprint(
+      { ...current, metadata: { ...current.metadata, guestPortraits: next.length > 0 ? next : undefined } },
+      { message, kind: 'settings' },
+    );
+  };
+  const openGuestPortraits = () => {
+    if (!allowGuestPhotos) {
+      setUpsell({
+        planLabel: 'Premium',
+        label: 'Invités avec photo',
+        message: '« Invités avec photo » est inclus dans les forfaits Premium, Enterprise, Particulier, Salle et Salle & presta.',
+      });
+      return;
+    }
+    setPortraitError('');
+    setPortraitsOpen(true);
+    if (!guestSim) setGuestSim(DEFAULT_GUEST_SIMULATION);
+  };
+  const addGuestPortrait = async (file: File) => {
+    setPortraitError('');
+    const picked = selection.find((s) => s.kind === 'table' || s.kind === 'row' || s.kind === 'chair');
+    setPortraitBusy(true);
+    try {
+      const photoUrl = await preparePortraitPhoto(file);
+      const current = ensureBlueprintDefaults(latestBlueprintRef.current);
+      const existing = current.metadata.guestPortraits ?? [];
+      if (existing.length >= MAX_GUEST_PORTRAITS) return;
+      const taken = existing.map((p) => p.seatKey);
+      const exactKey = picked && picked.seatIndex != null ? `${picked.id}:${picked.seatIndex}` : null;
+      const seats = listGuestSeats(current);
+      const exact = exactKey && !taken.includes(exactKey) ? seats.find((s) => s.key === exactKey) : undefined;
+      const seat = exact ?? firstFreeGuestSeat(current, taken, picked?.id);
+      if (!seat) {
+        setPortraitError('Toutes les places ont déjà une personne : ajoutez des chaises ou retirez quelqu’un.');
+        return;
+      }
+      const portrait: GuestPortrait = {
+        id: `gp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        name: '',
+        photoUrl,
+        seatKey: seat.key,
+      };
+      setGuestPortraits([...existing, portrait], `Invité avec photo ajouté : ${seat.label}`);
+    } catch {
+      setPortraitError('Impossible de lire cette photo. Essayez une image JPG ou PNG.');
+    } finally {
+      setPortraitBusy(false);
+    }
+  };
+  const updateGuestPortrait = (id: string, patch: Partial<GuestPortrait>, message: string) => {
+    const existing = ensureBlueprintDefaults(latestBlueprintRef.current).metadata.guestPortraits ?? [];
+    setGuestPortraits(existing.map((p) => (p.id === id ? { ...p, ...patch } : p)), message);
+  };
+  const removeGuestPortrait = (id: string) => {
+    const existing = ensureBlueprintDefaults(latestBlueprintRef.current).metadata.guestPortraits ?? [];
+    const gone = existing.find((p) => p.id === id);
+    setGuestPortraits(existing.filter((p) => p.id !== id), `Invité retiré${gone?.name ? ` : ${gone.name}` : ''}`);
+  };
+  const guestPortraitsModal = (
+    <GuestPortraitsModal
+      open={portraitsOpen}
+      onClose={() => setPortraitsOpen(false)}
+      portraits={guestPortraits}
+      seats={guestSeats}
+      onAdd={addGuestPortrait}
+      onUpdate={updateGuestPortrait}
+      onRemove={removeGuestPortrait}
+      busy={portraitBusy}
+      error={portraitError}
+    />
+  );
 
   const setIntroView = (view: RoomIntroView) => {
     updateBlueprint(
@@ -9290,6 +9378,19 @@ export default function RoomLayoutEditor({
           {guestSim.dancing ? `Danse : ${guestSummary?.dancing ?? 0}` : 'Danse'}
         </button>
       ) : null}
+      {!readOnly ? (
+        <button
+          type="button"
+          onClick={openGuestPortraits}
+          title={allowGuestPhotos
+            ? 'Mettre la photo d’une personne sur son avatar, à sa place (enregistré avec le plan)'
+            : 'Invités avec photo : option des forfaits Premium, Enterprise, Particulier et Salle'}
+          className={cn(EDITOR_TOOL, guestPortraits.length > 0 ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED, !allowGuestPhotos && 'opacity-70')}
+        >
+          {allowGuestPhotos ? <Camera className="w-3.5 h-3.5" aria-hidden /> : <Lock className="w-3.5 h-3.5" aria-hidden />}
+          {guestPortraits.length > 0 ? `Photos : ${guestPortraits.length}` : 'Invités avec photo'}
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={toggleRoofVisible}
@@ -11130,6 +11231,8 @@ export default function RoomLayoutEditor({
         {aiPlanFileInput}
         {ambiencePreviewModal}
         {elementCreatorModal}
+        {guestPortraitsModal}
+        <EditorUpsellDialog upsell={upsell} onClose={() => setUpsell(null)} />
         <ImageCropModal
           open={Boolean(cropTarget)}
           onClose={() => setCropTarget(null)}
@@ -11213,6 +11316,7 @@ export default function RoomLayoutEditor({
       {ambiencePreviewModal}
       {elementCreatorModal}
       <EditorUpsellDialog upsell={upsell} onClose={() => setUpsell(null)} />
+      {guestPortraitsModal}
       <ImageCropModal
         open={Boolean(cropTarget)}
         onClose={() => setCropTarget(null)}

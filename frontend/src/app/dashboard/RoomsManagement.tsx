@@ -2256,6 +2256,7 @@ export default function RoomsManagement() {
                     onChange={setBlueprintDraft}
                     onRegenerate={regenerateBlueprint}
                     allowThemesFixtures={planFeatures?.roomThemesFixtures === true}
+                    allowGuestPhotos={planFeatures?.guestPhotoAvatars === true}
                     editorLevel={planFeatures?.roomEditorLevel}
                     focusPlanImport={focusPlanImport}
                     seedPlanPhoto={pendingPlanPhoto}
@@ -3246,6 +3247,7 @@ export default function RoomsManagement() {
                 setEditBlueprint(next);
               }}
               allowThemesFixtures={planFeatures?.roomThemesFixtures === true}
+              allowGuestPhotos={planFeatures?.guestPhotoAvatars === true}
               editorLevel={planFeatures?.roomEditorLevel}
               paused={editPane !== 'elements'}
               onRegenerate={() => {

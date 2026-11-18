@@ -9,6 +9,7 @@ import {
   assertPlanFeature,
   allowsRoomBlueprint,
   assertThemesFixturesForBlueprint,
+  assertGuestPhotosForBlueprint,
   PlanFeatureError,
 } from '../services/planFeaturesService';
 import {
@@ -181,6 +182,7 @@ export async function createRoom(req: AuthenticatedRequest, res: Response) {
 
     try {
       await assertThemesFixturesForBlueprint(tenantId, blueprint);
+      await assertGuestPhotosForBlueprint(tenantId, blueprint);
     } catch (err) {
       if (err instanceof PlanFeatureError) {
         return res.status(403).json({ error: err.message });
@@ -279,6 +281,7 @@ export async function updateRoom(req: AuthenticatedRequest, res: Response) {
     if (layoutChanging) {
       try {
         await assertThemesFixturesForBlueprint(tenantId, nextBlueprint);
+        await assertGuestPhotosForBlueprint(tenantId, nextBlueprint);
       } catch (err) {
         if (err instanceof PlanFeatureError) {
           return res.status(403).json({ error: err.message });
