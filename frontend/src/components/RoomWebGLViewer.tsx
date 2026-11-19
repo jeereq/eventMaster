@@ -138,6 +138,7 @@ import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import { entranceViewPose } from '@/lib/roomWalkthrough';
 import { buildGuestSimulation, type GuestSimulationSettings, type SimulatedGuest } from '@/lib/roomGuestSimulation';
 import { GuestAvatars } from '@/components/room/GuestAvatarMeshes';
+import GestureFeedback from '@/components/room/GestureFeedback';
 import AvatarEyeCamera, { AVATAR_START_PITCH, type AvatarLook } from '@/components/room/AvatarEyeCamera';
 import {
   AVATAR_VIEW_FILTER_LABELS,
@@ -5799,6 +5800,8 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
           />
         </Suspense>
       </Canvas>
+      {/* Gestes visibles : cercles sous les doigts, trait du glissé, badge de zoom. */}
+      <GestureFeedback targetRef={viewerRootRef} reduceMotion={reduceMotion} />
       {avatarActive ? (
         <>
           <div className="pointer-events-none absolute top-2.5 left-2.5 right-2.5 z-10 flex justify-start">

@@ -1269,6 +1269,8 @@ const GuestPickTargets = React.memo(function GuestPickTargets({
         const g = e.instanceId !== undefined ? guests[e.instanceId] : undefined;
         if (!g) return;
         e.stopPropagation();
+        // Au doigt, pas de survol : l'étiquette suivrait le glissé de la caméra.
+        if ((e.nativeEvent as PointerEvent).pointerType === 'touch') return;
         setCursor(e, 'pointer');
         if (g !== hovered) setHovered(g);
       }}
