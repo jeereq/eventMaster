@@ -9,6 +9,7 @@ import { CatalogueChair, ChairSelectionHalo } from '@/components/CatalogueFurnit
 import type { RenderQualitySettings } from '@/lib/roomRenderQuality';
 import { computeRowSeatPose, rowSeatCode } from '@/lib/roomAmphitheaterGeom';
 import { TheaterSeatRow, type SeatPose } from '@/components/room/TheaterSeatRow';
+import { PmrSpotMarker } from '@/components/room/PmrSpotMarker';
 
 type Lod = RenderQualitySettings['rowChairLod'];
 
@@ -35,6 +36,7 @@ export function RowSeatsLOD({
   aisleWidthPct,
   showSeatNumbers,
   rowName,
+  pmrSeatIndices,
 }: {
   count: number;
   spacing: number;
@@ -58,6 +60,8 @@ export function RowSeatsLOD({
   aisleWidthPct?: number;
   showSeatNumbers?: boolean;
   rowName?: string;
+  /** Places pour fauteuil roulant : le siège laisse la place à un marquage au sol. */
+  pmrSeatIndices?: number[];
 }) {
   const visual = useMemo(
     () => resolveChairVisual(chairType, chairStyle, seatMaterial, { seat: chairSeatColor, frame: chairFrameColor }),
@@ -67,6 +71,20 @@ export function RowSeatsLOD({
   const frame = visual.frameColor;
   const picked = selectedSeatIndices;
   const blocked = useMemo(() => new Set(blockedSeatIndices), [blockedSeatIndices]);
+  const pmrKey = (pmrSeatIndices ?? []).join(',');
+  const pmr = useMemo(
+    () => new Set((pmrSeatIndices ?? []).filter((i) => i >= 0 && i < count)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pmrKey, count],
+  );
+  const pmrSpots = pmr.size > 0 ? (
+    <>
+      {[...pmr].map((i) => {
+        const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
+        return <PmrSpotMarker key={`pmr-${i}`} position={[p.localX, p.y, p.localZ]} rotationY={p.faceY} />;
+      })}
+    </>
+  ) : null;
 
   const emitSeat = (i: number, e: { stopPropagation: () => void; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => {
     if (!onSelectSeat || blocked.has(i)) return;
@@ -82,6 +100,7 @@ export function RowSeatsLOD({
     const dummy = new THREE.Object3D();
     for (let i = 0; i < count; i += 1) {
       const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
+      dummy.scale.setScalar(pmr.has(i) ? 0 : 1);
       if (seatRef.current) {
         dummy.position.set(p.localX, p.y + 0.45, p.localZ);
         dummy.rotation.set(0, p.faceY, 0);
@@ -98,7 +117,7 @@ export function RowSeatsLOD({
     }
     if (seatRef.current) seatRef.current.instanceMatrix.needsUpdate = true;
     if (backRef.current) backRef.current.instanceMatrix.needsUpdate = true;
-  }, [lod, count, spacing, curve, elevation, focusLocal.x, focusLocal.z, aisleSplit, aisleWidthPct]);
+  }, [lod, count, spacing, curve, elevation, focusLocal.x, focusLocal.z, aisleSplit, aisleWidthPct, pmr]);
 
   const numberLabel = useMemo(() => {
     if (!showSeatNumbers || (!selected && picked.length === 0) || count < 1) return null;
@@ -164,19 +183,23 @@ export function RowSeatsLOD({
   );
 
   if (upholsteredRow) {
+    // Les places PMR sont retirées du rang ; les index sélectionnés suivent les sièges restants.
+    const kept = poses.map((_, i) => i).filter((i) => !pmr.has(i));
+    const toKept = new Map(kept.map((orig, k) => [orig, k]));
     return (
       <group>
         <TheaterSeatRow
-          poses={poses}
+          poses={pmr.size ? kept.map((i) => poses[i]) : poses}
           spacing={spacing}
           seatColor={color}
           frameColor={frame}
           variant={chairStyle === 'cinema' ? 'cinema' : chairType === 'ARMCHAIR' ? 'lounge' : 'theater'}
-          picked={picked}
-          blocked={blocked}
+          picked={pmr.size ? picked.filter((i) => toKept.has(i)).map((i) => toKept.get(i) as number) : picked}
+          blocked={pmr.size ? new Set([...blocked].filter((i) => toKept.has(i)).map((i) => toKept.get(i) as number)) : blocked}
           castShadow={castShadow}
-          onSeat={(i, e) => emitSeat(i, e)}
+          onSeat={(i, e) => emitSeat(pmr.size ? kept[i] : i, e)}
         />
+        {pmrSpots}
         {picked.map((i) => (
           <group key={`sel-${i}`} position={[poses[i]?.localX ?? 0, poses[i]?.y ?? 0, poses[i]?.localZ ?? 0]}>
             <ChairSelectionHalo selected />
@@ -192,6 +215,7 @@ export function RowSeatsLOD({
       <group>
         {Array.from({ length: count }).map((_, i) => {
           const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
+          if (pmr.has(i)) return null;
           const chairSelected = picked.includes(i);
           const chairBlocked = blocked.has(i);
           return (
@@ -220,6 +244,7 @@ export function RowSeatsLOD({
             </group>
           );
         })}
+        {pmrSpots}
         {numbers}
       </group>
     );
@@ -229,6 +254,7 @@ export function RowSeatsLOD({
     return (
       <group>
         {Array.from({ length: count }).map((_, i) => {
+          if (pmr.has(i)) return null;
           const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
           return (
             <group
@@ -282,6 +308,7 @@ export function RowSeatsLOD({
             </group>
           );
         })}
+        {pmrSpots}
         {numbers}
       </group>
     );
@@ -316,6 +343,7 @@ export function RowSeatsLOD({
           </group>
         );
       })}
+      {pmrSpots}
       {numbers}
     </group>
   );

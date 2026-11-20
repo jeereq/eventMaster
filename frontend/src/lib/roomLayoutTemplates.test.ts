@@ -5,7 +5,8 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ROOM_LAYOUT_TEMPLATES, applyRoomTemplate, applyTemplateTableSetting } from './roomLayoutUtils.ts';
+import { ROOM_LAYOUT_TEMPLATES, applyRoomTemplate, applyTemplateTableSetting, resolveBlueprintWalls } from './roomLayoutUtils.ts';
+import { auditRoomNorms } from './roomSafetyNorms.ts';
 import { detectLayoutClearanceConflicts } from './roomLayoutClearance.ts';
 
 const EPS = 0.5;
@@ -71,6 +72,14 @@ describe('modèles de salle', () => {
         }
       });
 
+      it('respecte les normes (issues, rangées, places PMR, surface)', () => {
+        assert.ok(bp);
+        const failing = auditRoomNorms({ ...bp, walls: resolveBlueprintWalls(bp) })
+          .filter((c) => !c.ok)
+          .map((c) => `${c.label} : ${c.detail}`);
+        assert.deepEqual(failing, []);
+      });
+
       it('n’a aucun conflit bloquant (chevauchement, mur traversé)', () => {
         assert.ok(bp);
         const errors = detectLayoutClearanceConflicts(bp).conflicts.filter((c) => c.severity === 'error');
@@ -127,5 +136,39 @@ describe('mise en place des modèles', () => {
     assert.equal(Math.max(...xs), 80);
     assert.equal(Math.min(...ys), 40);
     assert.equal(Math.max(...ys), 80);
+  });
+});
+
+describe('salles de réception réalistes', () => {
+  for (const id of ['banquet-classic', 'banquet-oval', 'banquet-circle', 'banquet-honor', 'courtyard-gala', 'grand-hall-classical']) {
+    it(`${id} : espacements réels respectés entre les tables`, () => {
+      const bp = applyRoomTemplate(id);
+      assert.ok(bp);
+      const spacing = detectLayoutClearanceConflicts(bp).conflicts.map((c) => c.message);
+      assert.deepEqual(spacing, []);
+    });
+  }
+
+  it('les grandes salles ont une sortie de secours en plus de l’entrée', () => {
+    const bp = applyRoomTemplate('banquet-oval');
+    assert.ok(bp);
+    const exits = resolveBlueprintWalls(bp).flatMap((w) => (w.openings ?? []).filter((o) => o.kind === 'door' && o.style === 'fireExit'));
+    assert.ok(exits.length >= 1);
+  });
+
+  it('les rangées longues ont une allée centrale et des places fauteuil roulant', () => {
+    const bp = applyRoomTemplate('amphitheater-slope');
+    assert.ok(bp);
+    const rows = bp.furniture.filter((f) => f.kind === 'row');
+    assert.ok(rows.every((r) => r.kind === 'row' && (r.seatCount <= 16 || r.aisleSplit)));
+    const pmr = rows.reduce((n, r) => n + (r.kind === 'row' ? r.pmrSeatIndices?.length ?? 0 : 0), 0);
+    assert.ok(pmr >= 5);
+  });
+
+  it('une piste de danse face à la scène dans les banquets', () => {
+    for (const id of ['banquet-classic', 'banquet-oval', 'banquet-circle', 'banquet-honor']) {
+      const bp = applyRoomTemplate(id);
+      assert.ok(bp?.furniture.some((f) => f.kind === 'zone' && f.zoneKind === 'dance'), id);
+    }
   });
 });

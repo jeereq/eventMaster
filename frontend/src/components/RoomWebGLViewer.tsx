@@ -4733,6 +4733,7 @@ function SceneContent({
                     aisleWidthPct={item.aisleWidthPct}
                     showSeatNumbers={item.showSeatNumbers !== false}
                     rowName={item.rowName || item.label}
+                    pmrSeatIndices={item.pmrSeatIndices}
                   />
                 );
               })()}
