@@ -1279,10 +1279,11 @@ export default function FixtureRenderer({
     <div
       className={`${fill ? 'relative' : 'absolute'} border-2 text-[9px] font-bold flex items-center justify-center px-1 text-center overflow-hidden ${getFixtureClass(
         fixture.kind,
-      )} ${className} ${isColumn && colShape === 'round' && !hasImage ? 'rounded-full' : isColumn && !hasImage ? 'rounded-md' : 'rounded-lg'}`}
+      )} ${className} ${isColumn && colShape !== 'square' && colShape !== 'octagonal' && !hasImage ? 'rounded-full' : isColumn && !hasImage ? 'rounded-md' : 'rounded-lg'}`}
       style={{
         ...positionStyle,
         backgroundColor: materialTint ?? (!hasImage && isColumn && fixture.color ? fixture.color : undefined),
+        ...(isColumn && colShape === 'octagonal' ? { clipPath: 'polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%)' } : {}),
         ...imageStyle,
         ...(isStage && !hasImage && deckStyle ? deckStyle : {}),
       }}

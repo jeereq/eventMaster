@@ -1,4 +1,6 @@
 import {
+  applyRoomAmbiencePreset,
+  DEFAULT_AMBIENCE_SCOPE,
   captureRoomAmbienceFromBlueprint,
   chairStyleLabels,
   chairTypeLabels,
@@ -14,7 +16,23 @@ import {
 import { chandelierTypeLabels } from '@/lib/roomCeilingUtils';
 import { floorTypeLabels } from '@/lib/roomFloorUtils';
 import { lightingPresetLabels } from '@/lib/roomRenderQuality';
-import { getRoomTheme } from '@/lib/roomThemeUtils';
+import { applyRoomTheme, getRoomTheme } from '@/lib/roomThemeUtils';
+
+/**
+ * Applique une ambiance complète en une seule étape : d’abord le thème (contour, couleur
+ * de table par défaut), puis murs, sol, mobilier et éclairage de l’ambiance par-dessus.
+ * Appliquer le thème après coup écrasait l’ambiance (sol du thème, anciens murs et chaises).
+ */
+export function applyAmbienceWithTheme(
+  blueprint: RoomLayoutBlueprint,
+  preset: RoomAmbiencePreset,
+  scope: AmbienceApplyScope = DEFAULT_AMBIENCE_SCOPE,
+): RoomLayoutBlueprint {
+  const themed = preset.roomThemeId && scope.theme
+    ? applyRoomTheme(blueprint, preset.roomThemeId, { keepFloor: true })
+    : blueprint;
+  return applyRoomAmbiencePreset(themed, preset, scope);
+}
 
 const SCOPE_LABELS: Record<keyof AmbienceApplyScope, string> = {
   walls: 'Murs',
