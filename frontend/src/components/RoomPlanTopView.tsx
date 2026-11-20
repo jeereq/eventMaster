@@ -184,6 +184,8 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
   const geometry = useMemo(() => {
     const tables: Array<{ item: Extract<typeof furniture[number], { kind: 'table' }>; top: TopViewTable }> = [];
     const chairs: Array<{ key: string; seat: TopViewSeat; look: ChairLook }> = [];
+    /** Places pour fauteuil roulant : marquage bleu au sol à la place du siège. */
+    const pmrSpots: Array<{ key: string; seat: TopViewSeat }> = [];
     for (const item of furniture) {
       if (item.kind === 'table') {
         const top = topViewTable(item, W, H);
@@ -193,7 +195,11 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
       } else if (item.kind === 'row') {
         const row = topViewRow(item, blueprint.fixtures, W, H);
         const look = { chairType: item.chairType, chairStyle: item.chairStyle, seatMaterial: item.seatMaterial, chairSeatColor: item.chairSeatColor, chairFrameColor: item.chairFrameColor };
-        for (const seat of row.seats) chairs.push({ key: `${item.id}-${seat.index}`, seat, look });
+        const pmr = new Set(item.pmrSeatIndices ?? []);
+        for (const seat of row.seats) {
+          if (pmr.has(seat.index)) pmrSpots.push({ key: `${item.id}-pmr-${seat.index}`, seat });
+          else chairs.push({ key: `${item.id}-${seat.index}`, seat, look });
+        }
       } else if (item.kind === 'chair') {
         chairs.push({
           key: item.id,
@@ -202,7 +208,7 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
         });
       }
     }
-    return { tables, chairs };
+    return { tables, chairs, pmrSpots };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blueprint, W, H]);
 
@@ -319,6 +325,16 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
           {/* Chaises sous les plateaux, comme en 3D où elles glissent sous la table. */}
           {geometry.chairs.map(({ key, seat, look }) => (
             <ChairGlyph key={key} seat={seat} look={look} />
+          ))}
+
+          {geometry.pmrSpots.map(({ key, seat }) => (
+            <g key={key} transform={`translate(${seat.x} ${seat.y}) rotate(${seat.rotDeg})`}>
+              <title>Emplacement fauteuil roulant</title>
+              <rect x={-0.4} y={-0.85} width={0.8} height={1.3} rx={0.06} fill="#1d4ed8" stroke="#ffffff" strokeWidth={0.04} />
+              <circle cx={-0.02} cy={-0.42} r={0.07} fill="#ffffff" />
+              <path d="M -0.05 -0.32 L -0.05 -0.12 L 0.1 -0.12 L 0.16 0.04 M -0.05 -0.24 L 0.08 -0.24" stroke="#ffffff" strokeWidth={0.05} fill="none" strokeLinecap="round" />
+              <path d="M 0.1 -0.02 A 0.16 0.16 0 1 1 -0.17 -0.2" stroke="#ffffff" strokeWidth={0.04} fill="none" />
+            </g>
           ))}
 
           {geometry.tables.map(({ item, top }) => {

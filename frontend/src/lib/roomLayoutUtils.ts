@@ -4,7 +4,8 @@ import { HOME_FURNITURE_META } from './roomHomeFurniture.ts';
 import { concentricRowCurvePercent, rowSeatCode, seatsGrownForTier } from './roomAmphitheaterGeom.ts';
 import { getTableSeatPlacement3D, tablePlateSizeMeters, type TableSeatingSide } from './tablePlanUtils.ts';
 export type { TableSeatingSide } from '@/lib/tablePlanUtils';
-import { enforceRealLayoutClearances } from './roomLayoutClearance.ts';
+import { enforceRealLayoutClearances, estimateTableSizeMeters, estimateRowSizeMeters } from './roomLayoutClearance.ts';
+import { MAX_SEATS_BETWEEN_AISLES, exitUnits, requiredExits, requiredPmrPlaces } from './roomSafetyNorms.ts';
 
 export { estimateAmphitheaterSeats, rowCurveFactor, rowCurvePercent, rowSeatCode } from './roomAmphitheaterGeom.ts';
 
@@ -3502,12 +3503,28 @@ type TemplateTableSetting = {
    * en quinconce si `stagger`, au lieu d’un bloc serré au milieu de la salle.
    */
   spread?: { cols: number; x: [number, number]; y: [number, number]; stagger?: boolean };
+  /** Positions exactes des tables d’invités (en % du plan), dans l’ordre. */
+  layout?: Array<[number, number]>;
   /** Bars à cocktails, à gin, tiki… ajoutés au modèle. */
   bars?: TemplateBarSpot[];
   /** Style appliqué aux bars déjà présents dans le modèle. */
   barStyle?: BarStyle;
   /** Réglages des piscines du modèle (type, eau, margelles, décor flottant). */
   pool?: Partial<import('./roomPoolDesign.ts').PoolOptions>;
+  /** Piste de danse, centrée sur (x, y), dimensions en mètres. */
+  danceFloor?: {
+    x: number;
+    y: number;
+    wM: number;
+    hM: number;
+    style?: import('./roomDanceFloor.ts').DanceFloorStyle;
+    mirrorBall?: boolean;
+    material?: ZoneMaterial;
+  };
+  /** Écrans de présentation (mur LED par défaut), centrés sur (x, y), contre le mur du fond. */
+  screens?: Array<{ x: number; y: number; kind?: ScreenKind }>;
+  /** Compositions florales de part et d’autre de l’entrée (accueil des invités). */
+  welcomeFlowers?: boolean;
 };
 
 function templateBarFixture(canvas: RoomLayoutBlueprint['canvas'], spot: TemplateBarSpot): BlueprintFixture {
@@ -3560,7 +3577,9 @@ export function applyTemplateTableSetting(
   setting: TemplateTableSetting,
 ): RoomLayoutBlueprint {
   const guests = blueprint.furniture.filter((item): item is TemplateTable => item.kind === 'table' && !item.locked);
-  const spots = setting.spread ? spreadTablePositions(guests.length, setting.spread) : [];
+  const spots = setting.layout
+    ? setting.layout.map(([x, y]) => ({ x, y }))
+    : setting.spread ? spreadTablePositions(guests.length, setting.spread) : [];
   let guestIndex = 0;
   const furniture = blueprint.furniture.map((item) => {
     if (item.kind === 'row' && setting.rows) return { ...item, ...setting.rows };
@@ -3591,8 +3610,56 @@ export function applyTemplateTableSetting(
       return fixture;
     }),
     ...(setting.bars ?? []).map((spot) => templateBarFixture(blueprint.canvas, spot)),
+    ...(setting.screens ?? []).map((spot) => {
+      const kind = spot.kind ?? 'stageLedWall';
+      const size = realFixtureFootprintPct('screen', blueprint.canvas, { screenKind: kind }) ?? { w: 20, h: 4 };
+      return {
+        ...createBlueprintFixture('screen', blueprint.canvas),
+        id: makeLayoutId('screen'),
+        x: spot.x - size.w / 2,
+        y: spot.y - size.h / 2,
+        w: size.w,
+        h: size.h,
+        screenKind: kind,
+        screenContent: 'presentation' as const,
+        label: 'Écran de présentation',
+      };
+    }),
+    ...(setting.welcomeFlowers
+      ? [42, 58].map((x) => {
+        const w = (0.6 / blueprint.canvas.widthM) * 100;
+        const h = (0.6 / blueprint.canvas.heightM) * 100;
+        return {
+          ...createBlueprintFixture('pedestal'),
+          id: makeLayoutId('pedestal'),
+          x: (x < 50 ? x - 2 : x + 2) - w / 2,
+          y: 95 - 1.2 - h,
+          w,
+          h,
+          label: 'Composition florale d’accueil',
+        };
+      })
+      : []),
   ];
-  return refreshBlueprintMetadata({ ...blueprint, furniture, fixtures });
+  const dance = setting.danceFloor;
+  const danceZone = dance
+    ? (() => {
+      const w = (dance.wM / blueprint.canvas.widthM) * 100;
+      const h = (dance.hM / blueprint.canvas.heightM) * 100;
+      return {
+        ...createBlueprintZone('Piste de danse', 1, { zoneKind: 'dance', material: dance.material ?? 'parquet', w, h }),
+        x: dance.x - w / 2,
+        y: dance.y - h / 2,
+        ...(dance.style ? { danceStyle: dance.style } : {}),
+        ...(dance.mirrorBall ? { danceMirrorBall: true } : {}),
+      };
+    })()
+    : null;
+  return refreshBlueprintMetadata({
+    ...blueprint,
+    furniture: danceZone ? [danceZone, ...furniture] : furniture,
+    fixtures,
+  });
 }
 
 const CHIAVARI_GOLD: TemplateSeatStyle = { chairType: 'BANQUET', chairStyle: 'chiavari', seatMaterial: 'velvet', chairSeatColor: '#f5efe3', chairFrameColor: '#c9a227' };
@@ -3606,12 +3673,16 @@ const TEMPLATE_TABLE_SETTINGS: Record<string, TemplateTableSetting> = {
   'banquet-classic': {
     table: { ...IVORY_LINEN, couvertStyle: 'silver', chairType: 'BANQUET', chairStyle: 'chiavari', seatMaterial: 'velvet', chairSeatColor: '#f5f5f4', chairFrameColor: '#c0c6cf' },
     centerpieces: ['floral', 'candelabra'],
-    spread: { cols: 4, x: [20, 80], y: [38, 66] },
+    spread: { cols: 4, x: [20, 80], y: [44, 68] },
     bars: [{ style: 'champagne', x: 78, y: 95 }],
+    // Comme dans une vraie salle : la piste de danse devant la scène, les tables autour.
+    danceFloor: { x: 50, y: 26, wM: 6, hM: 3.6, style: 'whiteGloss', mirrorBall: true },
+    welcomeFlowers: true,
   },
   'banquet-oval': {
     table: { ...IVORY_LINEN, couvertStyle: 'gold', ...CHIAVARI_GOLD },
     centerpieces: ['candelabra', 'floral'],
+    danceFloor: { x: 50, y: 50, wM: 5.4, hM: 3.6, style: 'blackGloss', mirrorBall: true },
   },
   'banquet-ushape': {
     table: { tableSurface: 'wood', tableColor: '#8b5a2b', hasCouverts: true, couvertStyle: 'rustic', chairType: 'CROSSBACK', chairStyle: 'ladderBack', seatMaterial: 'rattan' },
@@ -3620,17 +3691,28 @@ const TEMPLATE_TABLE_SETTINGS: Record<string, TemplateTableSetting> = {
   'banquet-circle': {
     table: { tableSurface: 'linen', tableColor: '#f6e9e6', hasCouverts: true, couvertStyle: 'blush', chairType: 'BANQUET', chairStyle: 'ghost', seatMaterial: 'plastic' },
     centerpieces: ['rosePomander', 'floatingCandles'],
+    danceFloor: { x: 50, y: 52, wM: 6, hM: 3.6, style: 'whiteGloss', mirrorBall: true },
+    welcomeFlowers: true,
   },
   'banquet-honor': {
     table: { ...IVORY_LINEN, couvertStyle: 'gold', ...CHIAVARI_GOLD },
     centerpieces: ['floral', 'candelabra'],
+    // Piste au pied de la table d’honneur, les invités en éventail autour.
+    danceFloor: { x: 50, y: 34, wM: 5.8, hM: 2.6, style: 'classic', material: 'parquet' },
+    layout: [[20, 34], [80, 34], [20, 56], [50, 58], [80, 56], [32, 80], [68, 80]],
+    welcomeFlowers: true,
   },
   'wedding-aisle-banquet': { centerpieces: ['floral', 'candelabra'] },
   'wedding-organic-gala': { table: { hasCouverts: true, couvertStyle: 'beaded' } },
-  'grand-hall-classical': { table: { couvertStyle: 'gold' } },
+  'grand-hall-classical': { table: { couvertStyle: 'gold' }, spread: { cols: 3, x: [27, 73], y: [17, 85] } },
   'garden-dusk-reception': { table: { couvertStyle: 'scalloped' }, centerpieces: ['lanterns', 'candleCluster'] },
   'night-banquet-edison': { table: { couvertStyle: 'black' } },
-  'courtyard-gala': { table: { couvertStyle: 'silver' }, centerpieces: ['candleCluster', 'mirrorVotives'] },
+  'courtyard-gala': {
+    table: { couvertStyle: 'silver' },
+    centerpieces: ['candleCluster', 'mirrorVotives'],
+    // Tables en couronne autour de la piste, comme dans une cour d’hôtel particulier.
+    layout: [[28, 24], [43, 24], [57, 24], [72, 24], [21, 47], [79, 47], [28, 71], [43, 71], [57, 71], [72, 71]],
+  },
   'fountain-gala': { table: { tableSurface: 'linen', hasCouverts: true, couvertStyle: 'silver' } },
   'beach-wedding': { table: { couvertStyle: 'rattan', chairStyle: 'acapulco', chairSeatColor: '#f5efe3' }, centerpieces: ['tropical', 'lanterns'] },
   'vineyard-long-table': { table: { couvertStyle: 'rustic' } },
@@ -3645,12 +3727,13 @@ const TEMPLATE_TABLE_SETTINGS: Record<string, TemplateTableSetting> = {
     spread: { cols: 4, x: [18, 82], y: [26, 70], stagger: true },
     bars: [{ style: 'gin', x: 22, y: 95 }],
   },
-  classroom: { table: { tableSurface: 'whiteLacquer', chairType: 'BANQUET', chairStyle: 'scandi', seatMaterial: 'plastic', chairSeatColor: '#334155', chairFrameColor: '#d6d3d1' } },
+  classroom: { screens: [{ x: 22, y: 7 }, { x: 78, y: 7 }], table: { tableSurface: 'whiteLacquer', chairType: 'BANQUET', chairStyle: 'scandi', seatMaterial: 'plastic', chairSeatColor: '#334155', chairFrameColor: '#d6d3d1' } },
   boardroom: { table: { tableSurface: 'walnut', chairType: 'ARMCHAIR', chairStyle: 'modern', seatMaterial: 'leather', chairSeatColor: '#1c1917' } },
   'conference-ushape': {
+    screens: [{ x: 50, y: 7 }],
     table: { tableSurface: 'linen', tableColor: '#f1f5f9', chairType: 'BANQUET', chairStyle: 'modern', seatMaterial: 'mesh', chairSeatColor: '#1f2937' },
   },
-  'conference-standard': { rows: { chairStyle: 'modern', seatMaterial: 'mesh', chairSeatColor: '#1f2937' } },
+  'conference-standard': { screens: [{ x: 22, y: 6.5, kind: 'wallTv' }, { x: 78, y: 6.5, kind: 'wallTv' }], rows: { chairStyle: 'modern', seatMaterial: 'mesh', chairSeatColor: '#1f2937' } },
   'amphitheater-small': { rows: { chairStyle: 'cinema', seatMaterial: 'fabric', chairSeatColor: '#1e3a5f' } },
   'amphitheater-slope': { rows: { chairStyle: 'cinema', seatMaterial: 'fabric', chairSeatColor: '#334155' } },
   'chairs-theater': { rows: { chairType: 'THEATER', chairStyle: 'cinema', seatMaterial: 'velvet', chairSeatColor: '#7f1d1d' } },
@@ -3923,6 +4006,136 @@ function buildShowFlatTemplate(): RoomLayoutBlueprint {
       showUplights: false,
     },
   });
+}
+
+
+// ───────────────── normes de sécurité et d’accessibilité des modèles ─────────────────
+
+/** Les murs suivent-ils exactement le contour (aucune cloison intérieure) ? */
+function wallsFollowOutline(blueprint: RoomLayoutBlueprint, walls: RoomWallSegment[]): boolean {
+  const pts = outlinePolygonPoints(blueprint.roomOutline ?? defaultRoomOutline('rectangle'));
+  const near = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.abs(a.x - b.x) < 0.6 && Math.abs(a.y - b.y) < 0.6;
+  return walls.length > 0 && walls.every((w) => pts.some((p) => near(p, w.start)) && pts.some((p) => near(p, w.end)));
+}
+
+/** Point du mur à la position `t`, en mètres. */
+function wallPointM(wall: RoomWallSegment, t: number, canvas: RoomLayoutBlueprint['canvas']) {
+  return {
+    x: ((wall.start.x + (wall.end.x - wall.start.x) * t) / 100) * canvas.widthM,
+    y: ((wall.start.y + (wall.end.y - wall.start.y) * t) / 100) * canvas.heightM,
+  };
+}
+
+/** Ne sont pas des obstacles au sol : éclairages suspendus, guirlandes, périmètre de tente. */
+const OVERHEAD_FIXTURE_KINDS = new Set(['stringLight', 'chandelier', 'perimeter', 'decal', 'carpet']);
+
+/** Le palier devant une porte (1,40 m) est-il libre de tout mobilier ? */
+function doorLandingIsFree(blueprint: RoomLayoutBlueprint, door: { x: number; y: number }): boolean {
+  const { widthM, heightM } = blueprint.canvas;
+  const clear = 1.4;
+  for (const item of blueprint.furniture) {
+    if (item.kind === 'zone') continue;
+    const cx = (item.x / 100) * widthM;
+    const cy = (item.y / 100) * heightM;
+    const r = item.kind === 'table'
+      ? estimateTableSizeMeters(item.shape, item.capacity, item.rotation ?? 0).effectiveRadiusM
+      : item.kind === 'row'
+        ? estimateRowSizeMeters(item.seatCount, item.rotation ?? 0).radiusM
+        : 0.35;
+    if (Math.hypot(cx - door.x, cy - door.y) < r + clear) return false;
+  }
+  for (const fx of blueprint.fixtures) {
+    if (OVERHEAD_FIXTURE_KINDS.has(fx.kind)) continue;
+    const x0 = (fx.x / 100) * widthM;
+    const y0 = (fx.y / 100) * heightM;
+    const x1 = ((fx.x + fx.w) / 100) * widthM;
+    const y1 = ((fx.y + fx.h) / 100) * heightM;
+    const dx = Math.max(x0 - door.x, 0, door.x - x1);
+    const dy = Math.max(y0 - door.y, 0, door.y - y1);
+    if (Math.hypot(dx, dy) < clear) return false;
+  }
+  return true;
+}
+
+/**
+ * Ajoute les issues de secours qui manquent (porte « Sortie de secours » avec son bloc
+ * vert lumineux), sur les murs les plus éloignés de l’entrée, là où le palier est libre.
+ */
+function addMissingEmergencyExits(blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
+  if (blueprint.metadata?.showWalls === false) return blueprint;
+  const seats = blueprint.metadata?.totalSeats ?? 0;
+  const need = requiredExits(seats);
+  let walls = resolveBlueprintWalls(blueprint).map((w) => ({ ...w, openings: [...(w.openings ?? [])] }));
+  if (!wallsFollowOutline(blueprint, walls)) return blueprint;
+  const canvas = blueprint.canvas;
+  const doorsOf = () => walls.flatMap((w) => (w.openings ?? [])
+    .filter((o) => o.kind === 'door' && exitUnits(o.widthM ?? 0.9) > 0)
+    .map((o) => ({ wall: w, o, p: wallPointM(w, o.t, canvas) })));
+  const unitsOf = () => doorsOf().reduce((sum, d) => sum + exitUnits(d.o.widthM ?? 0.9), 0);
+  const missing = () => doorsOf().length < need.exits || unitsOf() < need.units;
+  if (!missing()) return blueprint;
+  let guard = 0;
+  while (missing() && guard++ < 4) {
+    const doors = doorsOf();
+    const lengthOf = (w: RoomWallSegment) => wallLengthMeters(w, canvas);
+    // Candidats : positions le long des murs, la plus éloignée des issues existantes d’abord.
+    const candidates = walls.flatMap((wall) => [0.5, 0.3, 0.7, 0.2, 0.8, 0.12, 0.88, 0.08, 0.92].map((t) => {
+      const p = wallPointM(wall, t, canvas);
+      const far = doors.length ? Math.min(...doors.map((d) => Math.hypot(d.p.x - p.x, d.p.y - p.y))) : 99;
+      return { wall, t, p, far };
+    }))
+      .filter(({ wall, t }) => {
+        const len = lengthOf(wall);
+        // La porte (1,10 m) et son huisserie tiennent dans le mur.
+        if (Math.min(t, 1 - t) * len < 0.8) return false;
+        return (wall.openings ?? []).every((o) => Math.abs(o.t - t) * len > ((o.widthM ?? 1) + 1.1) / 2 + 0.4);
+      })
+      .sort((a, b) => b.far - a.far);
+    const pick = candidates.find((c) => c.far > 5 && doorLandingIsFree(blueprint, c.p));
+    if (!pick) break;
+    const exit = createWallOpening('door', { t: pick.t, style: 'fireExit', color: '#3f4a52', frameColor: '#2b3237', hasMat: false });
+    walls = walls.map((w) => (w.id === pick.wall.id ? { ...w, openings: [...(w.openings ?? []), exit] } : w));
+  }
+  return { ...blueprint, walls };
+}
+
+/**
+ * Rangées : au-delà de 16 sièges d’affilée, une allée centrale coupe la rangée ;
+ * places pour fauteuil roulant en bout des derniers rangs (2 jusqu’à 50 places, +1 par 50).
+ */
+function applyRowSeatingNorms(blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
+  const rows = blueprint.furniture.filter((f): f is Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }> => f.kind === 'row');
+  if (rows.length === 0) return blueprint;
+  const rowSeats = rows.reduce((sum, r) => sum + r.seatCount, 0);
+  let pmrLeft = Math.max(0, requiredPmrPlaces(rowSeats) - rows.reduce((sum, r) => sum + (r.pmrSeatIndices?.length ?? 0), 0));
+  // Les derniers rangs (les plus loin de la scène) sont de plain-pied côté entrée.
+  const backFirst = [...rows].sort((a, b) => (b.tier ?? 0) - (a.tier ?? 0) || b.y - a.y);
+  const pmrById = new Map<string, number[]>();
+  for (const row of backFirst) {
+    if (pmrLeft <= 0) break;
+    if (row.seatCount < 4) continue;
+    const ends = [0, row.seatCount - 1].filter((i) => !(row.pmrSeatIndices ?? []).includes(i)).slice(0, pmrLeft);
+    pmrById.set(row.id, [...(row.pmrSeatIndices ?? []), ...ends]);
+    pmrLeft -= ends.length;
+  }
+  return {
+    ...blueprint,
+    furniture: blueprint.furniture.map((item) => {
+      if (item.kind !== 'row') return item;
+      const split = item.seatCount > MAX_SEATS_BETWEEN_AISLES && !item.aisleSplit;
+      const pmr = pmrById.get(item.id);
+      if (!split && !pmr) return item;
+      return {
+        ...item,
+        ...(split ? { aisleSplit: true, aisleWidthPct: item.aisleWidthPct ?? 10 } : {}),
+        ...(pmr ? { pmrSeatIndices: pmr } : {}),
+      };
+    }),
+  };
+}
+
+function applyTemplateSafetyNorms(blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
+  return addMissingEmergencyExits(refreshBlueprintMetadata(applyRowSeatingNorms(blueprint)));
 }
 
 export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
@@ -6597,7 +6810,7 @@ export function applyRoomTemplate(
   if (resolved.totalSeats) {
     built = fitBlueprintToSeatCount(built, resolved.totalSeats);
   }
-  built = sanitizeBlueprintLayout(built);
+  built = sanitizeBlueprintLayout(applyTemplateSafetyNorms(built));
   if (!previous) return built;
   return mergeTemplateStyle(built, previous, options?.keepStyle !== false);
 }
