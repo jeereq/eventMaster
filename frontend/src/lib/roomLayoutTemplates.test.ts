@@ -5,7 +5,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ROOM_LAYOUT_TEMPLATES, applyRoomTemplate } from './roomLayoutUtils.ts';
+import { ROOM_LAYOUT_TEMPLATES, applyRoomTemplate, applyTemplateTableSetting } from './roomLayoutUtils.ts';
 import { detectLayoutClearanceConflicts } from './roomLayoutClearance.ts';
 
 const EPS = 0.5;
@@ -78,4 +78,54 @@ describe('modèles de salle', () => {
       });
     });
   }
+});
+
+describe('mise en place des modèles', () => {
+  const tablesOf = (id: string) => {
+    const bp = applyRoomTemplate(id);
+    assert.ok(bp);
+    return bp.furniture.filter((f) => f.kind === 'table');
+  };
+
+  for (const id of ['banquet-classic', 'banquet-oval', 'banquet-circle', 'banquet-honor', 'banquet-ushape', 'tent-garden', 'fountain-gala']) {
+    it(`${id} : chaque table est dressée (service et centre de table)`, () => {
+      for (const t of tablesOf(id)) {
+        assert.ok(t.kind === 'table' && t.hasCouverts && t.couvertStyle, `${t.id} sans service`);
+        assert.ok(t.kind === 'table' && t.hasCenterpiece !== false, `${t.id} sans centre`);
+      }
+    });
+  }
+
+  it('les centres de table alternent d’une table à l’autre', () => {
+    const styles = new Set(tablesOf('banquet-classic').map((t) => (t.kind === 'table' ? t.centerpieceStyle : null)));
+    assert.ok(styles.size >= 2);
+  });
+
+  it('la table d’honneur verrouillée garde son propre style', () => {
+    const honor = tablesOf('banquet-honor').find((t) => t.kind === 'table' && t.locked);
+    assert.ok(honor && honor.kind === 'table');
+    assert.equal(honor.chairType, 'ARMCHAIR');
+    assert.equal(honor.centerpieceStyle, 'greeneryRunner');
+  });
+
+  it('les bars du catalogue sont posés avec leur style', () => {
+    const bp = applyRoomTemplate('cocktail');
+    assert.ok(bp);
+    const bar = bp.fixtures.find((f) => f.kind === 'bar');
+    assert.equal(bar?.barStyle, 'gin');
+    const pool = applyRoomTemplate('pool-party')?.fixtures.find((f) => f.kind === 'landscape' && f.landscapeStyle === 'pool');
+    assert.equal(pool?.pool?.liner, 'mosaicWhite');
+  });
+
+  it('répartit les tables sur toute la zone demandée', () => {
+    const bp = applyRoomTemplate('banquet-classic');
+    assert.ok(bp);
+    const spread = applyTemplateTableSetting(bp, { spread: { cols: 4, x: [20, 80], y: [40, 80] } });
+    const xs = spread.furniture.filter((f) => f.kind === 'table').map((f) => f.x);
+    const ys = spread.furniture.filter((f) => f.kind === 'table').map((f) => f.y);
+    assert.equal(Math.min(...xs), 20);
+    assert.equal(Math.max(...xs), 80);
+    assert.equal(Math.min(...ys), 40);
+    assert.equal(Math.max(...ys), 80);
+  });
 });
