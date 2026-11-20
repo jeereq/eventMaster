@@ -2,12 +2,13 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Copy, Edit3, Eye, Globe, Trash2, Wand2 } from '@/components/icons';
+import { Copy, Edit3, Globe, MoreHorizontal, Trash2, Wand2 } from '@/components/icons';
+import OverflowMenu, { type OverflowMenuItem } from '@/components/ui/OverflowMenu';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import { getTemplateElementSummary, templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
 import { cn } from '@/lib/cn';
 import { gridColsClass, listStackClass, type GridColumns, type ViewMode } from '@/components/ui/ViewModeToggle';
-import { ProjectCard, ListRowAction, StatusPill } from '@/components/ui/ProjectCard';
+import { ProjectCard, StatusPill } from '@/components/ui/ProjectCard';
 
 export interface TemplateCardItem {
   id: string;
@@ -199,6 +200,22 @@ export default function TemplateCardGrid({
           </>
         );
 
+        const menuItems: OverflowMenuItem[] = [];
+        if (onUseInStudio) {
+          menuItems.push({ id: 'studio', label: 'Studio', icon: Wand2, onSelect: () => onUseInStudio(t) });
+        }
+        if (duplicatable && onDuplicate && (!global || editable)) {
+          menuItems.push({
+            id: 'duplicate',
+            label: global ? 'Dupliquer vers une organisation' : 'Dupliquer',
+            icon: Copy,
+            onSelect: () => onDuplicate(t),
+          });
+        }
+        if (deletable && onDelete) {
+          menuItems.push({ id: 'delete', label: 'Supprimer', icon: Trash2, danger: true, onSelect: () => onDelete(t.id, t.name) });
+        }
+
         const actions = (
           <div
             className={cn(
@@ -229,62 +246,21 @@ export default function TemplateCardGrid({
               <button
                 type="button"
                 onClick={() => onDuplicate(t)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold rounded-xl text-xs transition"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition"
               >
                 <Copy className="w-4 h-4" />
                 {layout === 'grid' ? 'Utiliser ce modèle' : ''}
               </button>
             )}
 
-            {onUseInStudio && (
-              <button
-                type="button"
-                onClick={() => onUseInStudio(t)}
-                className={cn(
-                  layout === 'list'
-                    ? 'inline-flex items-center justify-center min-h-11 px-3 rounded-xl text-xs font-bold bg-primary/10 text-primary hover:bg-primary/15 transition'
-                    : 'p-2.5 min-h-11 min-w-11 text-primary hover:bg-primary/10 rounded-xl transition',
-                )}
-                title="Préselectionner cette carte dans le studio"
-              >
-                {layout === 'list' ? 'Studio' : <Wand2 className="w-4 h-4" />}
-              </button>
-            )}
-            {onViewDetails && (
-              <button
-                type="button"
-                onClick={() => onViewDetails(t)}
-                className={cn(
-                  layout === 'list'
-                    ? 'inline-flex items-center'
-                    : 'p-2.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-xl transition',
-                )}
-                title="Voir les détails"
-              >
-                {layout === 'list' ? <ListRowAction /> : <Eye className="w-4 h-4" />}
-              </button>
-            )}
-
-            {duplicatable && onDuplicate && (!global || editable) && (
-              <button
-                type="button"
-                onClick={() => onDuplicate(t)}
-                className="p-2.5 text-muted hover:text-primary hover:bg-primary/10 rounded-xl transition"
-                title={global ? 'Dupliquer vers une organisation' : 'Dupliquer le modèle'}
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-            )}
-
-            {deletable && onDelete && (
-              <button
-                type="button"
-                onClick={() => onDelete(t.id, t.name)}
-                className="p-2.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition"
-                title="Supprimer le modèle"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+            {menuItems.length > 0 && (
+              <OverflowMenu
+                align="right"
+                triggerLabel={`Autres actions pour ${t.name}`}
+                triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+                items={menuItems}
+              />
             )}
           </div>
         );
@@ -327,20 +303,9 @@ export default function TemplateCardGrid({
           >
             <TemplatePreviewThumb t={t} onViewDetails={onViewDetails} />
             <div className="p-2.5 space-y-1.5 flex-[1] flex flex-col min-w-0 min-h-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-muted">
-                  {global ? 'Bibliothèque' : 'Organisation'}
-                </span>
-                {onViewDetails && (
-                  <button
-                    type="button"
-                    onClick={() => onViewDetails(t)}
-                    className="text-xs font-semibold text-primary inline-flex items-center gap-1 hover:underline"
-                  >
-                    Aperçu <Eye className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
+              <span className="text-xs font-semibold text-muted">
+                {global ? 'Bibliothèque' : 'Organisation'}
+              </span>
               <h3 className="text-sm font-semibold text-foreground tracking-tight line-clamp-1">{t.name}</h3>
               <p className="text-xs text-muted">
                 Créé le {new Date(t.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}

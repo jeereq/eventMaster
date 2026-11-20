@@ -78,14 +78,14 @@ export default function OrgCommercialPage() {
 
  <div className="grid sm:grid-cols-3 gap-4">
  <div className="bg-white dark:bg-background border rounded-2xl p-5">
- <div className="text-xs font-bold uppercase text-muted">Organisations parrainées</div>
+ <div className="text-xs font-semibold text-muted">Organisations parrainées</div>
  <div className="text-2xl font-black mt-1 flex items-center gap-2">
  <Building2 className="w-5 h-5 text-primary" />
  {data.stats.organizations}
  </div>
  </div>
  <div className="bg-white dark:bg-background border rounded-2xl p-5">
- <div className="text-xs font-bold uppercase text-muted">Commission ce mois</div>
+ <div className="text-xs font-semibold text-muted">Commission ce mois</div>
  <div className="text-2xl font-black mt-1 flex items-center gap-2">
  <TrendingUp className="w-5 h-5 text-emerald-600" />
  {data.stats.monthlyCommission.toLocaleString('fr-FR')} FC
@@ -95,7 +95,7 @@ export default function OrgCommercialPage() {
  )}
  </div>
  <div className="bg-white dark:bg-background border rounded-2xl p-5">
- <div className="text-xs font-bold uppercase text-muted">Total commissions</div>
+ <div className="text-xs font-semibold text-muted">Total commissions</div>
  <div className="text-2xl font-black mt-1 flex items-center gap-2">
  <Wallet className="w-5 h-5 text-amber-600" />
  {data.stats.totalCommission.toLocaleString('fr-FR')} FC
@@ -103,15 +103,15 @@ export default function OrgCommercialPage() {
  </div>
  </div>
 
- <div className="bg-primary-solid text-primary-foreground rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+ <div className="bg-surface text-foreground border border-border rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
  <div>
- <p className="text-primary-foreground/80 text-sm font-semibold">Votre code parrainage organisation</p>
+ <p className="text-muted text-sm font-semibold">Votre code parrainage organisation</p>
  <p className="text-2xl font-black tracking-wider">{data.referralCode}</p>
- <p className="text-primary-foreground/80 text-xs mt-1">
+ <p className="text-muted text-xs mt-1">
  {Math.round(data.commissionRate * 100)} % au premier paiement, puis {Math.round((data.renewalCommissionRate ?? 0.2) * 100)} % sur les factures suivantes
  </p>
  </div>
- <ReferralShareButtons referralCode={data.referralCode} />
+ <ReferralShareButtons referralCode={data.referralCode} className="[&_button]:!bg-surface [&_button]:!text-foreground [&_button]:!border-border/80 [&_button:hover]:!bg-card-hover" />
  </div>
 
  <div className="md:hidden space-y-3">

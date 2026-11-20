@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   Users, UserPlus, Trash2, Loader2, Crown, Mail, Phone, Pencil,
-  Shield, Briefcase, MessageSquare, Smartphone, TrendingUp, Copy, RefreshCw,
+  Shield, Briefcase, MessageSquare, Smartphone, TrendingUp, Copy, RefreshCw, ChevronDown,
 } from '@/components/icons';
 import {
   SkeletonGrid, ViewModeToggle, useViewMode, listStackClass,
@@ -295,16 +295,10 @@ export default function TeamManagement() {
   return (
     <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 sm:p-6 space-y-5">
       <div className="flex flex-col gap-4 pb-4 border-b border-border">
-        <div>
-          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary" />
-            Équipe de l&apos;organisation
-          </h2>
-          <p className="text-xs text-muted mt-1">
-            Managers : gestion des événements, salles et équipe. Protocole : accueil et check-in le jour J.
-            {hasCommercialNetwork ? ' Commerciaux : apport de clients et commissions.' : ''}
-          </p>
-        </div>
+        <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+          <Users className="w-5 h-5 text-primary" />
+          Équipe de l&apos;organisation
+        </h2>
         <div className="flex flex-wrap items-center gap-2">
           <div className="mr-auto">
           {members.length > 0 && (
@@ -330,17 +324,16 @@ export default function TeamManagement() {
       {members.length > 0 && (
         <div className={cn('grid gap-2', hasCommercialNetwork ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3')} aria-label="Répartition de l’équipe">
           {[
-            { label: 'Managers', value: maxManagers !== null && maxManagers < 9999 ? `${managerCount} / ${maxManagers}` : String(managerCount), hint: 'propriétaire inclus', gauge: maxManagers !== null && maxManagers > 0 && maxManagers < 9999 ? managerCount / maxManagers : null },
-            { label: 'Protocole', value: String(members.filter((m) => m.orgRole === 'PROTOCOL').length), hint: 'accueil et check-in', gauge: null },
+            { label: 'Managers', value: maxManagers !== null && maxManagers < 9999 ? `${managerCount} / ${maxManagers}` : String(managerCount), gauge: maxManagers !== null && maxManagers > 0 && maxManagers < 9999 ? managerCount / maxManagers : null },
+            { label: 'Protocole', value: String(members.filter((m) => m.orgRole === 'PROTOCOL').length), gauge: null },
             ...(hasCommercialNetwork
-              ? [{ label: 'Commerciaux', value: String(members.filter((m) => m.orgRole === 'COMMERCIAL').length), hint: 'apporteurs d’affaires', gauge: null }]
+              ? [{ label: 'Commerciaux', value: String(members.filter((m) => m.orgRole === 'COMMERCIAL').length), gauge: null }]
               : []),
-            { label: 'À valider', value: String(pendingCount), hint: pendingCount > 0 ? 'code de validation non saisi' : 'tous les comptes sont actifs', gauge: null },
+            { label: 'À valider', value: String(pendingCount), gauge: null },
           ].map((stat) => (
             <div key={stat.label} className="rounded-[var(--radius-card)] border border-border bg-surface-muted/60 px-3 py-2.5">
               <p className="text-xs font-medium text-muted">{stat.label}</p>
               <p className="text-lg font-semibold tabular-nums text-foreground">{stat.value}</p>
-              <p className="hidden truncate text-xs text-muted sm:block">{stat.hint}</p>
               {stat.gauge != null && (
                 <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-border" aria-hidden>
                   <div
@@ -359,11 +352,15 @@ export default function TeamManagement() {
       )}
 
       {hasCommercialNetwork && canManageTeam && (
-        <div className="bg-surface-muted border border-border rounded-[var(--radius-card)] p-4 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            Commission commerciale par défaut
-          </div>
+        <details className="group bg-surface-muted border border-border rounded-[var(--radius-card)] px-4">
+          <summary className="min-h-12 flex items-center justify-between gap-2 cursor-pointer list-none text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-[var(--radius-button)] [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              Commission commerciale par défaut
+            </span>
+            <ChevronDown className="w-4 h-4 text-muted shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+          </summary>
+          <div className="pb-4 space-y-3">
           <div className="flex flex-wrap items-end gap-3">
             <div>
               <label className="text-xs font-semibold text-muted block mb-1.5">
@@ -414,7 +411,8 @@ export default function TeamManagement() {
           <p className="text-xs text-muted">
             30 % au premier paiement et 20 % ensuite, sauf personnalisation par commercial.
           </p>
-        </div>
+          </div>
+        </details>
       )}
 
       {error && <Alert variant="error">{error}</Alert>}
@@ -577,7 +575,7 @@ export default function TeamManagement() {
           description="Ajoutez un manager ou un agent protocole."
           action={
             canManageTeam ? (
-              <Button type="button" size="sm" onClick={openForm} leftIcon={<UserPlus className="w-4 h-4" />}>
+              <Button type="button" size="sm" variant="secondary" onClick={openForm} leftIcon={<UserPlus className="w-4 h-4" />}>
                 Ajouter un membre
               </Button>
             ) : undefined

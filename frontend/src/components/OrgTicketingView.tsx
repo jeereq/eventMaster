@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { useAuth } from '@/context/AuthContext';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
@@ -14,24 +13,16 @@ import {
   Clock,
   XCircle,
   Users,
-  Calendar,
-  MapPin,
   Phone,
-  Mail,
   UserCheck,
   Armchair,
-  Filter,
-  CreditCard,
-  Building2,
   ChevronDown,
   ChevronUp,
   MessageCircle,
-  ExternalLink,
-  Layers,
-  Sparkles,
   Heart,
+  SlidersHorizontal,
 } from '@/components/icons';
-import { Button, Input, StatusPill, EmptyState } from '@/components/ui';
+import { Button, StatusPill } from '@/components/ui';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 
 export interface OrgTicketOrderGuest {
@@ -123,11 +114,9 @@ export interface OrgTicketingViewProps {
 
 export default function OrgTicketingView({
   eventId,
-  eventTitle,
   protocolMode = false,
   className = '',
 }: OrgTicketingViewProps) {
-  const { access } = useAuth();
   const [orders, setOrders] = useState<OrgTicketOrder[]>([]);
   const [summary, setSummary] = useState<OrgTicketingSummaryData | null>(null);
   const [eventsList, setEventsList] = useState<OrgTicketingEventSummary[]>([]);
@@ -144,8 +133,10 @@ export default function OrgTicketingView({
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [actingGuestId, setActingGuestId] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount =
+    (typeFilter !== 'ALL' ? 1 : 0) + (statusFilter !== 'ALL' ? 1 : 0) + (checkInFilter !== 'ALL' ? 1 : 0);
 
-  const isProtocolOnly = Boolean(access?.isProtocolOnly);
 
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -295,45 +286,10 @@ export default function OrgTicketingView({
       }
       return true;
     });
-  }, [orders, statusFilter, checkInFilter, searchQuery]);
+  }, [orders, statusFilter, checkInFilter, searchQuery, typeFilter]);
 
   return (
     <div className={cn('space-y-4 w-full', className)}>
-      {/* En-tête et Titre */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface p-4 rounded-2xl border border-border shadow-2xs">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Ticket className="w-4 h-4" />
-            </span>
-            <h2 className="text-base font-bold text-foreground">
-              {eventTitle ? `Billetterie · ${eventTitle}` : 'Billetterie & Contrôle d’accès'}
-            </h2>
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-              {isProtocolOnly || protocolMode ? 'Accueil & Protocole' : 'Gestion & Ventes'}
-            </span>
-          </div>
-          <p className="text-xs text-muted">
-            {isProtocolOnly || protocolMode
-              ? 'Consultez les commandes de billets, les paiements Mobile Money et validez les entrées des participants.'
-              : 'Suivi des ventes de billets en temps réel, recettes encaissées, répartition par zone et émargement jour J.'}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => loadData(true)}
-            disabled={refreshing || loading}
-            leftIcon={<RefreshCw className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')} />}
-          >
-            Actualiser
-          </Button>
-        </div>
-      </div>
-
       {error && (
         <div className="p-3 rounded-xl bg-danger/10 border border-danger/25 text-danger text-xs flex items-center justify-between">
           <span>{error}</span>
@@ -355,216 +311,135 @@ export default function OrgTicketingView({
         </div>
       )}
 
-      {/* Cartes KPI Synthèse */}
       {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          {/* Recettes encaissées */}
-          <div className="rounded-2xl border border-border bg-surface p-3.5 space-y-1 shadow-2xs">
-            <div className="flex items-center justify-between text-muted text-xs">
-              <span className="font-medium">Recettes nettes</span>
-              <CreditCard className="w-3.5 h-3.5 text-primary" />
+        <dl className="grid grid-cols-2 sm:grid-cols-4 rounded-2xl border border-border bg-surface divide-x divide-y sm:divide-y-0 divide-border overflow-hidden">
+          {[
+            {
+              label: 'Recettes nettes',
+              value: formatFc(summary.totalRevenueFc),
+              note: null,
+            },
+            {
+              label: 'Billets payés',
+              value: summary.paidTicketsCount,
+              note: summary.pendingTicketsCount > 0 ? `+ ${summary.pendingTicketsCount} en attente` : null,
+            },
+            {
+              label: 'Entrées',
+              value: `${summary.checkedInGuestsCount} / ${summary.paidTicketsCount || summary.totalOrdersCount || 0}`,
+              note: summary.paidTicketsCount > 0 && summary.checkedInGuestsCount > 0
+                ? `${Math.round((summary.checkedInGuestsCount / summary.paidTicketsCount) * 100)} % présents`
+                : null,
+            },
+            {
+              label: 'Commandes',
+              value: summary.totalOrdersCount,
+              note: summary.pendingOrdersCount > 0 ? `${summary.pendingOrdersCount} en attente de paiement` : null,
+            },
+          ].map((item) => (
+            <div key={item.label} className="px-4 py-3 min-w-0">
+              <dt className="text-xs text-muted">{item.label}</dt>
+              <dd className="text-lg font-bold text-foreground tabular-nums">{item.value}</dd>
+              {item.note ? <dd className="text-xs text-festive-accent truncate">{item.note}</dd> : null}
             </div>
-            <p className="text-lg font-black text-foreground tabular-nums">
-              {formatFc(summary.totalRevenueFc)}
-            </p>
-            <p className="text-xs text-muted">
-              {summary.paidOrdersCount} commande{summary.paidOrdersCount > 1 ? 's' : ''} payée{summary.paidOrdersCount > 1 ? 's' : ''}
-            </p>
-          </div>
-
-          {/* Billets vendus */}
-          <div className="rounded-2xl border border-border bg-surface p-3.5 space-y-1 shadow-2xs">
-            <div className="flex items-center justify-between text-muted text-xs">
-              <span className="font-medium">Billets payés</span>
-              <Ticket className="w-3.5 h-3.5 text-primary" />
-            </div>
-            <p className="text-lg font-black text-primary tabular-nums">
-              {summary.paidTicketsCount}
-            </p>
-            <p className="text-xs text-muted">
-              {summary.pendingTicketsCount > 0 ? `+ ${summary.pendingTicketsCount} en attente` : 'Toutes confirmées'}
-            </p>
-          </div>
-
-          {/* Émargés / Validés à l'entrée */}
-          <div className="rounded-2xl border border-border bg-surface p-3.5 space-y-1 shadow-2xs">
-            <div className="flex items-center justify-between text-muted text-xs">
-              <span className="font-medium">Entrées</span>
-              <UserCheck className="w-3.5 h-3.5 text-foreground" />
-            </div>
-            <p className="text-lg font-black text-foreground tabular-nums">
-              {summary.checkedInGuestsCount} / {summary.paidTicketsCount || summary.totalOrdersCount || 0}
-            </p>
-            <p className="text-xs text-muted">
-              {summary.paidTicketsCount > 0
-                ? `${Math.round((summary.checkedInGuestsCount / summary.paidTicketsCount) * 100)}% de présence`
-                : 'Scannés au guichet'}
-            </p>
-          </div>
-
-          {/* Commandes totales */}
-          <div className="rounded-2xl border border-border bg-surface p-3.5 space-y-1 shadow-2xs">
-            <div className="flex items-center justify-between text-muted text-xs">
-              <span className="font-medium">Total commandes</span>
-              <Users className="w-3.5 h-3.5 text-festive-accent" />
-            </div>
-            <p className="text-lg font-black text-foreground tabular-nums">
-              {summary.totalOrdersCount}
-            </p>
-            <p className="text-xs text-muted">
-              {summary.pendingOrdersCount} en attente de paiement
-            </p>
-          </div>
-        </div>
+          ))}
+        </dl>
       )}
 
-      {/* Barre d'outils et de filtres */}
-      <div className="rounded-2xl border border-border bg-surface p-3 sm:p-3.5 space-y-3 shadow-2xs">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
-          {/* Sélecteur d'événement (si vue globale) */}
-          {!eventId && eventsList.length > 0 && (
-            <div>
-              <label className="block text-xs font-semibold text-muted mb-1">Événement</label>
-              <select
-                value={selectedEventId}
-                onChange={(e) => setSelectedEventId(e.target.value)}
-                className="w-full h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-              >
-                <option value="all">Tous les événements ({eventsList.length})</option>
-                {eventsList.map((ev) => (
-                  <option key={ev.id} value={ev.id}>
-                    {ev.title}{ev.ticketPricingMode === 'by_zone' ? '' : ev.ticketPriceFc ? ` (${formatFc(ev.ticketPriceFc)})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[12rem] flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
+          <input
+            type="search"
+            placeholder="Nom, téléphone, email, n° commande…"
+            aria-label="Rechercher une commande"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-11 pl-9 pr-3 rounded-xl border border-border bg-surface text-xs text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+        {!eventId && eventsList.length > 0 && (
+          <select
+            value={selectedEventId}
+            onChange={(e) => setSelectedEventId(e.target.value)}
+            aria-label="Événement"
+            className="h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50 max-w-[14rem]"
+          >
+            <option value="all">Tous les événements</option>
+            {eventsList.map((ev) => (
+              <option key={ev.id} value={ev.id}>
+                {ev.title}{ev.ticketPricingMode === 'by_zone' ? '' : ev.ticketPriceFc ? ` (${formatFc(ev.ticketPriceFc)})` : ''}
+              </option>
+            ))}
+          </select>
+        )}
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((open) => !open)}
+          aria-expanded={filtersOpen}
+          aria-controls="org-ticketing-filters"
+          className={cn(
+            'inline-flex h-11 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+            filtersOpen || activeFilterCount > 0
+              ? 'border-border bg-surface-muted text-foreground'
+              : 'border-border bg-surface text-muted hover:text-foreground',
           )}
-
-          {/* Recherche textuelle */}
-          <div className={cn(!eventId && eventsList.length > 0 ? '' : 'sm:col-span-2')}>
-            <label className="block text-xs font-semibold text-muted mb-1">Recherche</label>
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-              <input
-                type="text"
-                placeholder="Nom, téléphone, email, n° commande…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-11 pl-9 pr-3 rounded-xl border border-border bg-surface text-xs text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary/30"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Effacer la recherche"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground"
-                >
-                  <XCircle className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Filtre de type de flux : Billets / Dons */}
-          <div>
-            <p className="block text-xs font-semibold text-muted mb-1">Type de flux</p>
-            <div className="flex flex-wrap gap-1" role="group" aria-label="Type de flux">
-              {([
-                ['ALL', 'Tous'],
-                ['TICKETS', 'Billets'],
-                ['DONATIONS', 'Dons'],
-              ] as const).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTypeFilter(id)}
-                  aria-pressed={typeFilter === id}
-                  className={cn(
-                    'px-2.5 min-h-11 rounded-lg text-xs font-semibold border transition',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    typeFilter === id
-                      ? id === 'DONATIONS'
-                        ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                        : 'bg-foreground text-background border-foreground'
-                      : 'border-border bg-surface text-muted hover:text-foreground',
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Filtre de paiement */}
-          <div>
-            <p className="block text-xs font-semibold text-muted mb-1">Paiement</p>
-            <div className="flex flex-wrap gap-1" role="group" aria-label="Statut de paiement">
-              {([
-                ['ALL', 'Tous'],
-                ['PAID', 'Payés'],
-                ['PENDING', 'En attente'],
-                ['CANCELLED', 'Annulés'],
-              ] as const).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setStatusFilter(id)}
-                  aria-pressed={statusFilter === id}
-                  className={cn(
-                    'px-2.5 min-h-11 rounded-lg text-xs font-semibold border transition',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    statusFilter === id
-                      ? 'bg-foreground text-background border-foreground'
-                      : 'border-border bg-surface text-muted hover:text-foreground',
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Filtre de check-in */}
-          <div>
-            <label className="block text-xs font-semibold text-muted mb-1">Contrôle d’accès</label>
-            <select
-              value={checkInFilter}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === 'ALL' || value === 'CHECKED_IN' || value === 'PENDING') {
-                  setCheckInFilter(value);
-                }
-              }}
-              className="w-full h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-            >
-              <option value="ALL">Toutes les entrées</option>
-              <option value="CHECKED_IN">Scannés / Entrés</option>
-              <option value="PENDING">Non encore scannés</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Badges de comptage */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border text-xs text-muted">
-          <span>
-            {filteredOrders.length} commande{filteredOrders.length > 1 ? 's' : ''} trouvée{filteredOrders.length > 1 ? 's' : ''}
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-primary" />
-              Payé
+        >
+          <SlidersHorizontal className="w-4 h-4" aria-hidden />
+          Filtres
+          {activeFilterCount > 0 ? (
+            <span className="rounded-full bg-surface px-1.5 text-xs font-bold tabular-nums text-foreground">
+              {activeFilterCount}
             </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-festive-accent" />
-              En attente
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-foreground" />
-              Validé à l’entrée
-            </span>
-          </div>
-        </div>
+          ) : null}
+        </button>
+        <button
+          type="button"
+          onClick={() => loadData(true)}
+          disabled={refreshing || loading}
+          aria-label="Actualiser"
+          title="Actualiser"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface text-muted hover:text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        >
+          <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
+        </button>
       </div>
+
+      {filtersOpen ? (
+        <div id="org-ticketing-filters" className="flex flex-wrap items-center gap-2">
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+            aria-label="Type de flux"
+            className="h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <option value="ALL">Billets et dons</option>
+            <option value="TICKETS">Billets</option>
+            <option value="DONATIONS">Dons</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+            aria-label="Paiement"
+            className="h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <option value="ALL">Tous paiements</option>
+            <option value="PAID">Payés</option>
+            <option value="PENDING">En attente</option>
+            <option value="CANCELLED">Annulés</option>
+          </select>
+          <select
+            value={checkInFilter}
+            onChange={(e) => setCheckInFilter(e.target.value as typeof checkInFilter)}
+            aria-label="Contrôle d’accès"
+            className="h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <option value="ALL">Toutes les entrées</option>
+            <option value="CHECKED_IN">Entrés</option>
+            <option value="PENDING">Pas encore entrés</option>
+          </select>
+        </div>
+      ) : null}
 
       {/* Liste des commandes */}
       {loading ? (
@@ -623,7 +498,7 @@ export default function OrgTicketingView({
                         </span>
                       )}
                       {order.flexPayChannel && (
-                        <span className="px-2 py-0.5 rounded-full bg-surface-muted border border-border text-xs font-semibold text-muted uppercase">
+                        <span className="px-2 py-0.5 rounded-full bg-surface-muted border border-border text-xs font-semibold text-muted">
                           {order.flexPayChannel}
                         </span>
                       )}
@@ -670,11 +545,6 @@ export default function OrgTicketingView({
                         <span className="hidden sm:inline truncate max-w-[200px]">{order.buyerEmail}</span>
                       )}
                     </div>
-                    {isPending ? (
-                      <p className="text-xs text-festive-accent">
-                        L’acheteur a initié FlexPay — en attente de confirmation opérateur.
-                      </p>
-                    ) : null}
                   </div>
 
                   <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border">
@@ -718,31 +588,18 @@ export default function OrgTicketingView({
                   <div className="p-3.5 sm:p-4 bg-surface-muted/30 border-t border-border space-y-3 animate-in fade-in">
                     {/* Information sur les sièges / places assignées */}
                     {order.selectedSeats && order.selectedSeats.length > 0 && (
-                      <div className="space-y-1.5">
-                        <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                          <Armchair className="w-3.5 h-3.5 text-primary" />
-                          Sièges réservés sur le plan 3D :
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {order.selectedSeats.map((seat, sIdx) => (
-                            <span
-                              key={sIdx}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-border text-xs font-semibold text-foreground shadow-2xs"
-                            >
-                              <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
-                                {sIdx + 1}
-                              </span>
-                              <span>{seat.tableName || `Table ${seat.tableId}`}</span>
-                              <span>· Siège {seat.seatIndex + 1}</span>
-                              {seat.zoneName && (
-                                <span className="text-xs px-1.5 py-0.2 rounded bg-primary/10 text-primary font-bold">
-                                  {seat.zoneName}
-                                </span>
-                              )}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                      <p className="text-xs text-foreground flex items-start gap-1.5">
+                        <Armchair className="w-3.5 h-3.5 text-muted shrink-0 mt-px" aria-hidden />
+                        <span>
+                          {order.selectedSeats
+                            .map((seat) =>
+                              [seat.tableName || `Table ${seat.tableId}`, `Siège ${seat.seatIndex + 1}`, seat.zoneName]
+                                .filter(Boolean)
+                                .join(' · '),
+                            )
+                            .join(', ')}
+                        </span>
+                      </p>
                     )}
 
                     {/* Liste des invités / billets émis */}
@@ -808,7 +665,7 @@ export default function OrgTicketingView({
                                     <Button
                                       type="button"
                                       size="sm"
-                                      variant="primary"
+                                      variant="secondary"
                                       disabled={isBusy}
                                       onClick={() => handleCheckInGuest(targetEventId, guest.id)}
                                       className="text-xs font-bold"

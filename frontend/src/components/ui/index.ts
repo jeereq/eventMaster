@@ -50,3 +50,5 @@ export { default as PhoneInput, parseStoredPhone, phonePartsToValue } from './Ph
 export type { PhoneInputValue } from './PhoneInput';
 export { default as IdentifierInput, identifierValue } from './IdentifierInput';
 export type { IdentifierMode } from './IdentifierInput';
+export { default as OverflowMenu } from './OverflowMenu';
+export type { OverflowMenuItem } from './OverflowMenu';

@@ -16,6 +16,7 @@ import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
 import { cn } from '@/lib/cn';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel from '@/components/QuotaUsagePanel';
+import TabsMoreMenu from '@/components/ui/TabsMoreMenu';
 import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/components/SubscriptionApprovalModal';
 import SubscriptionRequestListPanel, { type AdminSubscriptionRequestItem } from '@/components/SubscriptionRequestListPanel';
 import { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
@@ -357,101 +358,6 @@ interface TenantSubscriptionHistoryEntry {
  } | null;
 }
 
-function filterAdminDashboardEvents<T extends {
-  title: string;
-  location: string;
-  tenantName: string;
-  date: string;
-  latitude?: number | null;
-  longitude?: number | null;
-  isPublic?: boolean;
-  ticketingEnabled?: boolean;
-}>(
-  adminEvents: T[],
-  searchTerm: string,
-  filterEventWhen: string,
-  filterEventOrg: string,
-  filterEventGps: string,
-  filterEventVisibility: string,
-  filterEventTicketing: string,
-): T[] {
-  const needle = searchTerm.toLowerCase();
-  const now = Date.now();
-  return adminEvents.filter((event) => {
-    const matchesSearch =
-      event.title.toLowerCase().includes(needle) ||
-      event.location.toLowerCase().includes(needle) ||
-      event.tenantName.toLowerCase().includes(needle);
-    const when = new Date(event.date).getTime();
-    const matchesWhen =
-      filterEventWhen === 'ALL' ||
-      (filterEventWhen === 'upcoming' && when >= now) ||
-      (filterEventWhen === 'past' && when < now);
-    const matchesOrg = filterEventOrg === 'ALL' || event.tenantName === filterEventOrg;
-    const hasGps = Boolean(event.latitude && event.longitude);
-    const matchesGps =
-      filterEventGps === 'ALL' ||
-      (filterEventGps === 'yes' && hasGps) ||
-      (filterEventGps === 'no' && !hasGps);
-    const matchesVisibility =
-      filterEventVisibility === 'ALL' ||
-      (filterEventVisibility === 'public' && Boolean(event.isPublic)) ||
-      (filterEventVisibility === 'private' && !event.isPublic);
-    const matchesTicketing =
-      filterEventTicketing === 'ALL' ||
-      (filterEventTicketing === 'yes' && Boolean(event.ticketingEnabled)) ||
-      (filterEventTicketing === 'no' && !event.ticketingEnabled);
-    return matchesSearch && matchesWhen && matchesOrg && matchesGps && matchesVisibility && matchesTicketing;
-  });
-}
-
-function filterAdminDashboardGuests<T extends {
-  firstName: string;
-  lastName: string;
-  email: string;
-  category: string;
-  eventTitle: string;
-  tenantName: string;
-  rsvp: string;
-  checkedInAt?: string | null;
-  seatingInvitationPdfUrl?: string | null;
-}>(
-  adminGuests: T[],
-  searchTerm: string,
-  filterRsvp: string,
-  filterGuestOrg: string,
-  filterGuestEvent: string,
-  filterGuestCategory: string,
-  filterGuestCheckin: string,
-  filterGuestPdf: string,
-): T[] {
-  const needle = searchTerm.toLowerCase();
-  return adminGuests.filter((guest) => {
-    const matchesSearch =
-      guest.firstName.toLowerCase().includes(needle) ||
-      guest.lastName.toLowerCase().includes(needle) ||
-      guest.email.toLowerCase().includes(needle) ||
-      guest.category.toLowerCase().includes(needle) ||
-      guest.eventTitle.toLowerCase().includes(needle) ||
-      guest.tenantName.toLowerCase().includes(needle);
-    const matchesRsvp = filterRsvp === 'ALL' || guest.rsvp === filterRsvp;
-    const matchesOrg = filterGuestOrg === 'ALL' || guest.tenantName === filterGuestOrg;
-    const matchesEvent = filterGuestEvent === 'ALL' || guest.eventTitle === filterGuestEvent;
-    const matchesCategory = filterGuestCategory === 'ALL' || guest.category === filterGuestCategory;
-    const checkedIn = Boolean(guest.checkedInAt);
-    const matchesCheckin =
-      filterGuestCheckin === 'ALL' ||
-      (filterGuestCheckin === 'in' && checkedIn) ||
-      (filterGuestCheckin === 'out' && !checkedIn);
-    const hasPdf = Boolean(guest.seatingInvitationPdfUrl);
-    const matchesPdf =
-      filterGuestPdf === 'ALL' ||
-      (filterGuestPdf === 'delivered' && hasPdf) ||
-      (filterGuestPdf === 'missing' && guest.rsvp === 'ACCEPTED' && !hasPdf);
-    return matchesSearch && matchesRsvp && matchesOrg && matchesEvent && matchesCategory && matchesCheckin && matchesPdf;
-  });
-}
-
 function DashboardPageContent() {
  const { user, tenant, access, planQuota, planFeatures, enterSupportSession } = useAuth();
  const { site } = usePlatformSite();
@@ -478,20 +384,6 @@ function DashboardPageContent() {
  setGridColumns: setUsersColumns,
  gridClassName: usersGridClass,
  } = useViewMode('em-view-admin-users', 'grid', 3);
- const {
- mode: adminEventsViewMode,
- setViewMode: setAdminEventsViewMode,
- columns: adminEventsColumns,
- setGridColumns: setAdminEventsColumns,
- gridClassName: adminEventsGridClass,
- } = useViewMode('em-view-admin-events', 'grid', 3);
- const {
- mode: guestsViewMode,
- setViewMode: setGuestsViewMode,
- columns: guestsColumns,
- setGridColumns: setGuestsColumns,
- gridClassName: guestsGridClass,
- } = useViewMode('em-view-admin-guests', 'grid', 3);
  const {
  mode: plansViewMode,
  setViewMode: setPlansViewMode,
@@ -543,7 +435,7 @@ function DashboardPageContent() {
 
  // Super Admin specific states
  const [activeTab, setActiveTab] = useState<
- 'overview' | 'tenants' | 'users' | 'templates' | 'message-templates' | 'events' | 'analytics' | 'guests' | 'settings'
+ 'overview' | 'tenants' | 'users' | 'templates' | 'message-templates' | 'analytics' | 'settings'
  | 'subscription-requests' | 'subscription-plans' | 'invoices'
  >('overview');
 
@@ -606,7 +498,7 @@ function DashboardPageContent() {
  const [users, setUsers] = useState<AdminUserItem[]>([]);
  const [templates, setTemplates] = useState<AdminTemplateItem[]>([]);
  const [adminEvents, setAdminEvents] = useState<any[]>([]);
- const [adminGuests, setAdminGuests] = useState<any[]>([]);
+ const [, setAdminGuests] = useState<any[]>([]);
  const [adminSettings, setAdminSettings] = useState<any>(null);
  const [templateSavedFlash, setTemplateSavedFlash] = useState(false);
 
@@ -646,8 +538,6 @@ function DashboardPageContent() {
  const [notifyingPayouts, setNotifyingPayouts] = useState(false);
  const [usersLoading, setUsersLoading] = useState(false);
  const [templatesLoading, setTemplatesLoading] = useState(false);
- const [adminEventsLoading, setAdminEventsLoading] = useState(false);
- const [adminGuestsLoading, setAdminGuestsLoading] = useState(false);
  const [adminSettingsLoading, setAdminSettingsLoading] = useState(false);
  const [subRequestsLoading, setSubRequestsLoading] = useState(false);
   const [busySubRequestId, setBusySubRequestId] = useState<string | null>(null);
@@ -663,67 +553,23 @@ function DashboardPageContent() {
  const [filterAccountKind, setFilterAccountKind] = useState<string>('ALL');
  const [filterRole, setFilterRole] = useState<string>('ALL');
  const [filterType, setFilterType] = useState<'ALL' | 'GLOBAL' | 'TENANT'>('GLOBAL');
- const [filterRsvp, setFilterRsvp] = useState<string>('ALL');
  const [filterVerified, setFilterVerified] = useState<string>('ALL');
  const [filterUserOrg, setFilterUserOrg] = useState<string>('ALL');
  const [filterOrgRole, setFilterOrgRole] = useState<string>('ALL');
- const [filterEventWhen, setFilterEventWhen] = useState<string>('ALL');
- const [filterEventOrg, setFilterEventOrg] = useState<string>('ALL');
- const [filterEventGps, setFilterEventGps] = useState<string>('ALL');
- const [filterEventVisibility, setFilterEventVisibility] = useState<string>('ALL');
- const [filterEventTicketing, setFilterEventTicketing] = useState<string>('ALL');
- const [filterGuestOrg, setFilterGuestOrg] = useState<string>('ALL');
- const [filterGuestEvent, setFilterGuestEvent] = useState<string>('ALL');
- const [filterGuestCategory, setFilterGuestCategory] = useState<string>('ALL');
- const [filterGuestCheckin, setFilterGuestCheckin] = useState<string>('ALL');
- const [filterGuestPdf, setFilterGuestPdf] = useState<string>('ALL');
  const [platformInsights, setPlatformInsights] = useState<PlatformInsights | null>(null);
 
  // Pagination states
  const [tenantsPage, setTenantsPage] = useState(1);
  const [usersPage, setUsersPage] = useState(1);
  const [templatesPage, setTemplatesPage] = useState(1);
- const [eventsPage, setEventsPage] = useState(1);
- const [guestsPage, setGuestsPage] = useState(1);
  const [homeEventsPage, setHomeEventsPage] = useState(1);
  const [plansPage, setPlansPage] = useState(1);
  const [tenantsPageSize, setTenantsPageSize] = usePageSize('admin-tenants', 8);
  const [usersPageSize, setUsersPageSize] = usePageSize('admin-users', 8);
  const [templatesPageSize, setTemplatesPageSize] = usePageSize('admin-templates', 8);
- const [eventsPageSize, setEventsPageSize] = usePageSize('admin-events', 8);
- const [guestsPageSize, setGuestsPageSize] = usePageSize('admin-guests', 8);
  const [homeEventsPageSize, setHomeEventsPageSize] = usePageSize('home-events', 6);
  const [plansPageSize, setPlansPageSize] = usePageSize('admin-plans', 4);
 
-  const filteredEvents = useMemo(
-    () =>
-      filterAdminDashboardEvents(
-        adminEvents,
-        searchTerm,
-        filterEventWhen,
-        filterEventOrg,
-        filterEventGps,
-        filterEventVisibility,
-        filterEventTicketing,
-      ),
-    [adminEvents, searchTerm, filterEventWhen, filterEventOrg, filterEventGps, filterEventVisibility, filterEventTicketing],
-  );
-  const filteredGuests = useMemo(
-    () =>
-      filterAdminDashboardGuests(
-        adminGuests,
-        searchTerm,
-        filterRsvp,
-        filterGuestOrg,
-        filterGuestEvent,
-        filterGuestCategory,
-        filterGuestCheckin,
-        filterGuestPdf,
-      ),
-    [adminGuests, searchTerm, filterRsvp, filterGuestOrg, filterGuestEvent, filterGuestCategory, filterGuestCheckin, filterGuestPdf],
-  );
-  const paginatedEvents = usePaginateItems(filteredEvents, eventsPage, eventsPageSize);
-  const paginatedGuests = usePaginateItems(filteredGuests, guestsPage, guestsPageSize);
   const paginatedPlanIds = usePaginateItems(PLAN_IDS, plansPage, plansPageSize);
 
  // Guest CRUD Modals states (Super Admin)
@@ -945,21 +791,6 @@ function DashboardPageContent() {
  }
  }, [activeTab, user, templatesPage, templatesPageSize, deferredSearch, filterType]);
 
- // Load events when events tab is active
- useEffect(() => {
- if (user?.role === 'SUPER_ADMIN' && activeTab === 'events') {
- loadAdminEvents();
- }
- }, [activeTab, user]);
-
- // Load guests when guests tab is active
- useEffect(() => {
- if (user?.role === 'SUPER_ADMIN' && activeTab === 'guests') {
- loadAdminGuests();
- loadAdminEvents(); // Also load events for the dropdown
- }
- }, [activeTab, user]);
-
  // Load settings when settings tab is active
  useEffect(() => {
  if (user?.role === 'SUPER_ADMIN' && activeTab === 'settings') {
@@ -1035,9 +866,7 @@ function DashboardPageContent() {
  setTenantsPage(1);
  setUsersPage(1);
  setTemplatesPage(1);
- setEventsPage(1);
- setGuestsPage(1);
- }, [searchTerm, filterPlan, filterAccountKind, filterRole, filterType, filterRsvp, filterVerified, filterUserOrg, filterOrgRole, filterEventWhen, filterEventOrg, filterEventGps, filterEventVisibility, filterEventTicketing, filterGuestOrg, filterGuestEvent, filterGuestCategory, filterGuestCheckin, filterGuestPdf]);
+ }, [searchTerm, filterPlan, filterAccountKind, filterRole, filterType, filterVerified, filterUserOrg, filterOrgRole]);
 
  // Leaflet Map Initialization Effect for Super Admin Event Modal
  useEffect(() => {
@@ -1252,7 +1081,6 @@ function DashboardPageContent() {
  };
 
  const loadAdminEvents = async () => {
- setAdminEventsLoading(true);
  try {
  const data = await api.get('/admin/events');
  setAdminEvents(unwrapAdminList(data).items);
@@ -1260,12 +1088,10 @@ function DashboardPageContent() {
  console.error('Error loading admin events:', err);
  setError('Impossible de charger la liste des événements.');
  } finally {
- setAdminEventsLoading(false);
  }
  };
 
  const loadAdminGuests = async () => {
- setAdminGuestsLoading(true);
  try {
  const data = await api.get('/admin/guests');
  setAdminGuests(unwrapAdminList(data).items);
@@ -1273,7 +1099,6 @@ function DashboardPageContent() {
  console.error('Error loading admin guests:', err);
  setError('Impossible de charger la liste des invités.');
  } finally {
- setAdminGuestsLoading(false);
  }
  };
 
@@ -1752,20 +1577,6 @@ function DashboardPageContent() {
  };
 
  // Event handlers for Super Admin
- const handleOpenCreateEventModal = () => {
- setEventModalMode('create');
- setSelectedEvent(null);
- setEventTitle('');
- setEventDescription('');
- setEventDate('');
- setEventLocation('');
- setEventReminderFrequency('NONE');
- setEventLatitude('');
- setEventLongitude('');
- setEventTenantId('');
- setIsEventModalOpen(true);
- };
-
  const handleOpenEditEventModal = (e: any) => {
  setEventModalMode('edit');
  setSelectedEvent(e);
@@ -1823,20 +1634,6 @@ function DashboardPageContent() {
       setError(err instanceof Error ? err.message : 'Erreur lors de la suppression de l’événement');
       throw err;
  }
- };
-
- const handleOpenCreateGuestModal = () => {
- setGuestModalMode('create');
- setSelectedGuest(null);
- setGuestFirstName('');
- setGuestLastName('');
- setGuestEmail('');
- setGuestCategory('Général');
- setGuestRsvp('PENDING');
- setGuestEventId(adminEvents[0]?.id || '');
- setModalGuestPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
- setModalGuestPhoneNational('');
- setIsGuestModalOpen(true);
  };
 
  const handleOpenEditGuestModal = (guest: any) => {
@@ -1903,42 +1700,6 @@ function DashboardPageContent() {
       setError(err instanceof Error ? err.message : 'Erreur lors de la suppression de l’invité');
       throw err;
  }
- };
-
- const handleExportAdminGuests = () => {
- if (adminGuests.length === 0) {
-      setError('Aucun invité à exporter.');
- return;
- }
- 
-    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Catégorie", "Statut de réponse", "Événement", "Organisation"];
- const rows = adminGuests.map(g => {
- const phone = g.phone || g.preferences?.phone || g.preferences?.telephone || "";
- return [
- g.firstName,
- g.lastName,
- g.email,
- phone,
- g.category || "Général",
- g.rsvp === "ACCEPTED" ? "Accepté" : g.rsvp === "DECLINED" ? "Décliné" : "En attente",
- g.eventTitle,
- g.tenantName
- ];
- });
- 
- const csvContent = [
- headers.join(","),
- ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
- ].join("\n");
- 
- const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
- const url = URL.createObjectURL(blob);
- const link = document.createElement("a");
- link.setAttribute("href", url);
- link.setAttribute("download", `tous_les_invites_eventmaster.csv`);
- document.body.appendChild(link);
- link.click();
- document.body.removeChild(link);
  };
 
  const handleSaveSettings = async (e: React.FormEvent) => {
@@ -2062,14 +1823,9 @@ function DashboardPageContent() {
  const paginatedUsers = filteredUsers;
  const paginatedTemplates = filteredTemplates;
  const userOrgOptions = tenantOptions.map((t) => t.name).filter(Boolean).sort();
- const eventOrgOptions = [...new Set(adminEvents.map((e) => e.tenantName).filter(Boolean))].sort();
- const guestOrgOptions = [...new Set(adminGuests.map((g) => g.tenantName).filter(Boolean))].sort();
- const guestEventOptions = [...new Set(adminGuests.map((g) => g.eventTitle).filter(Boolean))].sort();
- const guestCategoryOptions = [...new Set(adminGuests.map((g) => g.category).filter(Boolean))].sort();
     const filterSelectClass =
       'bg-surface-muted dark:bg-background border border-border rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition min-h-11 shrink-0 max-w-[170px] sm:max-w-none';
 
- const activeLicensesCount = adminData?.stats.licensesActive ?? 0;
  const statCardClass = 'bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3';
 
  // Actions principales de l’onglet : dans l’en-tête de page (Super Admin) ou du panneau (Commercial).
@@ -2102,25 +1858,6 @@ function DashboardPageContent() {
  </Button>
  </Link>
  )}
-
- {activeTab === 'events' && isSuperAdmin && (
- <Button type="button" size="sm" onClick={handleOpenCreateEventModal} leftIcon={<Plus className="w-4 h-4" />}>
- Créer un événement
- </Button>
- )}
-
- {activeTab === 'guests' && isSuperAdmin && (
- <div className="flex gap-2">
- {adminGuests.length > 0 && (
- <Button type="button" size="sm" variant="secondary" onClick={handleExportAdminGuests} leftIcon={<Download className="w-4 h-4" />}>
- Exporter CSV
- </Button>
- )}
- <Button type="button" size="sm" onClick={handleOpenCreateGuestModal} leftIcon={<Plus className="w-4 h-4" />}>
- Créer un invité
- </Button>
- </div>
- )}
  </>
  );
 
@@ -2147,11 +1884,6 @@ function DashboardPageContent() {
  </div>
         <div>
  <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.tenants}</span>
-                  <p className="text-xs text-muted mt-1">
- {isCommercialPlatform
- ? 'Liées à votre code'
- : `${activeLicensesCount} licence${activeLicensesCount !== 1 ? 's' : ''} active${activeLicensesCount !== 1 ? 's' : ''}`}
- </p>
         </div>
  </div>
 
@@ -2180,7 +1912,6 @@ function DashboardPageContent() {
  </div>
  <div>
  <span className="text-2xl font-semibold text-foreground tracking-tight">{pendingSubscriptionCount}</span>
-                      <p className="text-xs text-muted mt-1">Demandes à traiter</p>
  </div>
  </div>
  <div className={statCardClass}>
@@ -2219,8 +1950,8 @@ function DashboardPageContent() {
 
  {activeTab === 'analytics' && user?.role === 'SUPER_ADMIN' && (
  <div className="px-5 py-3 border-b border-border bg-surface">
- <div className="inline-flex flex-wrap gap-0.5 p-0.5 bg-surface-muted border border-border rounded-[var(--radius-button)]">
- {ANALYTICS_SECTIONS.map(({ id, label }) => (
+ <div className="inline-flex max-w-full flex-wrap gap-0.5 p-0.5 bg-surface-muted border border-border rounded-[var(--radius-button)]">
+ {ANALYTICS_SECTIONS.slice(0, 5).map(({ id, label }) => (
  <button
  key={id}
  type="button"
@@ -2235,6 +1966,14 @@ function DashboardPageContent() {
  {label}
  </button>
  ))}
+ <TabsMoreMenu
+ items={ANALYTICS_SECTIONS.slice(5)}
+ activeId={activeAnalyticsSection}
+ onSelect={setAnalyticsSection}
+ baseClassName="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+ activeClassName="bg-surface text-foreground shadow-[var(--shadow-soft)]"
+ inactiveClassName="text-muted hover:text-foreground"
+ />
  </div>
  </div>
  )}
@@ -2249,8 +1988,6 @@ function DashboardPageContent() {
  placeholder={
  activeTab === 'tenants' ? "Rechercher une organisation, un gérant..." :
  activeTab === 'users' ? "Rechercher un utilisateur, un email, une organisation..." :
- activeTab === 'events' ? "Rechercher un événement, un lieu, une organisation..." :
- activeTab === 'guests' ? "Rechercher un invité, un email, une catégorie..." :
  "Rechercher un modèle..."
  }
  value={searchTerm}
@@ -2348,49 +2085,6 @@ function DashboardPageContent() {
  </div>
  )}
 
- {activeTab === 'events' && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
-                      <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
-                      <select value={filterEventWhen} onChange={(e) => setFilterEventWhen(e.target.value)} className={filterSelectClass} aria-label="Filtrer par date">
- <option value="ALL">Toutes les dates</option>
- <option value="upcoming">À venir</option>
- <option value="past">Passés</option>
- </select>
-                      <select value={filterEventOrg} onChange={(e) => setFilterEventOrg(e.target.value)} className={filterSelectClass} aria-label="Filtrer par organisation">
- <option value="ALL">Toutes les organisations</option>
- {eventOrgOptions.map((name) => (
- <option key={name} value={name}>{name}</option>
- ))}
- </select>
-                      <select value={filterEventGps} onChange={(e) => setFilterEventGps(e.target.value)} className={filterSelectClass} aria-label="Filtrer par GPS">
- <option value="ALL">Localisation</option>
- <option value="yes">Avec GPS</option>
- <option value="no">Sans GPS</option>
- </select>
-                      <select value={filterEventVisibility} onChange={(e) => setFilterEventVisibility(e.target.value)} className={filterSelectClass} aria-label="Filtrer par visibilité">
- <option value="ALL">Visibilité</option>
- <option value="public">Publics</option>
- <option value="private">Privés</option>
- </select>
-                      <select value={filterEventTicketing} onChange={(e) => setFilterEventTicketing(e.target.value)} className={filterSelectClass} aria-label="Filtrer par billetterie">
- <option value="ALL">Billets</option>
- <option value="yes">Billetterie</option>
- <option value="no">Sans billets</option>
- </select>
-                      <div className="shrink-0 ml-auto sm:ml-0">
- <ViewModeToggle
- storageKey="em-view-admin-events"
- value={adminEventsViewMode}
- onChange={setAdminEventsViewMode}
- columns={adminEventsColumns}
- onColumnsChange={setAdminEventsColumns}
- defaultMode="grid"
- defaultColumns={3}
- />
-                      </div>
- </div>
- )}
-
                   {activeTab === 'templates' && canManageTemplates && (
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
                       <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
@@ -2404,57 +2098,6 @@ function DashboardPageContent() {
  <option value="GLOBAL">Modèles Globaux (Publics)</option>
  <option value="TENANT">Modèles d'organisations</option>
  </select>
- </div>
- )}
-
- {activeTab === 'guests' && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
-                      <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
-                      <select value={filterRsvp} onChange={(e) => setFilterRsvp(e.target.value)} className={filterSelectClass} aria-label="Filtrer par réponse">
-                        <option value="ALL">Toutes les réponses</option>
- <option value="PENDING">En attente</option>
- <option value="ACCEPTED">Confirmé</option>
- <option value="DECLINED">Décliné</option>
- </select>
-                      <select value={filterGuestCheckin} onChange={(e) => setFilterGuestCheckin(e.target.value)} className={filterSelectClass} aria-label="Filtrer par présence">
- <option value="ALL">Présence</option>
- <option value="in">Entrés</option>
- <option value="out">Pas encore entrés</option>
- </select>
-                      <select value={filterGuestPdf} onChange={(e) => setFilterGuestPdf(e.target.value)} className={filterSelectClass} aria-label="Filtrer par PDF">
- <option value="ALL">PDF invitation</option>
- <option value="delivered">PDF livré</option>
- <option value="missing">PDF non livré</option>
- </select>
-                      <select value={filterGuestCategory} onChange={(e) => setFilterGuestCategory(e.target.value)} className={filterSelectClass} aria-label="Filtrer par catégorie">
- <option value="ALL">Toutes les catégories</option>
- {guestCategoryOptions.map((name) => (
- <option key={name} value={name}>{name}</option>
- ))}
- </select>
-                      <select value={filterGuestEvent} onChange={(e) => setFilterGuestEvent(e.target.value)} className={filterSelectClass} aria-label="Filtrer par événement">
- <option value="ALL">Tous les événements</option>
- {guestEventOptions.map((name) => (
- <option key={name} value={name}>{name}</option>
- ))}
- </select>
-                      <select value={filterGuestOrg} onChange={(e) => setFilterGuestOrg(e.target.value)} className={filterSelectClass} aria-label="Filtrer par organisation">
- <option value="ALL">Toutes les organisations</option>
- {guestOrgOptions.map((name) => (
- <option key={name} value={name}>{name}</option>
- ))}
- </select>
-                      <div className="shrink-0 ml-auto sm:ml-0">
- <ViewModeToggle
- storageKey="em-view-admin-guests"
- value={guestsViewMode}
- onChange={setGuestsViewMode}
- columns={guestsColumns}
- onColumnsChange={setGuestsColumns}
- defaultMode="grid"
- defaultColumns={3}
- />
-                      </div>
  </div>
  )}
  </div>
@@ -2942,280 +2585,6 @@ function DashboardPageContent() {
  <GuestMessageTemplatesPanel />
  )}
 
- {/* Events Tab */}
- {activeTab === 'events' && (
- <div className="space-y-4">
- {adminEventsLoading ? (
- <SkeletonTabContent mode={adminEventsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
- ) : filteredEvents.length === 0 ? (
-              <EmptyState illustration="events" 
-                icon={<Calendar className="w-5 h-5" />} 
-                title="Votre calendrier est libre" 
-                        description="Aucun événement."
-              />
- ) : (
- <>
- <div
- className={
- adminEventsViewMode === 'grid' ? adminEventsGridClass : listStackClass
- }
- >
- {paginatedEvents.map((e) => {
- const dateLabel = new Date(e.date).toLocaleDateString('fr-FR', {
- day: 'numeric',
- month: 'short',
- year: 'numeric',
- hour: '2-digit',
- minute: '2-digit',
- });
- const guestsChip = (
- <StatusPill tone="primary">{e.guestCount} invités</StatusPill>
- );
- const invitesChip = (
- <StatusPill tone="emerald">{e.invitationCount} invitations</StatusPill>
- );
- const visibilityChip = (
- <StatusPill tone={e.isPublic ? 'primary' : 'slate'}>{e.isPublic ? 'Public' : 'Privé'}</StatusPill>
- );
- const ticketsChip = e.ticketingEnabled ? (
- <StatusPill tone="amber">{e.ticketsSold || 0} billets</StatusPill>
- ) : null;
- const actions = (
- <>
- {adminEventsViewMode === 'list' ? (
- <button
- type="button"
- onClick={() => handleOpenDetailsModal('event', e)}
-                                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
- title="Voir détails"
-                                    aria-label={`Voir les détails de l'événement ${e.title}`}
- >
- <ListRowAction />
- </button>
- ) : (
- <button
- type="button"
- onClick={() => handleOpenDetailsModal('event', e)}
-                                    className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
- title="Détails"
-                                    aria-label={`Détails de l'événement ${e.title}`}
- >
- <Eye className="w-4 h-4" />
- </button>
- )}
- <button
- type="button"
- onClick={() => handleOpenEditEventModal(e)}
-                                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
- title="Modifier"
-                                  aria-label={`Modifier l'événement ${e.title}`}
- >
- <Edit2 className="w-4 h-4" />
- </button>
- <button
- type="button"
-                                  onClick={() => setPendingConfirm({ kind: 'delete-event', id: e.id, label: e.title })}
-                                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
- title="Supprimer"
-                                  aria-label={`Supprimer l'événement ${e.title}`}
- >
- <Trash2 className="w-4 h-4" />
- </button>
- </>
- );
-
- return (
- <ProjectCard
- coverClassName={isSuperAdmin ? 'aspect-[5/2] sm:aspect-[16/9]' : undefined}
- key={e.id}
- id={e.id}
- title={e.title}
- layout={adminEventsViewMode}
- icon={<Calendar className="w-4 h-4" />}
- badge={visibilityChip}
- overlayMeta={dateLabel}
- ctaLabel="Voir l’événement"
- onClick={() => handleOpenDetailsModal('event', e)}
- meta={
- adminEventsViewMode === 'list' ? (
- <span className="truncate">
- {e.tenantName}
- {' · '}
- {e.location || 'Sans lieu'}
- {' · '}
- {dateLabel}
- </span>
- ) : (
- <div className="space-y-1.5">
- <p className="truncate text-xs font-medium">{e.tenantName}</p>
- <p className="truncate text-xs text-muted">{e.location || 'Sans lieu'}</p>
-                                      <p className="text-xs text-muted">{dateLabel}</p>
- <div className="flex flex-wrap items-center gap-1.5">
- {visibilityChip}
- {ticketsChip}
- {guestsChip}
- {invitesChip}
- </div>
- </div>
- )
- }
- value={
- adminEventsViewMode === 'list'
- ? `${e.guestCount} inv.`
- : undefined
- }
- valueMeta={
- adminEventsViewMode === 'list'
- ? `${e.invitationCount} invitations`
- : undefined
- }
- status={adminEventsViewMode === 'list' ? guestsChip : undefined}
- actions={actions}
- />
- );
- })}
- </div>
-
- <Pagination
- page={eventsPage}
- pageSize={eventsPageSize}
- total={filteredEvents.length}
- onPageChange={setEventsPage}
- onPageSizeChange={setEventsPageSize}
- itemLabel="événements"
- />
- </>
- )}
-        </div>
-      )}
-
- {/* Guests Tab */}
- {activeTab === 'guests' && (
- <div className="space-y-4">
- {adminGuestsLoading ? (
- <SkeletonTabContent mode={guestsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
- ) : filteredGuests.length === 0 ? (
-              <EmptyState illustration="guests" 
-                icon={<Users className="w-5 h-5" />} 
-                title="Liste d'invités vide" 
-                        description="Ajoutez vos invités."
-              />
- ) : (
- <>
- <div className={guestsViewMode === 'grid' ? guestsGridClass : listStackClass}>
- {paginatedGuests.map((g) => {
- const rsvpTone =
- g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber';
- const rsvpLabel =
- g.rsvp === 'ACCEPTED' ? 'Confirmé' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
- const rsvpChip = <StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>;
- const categoryChip = <StatusPill tone="slate">{g.category || 'Général'}</StatusPill>;
- const pdfChip = g.rsvp === 'ACCEPTED' ? (
- <StatusPill tone={g.seatingInvitationPdfUrl ? 'emerald' : 'rose'}>
- {g.seatingInvitationPdfUrl ? 'PDF livré' : 'PDF manquant'}
- </StatusPill>
- ) : null;
- const checkinChip = g.checkedInAt ? <StatusPill tone="primary">Entré</StatusPill> : null;
- const actions = (
- <>
- {guestsViewMode === 'list' ? (
- <button
- type="button"
- onClick={() => handleOpenDetailsModal('guest', g)}
-                                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
- title="Voir détails"
-                                    aria-label={`Voir les détails de l'invité ${g.firstName} ${g.lastName}`}
- >
- <ListRowAction />
- </button>
- ) : (
- <button
- type="button"
- onClick={() => handleOpenDetailsModal('guest', g)}
-                                    className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
- title="Détails"
-                                    aria-label={`Détails de l'invité ${g.firstName} ${g.lastName}`}
- >
- <Eye className="w-4 h-4" />
- </button>
- )}
- <button
- type="button"
- onClick={() => handleOpenEditGuestModal(g)}
-                                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
- title="Modifier"
-                                  aria-label={`Modifier l'invité ${g.firstName} ${g.lastName}`}
- >
- <Edit2 className="w-4 h-4" />
- </button>
- <button
- type="button"
-                                  onClick={() => setPendingConfirm({ kind: 'delete-guest', id: g.id, label: `${g.firstName} ${g.lastName}` })}
-                                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
- title="Supprimer"
-                                  aria-label={`Supprimer l'invité ${g.firstName} ${g.lastName}`}
- >
- <Trash2 className="w-4 h-4" />
- </button>
- </>
- );
-
- return (
- <ProjectCard
- coverClassName={isSuperAdmin ? 'aspect-[5/2] sm:aspect-[16/9]' : undefined}
- key={g.id}
- id={g.id}
- title={`${g.lastName} ${g.firstName}`}
- layout={guestsViewMode}
- icon={<Users className="w-4 h-4" />}
- badge={rsvpChip}
- overlayMeta={g.eventTitle}
- ctaLabel="Fiche invité"
- onClick={() => handleOpenDetailsModal('guest', g)}
- meta={
- guestsViewMode === 'list' ? (
- <span className="truncate">
- {g.email}
- {' · '}
- {g.eventTitle}
- {' · '}
- {g.tenantName}
- </span>
- ) : (
- <div className="space-y-1.5">
- <p className="truncate text-xs">{g.email}</p>
- <div className="flex flex-wrap gap-1.5">
- {rsvpChip}
- {categoryChip}
- {pdfChip}
- {checkinChip}
- </div>
- <p className="truncate text-xs font-medium">{g.eventTitle}</p>
-                                      <p className="truncate text-xs text-muted">{g.tenantName}</p>
-            </div>
- )
- }
- status={guestsViewMode === 'list' ? rsvpChip : undefined}
- aside={guestsViewMode === 'list' ? (pdfChip || categoryChip) : undefined}
- actions={actions}
- />
- );
- })}
- </div>
-
- <Pagination
- page={guestsPage}
- pageSize={guestsPageSize}
- total={filteredGuests.length}
- onPageChange={setGuestsPage}
- onPageSizeChange={setGuestsPageSize}
- itemLabel="invités"
- />
- </>
- )}
- </div>
- )}
-
  {/* Settings Tab */}
  {activeTab === 'settings' && (
  <div className="w-full">
@@ -3640,7 +3009,7 @@ function DashboardPageContent() {
                                         }}
                                         className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                                       />
-                                      <label htmlFor={`guest-avatars-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`guest-avatars-${planKey}`} className="text-xs font-bold text-muted cursor-pointer">
                                         Invités simulés
                                       </label>
                                     </div>
@@ -3656,7 +3025,7 @@ function DashboardPageContent() {
                                         }}
                                         className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                                       />
-                                      <label htmlFor={`guest-photos-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`guest-photos-${planKey}`} className="text-xs font-bold text-muted cursor-pointer">
                                         Avatars avec photo
                                       </label>
                                     </div>
@@ -4222,12 +3591,12 @@ function DashboardPageContent() {
  <>
  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
  <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
- <span className="text-xs font-bold text-primary uppercase">Revenus bruts</span>
+ <span className="text-xs font-bold text-primary">Revenus bruts</span>
  <p className="text-xl font-extrabold text-primary mt-1">{revenueReport.summary.totalRevenueFormatted}</p>
  <span className="text-xs text-primary">{revenueReport.summary.invoiceCount} facture(s)</span>
  </div>
                               <div className="bg-festive-accent-soft border border-festive-accent/25 rounded-xl p-4">
-                                <span className="text-xs font-bold text-festive-accent uppercase">Commissions SaaS</span>
+                                <span className="text-xs font-bold text-festive-accent">Commissions SaaS</span>
                                 <p className="text-xl font-extrabold text-festive-accent mt-1">{revenueReport.summary.totalCommissionsFormatted}</p>
  {revenueReport.summary.unpaidCommissionsFormatted ? (
                                   <span className="text-xs text-festive-accent">Dû : {revenueReport.summary.unpaidCommissionsFormatted} · {commercialPct}/{renewalPct} %</span>
@@ -4236,11 +3605,11 @@ function DashboardPageContent() {
  )}
  </div>
                               <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
-                                <span className="text-xs font-bold text-primary uppercase">Revenu net plateforme</span>
+                                <span className="text-xs font-bold text-primary">Revenu net plateforme</span>
                                 <p className="text-xl font-extrabold text-primary mt-1">{revenueReport.summary.netRevenueFormatted}</p>
  </div>
  <div className="bg-surface-muted border border-border rounded-xl p-4">
- <span className="text-xs font-bold text-muted uppercase">Période</span>
+ <span className="text-xs font-bold text-muted">Période</span>
  <p className="text-xl font-extrabold text-foreground mt-1">{revenueReport.period}</p>
  </div>
  </div>
@@ -4433,7 +3802,7 @@ function DashboardPageContent() {
                                     {[u.tenantName, orgRoleLabel(u.orgRole, u.isOwner) || platformRoleLabel(u.role), formatAdminDate(u.createdAt)].filter(Boolean).join(' · ')}
                                   </p>
  </div>
-                                <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-full bg-surface-muted dark:bg-surface-muted text-muted dark:text-muted shrink-0">
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-surface-muted dark:bg-surface-muted text-muted dark:text-muted shrink-0">
                                   {u.role === 'USER' && orgRoleLabel(u.orgRole, u.isOwner)
                                     ? orgRoleLabel(u.orgRole, u.isOwner)
                                     : platformRoleLabel(u.role)}

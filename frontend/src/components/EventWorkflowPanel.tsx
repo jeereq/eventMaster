@@ -5,31 +5,23 @@ import {
   CheckCircle2,
   Users,
   ClipboardList,
-  Shirt,
   MessageSquare,
   Ticket,
   Heart,
   ScanLine,
-  ArrowRight,
   Store,
-  Mail,
   LayoutGrid,
+  ChevronDown,
   type LucideIcon,
 } from '@/components/icons';
-import {
-  type EventWorkflowState,
-  type EventWorkflowStepId,
-  type EventWorkflowTab,
-} from '@/lib/eventWorkflow';
-import { Button } from '@/components/ui';
+import { type EventWorkflowState, type EventWorkflowTab } from '@/lib/eventWorkflow';
+import { OverflowMenu } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 interface EventWorkflowPanelProps {
   workflow: EventWorkflowState;
   activeTab: string;
   onNavigateTab: (tab: EventWorkflowTab) => void;
-  onAction?: (stepId: string) => void;
-  compact?: boolean;
   /** Mode protocole : Accueil, Billetterie et Tâches seulement. */
   protocolDesk?: boolean;
   /** Particulier (B2C) : pas de billetterie, équipe = co-organisateurs. */
@@ -47,18 +39,25 @@ type TabItem = {
   complete?: boolean;
 };
 
-const STEP_TAB_ICONS: Partial<Record<EventWorkflowTab, LucideIcon>> = {
-  prep: Store,
-  guests: Users,
-  invitations: Mail,
-  tablePlan: LayoutGrid,
-  protocol: ScanLine,
-};
+/**
+ * « Invités » regroupe trois écrans (mêmes identifiants d’onglet et mêmes adresses ?tab= qu’avant) :
+ * la liste, l’invitation et les infos pratiques. Un sélecteur sous la ligne d’onglets passe de l’un à l’autre.
+ */
+const GUEST_GROUP: Array<{ id: EventWorkflowTab; label: string }> = [
+  { id: 'guests', label: 'Liste' },
+  { id: 'invitations', label: 'Invitation' },
+  { id: 'guestInfo', label: 'Infos pratiques' },
+];
+const GUEST_GROUP_IDS = new Set<EventWorkflowTab>(GUEST_GROUP.map((item) => item.id));
+
+/** Onglet de premier niveau qui porte un écran (les écrans du groupe Invités sont sous « guests »). */
+function topLevelOf(tab: string): string {
+  return GUEST_GROUP_IDS.has(tab as EventWorkflowTab) ? 'guests' : tab;
+}
 
 const SUPPORT_TABS: TabItem[] = [
   { id: 'ticketing', label: 'Billetterie', icon: Ticket },
   { id: 'donations', label: 'Dons solidaires', icon: Heart },
-  { id: 'guestInfo', label: 'Infos invités', icon: Shirt },
   { id: 'feed', label: 'Feed', icon: MessageSquare },
   { id: 'tasks', label: 'Tâches', icon: ClipboardList },
   { id: 'staff', label: 'Équipe', icon: Users },
@@ -70,27 +69,8 @@ const PROTOCOL_TABS: TabItem[] = [
   { id: 'tasks', label: 'Tâches', icon: ClipboardList },
 ];
 
-/** Bouton du bandeau quand l’étape à faire est dans un autre onglet. */
-const STEP_CTA: Record<EventWorkflowStepId, string> = {
-  event: 'Modifier l’événement',
-  prep: 'Ouvrir la préparation',
-  guests: 'Gérer les invités',
-  invitation: 'Ouvrir les invitations',
-  rsvp: 'Voir les réponses',
-  tablePlan: 'Ouvrir le plan de table',
-  protocol: 'Ouvrir l’accueil',
-  protocolTasks: 'Ouvrir les tâches',
-};
-
-/** Bouton du bandeau quand on est déjà dans l’onglet de l’étape (action directe). */
-const IN_TAB_CTA: Partial<Record<EventWorkflowStepId, string>> = {
-  event: 'Modifier l’événement',
-  guests: 'Ajouter des invités',
-  invitation: 'Rédiger l’invitation',
-};
-
-const TAB_CHIP_CLASS =
-  'inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 min-h-11 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+const TAB_CLASS =
+  'relative inline-flex shrink-0 items-center gap-1.5 px-3 min-h-11 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50 rounded-t-lg';
 
 function focusWorkflowTab(id: EventWorkflowTab) {
   document.getElementById(`workflow-tab-${id}`)?.focus();
@@ -121,57 +101,57 @@ function onTabListKeyDown(
   requestAnimationFrame(() => focusWorkflowTab(ids[next]));
 }
 
-/** Étapes du parcours (un onglet par écran, sans doublon) puis onglets complémentaires. */
+function stepComplete(workflow: EventWorkflowState, tab: EventWorkflowTab): boolean {
+  const steps = workflow.steps.filter((step) => step.tab === tab);
+  return steps.length > 0 && steps.every((step) => step.status === 'complete');
+}
+
+/** Vue d’ensemble puis les quatre étapes ; les écrans complémentaires vont dans « Plus ». */
 function buildTabs(
   workflow: EventWorkflowState,
   protocolDesk: boolean,
   personal: boolean,
-): TabItem[] {
-  if (protocolDesk) return PROTOCOL_TABS;
-  const seen = new Set<EventWorkflowTab>();
-  const stepTabs: TabItem[] = [];
-  for (const step of workflow.steps) {
-    if (!step.tab || seen.has(step.tab)) continue;
-    seen.add(step.tab);
-    stepTabs.push({
-      id: step.tab,
-      label: step.title,
-      icon: STEP_TAB_ICONS[step.tab] ?? ClipboardList,
-      complete: step.status === 'complete',
-    });
-  }
+): { mainTabs: TabItem[]; supportTabs: TabItem[] } {
+  if (protocolDesk) return { mainTabs: PROTOCOL_TABS, supportTabs: [] };
+  const mainTabs: TabItem[] = [
+    { id: 'overview', label: 'Vue d’ensemble', icon: LayoutGrid },
+    { id: 'prep', label: 'Préparation', icon: Store, complete: stepComplete(workflow, 'prep') },
+    {
+      id: 'guests',
+      label: 'Invités',
+      icon: Users,
+      complete: stepComplete(workflow, 'guests') && stepComplete(workflow, 'invitations'),
+    },
+    { id: 'tablePlan', label: 'Plan de table', icon: LayoutGrid, complete: stepComplete(workflow, 'tablePlan') },
+    { id: 'protocol', label: 'Jour J', icon: ScanLine, complete: stepComplete(workflow, 'protocol') },
+  ];
   const supportTabs = personal
     ? SUPPORT_TABS.filter((tab) => tab.id !== 'ticketing').map((tab) =>
         tab.id === 'staff' ? { ...tab, label: 'Co-organisateurs' } : tab,
       )
     : SUPPORT_TABS;
-  return [...stepTabs, ...supportTabs.filter((tab) => !seen.has(tab.id))];
+  return { mainTabs, supportTabs };
 }
 
 export default function EventWorkflowPanel({
   workflow,
   activeTab,
   onNavigateTab,
-  onAction,
-  compact = false,
   protocolDesk = false,
   personal = false,
   badges,
   hiddenTabs,
 }: EventWorkflowPanelProps) {
-  const tabs = buildTabs(workflow, protocolDesk, personal).filter(
-    (tab) => tab.id === activeTab || !hiddenTabs?.includes(tab.id),
-  );
-
-  const currentStep = workflow.steps.find((s) => s.id === workflow.currentStepId) ?? null;
-  const onCurrentTab = Boolean(currentStep?.tab && currentStep.tab === activeTab);
-  const allDone = workflow.completedCount >= workflow.totalCount && workflow.totalCount > 0;
-  const inTabCta = currentStep ? IN_TAB_CTA[currentStep.id] : undefined;
-  const showBanner =
-    !compact &&
-    !protocolDesk &&
-    Boolean(currentStep) &&
-    (allDone ? activeTab !== 'protocol' : !onCurrentTab || Boolean(inTabCta));
+  const activeTop = protocolDesk ? activeTab : topLevelOf(activeTab);
+  const visible = (tab: TabItem) => tab.id === activeTop || !hiddenTabs?.includes(tab.id);
+  const built = buildTabs(workflow, protocolDesk, personal);
+  const mainTabs = built.mainTabs.filter(visible);
+  const supportTabs = built.supportTabs.filter(visible);
+  /** Les écrans complémentaires passent dans « Plus », sauf celui qui est ouvert. */
+  const activeSupport = supportTabs.find((tab) => tab.id === activeTop);
+  const tabs = activeSupport ? [...mainTabs, activeSupport] : mainTabs;
+  const moreTabs = supportTabs.filter((tab) => tab.id !== activeTop);
+  const inGuestGroup = !protocolDesk && activeTop === 'guests';
 
   const activeBtnRef = useRef<HTMLButtonElement | null>(null);
 
@@ -183,92 +163,97 @@ export default function EventWorkflowPanel({
       block: 'nearest',
       behavior: reduceMotion ? 'auto' : 'smooth',
     });
-  }, [activeTab]);
-
-  const handleNextAction = () => {
-    if (!currentStep) return;
-    if (currentStep.tab && currentStep.tab !== activeTab) {
-      onNavigateTab(currentStep.tab);
-    }
-    onAction?.(currentStep.id);
-  };
+  }, [activeTop]);
 
   return (
-    <div className="space-y-3">
-      {showBanner && currentStep ? (
-        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-3.5 py-2.5">
-          <p className="min-w-0 truncate text-sm font-semibold text-foreground">
-            {allDone ? 'Prêt pour le jour J' : `À faire : ${currentStep.title}`}
-          </p>
-          {allDone ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => onNavigateTab('protocol')}
-              rightIcon={<ArrowRight className="w-4 h-4" />}
-            >
-              {STEP_CTA.protocol}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleNextAction}
-              rightIcon={<ArrowRight className="w-4 h-4" />}
-            >
-              {onCurrentTab && inTabCta ? inTabCta : STEP_CTA[currentStep.id]}
-            </Button>
-          )}
+    <div className="space-y-4">
+      <div className="flex items-end gap-1 border-b border-border">
+        <div
+          role="tablist"
+          aria-label={protocolDesk ? 'Desk protocole' : 'Onglets de l’événement'}
+          className="flex min-w-0 flex-1 items-end overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          onKeyDown={(event) => onTabListKeyDown(event, tabs, activeTop, onNavigateTab)}
+        >
+          {tabs.map((tab) => {
+            const selected = activeTop === tab.id;
+            const Icon = tab.complete ? CheckCircle2 : tab.icon;
+            const badge = badges?.[tab.id];
+            return (
+              <button
+                key={tab.id}
+                ref={selected ? activeBtnRef : null}
+                type="button"
+                id={`workflow-tab-${tab.id}`}
+                role="tab"
+                aria-selected={selected}
+                tabIndex={selected ? 0 : -1}
+                onClick={() => onNavigateTab(tab.id)}
+                className={cn(
+                  TAB_CLASS,
+                  selected
+                    ? 'border-foreground text-foreground'
+                    : 'border-transparent text-muted hover:text-foreground',
+                )}
+              >
+                <Icon className={cn('w-4 h-4', tab.complete && 'text-primary')} aria-hidden />
+                {tab.label}
+                {badge !== undefined && badge !== '' ? (
+                  <span className="rounded-full bg-surface-muted px-1.5 text-xs font-semibold tabular-nums text-foreground">
+                    {badge}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+        {moreTabs.length > 0 ? (
+          <OverflowMenu
+            align="right"
+            triggerClassName={cn(TAB_CLASS, 'border-transparent text-muted hover:text-foreground')}
+            trigger={
+              <>
+                Plus
+                <ChevronDown className="w-3.5 h-3.5" aria-hidden />
+              </>
+            }
+            items={moreTabs.map((tab) => ({
+              id: tab.id,
+              label: tab.label,
+              icon: tab.icon,
+              badge: badges?.[tab.id],
+              onSelect: () => onNavigateTab(tab.id),
+            }))}
+          />
+        ) : null}
+      </div>
+
+      {inGuestGroup ? (
+        <div
+          role="radiogroup"
+          aria-label="Écrans des invités"
+          className="inline-flex max-w-full p-0.5 rounded-full bg-surface-muted border border-border overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {GUEST_GROUP.map((item) => {
+            const selected = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => onNavigateTab(item.id)}
+                className={cn(
+                  'shrink-0 min-h-10 px-4 rounded-full text-sm font-semibold whitespace-nowrap transition',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  selected ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]' : 'text-muted hover:text-foreground',
+                )}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </div>
       ) : null}
-
-      <div
-        role="tablist"
-        aria-label={protocolDesk ? 'Desk protocole' : 'Onglets de l’événement'}
-        className="flex gap-2 items-center overflow-x-auto scrollbar-hide -mx-1 px-1 py-0.5 lg:flex-wrap lg:overflow-visible"
-        onKeyDown={(event) => onTabListKeyDown(event, tabs, activeTab, onNavigateTab)}
-      >
-        {tabs.map((tab) => {
-          const selected = activeTab === tab.id;
-          const Icon = tab.complete ? CheckCircle2 : tab.icon;
-          const badge = badges?.[tab.id];
-          return (
-            <button
-              key={tab.id}
-              ref={selected ? activeBtnRef : null}
-              type="button"
-              id={`workflow-tab-${tab.id}`}
-              role="tab"
-              aria-selected={selected}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => onNavigateTab(tab.id)}
-              className={cn(
-                TAB_CHIP_CLASS,
-                selected
-                  ? 'bg-foreground text-background border-foreground'
-                  : 'bg-surface text-muted border-border hover:text-foreground hover:bg-surface-muted',
-              )}
-            >
-              <Icon
-                className={cn('w-3.5 h-3.5', tab.complete && !selected && 'text-primary')}
-                aria-hidden
-              />
-              {tab.label}
-              {badge !== undefined && badge !== '' ? (
-                <span
-                  className={cn(
-                    'rounded-full px-1.5 text-xs font-bold tabular-nums',
-                    selected ? 'bg-background/20' : 'bg-surface-muted text-foreground',
-                  )}
-                >
-                  {badge}
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }

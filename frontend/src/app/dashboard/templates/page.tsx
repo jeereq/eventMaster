@@ -56,12 +56,12 @@ import {
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
  Undo2, Redo2, History, Download, SlidersHorizontal, LayoutTemplate,
- Calendar, MapPin, User, Users, MessageSquare, Layers, Move, Crown, ArrowRight, Check,
+ Calendar, MapPin, User, Users, MessageSquare, Layers, Move, Crown, ArrowRight,
  BookOpen, FolderHeart,
 } from '@/components/icons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
-import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Pagination, usePaginateItems, usePageSize, Modal } from '@/components/ui';
+import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Pagination, usePaginateItems, usePageSize, Modal, ConfirmDialog } from '@/components/ui';
 import InvitationDuplicateModal, { type InvitationDuplicateValues } from '@/components/InvitationDuplicateModal';
 import { emptyInvitationStructuredBrief, type InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
 import InvitationAiComposeForm, {
@@ -504,6 +504,8 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  const [showGuestPreview, setShowGuestPreview] = useState(false);
  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+ const [pendingEditorialLayout, setPendingEditorialLayout] = useState<EditorialLayoutId | null>(null);
+ const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
  const [freeDragId, setFreeDragId] = useState<string | null>(null);
  const freeCanvasRef = useRef<HTMLDivElement>(null);
  const [importedWithOcr, setImportedWithOcr] = useState(false);
@@ -2293,13 +2295,15 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  };
 
  const applyEditorialLayout = (id: EditorialLayoutId) => {
- const layout = editorialLayoutById(id);
- if (
-   canvasElements.length > 0 &&
-   !window.confirm(`Remplacer la carte actuelle par « ${layout.name} » ? Les textes et photos en place seront perdus.`)
- ) {
+ if (canvasElements.length > 0) {
+   setPendingEditorialLayout(id);
    return;
  }
+ runEditorialLayout(id);
+ };
+
+ const runEditorialLayout = (id: EditorialLayoutId) => {
+ const layout = editorialLayoutById(id);
  const stamp = Date.now();
  const resolvedIdentity = resolveInvitationIdentity({
  title: templateName,
@@ -2702,9 +2706,13 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  }
  };
 
- const handleDeleteTemplate = async (id: string) => {
+ const handleDeleteTemplate = (id: string) => {
  if (!canUseCustomTemplates) return;
- if (!confirm('Supprimer ce modèle d\'invitation ?')) return;
+ setDeleteTemplateId(id);
+ };
+
+ const confirmDeleteTemplate = async (id: string) => {
+ setDeleteTemplateId(null);
  try {
  await api.delete(`/templates/${id}`);
  setTemplates(templates.filter(t => t.id !== id));
@@ -3133,6 +3141,19 @@ const studioModelPhotos = useMemo(
  }
  onContinueInBackground={hideInvitationLoader}
  />
+ <ConfirmDialog
+ open={pendingEditorialLayout !== null}
+ onClose={() => setPendingEditorialLayout(null)}
+ onConfirm={() => {
+ const id = pendingEditorialLayout;
+ setPendingEditorialLayout(null);
+ if (id) runEditorialLayout(id);
+ }}
+ title={pendingEditorialLayout ? `Remplacer la carte actuelle par « ${editorialLayoutById(pendingEditorialLayout).name} » ?` : 'Remplacer la carte actuelle ?'}
+ description="Les textes et photos en place seront perdus."
+ confirmLabel="Remplacer"
+ tone="danger"
+ />
  <Modal
  open={exitConfirmOpen}
  onClose={() => setExitConfirmOpen(false)}
@@ -3195,46 +3216,23 @@ const studioModelPhotos = useMemo(
  </p>
  </div>
 
- <div className="rounded-xl border border-border p-3.5 space-y-2 bg-surface text-xs">
- <p className="font-semibold text-foreground flex items-center gap-1.5">
- <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
- Avantages du forfait supérieur :
- </p>
- <ul className="space-y-1.5 text-muted pl-1">
- <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
- <span>Enregistrement et utilisation illimitée de modèles sur-mesure</span>
- </li>
- <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
- <span>Formulaires de réponse à l’invitation personnalisés et suivi des présences</span>
- </li>
- <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
- <span>Génération d&apos;invitations avancées par Intelligence Artificielle</span>
- </li>
- </ul>
- </div>
-
  <div className="flex flex-col gap-2.5 pt-2">
- <Link
-   href="/dashboard/events"
-   className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition"
- >
-   Continuer vers un événement
- </Link>
- <p className="text-xs text-muted text-center"><ChannelText text="Depuis l’événement, vous pourrez l’envoyer sur WhatsApp." /></p>
- <div className="flex flex-col sm:flex-row gap-2.5">
- <button 
+ <button
  type="button"
  onClick={() => {
  window.open('/dashboard/billing', '_blank');
  }}
- className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
+ className="inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
  >
- <Sparkles className="w-4 h-4" aria-hidden />
  <span>Voir les formules</span>
  </button>
+ <div className="flex flex-col sm:flex-row gap-2.5">
+ <Link
+   href="/dashboard/events"
+   className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition"
+ >
+   Continuer vers un événement
+ </Link>
  <button
  type="button"
  onClick={() => setSaveUpgradeModalOpen(false)}
@@ -3243,6 +3241,7 @@ const studioModelPhotos = useMemo(
  Continuer à peaufiner
  </button>
  </div>
+ <p className="text-xs text-muted text-center"><ChannelText text="Depuis l’événement, vous pourrez l’envoyer sur WhatsApp." /></p>
  </div>
  </div>
  </Modal>
@@ -3540,15 +3539,7 @@ const studioModelPhotos = useMemo(
    <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
      <CheckCircle2 className="w-5 h-5" />
    </div>
-   <div className="min-w-0">
-     <div className="flex items-center gap-2 flex-wrap">
-       <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
-         <Sparkles className="w-3 h-3" /> Succès Studio
-       </span>
-       <span className="font-bold text-foreground">Modèle mis à jour avec l’IA</span>
-     </div>
-     <p className="text-xs text-muted-foreground dark:text-muted mt-1 leading-relaxed break-words">{success}</p>
-   </div>
+   <p className="min-w-0 text-sm text-foreground leading-relaxed break-words">{success}</p>
  </div>
  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
    <button
@@ -3573,15 +3564,7 @@ const studioModelPhotos = useMemo(
    <div className="p-1 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5">
      <AlertCircle className="w-5 h-5" />
    </div>
-   <div className="min-w-0">
-     <div className="flex items-center gap-2 flex-wrap">
-       <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-rose-500/20 text-rose-700 dark:text-rose-300 ">
-         ⚠️ Erreur Studio
-       </span>
-       <span className="font-bold text-foreground">Opération interrompue</span>
-     </div>
-     <p className="text-xs text-rose-800 dark:text-rose-200 mt-1 leading-relaxed break-words">{error}</p>
-   </div>
+   <p className="min-w-0 text-sm text-rose-800 dark:text-rose-200 leading-relaxed break-words">{error}</p>
  </div>
  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
    {error.toLowerCase().includes('jeton') ? (
@@ -3646,18 +3629,13 @@ const studioModelPhotos = useMemo(
  <>
         {canUseCustomTemplates && (
           <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 space-y-2.5">
-            <div className="flex items-start gap-2.5">
-              <span className="w-8 h-8 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground flex items-center justify-center shrink-0">
-                <Wand2 className="w-4 h-4" aria-hidden />
-              </span>
-              <div className="min-w-0">
-                <h3 className="text-xs font-bold text-foreground">
-                  Assistant IA
-                </h3>
-                <p className="text-xs text-muted leading-relaxed mt-0.5">
-                  Décrivez la fête et l’IA compose la carte. Dès {AI_INVITATION_COMPOSE_TOKEN_COST} jetons.
-                </p>
-              </div>
+            <div className="min-w-0">
+              <h3 className="text-xs font-bold text-foreground">
+                Assistant IA
+              </h3>
+              <p className="text-xs text-muted leading-relaxed mt-0.5">
+                Dès {AI_INVITATION_COMPOSE_TOKEN_COST} jetons.
+              </p>
             </div>
 
             {isInviteBlocked ? (
@@ -3672,7 +3650,7 @@ const studioModelPhotos = useMemo(
                   type="button"
                   disabled={mockupImporting || imageUploading || aiComposeBusy}
                   onClick={() => openAiComposeModal()}
-                  className="w-full min-h-11 flex items-center justify-center gap-2 p-2.5 rounded-[var(--radius-button)] bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold text-xs transition disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+                  className="w-full min-h-11 flex items-center justify-center gap-2 p-2.5 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-foreground font-bold text-xs transition disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
                 >
                   {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : <Wand2 className="w-4 h-4" aria-hidden />}
                   {aiComposeBusy ? 'Création en cours…' : 'Créer une carte'}
@@ -6105,6 +6083,17 @@ const studioModelPhotos = useMemo(
 
  return (
  <>
+ <ConfirmDialog
+ open={deleteTemplateId !== null}
+ onClose={() => setDeleteTemplateId(null)}
+ onConfirm={() => {
+ if (deleteTemplateId) void confirmDeleteTemplate(deleteTemplateId);
+ }}
+ title={`Supprimer « ${templates.find((t) => t.id === deleteTemplateId)?.name ?? 'ce modèle'} » ?`}
+ description="Cette action est définitive."
+ confirmLabel="Supprimer"
+ tone="danger"
+ />
  {renderMockupImportModal()}
       {renderAiComposeModal()}
       <AiTokenPurchaseModal
@@ -6173,27 +6162,14 @@ const studioModelPhotos = useMemo(
  }
 />
 
- {(!canUseCustomTemplates || templatesAtLimit) && user?.role === 'USER' && (
+ {user?.role === 'USER' && (
+ templatesAtLimit ? (
  <PlanLimitCallout kind="templates" planQuota={planQuota} planName={planLabel} />
- )}
- {isSuperAdmin && (
- <div className="rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground space-y-1">
- <p className="font-semibold text-primary text-xs ">Nuance des vues</p>
- <p className="text-xs text-muted leading-relaxed">
- <strong className="text-foreground">Catalogue Super Admin</strong> (`/dashboard?tab=templates`) : supervision globale,
- filtres Global / Organisation, activation « Vitrine landing ».
- {' '}
- <strong className="text-foreground">Ce concepteur</strong> : édition visuelle. Si vous ouvrez Créer / Modifier depuis le catalogue,
- vous y revenez automatiquement après enregistrement.
- </p>
- </div>
- )}
-
- {!canUseCustomTemplates && !templatesAtLimit && user?.role === 'USER' && (
+ ) : !canUseCustomTemplates ? (
  <PlanLimitCallout feature="customTemplates" planName={planLabel} />
- )}
- {canUseCustomTemplates && !canUseMockupOcr && user?.role === 'USER' && (
+ ) : !canUseMockupOcr ? (
  <PlanLimitCallout feature="mockupOcr" planName={planLabel} />
+ ) : null
  )}
 
  {error && <Alert variant="error">{error}</Alert>}
@@ -6204,10 +6180,7 @@ const studioModelPhotos = useMemo(
  <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
    <CheckCircle2 className="w-5 h-5" />
  </div>
- <div className="min-w-0">
-   <span className="font-bold text-foreground block">Opération réussie</span>
-   <p className="text-xs text-muted-foreground dark:text-muted mt-0.5 break-words">{success}</p>
- </div>
+ <p className="min-w-0 text-sm text-foreground break-words">{success}</p>
  </div>
  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
  <Link
@@ -6308,8 +6281,6 @@ const studioModelPhotos = useMemo(
  resultLabel={`${shownCount} modèle${shownCount > 1 ? 's' : ''}`}
  modalTitle="Filtrer les modèles"
  modalDescription="Choisissez une catégorie et un tri. Cliquez une seconde fois sur un choix pour le retirer."
- topSlotClassName="hidden sm:block"
- topSlot={categoryPills}
  actions={
  <ViewModeToggle
  storageKey="em-view-templates"
@@ -6361,9 +6332,6 @@ const studioModelPhotos = useMemo(
  aria-labelledby="templates-tab-library"
  className="space-y-4"
  >
- <p className="text-sm text-muted">
- Modèles prêts à l&apos;emploi. Dupliquez-en un pour votre organisation.
- </p>
  <TemplateCardGrid
  templates={paginatedCatalog}
  isSuperAdmin={false}
@@ -6401,12 +6369,6 @@ const studioModelPhotos = useMemo(
  aria-labelledby="templates-tab-mine"
  className="space-y-4"
  >
- {!isSuperAdmin && (
- <p className="text-sm text-muted">
- Modèles appartenant à votre organisation.
- </p>
- )}
-
  <TemplateCardGrid
  templates={paginatedOwn}
  isSuperAdmin={isSuperAdmin}
@@ -6419,7 +6381,7 @@ const studioModelPhotos = useMemo(
  ? 'Aucun modèle ne correspond à ces filtres.'
  : isSuperAdmin
  ? "Aucun modèle. Créez un modèle global ou pour une organisation."
- : "Votre premier carton n’est pas encore là. En 2 minutes : décrivez la fête, voyez le faire-part, envoyez-le."
+ : 'Aucun modèle.'
  }
  emptyAction={
  listTemplates.length > 0 ? (
@@ -6432,7 +6394,7 @@ const studioModelPhotos = useMemo(
  type="button"
  onClick={startAiComposeFromList}
  disabled={aiComposeBusy}
- className="inline-flex min-h-11 items-center gap-2 px-5 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-[var(--radius-button)] text-sm transition cursor-pointer"
+ className="inline-flex min-h-11 items-center gap-2 px-5 py-2.5 border border-border text-foreground font-semibold rounded-[var(--radius-button)] text-sm transition hover:bg-surface-muted cursor-pointer"
  >
  {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
  Créer mon carton
@@ -6559,46 +6521,23 @@ const studioModelPhotos = useMemo(
  </p>
  </div>
 
- <div className="rounded-xl border border-border p-3.5 space-y-2 bg-surface text-xs">
- <p className="font-semibold text-foreground flex items-center gap-1.5">
- <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
- Avantages du forfait supérieur :
- </p>
- <ul className="space-y-1.5 text-muted pl-1">
- <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
- <span>Enregistrement et utilisation illimitée de modèles sur-mesure</span>
- </li>
- <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
- <span>Formulaires de réponse à l’invitation personnalisés et suivi des présences</span>
- </li>
- <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
- <span>Génération d&apos;invitations avancées par Intelligence Artificielle</span>
- </li>
- </ul>
- </div>
-
  <div className="flex flex-col gap-2.5 pt-2">
- <Link
-   href="/dashboard/events"
-   className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition"
- >
-   Continuer vers un événement
- </Link>
- <p className="text-xs text-muted text-center"><ChannelText text="Depuis l’événement, vous pourrez l’envoyer sur WhatsApp." /></p>
- <div className="flex flex-col sm:flex-row gap-2.5">
  <button
  type="button"
  onClick={() => {
  window.open('/dashboard/billing', '_blank');
  }}
- className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
+ className="inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
  >
- <Sparkles className="w-4 h-4" aria-hidden />
  <span>Voir les formules</span>
  </button>
+ <div className="flex flex-col sm:flex-row gap-2.5">
+ <Link
+   href="/dashboard/events"
+   className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition"
+ >
+   Continuer vers un événement
+ </Link>
  <button
  type="button"
  onClick={() => setSaveUpgradeModalOpen(false)}
@@ -6607,6 +6546,7 @@ const studioModelPhotos = useMemo(
  Continuer à peaufiner
  </button>
  </div>
+ <p className="text-xs text-muted text-center"><ChannelText text="Depuis l’événement, vous pourrez l’envoyer sur WhatsApp." /></p>
  </div>
  </div>
  </Modal>

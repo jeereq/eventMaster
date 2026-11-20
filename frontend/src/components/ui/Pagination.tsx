@@ -154,6 +154,9 @@ export default function Pagination({
     ? pageSizeOptions
     : [...pageSizeOptions, pageSize].sort((a, b) => a - b);
 
+  // Tout tient sur une page, même au plus petit format : rien à paginer.
+  if (singlePage && total <= Math.min(...sizeOptions)) return null;
+
   if (infinite) {
     return (
       <nav
@@ -196,74 +199,67 @@ export default function Pagination({
   return (
     <nav
       aria-label="Pagination"
-      className={cn(
-        'flex flex-col sm:flex-row items-center justify-between gap-3',
-        'mt-4 rounded-[var(--radius-button)] border border-border bg-surface-muted/60 px-3 py-2.5',
-        className,
-      )}
+      className={cn('mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-1 py-1', className)}
     >
-      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-        <span className="text-xs font-medium text-foreground/80">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span className="text-xs text-muted tabular-nums">
           {from}–{to} sur {total}
           {itemLabel ? ` ${itemLabel}` : ''}
-          {singlePage ? ' · 1 page' : ` · ${totalPages} pages`}
         </span>
         {onPageSizeChange && (
-          <label className="inline-flex items-center gap-1.5 text-xs text-muted">
-            <span className="sr-only sm:not-sr-only">Par page</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                onPageSizeChange(Number(e.target.value));
-                onPageChange(1);
-              }}
-              className="h-8 rounded-[var(--radius-button)] border border-border bg-surface px-2 text-xs font-semibold text-foreground"
-              aria-label="Nombre d’éléments par page"
-            >
-              {sizeOptions.map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
-          </label>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              onPageSizeChange(Number(e.target.value));
+              onPageChange(1);
+            }}
+            className="h-8 rounded-lg border border-border bg-surface px-2 text-xs font-semibold text-foreground"
+            aria-label="Nombre d’éléments par page"
+          >
+            {sizeOptions.map((size) => (
+              <option key={size} value={size}>{size} / page</option>
+            ))}
+          </select>
         )}
       </div>
-      <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-0.5">
-        <button
-          type="button"
-          onClick={() => onPageChange(Math.max(1, safePage - 1))}
-          disabled={safePage <= 1}
-          className="p-2 border border-border rounded-[var(--radius-button)] bg-surface text-muted hover:bg-surface-muted disabled:opacity-40 transition"
-          aria-label="Page précédente"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        {pages.map((p) => (
+      {!singlePage && (
+        <div className="flex items-center gap-0.5 overflow-x-auto max-w-full">
           <button
-            key={p}
             type="button"
-            onClick={() => onPageChange(p)}
-            disabled={singlePage}
-            className={cn(
-              'min-w-8 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition',
-              safePage === p
-                ? 'bg-primary-solid text-primary-foreground shadow-sm'
-                : 'border border-border bg-surface text-muted hover:bg-surface-muted',
-            )}
-            aria-current={safePage === p ? 'page' : undefined}
+            onClick={() => onPageChange(Math.max(1, safePage - 1))}
+            disabled={safePage <= 1}
+            className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent transition"
+            aria-label="Page précédente"
           >
-            {p}
+            <ChevronLeft className="w-4 h-4" />
           </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
-          disabled={safePage >= totalPages}
-          className="p-2 border border-border rounded-[var(--radius-button)] bg-surface text-muted hover:bg-surface-muted disabled:opacity-40 transition"
-          aria-label="Page suivante"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
+          {pages.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => onPageChange(p)}
+              className={cn(
+                'h-8 min-w-8 px-2 rounded-lg text-xs font-semibold tabular-nums transition',
+                safePage === p
+                  ? 'bg-primary-solid text-primary-foreground'
+                  : 'text-muted hover:bg-surface-muted hover:text-foreground',
+              )}
+              aria-current={safePage === p ? 'page' : undefined}
+            >
+              {p}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
+            disabled={safePage >= totalPages}
+            className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent transition"
+            aria-label="Page suivante"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </nav>
   );
 }

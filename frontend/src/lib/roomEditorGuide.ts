@@ -146,11 +146,25 @@ const GROUP_LABEL: Record<ToolGroup, string> = {
   light: 'Lumière',
 };
 
+/**
+ * Menus du groupe « Ajouter » rangés sous le bouton « Plus » de la barre d'outils
+ * (`data-tour="tool-more"`) : l'éditeur ne montre que les cinq premiers.
+ */
+export const EDITOR_TOOLBAR_MORE_GROUPS = ['scene', 'outdoor', 'custom'] as const;
+
+function inMore(group: ToolGroup): boolean {
+  return (EDITOR_TOOLBAR_MORE_GROUPS as readonly string[]).includes(group);
+}
+
 /** Ouvre un menu de la barre d'outils. */
 function openMenu(group: ToolGroup): GuideStep {
+  const more = inMore(group);
   return {
-    say: `Ouvrez le menu « ${GROUP_LABEL[group]} » de la barre d’outils, en haut de l’éditeur.`,
+    say: more
+      ? `Ouvrez « Plus », puis le menu « ${GROUP_LABEL[group]} » de la barre d’outils, en haut de l’éditeur.`
+      : `Ouvrez le menu « ${GROUP_LABEL[group]} » de la barre d’outils, en haut de l’éditeur.`,
     target: `tour:tool-${group}`,
+    ...(more ? { via: ['tour:tool-more'] } : {}),
     pane: 'tools',
     open: true,
   };
@@ -158,7 +172,8 @@ function openMenu(group: ToolGroup): GuideStep {
 
 /** Élément à l'intérieur d'un menu de la barre d'outils. */
 function inMenu(group: ToolGroup, locator: string, say: string, done?: GuideDone): GuideStep {
-  return { say, target: `css:#editor-tool-group-${group} >> ${locator}`, via: [`tour:tool-${group}`], pane: 'tools', done };
+  const via = inMore(group) ? ['tour:tool-more', `tour:tool-${group}`] : [`tour:tool-${group}`];
+  return { say, target: `css:#editor-tool-group-${group} >> ${locator}`, via, pane: 'tools', done };
 }
 
 /** Ouvre un menu puis clique un de ses boutons. */

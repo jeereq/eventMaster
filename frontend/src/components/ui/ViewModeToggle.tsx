@@ -120,7 +120,7 @@ export function ViewModeToggle({
   className,
   defaultMode = 'grid',
   defaultColumns = 3,
-  showColumnPicker = true,
+  showColumnPicker = false,
 }: ViewModeToggleProps) {
   const internal = useViewMode(storageKey, defaultMode, defaultColumns);
   const mode = value ?? internal.mode;
@@ -142,14 +142,13 @@ export function ViewModeToggle({
           aria-label="Vue grille"
           title="Vue grille"
           className={cn(
-            'inline-flex items-center justify-center rounded-md px-2.5 py-1.5 transition-colors',
+            'inline-flex items-center justify-center rounded-md p-1.5 transition-colors',
             mode === 'grid'
               ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
               : 'text-muted hover:text-foreground',
           )}
         >
           <LayoutGrid className="h-4 w-4" aria-hidden="true" />
-          <span className="ml-1.5 hidden text-xs font-semibold sm:inline">Grille</span>
         </button>
         <button
           type="button"
@@ -158,14 +157,13 @@ export function ViewModeToggle({
           aria-label="Vue liste"
           title="Vue liste"
           className={cn(
-            'inline-flex items-center justify-center rounded-md px-2.5 py-1.5 transition-colors',
+            'inline-flex items-center justify-center rounded-md p-1.5 transition-colors',
             mode === 'list'
               ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
               : 'text-muted hover:text-foreground',
           )}
         >
           <List className="h-4 w-4" aria-hidden="true" />
-          <span className="ml-1.5 hidden text-xs font-semibold sm:inline">Liste</span>
         </button>
       </div>
 

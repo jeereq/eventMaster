@@ -355,10 +355,10 @@ export function ProjectCard({
         {children}
         {(showCta || actions || footer) && (
           <div
-            className="mt-auto flex flex-col gap-2 pt-1"
+            className="mt-auto flex items-center justify-between gap-2 pt-1"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="min-w-0 flex items-center justify-between gap-2">
+            <div className="min-w-0">
               {showCta ? (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
                   {ctaLabel || 'Voir la fiche'}
@@ -369,7 +369,7 @@ export function ProjectCard({
               )}
             </div>
             {actions && (
-              <div className="flex flex-wrap items-center gap-1.5 w-full">
+              <div className="flex shrink-0 items-center gap-0.5 -mr-2">
                 {actions}
               </div>
             )}

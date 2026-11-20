@@ -9,7 +9,6 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { PlatformSiteProvider } from "@/context/PlatformSiteContext";
 import PWARegister from "@/components/PWARegister";
 import { PwaInstallProvider } from "@/context/PwaInstallContext";
-import ViewPreferencesBridge from "@/components/ViewPreferencesBridge";
 import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 import BrandFaviconSync from "@/components/BrandFaviconSync";
 import GlobalAiSimulatorFabHost from "@/components/GlobalAiSimulatorFabHost";
@@ -128,7 +127,8 @@ html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important;overfl
         />
       </head>
       <body className={`${manrope.className} min-h-full flex flex-col font-sans bg-background text-foreground`}>
-        <div id="em-native-splash" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="EventMaster">
+        {/* Le script inline ci-dessous modifie hidden / aria-hidden / class avant l'hydratation. */}
+        <div id="em-native-splash" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="EventMaster" suppressHydrationWarning>
           <span className="em-ns-mark">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/logo.svg" alt="" width={64} height={64} />
@@ -158,23 +158,21 @@ html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important;overfl
               <SessionExpiredDialog />
               <AiTokenShortageAlert />
               <PwaInstallProvider>
-                <ViewPreferencesBridge>
-                  <BrandFaviconSync />
-                  <PWARegister />
-                  <MobileSplashScreen />
-                  <MaintenanceOverlay />
-                  <Suspense fallback={null}>
-                    <NavigationProgressBar />
-                    <NavigationScrollTop />
-                  </Suspense>
-                  <Suspense fallback={null}>
-                    {children}
-                  </Suspense>
-                  <Suspense fallback={null}>
-                    <GlobalAiSimulatorFabHost />
-                  </Suspense>
-                  <StudioJobsDock />
-                </ViewPreferencesBridge>
+                <BrandFaviconSync />
+                <PWARegister />
+                <MobileSplashScreen />
+                <MaintenanceOverlay />
+                <Suspense fallback={null}>
+                  <NavigationProgressBar />
+                  <NavigationScrollTop />
+                </Suspense>
+                <Suspense fallback={null}>
+                  {children}
+                </Suspense>
+                <Suspense fallback={null}>
+                  <GlobalAiSimulatorFabHost />
+                </Suspense>
+                <StudioJobsDock />
               </PwaInstallProvider>
               </StudioJobsProvider>
             </AuthProvider>

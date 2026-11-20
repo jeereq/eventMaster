@@ -6,7 +6,6 @@ import { useAuth } from '@/context/AuthContext';
 import { isB2cPlanId } from '@/config/landingPricing';
 import { useTheme } from '@/context/ThemeContext';
 import { NotificationBell } from '@/components/CommercialNotifications';
-import { ViewCustomizerTrigger } from '@/components/ViewCustomizer';
 import { Tooltip } from '@/components/ui';
 import PWAInstallCta from '@/components/PWAInstallCta';
 import { Sun, Moon } from '@/components/icons';
@@ -116,7 +115,6 @@ export default function DashboardTopBar() {
         <div className="flex items-center gap-2 shrink-0">
           <PWAInstallCta variant="header" />
           <NotificationBell />
-          <ViewCustomizerTrigger />
           <Tooltip content={theme === 'light' ? 'Mode sombre' : 'Mode clair'} side="bottom">
             <button
               type="button"

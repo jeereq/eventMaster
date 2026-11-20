@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -20,6 +19,8 @@ import {
   ViewModeToggle,
   useViewMode,
   listStackClass,
+  OverflowMenu,
+  ConfirmDialog,
 } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import {
@@ -34,7 +35,6 @@ import {
   parseBlockedDates,
   defaultUnitForServiceCategory,
   dashboardServiceHref,
-  type MarketplaceInquiryItem,
   type ServiceCategory,
   type RentalDeliveryFilter,
   type ServiceMobility,
@@ -46,7 +46,7 @@ import { commissionPercent } from '@/lib/platformRates';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
-  AlertTriangle, CalendarCheck, Globe, GlobeLock, Inbox, KeyRound, Loader2, Plus, Sparkles, Trash2,
+  AlertTriangle, Globe, GlobeLock, KeyRound, Loader2, MoreHorizontal, Plus, Sparkles, Trash2,
 } from '@/components/icons';
 import { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import ServiceOfferingForm, {
@@ -122,7 +122,6 @@ export default function MarketplaceDeskPage() {
   );
   const [tabChoice, setTab] = useState<DeskTab | null>(null);
   const [services, setServices] = useState<ServiceItem[]>([]);
-  const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
   const [sellsBeverages, setSellsBeverages] = useState(false);
   const venueAccount = getWorkspaceModules({ accountKind: tenant?.accountKind, access, planQuota, planFeatures }).showRooms;
   // Boissons : traiteurs, organisateurs, salles, ou vendeur qui a déjà des tarifs boissons.
@@ -135,6 +134,7 @@ export default function MarketplaceDeskPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<ServiceItem | null>(null);
   const [servicesPage, setServicesPage] = useState(1);
   const [servicesPageSize, setServicesPageSize] = usePageSize('marketplace-desk-services', 8);
   const [svcQuery, setSvcQuery] = useState('');
@@ -185,14 +185,13 @@ export default function MarketplaceDeskPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [svc, leads, drinks] = await Promise.all([
+      const [svc, , drinks] = await Promise.all([
         api.get('/marketplace/services'),
-        // Compteur des nouvelles demandes (le traitement se fait dans « Demandes de devis »).
+        // Appel conservé ; son résultat n’est plus affiché depuis le retrait du lien « Demandes de devis ».
         api.get('/marketplace/inquiries?role=vendor').catch(() => ({ inquiries: [] })),
         api.get('/marketplace/beverage-catalog').catch(() => ({ brands: [] })),
       ]);
       setServices(svc.services || []);
-      setInquiries(leads.inquiries || []);
       const brands: Array<{ myPrices?: unknown[] }> = Array.isArray(drinks?.brands) ? drinks.brands : [];
       setSellsBeverages(brands.some((brand) => Array.isArray(brand.myPrices) && brand.myPrices.length > 0));
     } catch (err: unknown) {
@@ -394,7 +393,7 @@ export default function MarketplaceDeskPage() {
   };
 
   const handleDelete = async (item: ServiceItem) => {
-    if (!confirm(`Supprimer « ${item.title} » ?`)) return;
+    setDeleteTarget(null);
     try {
       await api.delete(`/marketplace/services/${item.id}`);
       setSuccess(isServiceRentalCategory(item.category) ? 'Matériel / équipement supprimé.' : 'Prestation supprimée.');
@@ -403,8 +402,6 @@ export default function MarketplaceDeskPage() {
       setError(err.message || 'Suppression impossible.');
     }
   };
-
-  const newCount = inquiries.filter((i) => i.status === 'NEW' && !i.closedAt).length;
 
   const deskTabs: Array<{ id: DeskTab; label: string; locked?: boolean }> = [
     { id: 'services', label: 'Prestations', locked: servicesNotIncluded },
@@ -518,21 +515,6 @@ export default function MarketplaceDeskPage() {
             {item.label}
           </button>
         ))}
-        <span aria-hidden className="mx-1 w-px shrink-0 self-stretch bg-border" />
-        <Link
-          href="/dashboard/quotes"
-          className="inline-flex items-center gap-1.5 shrink-0 min-h-11 px-3 py-2 rounded-full text-xs font-semibold border border-border text-muted hover:text-foreground whitespace-nowrap touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-        >
-          <Inbox className="w-3.5 h-3.5" aria-hidden />
-          Demandes de devis{newCount > 0 ? ` (${newCount})` : ''}
-        </Link>
-        <Link
-          href="/dashboard/bookings?tab=bookings"
-          className="inline-flex items-center gap-1.5 shrink-0 min-h-11 px-3 py-2 rounded-full text-xs font-semibold border border-border text-muted hover:text-foreground whitespace-nowrap touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-        >
-          <CalendarCheck className="w-3.5 h-3.5" aria-hidden />
-          Réservations
-        </Link>
       </div>
 
       {services.some((item) => item.isBlockedByAdmin) ? (
@@ -686,16 +668,18 @@ export default function MarketplaceDeskPage() {
                   <Button size="sm" variant="secondary" onClick={() => openEdit(item)}>
                     Modifier
                   </Button>
-                  {item.isPublic && (
-                    <Link href={dashboardServiceHref(item.slug, item.category)} className="inline-flex">
-                      <Button size="sm" variant="ghost" leftIcon={<Globe className="w-3.5 h-3.5" />}>
-                        Voir
-                      </Button>
-                    </Link>
-                  )}
-                  <Button size="sm" variant="ghost" onClick={() => handleDelete(item)} leftIcon={<Trash2 className="w-3.5 h-3.5" />}>
-                    Supprimer
-                  </Button>
+                  <OverflowMenu
+                    align="right"
+                    triggerLabel={`Autres actions pour ${item.title}`}
+                    triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-full text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+                    items={[
+                      ...(item.isPublic
+                        ? [{ id: 'view', label: 'Voir', icon: Globe, onSelect: () => router.push(dashboardServiceHref(item.slug, item.category)) }]
+                        : []),
+                      { id: 'delete', label: 'Supprimer', icon: Trash2, danger: true, onSelect: () => setDeleteTarget(item) },
+                    ]}
+                  />
                 </div>
               );
               if (servicesViewMode === 'list') {
@@ -791,7 +775,6 @@ export default function MarketplaceDeskPage() {
           : isServiceRentalCategory(draft.category)
             ? 'Nouveau matériel & équipement'
             : 'Nouvelle prestation'}
-        description="Brouillon : visible par vous seul. Publiée : visible par les clients."
         size="xl"
         footer={
           <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -825,6 +808,17 @@ export default function MarketplaceDeskPage() {
           onUploadingChange={setMediaUploading}
         />
       </Modal>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) void handleDelete(deleteTarget);
+        }}
+        title={`Supprimer « ${deleteTarget?.title ?? ''} » ?`}
+        description="Cette action est définitive."
+        confirmLabel="Supprimer"
+        tone="danger"
+      />
     </div>
   );
 }

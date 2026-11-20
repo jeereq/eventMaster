@@ -483,35 +483,13 @@ export default function AdminOpsHome() {
     warn?: boolean;
   }> = [
     {
-      label: 'Demandes',
-      value: counts?.pendingRequests ?? 0,
-      hint: 'Abonnements à traiter',
-      href: '/dashboard?tab=subscription-requests',
-      icon: Clock,
-      actionable: true,
-    },
-    {
-      label: 'Licences J-7',
-      value: counts?.licensesExpiring ?? 0,
-      hint: 'Expirent dans 7 jours',
-      href: '/dashboard?tab=tenants',
-      icon: ShieldAlert,
-      actionable: true,
-    },
-    {
-      label: 'Impayées',
-      value: counts?.unpaidInvoices ?? 0,
-      hint: 'Factures envoyées ou en attente',
-      href: '/dashboard?tab=invoices',
-      icon: FileText,
-      actionable: true,
-    },
-    {
       label: 'Versements',
       value: payoutsDue,
       hint: data?.saasPayoutsDue?.overdue
-        ? `En retard · ${data.saasPayoutsDue.periodLabel}`
-        : `Mois précédent (${data?.saasPayoutsDue?.period || '—'})`,
+        ? `${formatFc(data.saasPayoutsDue.amountFc)} · en retard · ${data.saasPayoutsDue.periodLabel}`
+        : data?.saasPayoutsDue && data.saasPayoutsDue.count > 0
+          ? `${formatFc(data.saasPayoutsDue.amountFc)} · ${data.saasPayoutsDue.periodLabel}`
+          : `Mois précédent (${data?.saasPayoutsDue?.period || '—'})`,
       href: `/dashboard/admin/payouts?period=${encodeURIComponent(data?.saasPayoutsDue?.period || '')}`,
       icon: Wallet,
       actionable: true,
@@ -572,7 +550,7 @@ export default function AdminOpsHome() {
                   Rejeter
                 </ActionBtn>
                 <ActionBtn
-                  variant="primary"
+                  variant="secondary"
                   loading={busyId === `approve:${req.id}`}
                   onClick={() => void approveRequest(req.id, req.tenant?.id)}
                   title="Approuver"
@@ -612,7 +590,7 @@ export default function AdminOpsHome() {
                   Détail
                 </Link>
                 <ActionBtn
-                  variant="primary"
+                  variant="secondary"
                   loading={busyId === `paid:${inv.id}`}
                   onClick={() => askMarkInvoicePaid(inv.id, `${inv.invoiceNumber} · ${invoiceOrgName(inv)}`)}
                 >
@@ -738,18 +716,7 @@ export default function AdminOpsHome() {
         </div>
       </div>
 
-      {data?.saasPayoutsDue && data.saasPayoutsDue.count > 0 && (
-        <Alert variant={data.saasPayoutsDue.overdue ? 'warning' : 'info'} title={data.saasPayoutsDue.overdue ? 'Versements J+3' : 'Versements du mois précédent'}>
-          {data.saasPayoutsDue.count} commercial(aux) plateforme — {formatFc(data.saasPayoutsDue.amountFc)} dû pour {data.saasPayoutsDue.periodLabel}
-          {data.saasPayoutsDue.overdue ? ' (fenêtre J1–J3 dépassée).' : '.'}
-          {' '}
-          <Link href={`/dashboard/admin/payouts?period=${encodeURIComponent(data.saasPayoutsDue.period)}`} className="font-semibold underline">
-            Ouvrir la file
-          </Link>
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {stats.map((stat) => {
           const StatIcon = stat.icon;
           const attention = Boolean(stat.actionable && stat.value > 0);
@@ -785,7 +752,14 @@ export default function AdminOpsHome() {
               >
                 {stat.value.toLocaleString('fr-FR')}
               </p>
-              <p className="hidden sm:block text-xs text-muted mt-0.5 line-clamp-1">{stat.hint}</p>
+              <p
+                className={cn(
+                  stat.icon === Wallet && (data?.saasPayoutsDue?.count ?? 0) > 0 ? 'block' : 'hidden sm:block',
+                  'text-xs text-muted mt-0.5 line-clamp-1',
+                )}
+              >
+                {stat.hint}
+              </p>
             </Link>
           );
         })}
@@ -925,17 +899,18 @@ export default function AdminOpsHome() {
                     </p>
                     <div className="flex gap-2">
                       <ActionBtn
-                        variant="primary"
+                        variant="secondary"
                         loading={busyId === `approve:${r.id}`}
                         onClick={() => void approveRequest(r.id, fiche.tenant.id)}
                       >
                         Approuver
                       </ActionBtn>
                       <ActionBtn
-                        variant="danger"
+                        variant="secondary"
                         loading={busyId === `reject:${r.id}`}
                         onClick={() => setRejectTarget({ id: r.id, tenantId: fiche.tenant.id, label: fiche.tenant.name })}
                       >
+                        <X className="w-3.5 h-3.5 text-danger" />
                         Rejeter
                       </ActionBtn>
                     </div>
@@ -961,7 +936,7 @@ export default function AdminOpsHome() {
                         </span>
                         {unpaid ? (
                           <ActionBtn
-                            variant="primary"
+                            variant="secondary"
                             loading={busyId === `paid:${inv.id}`}
                             onClick={() => askMarkInvoicePaid(inv.id, `${inv.invoiceNumber} · ${fiche.tenant.name}`, fiche.tenant.id)}
                           >

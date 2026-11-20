@@ -372,11 +372,7 @@ export default function ServiceOfferingForm({
         onChange={onTabChange}
         include={EDITOR_TABS}
         labelledPanels
-        labels={{
-          details: `1. ${tabLabels.details}`,
-          map: `2. ${tabLabels.map}`,
-          medias: `3. ${tabLabels.medias}`,
-        }}
+        labels={tabLabels}
         badges={{
           medias: draft.photos.length || undefined,
         }}

@@ -230,23 +230,12 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
 
   const showEventFilter = (tab === 'quotes' || tab === 'bookings') && eventOptions.length > 0;
   const showSubTabs = section === 'bookings' && role === 'organizer' && !isProtocol;
-  const crossHref = `${SECTION_PATH[section === 'quotes' ? 'bookings' : 'quotes']}${role === 'vendor' ? '?role=vendor' : ''}`;
 
   return (
     <div className="space-y-5 w-full">
       <PageHeader
         action={
-          isProtocol ? null : role === 'vendor' ? (
-            <Link href={crossHref} className="inline-flex">
-              <Button
-                size="sm"
-                variant="secondary"
-                leftIcon={section === 'quotes' ? <CalendarCheck className="w-4 h-4" /> : <Inbox className="w-4 h-4" />}
-              >
-                {section === 'quotes' ? 'Voir les réservations' : 'Voir les devis'}
-              </Button>
-            </Link>
-          ) : (
+          isProtocol || role === 'vendor' ? null : (
             <Link href="/dashboard/catalogue" className="inline-flex">
               <Button size="sm" variant="secondary" leftIcon={<Store className="w-4 h-4" />}>
                 Explorer

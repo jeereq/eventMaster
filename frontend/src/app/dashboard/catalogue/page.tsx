@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Heart, Minimize2, Store, Wallet, Bookmark, Sparkles } from '@/components/icons';
+import { Heart, Minimize2, Store, Wallet, Bookmark, Sparkles, Check } from '@/components/icons';
 import { api } from '@/lib/api';
 import {
   Alert,
@@ -19,7 +19,6 @@ import CatalogueFilterBar, {
 } from '@/components/CatalogueFilterBar';
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
-import { usePlatformSite } from '@/context/PlatformSiteContext';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { CatalogueFocusStage, CatalogueImmersiveStage } from '@/components/CatalogueSearchLayout';
 import CatalogueMobileExplore from '@/components/CatalogueMobileExplore';
@@ -79,7 +78,7 @@ import EventPlanMethodPicker from '@/components/EventPlanMethodPicker';
 import EventPlanPacks from '@/components/EventPlanPacks';
 import EventSavedPacks from '@/components/EventSavedPacks';
 import dynamic from 'next/dynamic';
-import DashboardAiStudios, { type DashboardAiStudioId } from '@/components/DashboardAiStudios';
+import DashboardAiStudios from '@/components/DashboardAiStudios';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
 import EventPrepListingModal, { type EventPrepPreviewTarget } from '@/components/EventPrepListingModal';
 
@@ -103,10 +102,11 @@ function parsePlanPrepView(params: URLSearchParams): PlanPrepView {
   return raw === 'ai' || raw === 'final' ? raw : 'manual';
 }
 
-function parseAiStudio(params: URLSearchParams): DashboardAiStudioId {
-  const raw = params.get('studio');
-  return raw === 'invite' || raw === 'room' ? raw : 'budget';
-}
+/** Anciens studios du simulateur : leurs équivalents vivent dans Modèles et Salles. */
+const LEGACY_STUDIO_ROUTES: Record<string, string> = {
+  invite: '/dashboard/templates',
+  room: '/dashboard/rooms',
+};
 
 const emptyFilters: HubFilters = {
   ...EMPTY_CATALOGUE_GEO,
@@ -161,28 +161,15 @@ function ClientMarketplaceInner() {
   const [saveError, setSaveError] = useState('');
   const [listingPreview, setListingPreview] = useState<EventPrepPreviewTarget | null>(null);
 
-  const { site } = usePlatformSite();
   const urlTab = parseHubTab(searchParams);
   const urlPlanView = parsePlanPrepView(searchParams);
-  const urlAiStudio = parseAiStudio(searchParams);
   const [tab, setTabState] = useState<HubTab>(urlTab);
   const [planView, setPlanViewState] = useState<PlanPrepView>(urlPlanView);
-  const [aiStudio, setAiStudioState] = useState<DashboardAiStudioId>(urlAiStudio);
 
-  const studioVisibility = site?.studioVisibility;
+  const legacyStudioRoute = LEGACY_STUDIO_ROUTES[searchParams.get('studio') ?? ''];
   useEffect(() => {
-    if (!studioVisibility) return;
-    if (aiStudio === 'budget' && !studioVisibility.budget) {
-      const fallback = studioVisibility.invite ? 'invite' : studioVisibility.room ? 'room' : 'budget';
-      setAiStudioState(fallback);
-    } else if (aiStudio === 'invite' && !studioVisibility.invite) {
-      const fallback = studioVisibility.budget ? 'budget' : studioVisibility.room ? 'room' : 'invite';
-      setAiStudioState(fallback);
-    } else if (aiStudio === 'room' && !studioVisibility.room) {
-      const fallback = studioVisibility.budget ? 'budget' : studioVisibility.invite ? 'invite' : 'room';
-      setAiStudioState(fallback);
-    }
-  }, [studioVisibility, aiStudio]);
+    if (legacyStudioRoute) router.replace(legacyStudioRoute);
+  }, [legacyStudioRoute, router]);
 
   // Synchronisation systématique de l'onglet avec l'URL (aucun blocage par ref)
   useEffect(() => {
@@ -192,10 +179,6 @@ function ClientMarketplaceInner() {
   useEffect(() => {
     setPlanViewState(urlPlanView);
   }, [urlPlanView]);
-
-  useEffect(() => {
-    setAiStudioState(urlAiStudio);
-  }, [urlAiStudio]);
 
   const setTab = useCallback((next: HubTab) => {
     setTabState(next);
@@ -241,21 +224,6 @@ function ClientMarketplaceInner() {
     } else {
       params.set('planView', next);
       if (next !== 'ai') params.delete('studio');
-    }
-    const qs = params.toString();
-    const href = qs ? `${pathname}?${qs}` : pathname;
-    router.replace(href, { scroll: false });
-  }, [searchParams, pathname, router]);
-
-  const setAiStudio = useCallback((next: DashboardAiStudioId) => {
-    setAiStudioState(next);
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('tab');
-    params.set('hub', 'plan');
-    if (next === 'budget') {
-      params.delete('studio');
-    } else {
-      params.set('studio', next);
     }
     const qs = params.toString();
     const href = qs ? `${pathname}?${qs}` : pathname;
@@ -539,7 +507,7 @@ function ClientMarketplaceInner() {
             className={cn(
               'px-3 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation shrink-0',
               isSelected
-                ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
+                ? 'bg-surface text-primary border-primary/60 shadow-xs'
                 : 'border-white/25 dark:border-white/10 bg-surface/95 text-muted hover:text-foreground hover:border-primary/40 shadow-sm',
             )}
           >
@@ -749,7 +717,7 @@ function ClientMarketplaceInner() {
                     className={cn(
                       'px-3 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation',
                       favKind === id
-                        ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
+                        ? 'bg-surface text-primary border-primary/50 shadow-xs'
                         : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
                     )}
                   >
@@ -790,8 +758,6 @@ function ClientMarketplaceInner() {
 
       {tab === 'plan' ? (
         <DashboardAiStudios
-          value={aiStudio}
-          onChange={setAiStudio}
           budget={
         <div className="space-y-5">
           <EventPlanMethodPicker
@@ -870,12 +836,7 @@ function ClientMarketplaceInner() {
 
             {planView === 'final' ? (
               <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
-                <div className="space-y-1">
-                  <p className="text-sm font-bold text-foreground">Quel pack retenir ?</p>
-                  <p className="text-xs text-muted leading-relaxed">
-                    Reprenez un pack d’une simulation — c’est celui que vous enregistrerez dans Mes packs et utiliserez pour les devis.
-                  </p>
-                </div>
+                <p className="text-sm font-bold text-foreground">Quel pack retenir ?</p>
                 {manualPackages.length === 0 && aiPackages.length === 0 ? (
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" size="sm" variant="secondary" onClick={() => setPlanView('manual')}>
@@ -896,7 +857,10 @@ function ClientMarketplaceInner() {
                               key={`manual-${pack.id}`}
                               type="button"
                               size="sm"
-                              variant={finalPackage?.id === `final-${pack.id}` ? 'primary' : 'secondary'}
+                              variant="secondary"
+                              aria-pressed={finalPackage?.id === `final-${pack.id}`}
+                              className={finalPackage?.id === `final-${pack.id}` ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/15' : undefined}
+                              leftIcon={finalPackage?.id === `final-${pack.id}` ? <Check className="w-4 h-4" aria-hidden /> : undefined}
                               onClick={() => setFinalPackage({ ...pack, id: `final-${pack.id}`, label: pack.label || 'Pack sans IA' })}
                             >
                               {pack.label}
@@ -914,7 +878,10 @@ function ClientMarketplaceInner() {
                               key={`ai-${pack.id}`}
                               type="button"
                               size="sm"
-                              variant={finalPackage?.id === `final-${pack.id}` ? 'primary' : 'secondary'}
+                              variant="secondary"
+                              aria-pressed={finalPackage?.id === `final-${pack.id}`}
+                              className={finalPackage?.id === `final-${pack.id}` ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/15' : undefined}
+                              leftIcon={finalPackage?.id === `final-${pack.id}` ? <Check className="w-4 h-4" aria-hidden /> : undefined}
                               onClick={() => setFinalPackage({ ...pack, id: `final-${pack.id}`, label: pack.label || 'Proposition IA' })}
                             >
                               {pack.label}
@@ -930,23 +897,6 @@ function ClientMarketplaceInner() {
 
             {workingPackages.length > 0 ? (
               <div className="space-y-3 pt-2 animate-fade-in">
-                {planView === 'ai' ? (
-                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-primary/10 border border-primary/25">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-primary-solid text-primary-foreground flex items-center justify-center shrink-0">
-                        <Sparkles className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-foreground">
-                          Formule IA sélectionnée & prête pour votre projet
-                        </p>
-                        <p className="text-xs text-muted">
-                          Vous pouvez ajuster chaque ligne, sauvegarder dans Mes packs ou contacter directement les prestataires certifiés.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
                 <EventPlanPacks
                   packages={workingPackages}
                   budgetFc={brief.budgetMaxFc}

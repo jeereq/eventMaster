@@ -4,12 +4,11 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Alert, Button } from '@/components/ui';
+import { Alert, Button } from '@/components/ui';
 import { canPublishVenueCatalog } from '@/lib/planAccess';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
 import { CalendarCheck } from '@/components/icons';
 import RoomsManagement from '../RoomsManagement';
-import RoomEditorPlanCard from '@/components/room/RoomEditorPlanCard';
 
 export default function DashboardRoomsPage() {
   useRememberListReturn();
@@ -36,8 +35,8 @@ export default function DashboardRoomsPage() {
 
   return (
     <div className="space-y-6 w-full">
-      <PageHeader
-        action={
+      <RoomsManagement
+        headerAction={
           catalogPublish ? (
             <Link href="/dashboard/bookings?role=vendor" className="inline-flex">
               <Button size="sm" variant="secondary" leftIcon={<CalendarCheck className="w-4 h-4" />}>
@@ -47,8 +46,6 @@ export default function DashboardRoomsPage() {
           ) : null
         }
       />
-      <RoomEditorPlanCard level={planFeatures?.roomEditorLevel} themesFixtures={planFeatures?.roomThemesFixtures} />
-      <RoomsManagement />
     </div>
   );
 }

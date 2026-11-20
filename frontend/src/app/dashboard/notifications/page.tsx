@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Info,
   Sparkles,
+  ChevronDown,
 } from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -29,7 +30,9 @@ import {
   usePageSize,
   Card,
   CardHeader,
+  OverflowMenu,
 } from '@/components/ui';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import NotificationPreferencesCard from '@/components/NotificationPreferencesCard';
 import OrgNotificationSettingsModal, {
   type TenantNotificationSettings,
@@ -37,7 +40,6 @@ import OrgNotificationSettingsModal, {
 import { cn } from '@/lib/cn';
 import {
   NOTIFICATION_FAMILY_LABELS,
-  notificationFamilyLabel,
   notificationTypeLabel,
   type NotificationFamily,
   type NotificationPrefFamily,
@@ -63,6 +65,14 @@ interface NotificationsResponse {
 }
 
 type NotificationTab = 'inbox' | 'preferences';
+
+/** Au-delà de 4 filtres de famille visibles, le reste passe dans « Plus ». */
+const VISIBLE_FAMILIES: NotificationFamily[] = ['all', 'events', 'tasks', 'billing'];
+const MORE_FAMILIES: NotificationFamily[] = ['commissions', 'catalog'];
+
+function familyFilterLabel(id: NotificationFamily): string {
+  return id === 'all' ? 'Toutes' : NOTIFICATION_FAMILY_LABELS[id as NotificationPrefFamily];
+}
 
 function formatWhen(iso: string): string {
   return new Date(iso).toLocaleString('fr-FR', {
@@ -265,7 +275,7 @@ function NotificationsContent() {
       <div
         role="tablist"
         aria-label="Navigation des notifications"
-        className="flex items-center gap-2 border-b border-border pb-3 overflow-x-auto"
+        className={cn('flex w-fit max-w-full items-center overflow-x-auto', SEGMENTED_TRACK)}
       >
         <button
           role="tab"
@@ -275,13 +285,7 @@ function NotificationsContent() {
           tabIndex={activeTab === 'inbox' ? 0 : -1}
           type="button"
           onClick={() => handleTabChange('inbox')}
-          className={cn(
-            'inline-flex min-h-11 items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition touch-manipulation shrink-0',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-            activeTab === 'inbox'
-              ? 'bg-foreground text-background shadow-xs'
-              : 'text-muted hover:text-foreground hover:bg-surface-muted',
-          )}
+          className={segmentedItem(activeTab === 'inbox', 'inline-flex items-center gap-2 text-xs shrink-0')}
         >
           <Bell className="w-4 h-4 text-primary" />
           <span>Boîte de réception</span>
@@ -300,13 +304,7 @@ function NotificationsContent() {
           tabIndex={activeTab === 'preferences' ? 0 : -1}
           type="button"
           onClick={() => handleTabChange('preferences')}
-          className={cn(
-            'inline-flex min-h-11 items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition touch-manipulation shrink-0',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-            activeTab === 'preferences'
-              ? 'bg-foreground text-background shadow-xs'
-              : 'text-muted hover:text-foreground hover:bg-surface-muted',
-          )}
+          className={segmentedItem(activeTab === 'preferences', 'inline-flex items-center gap-2 text-xs shrink-0')}
         >
           <Sliders className="w-4 h-4 text-primary" />
           <span>Préférences & Canaux</span>
@@ -319,7 +317,7 @@ function NotificationsContent() {
       {activeTab === 'inbox' && (
         <section id="panel-inbox" role="tabpanel" aria-labelledby="tab-inbox" className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            {(['all', 'events', 'tasks', 'billing', 'commissions', 'catalog'] as NotificationFamily[]).map((id) => (
+            {VISIBLE_FAMILIES.map((id) => (
               <button
                 key={id}
                 type="button"
@@ -335,9 +333,33 @@ function NotificationsContent() {
                     : 'text-muted border-transparent hover:text-foreground',
                 )}
               >
-                {id === 'all' ? 'Toutes' : NOTIFICATION_FAMILY_LABELS[id as NotificationPrefFamily]}
+                {familyFilterLabel(id)}
               </button>
             ))}
+            <OverflowMenu
+              align="left"
+              triggerClassName={cn(
+                'inline-flex items-center gap-1 px-3 min-h-11 rounded-[var(--radius-button)] text-xs font-medium border transition',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                MORE_FAMILIES.includes(family)
+                  ? 'bg-surface text-foreground border-border shadow-[var(--shadow-soft)]'
+                  : 'text-muted border-transparent hover:text-foreground',
+              )}
+              trigger={
+                <>
+                  {MORE_FAMILIES.includes(family) ? familyFilterLabel(family) : 'Plus'}
+                  <ChevronDown className="w-3.5 h-3.5" aria-hidden />
+                </>
+              }
+              items={MORE_FAMILIES.map((id) => ({
+                id,
+                label: familyFilterLabel(id),
+                onSelect: () => {
+                  setFamily(id);
+                  setPage(1);
+                },
+              }))}
+            />
             <label className="ml-auto flex items-center gap-2 text-xs font-medium text-muted min-h-11 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -381,7 +403,6 @@ function NotificationsContent() {
                           <span className="text-xs font-semibold text-primary">
                             {notificationTypeLabel(item.type)}
                           </span>
-                          <span className="text-xs text-muted">{notificationFamilyLabel(item.type)}</span>
                           <span className="text-xs text-muted">{formatWhen(item.createdAt)}</span>
                         </div>
                         <p className="text-sm font-semibold text-foreground">{item.title}</p>
@@ -426,7 +447,7 @@ function NotificationsContent() {
                 action={
                   <Button
                     size="sm"
-                    variant="primary"
+                    variant="secondary"
                     onClick={() => setShowOrgNotifModal(true)}
                     leftIcon={<Sliders className="w-3.5 h-3.5" />}
                   >

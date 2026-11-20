@@ -51,7 +51,7 @@ export default function SubscriptionDiscountRequestModal({
     e.preventDefault();
     setError('');
     if (note.trim().length < 8) {
-      setError('Expliquez le motif de votre demande (8 caractères minimum).');
+      setError('Indiquez le motif de votre demande (8 caractères minimum).');
       return;
     }
     try {
@@ -74,10 +74,9 @@ export default function SubscriptionDiscountRequestModal({
       description={`${planName}${catalogAmount > 0 ? ` · catalogue ${formatFc(catalogAmount)}` : ''}`}
       size="sm"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <p className="text-xs text-muted leading-relaxed">
-          Le Superadmin ou le commercial global examine votre demande. S’il l’accepte, vous recevez une notification
-          avec un lien de paiement au tarif négocié. La place n’est pas activée tant que le paiement n’est pas validé.
+          Si votre demande est acceptée, vous recevez un lien de paiement au tarif négocié. Le forfait s’active après le paiement.
         </p>
 
         <div className="flex gap-2" role="group" aria-label="Type de rabais">
@@ -130,19 +129,30 @@ export default function SubscriptionDiscountRequestModal({
         </div>
 
         <label className="block space-y-1.5">
-          <span className="text-xs font-bold text-muted ">Motif</span>
+          <span className="text-xs font-bold text-muted">
+            Motif <span className="text-danger" aria-hidden>*</span>
+          </span>
           <textarea
             value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={4}
-            required
-            minLength={8}
-            className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/25"
-            placeholder="Ex. association, renouvellement fidèle, événement social…"
+            onChange={(e) => {
+              setNote(e.target.value);
+              if (error) setError('');
+            }}
+            rows={3}
+            aria-required="true"
+            aria-invalid={Boolean(error) || undefined}
+            aria-describedby={error ? 'discount-note-error' : undefined}
+            className={`w-full px-3 py-2.5 rounded-xl border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 ${
+              error ? 'border-danger' : 'border-border'
+            }`}
+            placeholder="Association, renouvellement fidèle, événement social…"
           />
+          {error && (
+            <span id="discount-note-error" className="block text-xs font-medium text-danger" role="alert">
+              {error}
+            </span>
+          )}
         </label>
-
-        {error && <p className="text-xs font-medium text-danger" role="alert">{error}</p>}
 
         <div className="flex gap-2">
           <Button type="button" variant="secondary" onClick={onClose} className="flex-1" disabled={submitting}>

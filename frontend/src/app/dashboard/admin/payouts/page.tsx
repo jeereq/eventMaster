@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Download, Loader2, Wallet, Eye, Ticket, HeartHandshake, CheckCircle2, Clock, ShieldCheck, Building2, Calendar, FileText } from '@/components/icons';
+import { Download, Loader2, MoreHorizontal, Wallet, Eye, Ticket, HeartHandshake, CheckCircle2, Clock, ShieldCheck, Building2, Calendar, FileText } from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import AdminMoneyNav from '@/components/admin/AdminMoneyNav';
 import { cn } from '@/lib/cn';
 import {
   PageHeader,
@@ -20,7 +20,10 @@ import {
   ProjectCard,
   StatusPill,
   listStackClass,
+  OverflowMenu,
+  ConfirmDialog,
 } from '@/components/ui';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
@@ -209,6 +212,7 @@ export default function AdminSaasPayoutsPage() {
   const [flexEventError, setFlexEventError] = useState<string | null>(null);
   const [flexEventBusy, setFlexEventBusy] = useState<string | null>(null);
   const [flexBalance, setFlexBalance] = useState<FlexPayBalanceResponse | null>(null);
+  const [autoRunConfirmOpen, setAutoRunConfirmOpen] = useState(false);
 
   const loadEventPayouts = useCallback(async () => {
     if (user?.role !== 'SUPER_ADMIN') return;
@@ -266,7 +270,7 @@ export default function AdminSaasPayoutsPage() {
   };
 
   const runAutoPayoutNow = async () => {
-    if (!window.confirm('Lancer maintenant le reversement automatique de tous les événements éligibles ?')) return;
+    setAutoRunConfirmOpen(false);
     setAutoPayoutBusy('run');
     setAutoPayoutMessage(null);
     try {
@@ -283,6 +287,14 @@ export default function AdminSaasPayoutsPage() {
     } finally {
       setAutoPayoutBusy(null);
     }
+  };
+
+  const openSettleEvent = (ev: EventPayoutRow) => {
+    setSettleEventModal(ev);
+    setSettleAmountFc(String(ev.totalNetPayoutFc));
+    setSettleProofUrl('');
+    setSettleNotes('');
+    setSettlePaymentMethod('Virement Bancaire');
   };
 
   const openFlexEvent = (ev: EventPayoutRow) => {
@@ -574,6 +586,7 @@ export default function AdminSaasPayoutsPage() {
 
   return (
     <div className="space-y-6 w-full">
+      <AdminMoneyNav active="payouts" />
       <PageHeader
         note={payoutTab === 'saas' ? `Commissions commerciaux : ${firstPct} % puis ${renewPct} %` : undefined}
         action={
@@ -654,14 +667,6 @@ export default function AdminSaasPayoutsPage() {
           <p className="text-xs font-bold text-emerald-700">Versé</p>
           <p className="text-lg sm:text-xl font-extrabold text-emerald-800 dark:text-emerald-200 mt-1">{formatFc(data?.sums.paidFc ?? 0)}</p>
           <p className="text-xs text-emerald-700">{data?.sums.paidCount ?? 0} dossier(s)</p>
-        </div>
-        <div className="bg-surface-muted border border-border rounded-xl p-3.5 sm:p-4 col-span-2">
-          <p className="text-xs font-bold text-muted">Payeur</p>
-          <p className="text-sm font-semibold text-foreground mt-1">EventMaster · Mobile Money (FlexPay Pay Out) ou virement</p>
-          <p className="text-xs text-muted mt-1">
-            Distinct de la commission vendeur marketplace.{' '}
-            <Link href="/dashboard/admin/catalogue" className="text-primary hover:underline">Ouvrir le catalogue</Link>
-          </p>
         </div>
       </div>
 
@@ -764,30 +769,51 @@ export default function AdminSaasPayoutsPage() {
             );
             const settleBtn = (
               <span className="inline-flex flex-wrap items-center gap-1.5">
-                {due && (
+                {due ? (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={busyKey === `flex:${key}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openFlexPay(row);
+                      }}
+                    >
+                      Verser via FlexPay
+                    </Button>
+                    <OverflowMenu
+                      align="right"
+                      triggerLabel={`Autres actions pour ${row.name || row.email}`}
+                      triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      trigger={
+                        busyKey === key
+                          ? <Loader2 className="w-5 h-5 animate-spin" aria-hidden />
+                          : <MoreHorizontal className="w-5 h-5" aria-hidden />
+                      }
+                      items={[
+                        {
+                          id: 'settle',
+                          label: 'Marquer manuellement',
+                          disabled: busyKey === key,
+                          onSelect: () => openSettle(row, due),
+                        },
+                      ]}
+                    />
+                  </>
+                ) : (
                   <Button
                     size="sm"
-                    variant="primary"
-                    loading={busyKey === `flex:${key}`}
+                    variant="secondary"
+                    loading={busyKey === key}
                     onClick={(e) => {
                       e.stopPropagation();
-                      openFlexPay(row);
+                      openSettle(row, due);
                     }}
                   >
-                    Verser via FlexPay
+                    Remettre due
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant={due ? 'secondary' : 'secondary'}
-                  loading={busyKey === key}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openSettle(row, due);
-                  }}
-                >
-                  {due ? 'Marquer manuellement' : 'Remettre due'}
-                </Button>
               </span>
             );
             return (
@@ -981,7 +1007,7 @@ export default function AdminSaasPayoutsPage() {
           {/* KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="bg-surface-muted border border-border rounded-xl p-3.5 sm:p-4">
-              <p className="text-xs font-bold text-muted">Total Encaissé Brut</p>
+              <p className="text-xs font-bold text-muted">Total encaissé brut</p>
               <p className="text-lg sm:text-xl font-extrabold text-foreground mt-1">
                 {formatFc(eventPayoutsData?.kpis?.totalGrossCollectedFc ?? 0)}
               </p>
@@ -990,7 +1016,7 @@ export default function AdminSaasPayoutsPage() {
 
             <div className="bg-primary/10 border border-primary/20 rounded-xl p-3.5 sm:p-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-primary">Retenue Plateforme</p>
+                <p className="text-xs font-bold text-primary">Retenue plateforme</p>
                 <span className="text-xs font-extrabold px-1.5 py-0.5 rounded bg-primary/20 text-primary">3% - 5%</span>
               </div>
               <p className="text-lg sm:text-xl font-extrabold text-primary mt-1">
@@ -1000,7 +1026,7 @@ export default function AdminSaasPayoutsPage() {
             </div>
 
             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl p-3.5 sm:p-4">
-              <p className="text-xs font-bold text-amber-700">Net À Reverser</p>
+              <p className="text-xs font-bold text-amber-700">Net à reverser</p>
               <p className="text-lg sm:text-xl font-extrabold text-amber-900 dark:text-amber-200 mt-1">
                 {formatFc(eventPayoutsData?.kpis?.totalNetPayoutDueFc ?? 0)}
               </p>
@@ -1008,7 +1034,7 @@ export default function AdminSaasPayoutsPage() {
             </div>
 
             <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-3.5 sm:p-4">
-              <p className="text-xs font-bold text-emerald-700">Net Déjà Reversé</p>
+              <p className="text-xs font-bold text-emerald-700">Net déjà reversé</p>
               <p className="text-lg sm:text-xl font-extrabold text-emerald-800 dark:text-emerald-200 mt-1">
                 {formatFc(eventPayoutsData?.kpis?.totalNetPayoutPaidFc ?? 0)}
               </p>
@@ -1079,17 +1105,14 @@ export default function AdminSaasPayoutsPage() {
                       size="sm"
                       variant="secondary"
                       disabled={autoPayoutBusy !== null || !ap.flexPayConfigured}
-                      onClick={() => void runAutoPayoutNow()}
+                      onClick={() => setAutoRunConfirmOpen(true)}
                     >
                       {autoPayoutBusy === 'run' ? 'Passage en cours…' : 'Lancer maintenant'}
                     </Button>
                   </div>
                 </div>
                 <p className="text-xs text-muted">
-                  Minimum {formatFc(ap.minFc)} par reversement. Seul le numéro de reversement saisi par l’organisateur est
-                  utilisé ; un événement bloqué, sans numéro ou dont le dernier versement a été refusé sur le même numéro
-                  attend une action manuelle. En cas d’annulation de paiements après un reversement, le trop-versé est
-                  affiché ici et déduit des encaissements suivants de l’événement.
+                  Minimum {formatFc(ap.minFc)} par reversement.
                 </p>
                 {autoPayoutMessage && <p className="text-xs text-foreground">{autoPayoutMessage}</p>}
               </div>
@@ -1106,18 +1129,13 @@ export default function AdminSaasPayoutsPage() {
               aria-label="Rechercher un événement ou une organisation"
               className="flex-1 bg-surface-muted border border-border rounded-lg px-3 py-2 text-sm min-h-11 focus:outline-none focus:ring-2 focus:ring-primary/25"
             />
-            <div role="group" aria-label="Filtrer par statut de versement" className="flex items-center gap-1.5 self-end sm:self-auto">
+            <div role="group" aria-label="Filtrer par statut de versement" className={cn('flex items-center self-end sm:self-auto', SEGMENTED_TRACK)}>
               <button
                 type="button"
                 aria-pressed={eventPayoutStatusFilter === 'all'}
                 aria-label="Afficher tous les statuts"
                 onClick={() => setEventPayoutStatusFilter('all')}
-                className={cn(
-                  "px-3 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-                  eventPayoutStatusFilter === 'all'
-                    ? "bg-primary text-white"
-                    : "bg-surface-muted text-muted hover:text-foreground"
-                )}
+                className={segmentedItem(eventPayoutStatusFilter === 'all', 'px-3 text-xs inline-flex items-center justify-center')}
               >
                 Tous
               </button>
@@ -1126,12 +1144,7 @@ export default function AdminSaasPayoutsPage() {
                 aria-pressed={eventPayoutStatusFilter === 'due'}
                 aria-label="Afficher les reversements dus"
                 onClick={() => setEventPayoutStatusFilter('due')}
-                className={cn(
-                  "px-3 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-                  eventPayoutStatusFilter === 'due'
-                    ? "bg-amber-600 text-white"
-                    : "bg-surface-muted text-muted hover:text-foreground"
-                )}
+                className={segmentedItem(eventPayoutStatusFilter === 'due', 'px-3 text-xs inline-flex items-center justify-center')}
               >
                 À reverser
               </button>
@@ -1140,12 +1153,7 @@ export default function AdminSaasPayoutsPage() {
                 aria-pressed={eventPayoutStatusFilter === 'paid'}
                 aria-label="Afficher les reversements réglés"
                 onClick={() => setEventPayoutStatusFilter('paid')}
-                className={cn(
-                  "px-3 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-                  eventPayoutStatusFilter === 'paid'
-                    ? "bg-primary-solid text-primary-foreground"
-                    : "bg-surface-muted text-muted hover:text-foreground"
-                )}
+                className={segmentedItem(eventPayoutStatusFilter === 'paid', 'px-3 text-xs inline-flex items-center justify-center')}
               >
                 Versés
               </button>
@@ -1205,7 +1213,7 @@ export default function AdminSaasPayoutsPage() {
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="text-xs text-muted block uppercase font-bold">Net à reverser</span>
+                        <span className="text-xs text-muted block">Net à reverser</span>
                         <span className="text-lg sm:text-xl font-extrabold text-primary block">
                           {formatFc(ev.totalNetPayoutFc)}
                         </span>
@@ -1352,7 +1360,7 @@ export default function AdminSaasPayoutsPage() {
                         {ev.remainingFc > 0 && !pending && (
                           <Button
                             size="sm"
-                            variant="primary"
+                            variant="secondary"
                             onClick={() => openFlexEvent(ev)}
                             disabled={flexBalance?.configured === false}
                             className="min-h-11 sm:min-h-10"
@@ -1361,18 +1369,26 @@ export default function AdminSaasPayoutsPage() {
                             Verser via FlexPay
                           </Button>
                         )}
-                        {!isPaid ? (
+                        {!isPaid && ev.remainingFc > 0 && !pending ? (
+                          <OverflowMenu
+                            align="right"
+                            triggerLabel={`Autres actions pour l'événement ${ev.eventTitle}`}
+                            triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center self-end sm:self-auto rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                            trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+                            items={[
+                              {
+                                id: 'settle',
+                                label: 'Marquer le reversement',
+                                onSelect: () => openSettleEvent(ev),
+                              },
+                            ]}
+                          />
+                        ) : !isPaid ? (
                           <Button
                             size="sm"
                             variant="secondary"
                             disabled={Boolean(pending)}
-                            onClick={() => {
-                              setSettleEventModal(ev);
-                              setSettleAmountFc(String(ev.totalNetPayoutFc));
-                              setSettleProofUrl('');
-                              setSettleNotes('');
-                              setSettlePaymentMethod('Virement Bancaire');
-                            }}
+                            onClick={() => openSettleEvent(ev)}
                             className="min-h-11 sm:min-h-10"
                             aria-label={`Marquer le reversement pour l'événement ${ev.eventTitle}`}
                           >
@@ -1568,6 +1584,15 @@ export default function AdminSaasPayoutsPage() {
           </form>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={autoRunConfirmOpen}
+        onClose={() => setAutoRunConfirmOpen(false)}
+        onConfirm={runAutoPayoutNow}
+        title="Lancer le reversement automatique"
+        description="Lancer maintenant le reversement automatique de tous les événements éligibles ?"
+        confirmLabel="Lancer maintenant"
+      />
     </div>
   );
 }

@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Users, UserPlus, Trash2, Loader2, Shield, Briefcase } from '@/components/icons';
+import { UserPlus, Trash2, Loader2, Shield, Briefcase } from '@/components/icons';
 import {
+  Button,
   ProjectCard,
   StatusPill,
   ViewModeToggle,
@@ -98,17 +99,8 @@ export default function EventStaffPanel({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-foreground tracking-tight flex items-center gap-2">
-            <Users className="w-4.5 h-4.5 text-primary" />
-            Équipe de l&apos;événement
-          </h2>
-          <p className="text-sm text-muted">
-            Assignez des managers ou agents protocole pour cet événement.
-          </p>
-        </div>
-        {staff.length > 0 && (
+      {staff.length > 0 && (
+        <div className="flex justify-end">
           <ViewModeToggle
             storageKey="em-view-event-staff"
             value={staffViewMode}
@@ -118,8 +110,8 @@ export default function EventStaffPanel({ eventId }: { eventId: string }) {
             defaultMode="grid"
             defaultColumns={3}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {error && (
         <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-[var(--radius-card)] px-3 py-2">
@@ -162,9 +154,6 @@ export default function EventStaffPanel({ eventId }: { eventId: string }) {
                   <StatusPill tone={isManager ? 'primary' : 'sky'}>
                     {roleLabels[s.staffRole]}
                   </StatusPill>
-                }
-                description={
-                  staffViewMode === 'grid' ? roleLabels[s.staffRole] : undefined
                 }
                 actions={
                   canManage ? (
@@ -211,14 +200,9 @@ export default function EventStaffPanel({ eventId }: { eventId: string }) {
               <option value="MANAGER">Manager</option>
               <option value="PROTOCOL">Protocole</option>
             </select>
-            <button
-              type="button"
-              onClick={handleAssign}
-              disabled={!userId}
-              className="px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white rounded-[var(--radius-button)] text-sm font-semibold transition"
-            >
+            <Button type="button" onClick={handleAssign} disabled={!userId}>
               Assigner
-            </button>
+            </Button>
           </div>
         </div>
       )}

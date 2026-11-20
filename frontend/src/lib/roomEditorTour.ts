@@ -115,9 +115,10 @@ const STEPS: EditorTourStepDef[] = [
   },
   {
     id: 'decor',
-    target: 'tool-scene',
+    // Le menu « Décor » est rangé sous « Plus » dans la barre d’outils.
+    target: 'tool-more',
     title: 'Scène, lustres, bars et décor',
-    body: 'Scène, podiums, instruments, lustres, bars, allées, fleurs, écrans : tout le décor se place comme une table et se règle dans le panneau de droite.',
+    body: 'Dans « Plus », le menu Décor regroupe scène, podiums, instruments, lustres, bars, allées, fleurs et écrans. Tout le décor se place comme une table et se règle dans le panneau de droite.',
     need: { fixture: 'stage' },
     needLabel: 'Scène et décor',
   },
@@ -186,6 +187,9 @@ function satisfiesNeed(caps: RoomEditorCapabilities, need: EditorNeed): boolean 
 }
 
 /** Résumé du forfait affiché à l’ouverture du guide. */
+/** Événement écouté par l’éditeur ouvert pour lancer sa visite ; `?guide=1` couvre celui qui s’ouvrira ensuite. */
+export const START_EDITOR_TOUR_EVENT = 'em-start-editor-tour';
+
 export function editorTourSummary(caps: RoomEditorCapabilities): { title: string; included: string[]; nextPlan: string | null } {
   const included = [
     `Jusqu’à ${caps.maxTables} tables`,

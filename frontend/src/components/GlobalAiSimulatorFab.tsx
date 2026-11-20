@@ -44,6 +44,8 @@ export default function GlobalAiSimulatorFab() {
   const [open, setOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
+  /** Page d’un événement : icône seule sur ordinateur, masqué sur mobile (« Simulateur » est dans la barre du bas). */
+  const iconOnly = /^\/dashboard\/events\/[^/]+/.test(pathname);
 
   const hidden =
     Boolean(access?.isProtocolOnly) ||
@@ -110,7 +112,9 @@ export default function GlobalAiSimulatorFab() {
         onClick={handleClick}
         className={cn(
           'em-ai-fab fixed z-[60] right-[max(1rem,env(safe-area-inset-right))] bottom-[var(--em-site-fab-bottom)] md:bottom-6 md:right-6',
-          'inline-flex items-center gap-2.5 min-h-12 pl-3 pr-3.5 sm:pr-4 rounded-2xl',
+          iconOnly
+            ? 'hidden md:inline-flex items-center justify-center w-12 h-12 rounded-full'
+            : 'inline-flex items-center gap-2.5 min-h-12 pl-3 pr-3.5 sm:pr-4 rounded-2xl',
           'transition cursor-pointer touch-manipulation text-left',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
           placement.mood === 'celebrate'
@@ -130,7 +134,7 @@ export default function GlobalAiSimulatorFab() {
         >
           <Icon className="w-4 h-4" aria-hidden />
         </span>
-        <span className="flex flex-col leading-tight min-w-0">
+        <span className={cn('flex flex-col leading-tight min-w-0', iconOnly && 'sr-only')}>
           <span className="text-xs font-bold tracking-tight">{placement.label}</span>
           <span
             className={cn(
@@ -147,7 +151,7 @@ export default function GlobalAiSimulatorFab() {
                   : placement.subtitle}
           </span>
         </span>
-        {showCounter ? (
+        {showCounter && !iconOnly ? (
           <span
             className={cn(
               'text-xs font-black tabular-nums px-1.5 py-0.5 rounded-full shrink-0',

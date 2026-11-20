@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Eye, Loader2, LogIn, Trash2, Users, X } from '@/components/icons';
+import { Download, Loader2, LogIn, MoreHorizontal, SlidersHorizontal, Trash2, Users, X } from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -13,14 +13,17 @@ import {
   Button,
   StatusPill,
   ProjectCard,
-  ListRowAction,
   SkeletonTabContent,
+  Modal,
+  ConfirmDialog,
+  OverflowMenu,
   ViewModeToggle,
   useViewMode,
   usePageSize,
   listStackClass,
 } from '@/components/ui';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
+import { CatalogueChoicePills, CatalogueFilterField } from '@/components/CatalogueFilterBar';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
 import useIsMobile from '@/hooks/useIsMobile';
 import { confirmSupportSession } from '@/lib/confirmSupportSession';
@@ -95,6 +98,9 @@ export default function AdminGuestsPage() {
   const [tenants, setTenants] = useState<TenantOption[]>([]);
   const [details, setDetails] = useState<AdminGuestRow | null>(null);
   const [openingId, setOpeningId] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const {
     mode: viewMode,
     setViewMode,
@@ -172,13 +178,18 @@ export default function AdminGuestsPage() {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Supprimer l’invité « ${name} » ? Cette action est définitive.`)) return;
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      await api.delete(`/admin/guests/${id}`);
+      await api.delete(`/admin/guests/${pendingDelete.id}`);
+      setPendingDelete(null);
       await load();
     } catch (err: unknown) {
+      setPendingDelete(null);
       alert(err instanceof Error ? err.message : 'Erreur lors de la suppression.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -213,6 +224,8 @@ export default function AdminGuestsPage() {
       </div>
     );
   }
+
+  const advancedCount = [checkin, pdf, org].filter((v) => v !== 'ALL').length;
 
   const filterClass =
     'bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary min-h-11 shrink-0';
@@ -280,37 +293,21 @@ export default function AdminGuestsPage() {
             <option value="ACCEPTED">Confirmé</option>
             <option value="DECLINED">Décliné</option>
           </select>
-          <select
-            value={checkin}
-            onChange={(e) => { setCheckin(e.target.value); setPage(1); }}
-            aria-label="Filtrer par présence et enregistrement"
-            className={filterClass}
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => setFiltersOpen(true)}
+            leftIcon={<SlidersHorizontal className="w-3.5 h-3.5" />}
+            className="shrink-0 !min-h-11"
           >
-            <option value="ALL">Présence</option>
-            <option value="in">Entrés</option>
-            <option value="out">Pas encore entrés</option>
-          </select>
-          <select
-            value={pdf}
-            onChange={(e) => { setPdf(e.target.value); setPage(1); }}
-            aria-label="Filtrer par livraison du PDF d'invitation"
-            className={filterClass}
-          >
-            <option value="ALL">PDF invitation</option>
-            <option value="delivered">PDF livré</option>
-            <option value="missing">PDF non livré</option>
-          </select>
-          <select
-            value={org}
-            onChange={(e) => { setOrg(e.target.value); setPage(1); }}
-            aria-label="Filtrer par organisation"
-            className={filterClass}
-          >
-            <option value="ALL">Toutes les organisations</option>
-            {tenants.map((t) => (
-              <option key={t.id} value={t.name}>{t.name}</option>
-            ))}
-          </select>
+            Filtres
+            {advancedCount > 0 ? (
+              <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-surface-muted px-1 text-xs font-semibold tabular-nums">
+                {advancedCount}
+              </span>
+            ) : null}
+          </Button>
           <ViewModeToggle
             storageKey="em-view-admin-guests"
             value={viewMode}
@@ -369,7 +366,6 @@ export default function AdminGuestsPage() {
                     <div className="space-y-1.5">
                       <p className="truncate text-xs">{g.email}</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {rsvpChip}
                         {categoryChip}
                         {pdfChip}
                         {checkinChip}
@@ -382,53 +378,34 @@ export default function AdminGuestsPage() {
                 status={viewMode === 'list' ? rsvpChip : undefined}
                 aside={viewMode === 'list' ? (pdfChip || categoryChip) : undefined}
                 actions={
-                  <>
-                    {viewMode === 'list' ? (
-                      <button
-                        type="button"
-                        onClick={() => setDetails(g)}
-                        className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
-                        title="Voir détails"
-                        aria-label={`Voir les détails de l'invité ${g.firstName} ${g.lastName}`}
-                      >
-                        <ListRowAction />
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setDetails(g)}
-                        className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
-                        title="Détails"
-                        aria-label={`Voir les détails de l'invité ${g.firstName} ${g.lastName}`}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    )}
-                    {g.tenantId && (
-                      <button
-                        type="button"
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          void openWorkspace(g.tenantId as string);
-                        }}
-                        disabled={openingId === g.tenantId}
-                        className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition disabled:opacity-50"
-                        title="Ouvrir l’espace"
-                        aria-label={`Ouvrir l'espace organisation de ${g.tenantName || 'l\'invité'}`}
-                      >
-                        {openingId === g.tenantId ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(g.id, `${g.firstName} ${g.lastName}`)}
-                      className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
-                      title="Supprimer"
-                      aria-label={`Supprimer l'invité ${g.firstName} ${g.lastName}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </>
+                  <OverflowMenu
+                    align="right"
+                    triggerLabel={`Autres actions pour ${g.firstName} ${g.lastName}`}
+                    triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    trigger={
+                      openingId && openingId === g.tenantId
+                        ? <Loader2 className="w-5 h-5 animate-spin" aria-hidden />
+                        : <MoreHorizontal className="w-5 h-5" aria-hidden />
+                    }
+                    items={[
+                      ...(g.tenantId
+                        ? [{
+                            id: 'workspace',
+                            label: 'Ouvrir l’espace',
+                            icon: LogIn,
+                            disabled: openingId === g.tenantId,
+                            onSelect: () => void openWorkspace(g.tenantId as string),
+                          }]
+                        : []),
+                      {
+                        id: 'delete',
+                        label: 'Supprimer',
+                        icon: Trash2,
+                        danger: true,
+                        onSelect: () => setPendingDelete({ id: g.id, name: `${g.firstName} ${g.lastName}` }),
+                      },
+                    ]}
+                  />
                 }
               />
             );
@@ -454,6 +431,80 @@ export default function AdminGuestsPage() {
         onOpenWorkspace={details?.tenantId ? () => openWorkspace(details.tenantId as string) : undefined}
         openingWorkspace={openingId === details?.tenantId}
         planBadgeClass={planBadgeClass}
+      />
+
+      <Modal
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title="Filtres invités"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setCheckin('ALL');
+                setPdf('ALL');
+                setOrg('ALL');
+                setPage(1);
+              }}
+            >
+              Tout effacer
+            </Button>
+            <Button type="button" onClick={() => setFiltersOpen(false)}>
+              Voir les résultats
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          <CatalogueFilterField label="Présence">
+            <CatalogueChoicePills
+              options={[
+                { id: 'all', label: 'Tous' },
+                { id: 'in', label: 'Entrés' },
+                { id: 'out', label: 'Pas encore entrés' },
+              ]}
+              value={checkin === 'ALL' ? 'all' : checkin}
+              onChange={(id) => { setCheckin(id && id !== 'all' ? id : 'ALL'); setPage(1); }}
+            />
+          </CatalogueFilterField>
+          <CatalogueFilterField label="PDF invitation">
+            <CatalogueChoicePills
+              options={[
+                { id: 'all', label: 'Tous' },
+                { id: 'delivered', label: 'PDF livré' },
+                { id: 'missing', label: 'PDF non livré' },
+              ]}
+              value={pdf === 'ALL' ? 'all' : pdf}
+              onChange={(id) => { setPdf(id && id !== 'all' ? id : 'ALL'); setPage(1); }}
+            />
+          </CatalogueFilterField>
+          <CatalogueFilterField label="Organisation">
+            <select
+              value={org}
+              onChange={(e) => { setOrg(e.target.value); setPage(1); }}
+              aria-label="Filtrer par organisation"
+              className={`${filterClass} w-full`}
+            >
+              <option value="ALL">Toutes les organisations</option>
+              {tenants.map((t) => (
+                <option key={t.id} value={t.name}>{t.name}</option>
+              ))}
+            </select>
+          </CatalogueFilterField>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={handleDelete}
+        title="Supprimer l’invité"
+        description={`Supprimer l’invité « ${pendingDelete?.name ?? ''} » ? Cette action est définitive.`}
+        confirmLabel="Supprimer"
+        tone="danger"
+        loading={deleting}
       />
     </div>
   );

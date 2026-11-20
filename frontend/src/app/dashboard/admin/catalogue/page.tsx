@@ -18,6 +18,7 @@ import {
   usePageSize,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import TabsMoreMenu from '@/components/ui/TabsMoreMenu';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueEntityFilterFields,
@@ -519,17 +520,31 @@ export default function AdminCataloguePage() {
     );
   }
 
-  const tabs: Array<{ id: CatalogTab; label: string; count?: number }> = [
-    { id: 'venues', label: 'Salles', count: overview?.venues.total },
-    { id: 'offerings', label: 'Prestataires', count: overview?.trades?.total ?? overview?.offerings.total },
-    { id: 'rentals', label: 'Matériel & Équipements', count: overview?.rentals?.total },
-    { id: 'inquiries', label: 'Demandes', count: overview?.inquiries.total },
-    { id: 'bookings', label: 'Réservations', count: overview?.bookings.total },
+  const tabs: Array<{ id: CatalogTab; label: string; count?: number; detail?: string }> = [
+    { id: 'venues', label: 'Salles', count: overview?.venues.total, detail: overview ? `${overview.venues.publicCount} publiques` : undefined },
+    {
+      id: 'offerings',
+      label: 'Prestataires',
+      count: overview?.trades?.total ?? overview?.offerings.total,
+      detail: overview ? `${overview.trades?.publicCount ?? overview.offerings.publicCount} publics` : undefined,
+    },
+    {
+      id: 'rentals',
+      label: 'Matériel & Équipements',
+      count: overview?.rentals?.total,
+      detail: overview?.rentals ? `${overview.rentals.publicCount} publics` : undefined,
+    },
+    { id: 'inquiries', label: 'Demandes', count: overview?.inquiries.total, detail: overview ? `${overview.inquiries.newCount} nouvelles` : undefined },
+    { id: 'bookings', label: 'Réservations', count: overview?.bookings.total, detail: overview ? `${overview.bookings.requestedCount} demandées` : undefined },
     { id: 'commissions', label: `Commissions ${commissionPct} %`, count: overview?.commissions?.dueCount },
     ...(user?.role === 'SUPER_ADMIN' ? [{ id: 'deposits' as const, label: 'Acomptes en ligne' }] : []),
     { id: 'reviews', label: 'Avis' },
     { id: 'brands', label: 'Marques' },
   ];
+
+  /** Les cinq premiers onglets restent visibles ; Commissions, Acomptes, Avis et Marques passent dans « Plus ». */
+  const visibleTabs = tabs.slice(0, 5);
+  const moreTabs = tabs.slice(5);
 
   const currentTotal =
     tab === 'venues'
@@ -568,7 +583,7 @@ export default function AdminCataloguePage() {
         {!isBlocked ? (
           <Button
             type="button"
-            variant="danger"
+            variant="secondary"
             size="sm"
             loading={busyId === item.listingId}
             onClick={() => openModeration(listingKind, item.listingId!, item.title, false, true)}
@@ -630,36 +645,6 @@ export default function AdminCataloguePage() {
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      <nav aria-label="Aller à une section" className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] pb-1 shrink-0">
-        {([
-          { id: 'venues' as CatalogTab, label: 'Salles publiques', value: overview?.venues.publicCount ?? 0 },
-          { id: 'offerings' as CatalogTab, label: 'Prestataires publics', value: overview?.trades?.publicCount ?? overview?.offerings.publicCount ?? 0 },
-          { id: 'rentals' as CatalogTab, label: 'Matériel public', value: overview?.rentals?.publicCount ?? 0 },
-          { id: 'inquiries' as CatalogTab, label: 'Devis nouveaux', value: overview?.inquiries.newCount ?? 0 },
-          { id: 'bookings' as CatalogTab, label: 'Réservations demandées', value: overview?.bookings.requestedCount ?? 0 },
-          { id: 'commissions' as CatalogTab, label: 'Commissions dues', value: formatFc(overview?.commissions?.dueFc ?? 0) },
-        ]).map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => {
-              setTab(item.id);
-              setPage(1);
-              if (item.id === 'venues' || item.id === 'offerings' || item.id === 'rentals') {
-                setExtras({ ...EMPTY_CATALOGUE_EXTRAS });
-              }
-            }}
-            className={cn(
-              'inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-button)] px-2.5 text-sm transition whitespace-nowrap shrink-0',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-              tab === item.id ? 'text-foreground font-semibold bg-surface-muted/60' : 'text-muted hover:text-foreground',
-            )}
-          >
-            <span className="font-semibold tabular-nums text-foreground">{item.value}</span>
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </nav>
       <p className="text-xs text-muted">
         GMV : salles {formatFc(overview?.gmv?.venueFc ?? 0)} · prestataires {formatFc(overview?.gmv?.tradeFc ?? 0)} · matériel {formatFc(overview?.gmv?.rentalFc ?? 0)}
         {(overview?.engagement?.favorites || overview?.engagement?.packs)
@@ -668,7 +653,7 @@ export default function AdminCataloguePage() {
       </p>
 
       <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] pb-1 shrink-0" role="tablist" aria-label="Sections du catalogue">
-        {tabs.map((item) => (
+        {visibleTabs.map((item, index) => (
           <button
             key={item.id}
             type="button"
@@ -676,14 +661,14 @@ export default function AdminCataloguePage() {
             id={`catalog-tab-${item.id}`}
             aria-selected={tab === item.id}
             aria-controls={`catalog-panel-${item.id}`}
-            tabIndex={tab === item.id ? 0 : -1}
+            tabIndex={tab === item.id || (index === 0 && !visibleTabs.some((t) => t.id === tab)) ? 0 : -1}
             onKeyDown={(e) => {
               if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
               e.preventDefault();
-              const i = tabs.findIndex((t) => t.id === tab);
-              const next = tabs[e.key === 'ArrowRight'
-                ? (i + 1) % tabs.length
-                : (i - 1 + tabs.length) % tabs.length];
+              const i = visibleTabs.findIndex((t) => t.id === tab);
+              const next = visibleTabs[e.key === 'ArrowRight'
+                ? (i + 1) % visibleTabs.length
+                : (i - 1 + visibleTabs.length) % visibleTabs.length];
               setTab(next.id);
               setPage(1);
               if (next.id === 'venues' || next.id === 'offerings' || next.id === 'rentals') {
@@ -706,9 +691,21 @@ export default function AdminCataloguePage() {
             )}
           >
             {item.label}
-            {typeof item.count === 'number' ? ` (${item.count})` : ''}
+            {typeof item.count === 'number' ? ` (${item.count}${item.detail ? ` · ${item.detail}` : ''})` : ''}
           </button>
         ))}
+        <TabsMoreMenu
+          items={moreTabs.map((item) => ({ id: item.id, label: item.label, badge: item.count }))}
+          activeId={tab}
+          onSelect={(id) => {
+            setTab(id);
+            setPage(1);
+          }}
+          activeLabelId={(id) => `catalog-tab-${id}`}
+          baseClassName="inline-flex min-h-11 items-center gap-1.5 px-3.5 rounded-md text-sm font-medium border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 whitespace-nowrap"
+          activeClassName="bg-surface text-foreground border-border shadow-[var(--shadow-soft)] font-semibold"
+          inactiveClassName="text-muted border-transparent hover:text-foreground"
+        />
       </div>
 
       <div
@@ -826,7 +823,7 @@ export default function AdminCataloguePage() {
           <p className="text-sm text-muted">
             {settlement === 'paid' ? 'Encaissé' : settlement === 'all' ? 'Total filtré' : 'Dû'} :{' '}
             <span className="font-semibold text-foreground">{formatFc(commissions?.sumCommissionFc ?? 0)}</span>
-            {' · '}commission {commissionPct} % (acompte {depositPct} %) sur réservations confirmées, versée hors plateforme.
+            {' · '}acompte {depositPct} %, versée hors plateforme.
           </p>
           <Button
             type="button"
@@ -991,7 +988,7 @@ export default function AdminCataloguePage() {
                   </Button>
                   <Button
                     size="sm"
-                    variant={row.commissionSettledAt ? 'secondary' : 'primary'}
+                    variant="secondary"
                     loading={busyId === row.id}
                     onClick={() => void settleCommission(row.id, !row.commissionSettledAt, row.vendorName)}
                   >
@@ -1025,7 +1022,6 @@ export default function AdminCataloguePage() {
             {fiche?.tenant.name || 'Organisation'}
           </span>
         }
-        description="Fiche support : forfait, équipe et catalogue."
         size="lg"
         footer={
           <div className="flex w-full justify-between items-center gap-2">
@@ -1033,7 +1029,7 @@ export default function AdminCataloguePage() {
               {fiche?.tenant.vendorProfile && (
                 <Button
                   type="button"
-                  variant={fiche.tenant.vendorProfile.isBlockedByAdmin ? 'secondary' : 'danger'}
+                  variant="secondary"
                   size="sm"
                   onClick={() => {
                     setFicheOpen(false);

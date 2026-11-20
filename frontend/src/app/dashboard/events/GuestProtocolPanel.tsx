@@ -217,9 +217,6 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             )}
           </div>
         </div>
-        <p className="text-xs text-muted leading-relaxed">
-          Présentez le badge QR. Après confirmation, le scanner se relance automatiquement.
-        </p>
         <div className="grid grid-cols-3 gap-2 pt-3">
           <div className="rounded-[var(--radius-button)] bg-surface-muted border border-border px-3 py-2 text-center">
             <p className="text-lg font-semibold text-foreground tabular-nums">{checkedInCount}</p>
@@ -275,7 +272,11 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             placeholder="URL de réponse, ID, ou code du badge"
             className="flex-1 px-4 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
           />
-          <Button onClick={handleScan} disabled={busy || !scanInput.trim()}>
+          <Button
+            variant={selectedGuest ? 'secondary' : 'primary'}
+            onClick={handleScan}
+            disabled={busy || !scanInput.trim()}
+          >
             <QrCode className="w-4 h-4" />
             Identifier
           </Button>
@@ -424,8 +425,8 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
                 className={cn(
                   'px-2.5 py-1 rounded-full text-xs font-semibold border transition',
                   listFilter === opt.id
-                    ? 'bg-primary-solid text-primary-foreground border-primary-solid'
-                    : 'border-border text-muted hover:text-foreground',
+                    ? 'bg-surface-muted text-foreground border-border'
+                    : 'border-transparent text-muted hover:text-foreground',
                 )}
               >
                 {opt.label}
