@@ -68,6 +68,13 @@ const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
 import RoomWallEditorPanel from '@/components/RoomWallEditorPanel';
 import { ChairTypePicker, SeatMaterialPicker, RoomAmbienceCard, TableSurfacePicker, ZoneMaterialPicker } from '@/components/room/RoomMaterialPreviews';
 import RoomAmbiencePreviewModal from '@/components/room/RoomAmbiencePreviewModal';
+import SurfaceRulesNotice from '@/components/room/SurfaceRulesNotice';
+import {
+  applySurfaceRuleAction,
+  collectFloorRules,
+  collectWallRules,
+  type SurfaceRuleAction,
+} from '@/lib/roomSurfaceRules';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { AiRoomPlanFullscreenLoader } from '@/components/AiComposeFullscreenLoader';
 import {
@@ -2918,6 +2925,13 @@ export default function RoomLayoutEditor({
 
   const activeTheme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
   const effectiveFloorType = blueprint.metadata.floorType ?? activeTheme.defaultFloorType;
+  /** Ce qui ne s’appliquera pas (ou pas entièrement) aux murs et au sol, et pourquoi. */
+  const floorSurfaceRules = collectFloorRules(blueprint);
+  const wallSurfaceRules = collectWallRules(blueprint);
+  const handleSurfaceRuleAction = (action: SurfaceRuleAction) => {
+    const { blueprint: next, message } = applySurfaceRuleAction(blueprint, action);
+    updateBlueprint(next, { message, kind: 'settings' });
+  };
   const availableThemes = listAvailableThemes(blueprint);
   const themesByCategory = groupThemesByCategory(availableThemes);
   const depthAmount = resolveDepthAmount(blueprint.metadata);
@@ -4880,6 +4894,11 @@ export default function RoomLayoutEditor({
                         {displayedFloors.length} sol{displayedFloors.length > 1 ? 's' : ''}
                       </span>
                     </div>
+                    <SurfaceRulesNotice
+                      rules={floorSurfaceRules}
+                      title="À savoir pour le sol"
+                      onAction={handleSurfaceRuleAction}
+                    />
 
                     {/* Filtres par catégories de sols */}
                     <div className="flex flex-wrap gap-1">
@@ -4963,6 +4982,11 @@ export default function RoomLayoutEditor({
                 </div>
                 <div className="space-y-2 pt-3 border-t border-border/50" data-tour="wall-paint">
                   <p className={EDITOR_HEADING}><BrickWall className="w-3 h-3" /> Peinture murs (globale)</p>
+                  <SurfaceRulesNotice
+                    rules={wallSurfaceRules}
+                    title="À savoir pour les murs"
+                    onAction={handleSurfaceRuleAction}
+                  />
                   <div className="flex flex-wrap gap-1.5 items-center">
                     {['#e8e4df', '#f8fafc', '#d6d3d1', '#b4533c', '#8b6914', '#78716c', '#1e3a5f', '#fef3c7'].map((c) => (
                       <button
