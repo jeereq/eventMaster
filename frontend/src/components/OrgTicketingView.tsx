@@ -20,6 +20,7 @@ import {
   ChevronUp,
   MessageCircle,
   Heart,
+  SlidersHorizontal,
 } from '@/components/icons';
 import { Button, StatusPill } from '@/components/ui';
 import { eventDashboardHref } from '@/lib/eventRoutes';
@@ -132,6 +133,9 @@ export default function OrgTicketingView({
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [actingGuestId, setActingGuestId] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount =
+    (typeFilter !== 'ALL' ? 1 : 0) + (statusFilter !== 'ALL' ? 1 : 0) + (checkInFilter !== 'ALL' ? 1 : 0);
 
 
   const loadData = useCallback(async (isRefresh = false) => {
@@ -369,37 +373,26 @@ export default function OrgTicketingView({
             ))}
           </select>
         )}
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
-          aria-label="Type de flux"
-          className="h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((open) => !open)}
+          aria-expanded={filtersOpen}
+          aria-controls="org-ticketing-filters"
+          className={cn(
+            'inline-flex h-11 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+            filtersOpen || activeFilterCount > 0
+              ? 'border-border bg-surface-muted text-foreground'
+              : 'border-border bg-surface text-muted hover:text-foreground',
+          )}
         >
-          <option value="ALL">Billets et dons</option>
-          <option value="TICKETS">Billets</option>
-          <option value="DONATIONS">Dons</option>
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-          aria-label="Paiement"
-          className="h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-        >
-          <option value="ALL">Tous paiements</option>
-          <option value="PAID">Payés</option>
-          <option value="PENDING">En attente</option>
-          <option value="CANCELLED">Annulés</option>
-        </select>
-        <select
-          value={checkInFilter}
-          onChange={(e) => setCheckInFilter(e.target.value as typeof checkInFilter)}
-          aria-label="Contrôle d’accès"
-          className="h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-        >
-          <option value="ALL">Toutes les entrées</option>
-          <option value="CHECKED_IN">Entrés</option>
-          <option value="PENDING">Pas encore entrés</option>
-        </select>
+          <SlidersHorizontal className="w-4 h-4" aria-hidden />
+          Filtres
+          {activeFilterCount > 0 ? (
+            <span className="rounded-full bg-surface px-1.5 text-xs font-bold tabular-nums text-foreground">
+              {activeFilterCount}
+            </span>
+          ) : null}
+        </button>
         <button
           type="button"
           onClick={() => loadData(true)}
@@ -411,6 +404,42 @@ export default function OrgTicketingView({
           <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
         </button>
       </div>
+
+      {filtersOpen ? (
+        <div id="org-ticketing-filters" className="flex flex-wrap items-center gap-2">
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+            aria-label="Type de flux"
+            className="h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <option value="ALL">Billets et dons</option>
+            <option value="TICKETS">Billets</option>
+            <option value="DONATIONS">Dons</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+            aria-label="Paiement"
+            className="h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <option value="ALL">Tous paiements</option>
+            <option value="PAID">Payés</option>
+            <option value="PENDING">En attente</option>
+            <option value="CANCELLED">Annulés</option>
+          </select>
+          <select
+            value={checkInFilter}
+            onChange={(e) => setCheckInFilter(e.target.value as typeof checkInFilter)}
+            aria-label="Contrôle d’accès"
+            className="h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <option value="ALL">Toutes les entrées</option>
+            <option value="CHECKED_IN">Entrés</option>
+            <option value="PENDING">Pas encore entrés</option>
+          </select>
+        </div>
+      ) : null}
 
       {/* Liste des commandes */}
       {loading ? (
@@ -469,7 +498,7 @@ export default function OrgTicketingView({
                         </span>
                       )}
                       {order.flexPayChannel && (
-                        <span className="px-2 py-0.5 rounded-full bg-surface-muted border border-border text-xs font-semibold text-muted uppercase">
+                        <span className="px-2 py-0.5 rounded-full bg-surface-muted border border-border text-xs font-semibold text-muted">
                           {order.flexPayChannel}
                         </span>
                       )}
@@ -516,11 +545,6 @@ export default function OrgTicketingView({
                         <span className="hidden sm:inline truncate max-w-[200px]">{order.buyerEmail}</span>
                       )}
                     </div>
-                    {isPending ? (
-                      <p className="text-xs text-festive-accent">
-                        L’acheteur a initié FlexPay — en attente de confirmation opérateur.
-                      </p>
-                    ) : null}
                   </div>
 
                   <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border">
@@ -564,31 +588,18 @@ export default function OrgTicketingView({
                   <div className="p-3.5 sm:p-4 bg-surface-muted/30 border-t border-border space-y-3 animate-in fade-in">
                     {/* Information sur les sièges / places assignées */}
                     {order.selectedSeats && order.selectedSeats.length > 0 && (
-                      <div className="space-y-1.5">
-                        <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                          <Armchair className="w-3.5 h-3.5 text-primary" />
-                          Sièges réservés sur le plan 3D :
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {order.selectedSeats.map((seat, sIdx) => (
-                            <span
-                              key={sIdx}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-border text-xs font-semibold text-foreground shadow-2xs"
-                            >
-                              <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
-                                {sIdx + 1}
-                              </span>
-                              <span>{seat.tableName || `Table ${seat.tableId}`}</span>
-                              <span>· Siège {seat.seatIndex + 1}</span>
-                              {seat.zoneName && (
-                                <span className="text-xs px-1.5 py-0.2 rounded bg-primary/10 text-primary font-bold">
-                                  {seat.zoneName}
-                                </span>
-                              )}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                      <p className="text-xs text-foreground flex items-start gap-1.5">
+                        <Armchair className="w-3.5 h-3.5 text-muted shrink-0 mt-px" aria-hidden />
+                        <span>
+                          {order.selectedSeats
+                            .map((seat) =>
+                              [seat.tableName || `Table ${seat.tableId}`, `Siège ${seat.seatIndex + 1}`, seat.zoneName]
+                                .filter(Boolean)
+                                .join(' · '),
+                            )
+                            .join(', ')}
+                        </span>
+                      </p>
                     )}
 
                     {/* Liste des invités / billets émis */}
@@ -654,7 +665,7 @@ export default function OrgTicketingView({
                                     <Button
                                       type="button"
                                       size="sm"
-                                      variant="primary"
+                                      variant="secondary"
                                       disabled={isBusy}
                                       onClick={() => handleCheckInGuest(targetEventId, guest.id)}
                                       className="text-xs font-bold"

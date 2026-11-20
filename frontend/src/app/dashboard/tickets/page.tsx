@@ -9,7 +9,7 @@ import {
   Alert,
   Button,
   EmptyState,
-  Input,
+  OverflowMenu,
   ProjectCard,
   StatusPill,
   ViewModeToggle,
@@ -23,9 +23,14 @@ import { SkeletonListRow } from '@/components/ui/Skeleton';
 import { formatFc } from '@/config/landingPricing';
 import { CLIENT_AGENDA_HREF, dashboardEventHref } from '@/lib/marketplace';
 import { rememberCatalogueReturn } from '@/lib/catalogueQuery';
-import { Calendar, MapPin, QrCode, Ticket, LayoutDashboard, ScanLine } from '@/components/icons';
+import { Calendar, MapPin, QrCode, Ticket, LayoutDashboard, ScanLine, MoreHorizontal } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import OrgTicketingView from '@/components/OrgTicketingView';
+import CatalogueFilterBar, {
+  CatalogueChoicePills,
+  CatalogueFilterField,
+  type CatalogueFilterChip,
+} from '@/components/CatalogueFilterBar';
 
 type MyTicket = {
   orderId: string;
@@ -49,6 +54,18 @@ type MyTicket = {
 
 type WhenFilter = 'all' | 'upcoming' | 'past';
 type EntryFilter = 'all' | 'paid' | 'free';
+
+const WHEN_OPTIONS: Array<{ id: WhenFilter; label: string }> = [
+  { id: 'all', label: 'Toutes dates' },
+  { id: 'upcoming', label: 'À venir' },
+  { id: 'past', label: 'Passés' },
+];
+
+const ENTRY_OPTIONS: Array<{ id: EntryFilter; label: string }> = [
+  { id: 'all', label: 'Tous tarifs' },
+  { id: 'paid', label: 'Payants' },
+  { id: 'free', label: 'Entrée libre' },
+];
 
 function ticketIsUpcoming(ticket: MyTicket, now: number) {
   return new Date(ticket.event.date).getTime() >= now;
@@ -154,31 +171,53 @@ export default function TicketsPage() {
 
   const visible = usePaginateItems(filtered, page, pageSize);
 
+  const filterChips: CatalogueFilterChip[] = [
+    ...(when !== 'all'
+      ? [{ id: 'when', label: 'Date', value: WHEN_OPTIONS.find((o) => o.id === when)?.label ?? when }]
+      : []),
+    ...(entry !== 'all'
+      ? [{ id: 'entry', label: 'Entrée', value: ENTRY_OPTIONS.find((o) => o.id === entry)?.label ?? entry }]
+      : []),
+    ...(location ? [{ id: 'location', label: 'Lieu', value: location }] : []),
+  ];
+
   const ticketActions = (ticket: MyTicket) => {
     const detailsHref = ticket.event.slug && ticket.event.isPublic
       ? dashboardEventHref(ticket.event.slug)
       : null;
+    const multiGuests = ticket.guests && ticket.guests.length > 1 ? ticket.guests : null;
+    const hasPass = Boolean(multiGuests || ticket.guestId);
     return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       {ticket.status === 'PENDING' && detailsHref ? (
         <Link
           href={detailsHref}
           className="inline-flex"
           onClick={() => rememberCatalogueReturn('/dashboard/tickets')}
         >
-          <Button size="sm">Reprendre le paiement</Button>
+          <Button size="sm" variant={hasPass ? 'secondary' : 'primary'}>Reprendre le paiement</Button>
         </Link>
       ) : null}
-      {ticket.guests && ticket.guests.length > 1 ? (
-        <div className="inline-flex items-center gap-1.5 flex-wrap">
-          {ticket.guests.map((g, idx) => (
-            <Link key={g.id} href={`/rsvp/${g.id}`} className="inline-flex">
-              <Button size="sm" variant={idx === 0 ? 'primary' : 'secondary'} leftIcon={<QrCode className="w-3.5 h-3.5" />}>
-                Pass {idx + 1}
-              </Button>
-            </Link>
-          ))}
-        </div>
+      {multiGuests ? (
+        <>
+          <Link href={`/rsvp/${multiGuests[0].id}`} className="inline-flex">
+            <Button size="sm" leftIcon={<QrCode className="w-3.5 h-3.5" />}>
+              Pass 1
+            </Button>
+          </Link>
+          <OverflowMenu
+            align="right"
+            triggerLabel={`Autres pass pour ${ticket.event.title}`}
+            triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+            items={multiGuests.slice(1).map((g, idx) => ({
+              id: g.id,
+              label: `Pass ${idx + 2}`,
+              icon: QrCode,
+              onSelect: () => router.push(`/rsvp/${g.id}`),
+            }))}
+          />
+        </>
       ) : ticket.guestId ? (
         <Link href={`/rsvp/${ticket.guestId}`} className="inline-flex">
           <Button size="sm" leftIcon={<QrCode className="w-4 h-4" />}>
@@ -275,98 +314,18 @@ export default function TicketsPage() {
               icon={<Ticket className="w-5 h-5" />}
               title="Aucun billet pour le moment"
               description="Les billets du catalogue apparaîtront ici."
-              action={
-                <Link href={agendaHref}>
-                  <Button size="sm">Découvrir les événements</Button>
-                </Link>
-              }
             />
           ) : (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4 space-y-3 shadow-[var(--shadow-soft)]">
-            {/* Filtres d'état rapides (Date & Entrée) */}
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/70 overflow-x-auto no-scrollbar">
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="flex items-center gap-1 shrink-0" role="group" aria-label="Date">
-                  {([
-                    ['all', 'Toutes dates'],
-                    ['upcoming', 'À venir'],
-                    ['past', 'Passés'],
-                  ] as Array<[WhenFilter, string]>).map(([id, label]) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setWhen(id)}
-                      className={cn(
-                        'px-3 py-1.5 min-h-11 rounded-lg text-xs font-semibold border transition touch-manipulation whitespace-nowrap',
-                        when === id
-                          ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
-                          : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
-                      )}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                <span className="text-muted/40 hidden sm:inline">|</span>
-
-                <div className="flex items-center gap-1 shrink-0" role="group" aria-label="Entrée">
-                  {([
-                    ['all', 'Tous tarifs'],
-                    ['paid', 'Payants'],
-                    ['free', 'Entrée libre'],
-                  ] as Array<[EntryFilter, string]>).map(([id, label]) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setEntry(id)}
-                      className={cn(
-                        'px-3 py-1.5 min-h-11 rounded-lg text-xs font-semibold border transition touch-manipulation whitespace-nowrap',
-                        entry === id
-                          ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
-                          : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
-                      )}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <span className="text-xs font-medium text-muted shrink-0 whitespace-nowrap pl-2">
-                {filtered.length} billet{filtered.length > 1 ? 's' : ''}
-                {filtered.length !== tickets.length ? ` / ${tickets.length}` : ''}
-              </span>
-            </div>
-
-            {/* Barre de recherche + Sélecteur de lieu + Vue */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
-              <div className="flex-1 min-w-0">
-                <Input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Titre, lieu, acheteur…"
-                  aria-label="Rechercher un billet"
-                />
-              </div>
-
-              {locations.length > 1 ? (
-                <div className="sm:w-48 shrink-0">
-                  <select
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    aria-label="Filtrer par lieu"
-                    className="w-full h-10 px-3 rounded-xl border border-border bg-surface text-xs font-medium text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                  >
-                    <option value="">Tous les lieux</option>
-                    {locations.map((item) => (
-                      <option key={item} value={item}>{item}</option>
-                    ))}
-                  </select>
-                </div>
-              ) : null}
-
+          <CatalogueFilterBar
+            search={q}
+            onSearchChange={setQ}
+            searchPlaceholder="Titre, lieu, acheteur…"
+            searchLabel="Rechercher un billet"
+            view={viewMode}
+            hideViewToggle
+            hideShare
+            actions={
               <ViewModeToggle
                 storageKey="em-view-tickets"
                 value={viewMode}
@@ -374,8 +333,49 @@ export default function TicketsPage() {
                 columns={columns}
                 onColumnsChange={setGridColumns}
               />
-            </div>
-          </div>
+            }
+            chips={filterChips}
+            onRemoveChip={(id) => {
+              if (id === 'when') setWhen('all');
+              if (id === 'entry') setEntry('all');
+              if (id === 'location') setLocation('');
+            }}
+            onClearChips={() => {
+              setQ('');
+              setWhen('all');
+              setEntry('all');
+              setLocation('');
+            }}
+            resultLabel={`${filtered.length} billet${filtered.length > 1 ? 's' : ''}${filtered.length !== tickets.length ? ` / ${tickets.length}` : ''}`}
+            modalTitle="Filtrer les billets"
+            filters={
+              <>
+                <CatalogueFilterField label="Date">
+                  <CatalogueChoicePills
+                    options={WHEN_OPTIONS}
+                    value={when}
+                    onChange={(id) => setWhen((id as WhenFilter) || 'all')}
+                  />
+                </CatalogueFilterField>
+                <CatalogueFilterField label="Entrée">
+                  <CatalogueChoicePills
+                    options={ENTRY_OPTIONS}
+                    value={entry}
+                    onChange={(id) => setEntry((id as EntryFilter) || 'all')}
+                  />
+                </CatalogueFilterField>
+                {locations.length > 1 ? (
+                  <CatalogueFilterField label="Lieu">
+                    <CatalogueChoicePills
+                      options={[{ id: 'all', label: 'Tous les lieux' }, ...locations.map((item) => ({ id: item, label: item }))]}
+                      value={location || 'all'}
+                      onChange={(id) => setLocation(id === 'all' ? '' : id)}
+                    />
+                  </CatalogueFilterField>
+                ) : null}
+              </>
+            }
+          />
 
           {filtered.length === 0 ? (
             <EmptyState illustration="search"
@@ -413,7 +413,6 @@ export default function TicketsPage() {
                           ) : null}
                         </span>
                       }
-                      description={`${ticket.quantity} place${ticket.quantity > 1 ? 's' : ''}${ticket.amountFc > 0 ? ` · ${formatFc(ticket.amountFc)}` : ' · entrée libre'}`}
                       value={ticket.amountFc > 0 ? formatFc(ticket.amountFc) : 'Libre'}
                       valueMeta={`${ticket.quantity} place${ticket.quantity > 1 ? 's' : ''}`}
                       status={

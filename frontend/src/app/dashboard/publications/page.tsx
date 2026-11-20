@@ -413,7 +413,7 @@ function PublicationsGrid({
           description="Dès que des salles ou prestations partagent une actualité, elle apparaîtra ici."
           action={
             canPublish ? (
-              <Button onClick={onCreate} leftIcon={<Plus className="w-4 h-4" />}>
+              <Button variant="secondary" onClick={onCreate} leftIcon={<Plus className="w-4 h-4" />}>
                 Créer une réalisation
               </Button>
             ) : undefined
@@ -775,12 +775,12 @@ function MyPublicationsPanel({
         }
         action={
           hasTargets ? (
-            <Button onClick={onCreate} leftIcon={<Plus className="w-4 h-4" />}>
+            <Button variant="secondary" onClick={onCreate} leftIcon={<Plus className="w-4 h-4" />}>
               Créer ma première réalisation
             </Button>
           ) : (
             <div className="flex flex-wrap gap-2 justify-center">
-              <Button href="/dashboard/rooms" size="sm">Mes salles</Button>
+              <Button href="/dashboard/rooms" size="sm" variant="secondary">Mes salles</Button>
               <Button href="/dashboard/marketplace" size="sm" variant="secondary">Mes offres</Button>
             </div>
           )

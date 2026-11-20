@@ -4,7 +4,7 @@ import { ChannelText } from '@/components/ChannelText';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Check, ShieldCheck, ArrowRight } from '@/components/icons';
+import { Check, ShieldCheck, ArrowRight, ChevronDown, FileText } from '@/components/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Alert,
@@ -13,6 +13,7 @@ import {
   StatusPill,
   Modal,
 } from '@/components/ui';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel from '@/components/QuotaUsagePanel';
@@ -176,7 +177,7 @@ const BILLING_TIERS: Array<{ label: string; ids: PlanId[] }> = [
 ];
 
 function BillingPageInner() {
-  const { tenant } = useAuth();
+  const { tenant, access } = useAuth();
   const { site } = usePlatformSite();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -189,6 +190,10 @@ function BillingPageInner() {
   const [successMsg, setSuccessMsg] = useState('');
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [invoices, setInvoices] = useState<PlatformInvoiceItem[]>([]);
+  const [invoicesError, setInvoicesError] = useState('');
+  /** Sélecteur Forfait / Factures : seulement si les deux entrées étaient accessibles. */
+  const showViewTabs = Boolean(access?.canViewBilling && access?.canViewInvoices);
+  const view: 'plan' | 'invoices' = showViewTabs && searchParams.get('tab') === 'invoices' ? 'invoices' : 'plan';
   /** Grille des forfaits : panneau latéral ouvert depuis « Changer de forfait » (ou ?tab=plans / ?plan=). */
   const [plansOpen, setPlansOpen] = useState(
     () => searchParams.get('tab') === 'plans' || Boolean(searchParams.get('plan')),
@@ -225,12 +230,16 @@ function BillingPageInner() {
   } | null>(null);
 
   const loadBillingStatus = async () => {
+    setInvoicesError('');
     try {
       const [billingData, plansData, requestsData, invoicesData] = await Promise.all([
         api.get('/billing/status'),
         api.get('/subscriptions/plans').catch(() => null as PlansCatalogResponse | null),
         api.get('/subscriptions/my-requests').catch(() => []),
-        api.get('/billing/invoices').catch(() => ({ invoices: [] })),
+        api.get('/billing/invoices').catch((err: unknown) => {
+          setInvoicesError(err instanceof Error && err.message ? err.message : 'Impossible de charger les factures.');
+          return { invoices: [] };
+        }),
       ]);
       setBilling(billingData);
       const catalog = (plansData || billingData.plans || null) as PlansCatalogResponse | null;
@@ -382,8 +391,22 @@ function BillingPageInner() {
     const params = new URLSearchParams(searchParams.toString());
     if (open) params.set('tab', 'plans');
     else {
-      params.delete('tab');
+      if (params.get('tab') !== 'invoices') params.delete('tab');
       params.delete('plan');
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/dashboard/billing?${qs}` : '/dashboard/billing', { scroll: false });
+  };
+
+  const selectView = (next: 'plan' | 'invoices') => {
+    if (next === view) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === 'invoices') {
+      setPlansOpen(false);
+      didAutoOpen.current = true;
+      params.set('tab', 'invoices');
+    } else {
+      params.delete('tab');
     }
     const qs = params.toString();
     router.replace(qs ? `/dashboard/billing?${qs}` : '/dashboard/billing', { scroll: false });
@@ -557,9 +580,47 @@ function BillingPageInner() {
 
   return (
     <div className="space-y-4 w-full">
+      {showViewTabs && (
+        <div role="tablist" aria-label="Forfait et factures" className={cn('flex w-fit max-w-full items-center overflow-x-auto [scrollbar-width:none]', SEGMENTED_TRACK)}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'plan'}
+            onClick={() => selectView('plan')}
+            className={segmentedItem(view === 'plan', 'whitespace-nowrap shrink-0')}
+          >
+            Forfait
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'invoices'}
+            data-tour="nav-invoices"
+            onClick={() => selectView('invoices')}
+            className={segmentedItem(view === 'invoices', 'whitespace-nowrap shrink-0')}
+          >
+            Factures
+          </button>
+        </div>
+      )}
 
       {error && <Alert variant="error">{error}</Alert>}
       {successMsg && <Alert variant="success">{successMsg}</Alert>}
+
+      {view === 'invoices' && (
+        <>
+          {invoicesError && <Alert variant="error">{invoicesError}</Alert>}
+          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 shadow-[var(--shadow-soft)]">
+            <h2 className="font-bold flex items-center gap-2 mb-4 text-foreground">
+              <FileText className="w-5 h-5 text-primary" />
+              Mes factures ({invoices.length})
+            </h2>
+            <InvoiceListPanel invoices={invoices} />
+          </div>
+        </>
+      )}
+
+      {view === 'plan' && (<>
       {discountCampaign?.enabled && discountCampaign.periodActive && formatCampaignWindow(discountCampaign.periodStart, discountCampaign.periodEnd) && (
         <Alert variant="info">
           Campagne de rabais ouverte {formatCampaignWindow(discountCampaign.periodStart, discountCampaign.periodEnd)}. Demandez un tarif négocié sur un forfait, puis payez le montant validé.
@@ -615,15 +676,21 @@ function BillingPageInner() {
             }}
           />
           {billing.capabilities && (
-            <p className="pt-4 border-t border-border text-xs text-muted leading-relaxed">
-              {[
-                ...capabilityLabels(commercialPercent(site))
-                  .filter(({ key }) => billing.capabilities![key] === true)
-                  .map(({ label }) => label),
-                `Éditeur salles ${(editorLevelLabel(billing.capabilities.roomEditorLevel) ?? billing.capabilities.roomEditorLevel)?.toLowerCase()}`,
-                `Support ${(supportLevelLabel(billing.capabilities.supportLevel) ?? billing.capabilities.supportLevel)?.toLowerCase()}`,
-              ].join(' · ')}
-            </p>
+            <details className="group pt-2 border-t border-border">
+              <summary className="min-h-11 flex items-center justify-between gap-2 cursor-pointer list-none text-sm font-medium text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-[var(--radius-button)] [&::-webkit-details-marker]:hidden">
+                Inclus dans le forfait
+                <ChevronDown className="w-4 h-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+              </summary>
+              <p className="pb-1 text-xs text-muted leading-relaxed">
+                {[
+                  ...capabilityLabels(commercialPercent(site))
+                    .filter(({ key }) => billing.capabilities![key] === true)
+                    .map(({ label }) => label),
+                  `Éditeur salles ${(editorLevelLabel(billing.capabilities.roomEditorLevel) ?? billing.capabilities.roomEditorLevel)?.toLowerCase()}`,
+                  `Support ${(supportLevelLabel(billing.capabilities.supportLevel) ?? billing.capabilities.supportLevel)?.toLowerCase()}`,
+                ].join(' · ')}
+              </p>
+            </details>
           )}
         </section>
       )}
@@ -631,18 +698,6 @@ function BillingPageInner() {
       {activeRequests.length > 0 && (
         <section className="bg-surface rounded-[var(--radius-card)] border border-border px-5 md:px-6 py-3" aria-label="Demandes en cours">
           <ul>{activeRequests.map(renderRequestRow)}</ul>
-        </section>
-      )}
-
-      {invoices.length > 0 && (
-        <section className="bg-surface rounded-[var(--radius-card)] border border-border p-5 md:p-6 space-y-3" aria-labelledby="billing-invoices">
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="billing-invoices" className="text-sm font-semibold text-foreground">Factures</h2>
-            <Button href="/dashboard/invoices" size="sm" variant="ghost">
-              Tout voir
-            </Button>
-          </div>
-          <InvoiceListPanel invoices={invoices.slice(0, 3)} showFilters={false} />
         </section>
       )}
 
@@ -656,9 +711,10 @@ function BillingPageInner() {
           <ul className="pb-3">{pastRequests.map(renderRequestRow)}</ul>
         </details>
       )}
+      </>)}
 
       <Modal
-        open={plansOpen}
+        open={plansOpen && view === 'plan'}
         onClose={() => setPlansPanel(false)}
         placement="right"
         title={isClientAccount ? 'Choisir un forfait' : 'Changer de forfait'}

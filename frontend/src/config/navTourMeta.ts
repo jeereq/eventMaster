@@ -187,12 +187,6 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
       'Modération des fiches salles, prestataires et matériel & équipements, devis, réservations, et file des commissions vendeur {commissionPercent} %.',
     route: '/dashboard/admin/catalogue',
   },
-  'nav-guide': {
-    title: 'Guide utilisateur',
-    description:
-      'Visite guidée interactive de votre espace : relancez le tour des onglets à tout moment.',
-    route: '/dashboard',
-  },
   'nav-profile': {
     title: 'Mon compte',
     description:
@@ -279,7 +273,6 @@ export const FINISH_STEP = {
   id: 'finish',
   title: 'Visite terminée',
   description:
-    'Vous avez parcouru tous les onglets disponibles pour votre profil. Relancez cette visite à tout moment depuis Guide utilisateur.',
+    'Vous avez parcouru tous les onglets disponibles pour votre profil. Relancez cette visite à tout moment depuis Mon compte.',
   route: '/dashboard',
-  target: 'nav-guide',
 } as const;

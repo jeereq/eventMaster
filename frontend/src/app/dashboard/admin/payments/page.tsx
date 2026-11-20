@@ -2,10 +2,11 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CreditCard, Eye, Heart, Loader2, Wallet } from '@/components/icons';
+import { ChevronDown, CreditCard, Heart, Loader2, Wallet } from '@/components/icons';
 import AdminFinanceDetailsModal, { type AdminPaymentDetail } from '@/components/admin/AdminFinanceDetailsModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import AdminMoneyNav from '@/components/admin/AdminMoneyNav';
 import {
   Alert,
   EmptyState,
@@ -342,6 +343,7 @@ export default function AdminPaymentsPage() {
 
   return (
     <div className="space-y-6 w-full">
+      <AdminMoneyNav active="payments" />
 
       {error && <Alert variant="error">{error}</Alert>}
 
@@ -370,11 +372,14 @@ export default function AdminPaymentsPage() {
         </div>
       </div>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-primary" />
-          Récapitulatif par source
-        </h2>
+      <details className="group space-y-3">
+        <summary className="min-h-11 flex items-center justify-between gap-2 cursor-pointer list-none text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-[var(--radius-button)] [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-primary" />
+            Récapitulatif par source
+          </span>
+          <ChevronDown className="w-4 h-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
+        </summary>
         {!overview?.bySource.length ? (
           <EmptyState illustration="payments"
             icon={<CreditCard className="w-5 h-5" />}
@@ -413,7 +418,7 @@ export default function AdminPaymentsPage() {
             </table>
           </div>
         )}
-      </section>
+      </details>
 
       <CatalogueFilterBar
         search={qInput}
@@ -614,10 +619,6 @@ export default function AdminPaymentsPage() {
                     .filter(Boolean)
                     .join(' · ')}
                 </p>
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary min-h-11">
-                  <Eye className="w-3.5 h-3.5" aria-hidden />
-                  Voir le détail
-                </span>
               </button>
             </li>
           ))}

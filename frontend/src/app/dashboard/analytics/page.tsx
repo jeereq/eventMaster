@@ -14,6 +14,7 @@ import WorkspaceStatsOverview, { type WorkspaceStats } from '@/components/Worksp
 import VendorStatsView from '@/components/dashboard/VendorStatsView';
 import { getWorkspaceModules } from '@/lib/planAccess';
 import { cn } from '@/lib/cn';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 // skeletons imported below
 import {
  extractRsvpFieldsFromTemplateContent,
@@ -297,7 +298,6 @@ function EventAnalyticsView() {
  <span className="text-xs font-bold text-muted block">Invités Totaux</span>
  <div className="flex items-baseline justify-between mt-3">
  <span className="text-3xl font-black text-foreground dark:text-foreground">{totalGuests}</span>
- <span className="text-xs bg-surface-muted dark:bg-surface-muted text-muted dark:text-muted px-2 py-0.5 rounded-md font-bold">100%</span>
  </div>
  </div>
 
@@ -499,20 +499,19 @@ function EventAnalyticsView() {
  {/* Recent Responses & Export Actions */}
  <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 shadow-xs space-y-6">
  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border-subtle dark:border-border pb-4">
- <div>
  <h3 className="text-lg font-bold text-foreground dark:text-foreground">Liste des Réponses & Préférences</h3>
- <p className="text-xs text-muted dark:text-muted mt-1">Exportez ou parcourez les réponses individuelles de vos invités.</p>
- </div>
 
  {guests.length > 0 && (
  canExportReports ? (
- <button
+ <Button
+ type="button"
+ size="sm"
+ variant="secondary"
  onClick={exportToCSV}
- className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-xs transition shadow-md cursor-pointer"
+ leftIcon={<Download className="w-4 h-4" />}
  >
- <Download className="w-4 h-4" />
  Exporter en CSV
- </button>
+ </Button>
  ) : (
  <div className="text-right space-y-1">
  <button
@@ -625,7 +624,7 @@ export default function AnalyticsPage() {
 
  return (
  <div className="space-y-6 w-full">
- <div role="tablist" aria-label="Statistiques" className="flex gap-1.5">
+ <div role="tablist" aria-label="Statistiques" className={cn('inline-flex', SEGMENTED_TRACK)}>
  {([
  ['vendor', 'Ventes marketplace'],
  ['events', 'Mes événements'],
@@ -636,10 +635,7 @@ export default function AnalyticsPage() {
  role="tab"
  aria-selected={view === id}
  onClick={() => setView(id)}
- className={cn(
- 'min-h-11 rounded-full border px-3 py-2 text-xs font-semibold touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
- view === id ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted hover:text-foreground',
- )}
+ className={segmentedItem(view === id, 'text-xs')}
  >
  {label}
  </button>

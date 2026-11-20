@@ -1,4 +1,4 @@
-import type { OrgAccess, PlanCapabilities, PlanQuotaInfo } from '@/context/AuthContext';
+import type { CommercialGrantedPermissions, OrgAccess, PlanCapabilities, PlanQuotaInfo } from '@/context/AuthContext';
 import type { UserGuideId } from '@/config/userGuides';
 import { FINISH_STEP, NAV_TOUR_META, WELCOME_STEP } from '@/config/navTourMeta';
 import type { ProductTourStep } from '@/config/productTours';
@@ -6,6 +6,7 @@ import { getWorkspaceModules, type WorkspaceModules } from '@/lib/planAccess';
 import { LANDING_PLANS } from '@/config/landingPricing';
 import { planDisplayName } from '@/lib/planCatalogDb';
 import { interpolateRates } from '@/lib/platformRates';
+import { buildDashboardNav, isVenuePlan, navTourTabs, type NavTourTab } from '@/lib/dashboardNav';
 
 function tabStep(tourId: string, routeOverride?: string): ProductTourStep | null {
   const meta = NAV_TOUR_META[tourId];
@@ -30,7 +31,7 @@ function spaceCopy(planName?: string | null): { title: string; welcome: string; 
   return {
     title: `Visite de votre espace ${space}`,
     welcome: `Cette visite parcourt les onglets de votre espace ${space} et explique leur rôle. Cliquez sur Suivant pour avancer — vous pourrez relancer la visite quand vous voulez.`,
-    finish: `Vous avez parcouru les onglets de votre espace ${space}. Relancez cette visite à tout moment depuis Guide utilisateur.`,
+    finish: `Vous avez parcouru les onglets de votre espace ${space}. Relancez cette visite à tout moment depuis Mon compte.`,
   };
 }
 
@@ -56,37 +57,54 @@ function buildSteps(
     title: FINISH_STEP.title,
     description: copy?.finish ?? FINISH_STEP.description,
     route: FINISH_STEP.route,
-    target: FINISH_STEP.target,
   });
 
   return steps;
 }
 
-/** Même liste d’onglets que dashboard/layout.tsx (workspace + facturation). */
-export function buildOrgNavTourIds(
-  workspace?: WorkspaceModules | null,
+function pathOf(href: string): string {
+  const q = href.indexOf('?');
+  return q >= 0 ? href.slice(0, q) : href;
+}
+
+/**
+ * Adresse de l’étape : celle de la fiche d’aide quand elle mène au même écran que l’entrée,
+ * sinon celle de l’entrée (ex. « Modèles » : /dashboard?tab=templates côté Super Admin,
+ * /dashboard/templates côté organisation). Le guide ne change pas de page.
+ */
+function tabRoute(tab: NavTourTab): string | undefined {
+  const metaRoute = NAV_TOUR_META[tab.tourId]?.route;
+  if (metaRoute && pathOf(metaRoute) === pathOf(tab.href)) return undefined;
+  return tab.href;
+}
+
+function guideRole(guideId: UserGuideId): string {
+  if (guideId === 'super_admin') return 'SUPER_ADMIN';
+  if (guideId === 'commercial_platform') return 'COMMERCIAL';
+  return 'USER';
+}
+
+/** Onglets de la visite : même construction et même ordre que le menu de dashboard/layout.tsx. */
+export function buildNavTourTabs(
+  guideId: UserGuideId,
   access?: OrgAccess | null,
+  opts?: NavTourOptions,
 ): Array<{ tourId: string; route?: string }> {
-  const tabs: Array<{ tourId: string; route?: string }> = [{ tourId: 'nav-dashboard' }];
-  if (!workspace || workspace.showEvents) tabs.push({ tourId: 'nav-events' });
-  if (workspace?.showRooms) tabs.push({ tourId: 'nav-rooms' });
-  if (workspace?.showBrowseCatalogue) tabs.push({ tourId: 'nav-catalogue' });
-  if (!workspace || workspace.showEvents || workspace?.showBrowseCatalogue) {
-    tabs.push({ tourId: 'nav-quotes' });
-    tabs.push({ tourId: 'nav-reservations' });
-  }
-  if (workspace?.showTeam) tabs.push({ tourId: 'nav-team' });
-  if (workspace?.showMarketplace) tabs.push({ tourId: 'nav-marketplace' });
-  if (workspace?.showProtocol) {
-    tabs.push({ tourId: 'nav-protocol' });
-  }
-  if (workspace?.showTemplates) tabs.push({ tourId: 'nav-templates', route: '/dashboard/templates' });
-  if (workspace?.showAnalytics) tabs.push({ tourId: 'nav-analytics-org' });
-  // Paramètres, en bas du menu : forfait, factures, puis guide et compte.
-  if (access?.canViewBilling) tabs.push({ tourId: 'nav-billing' });
-  if (access?.canViewInvoices) tabs.push({ tourId: 'nav-invoices', route: '/dashboard/invoices' });
-  tabs.push({ tourId: 'nav-guide' }, { tourId: 'nav-profile' });
-  return tabs;
+  const nav = opts?.nav;
+  const workspace = opts?.workspace ?? getWorkspaceModules({ accountKind: nav?.accountKind, access });
+  const sections = buildDashboardNav({
+    role: guideRole(guideId),
+    access,
+    workspace,
+    accountKind: nav?.accountKind,
+    isClientAccount: nav?.isClientAccount ?? (guideId === 'client' || access?.level === 'client'),
+    tenantPlan: nav?.tenantPlan,
+    audience: nav?.audience,
+    venuePlan: nav?.venuePlan,
+    commercialPermissions: nav?.commercialPermissions,
+    allStudiosBlocked: nav?.allStudiosBlocked,
+  });
+  return navTourTabs(sections).map((tab) => ({ tourId: tab.tourId, route: tabRoute(tab) }));
 }
 
 export function getTourSpaceLabel(opts: {
@@ -105,9 +123,21 @@ export function getTourSpaceLabel(opts: {
   return 'organisation';
 }
 
+/** Contexte du compte nécessaire pour reconstruire le menu (voir buildDashboardNav). */
+export interface NavTourMenuContext {
+  accountKind?: string | null;
+  isClientAccount?: boolean;
+  tenantPlan?: string | null;
+  audience?: string | null;
+  venuePlan?: boolean;
+  commercialPermissions?: CommercialGrantedPermissions | null;
+  allStudiosBlocked?: boolean;
+}
+
 export interface NavTourOptions {
   workspace?: WorkspaceModules | null;
   planName?: string | null;
+  nav?: NavTourMenuContext;
   /** `first-login` : parcours court après OTP. `nav` (défaut) : tous les onglets. */
   variant?: 'nav' | 'first-login';
 }
@@ -124,13 +154,26 @@ export function buildNavTourOptions(input: {
   const ms365Name = LANDING_PLANS.find((p) => p.id === input.planId)?.ms365Name;
   const landingName =
     input.planName || (ms365Name ? planDisplayName(input.planId, null, ms365Name) : null);
+  const workspace = getWorkspaceModules({
+    accountKind: input.accountKind,
+    access: input.access,
+    planQuota: input.planQuota,
+    planFeatures: input.planFeatures,
+  });
   return {
-    workspace: getWorkspaceModules({
+    workspace,
+    nav: {
       accountKind: input.accountKind,
-      access: input.access,
-      planQuota: input.planQuota,
-      planFeatures: input.planFeatures,
-    }),
+      isClientAccount: input.accountKind === 'CLIENT' || input.access?.level === 'client',
+      tenantPlan: input.planId,
+      audience: input.planFeatures?.audience,
+      venuePlan: isVenuePlan({
+        audience: input.planFeatures?.audience,
+        maxRooms: input.planQuota?.limits.maxRooms,
+        quotaLoaded: Boolean(input.planQuota),
+        workspace,
+      }),
+    },
     planName: getTourSpaceLabel({
       planId: input.planId,
       audience: input.planFeatures?.audience,
@@ -152,9 +195,8 @@ function firstLoginFinish(home: string, nextHint: string): ProductTourStep {
   return {
     id: 'first-finish',
     title: 'Vous êtes lancé',
-    description: `${nextHint} Relancez la visite complète à tout moment depuis Guide utilisateur.`,
+    description: `${nextHint} Relancez la visite complète à tout moment depuis Mon compte.`,
     route: home,
-    target: 'nav-guide',
   };
 }
 
@@ -262,91 +304,18 @@ export function buildFirstLoginTour(
   }
 }
 
-/** Ordre des onglets par profil — aligné sur dashboard/layout.tsx */
+/** Profils dont la visite garde l’accueil générique (pas de nom de forfait). */
+const GENERIC_COPY_GUIDES: UserGuideId[] = ['super_admin', 'commercial_platform', 'org_commercial', 'org_protocol', 'client'];
+
+/** Visite complète : un arrêt par entrée du menu, dans l’ordre du menu du profil, puis le profil. */
 export function buildNavProductTour(
   guideId: UserGuideId,
   access?: OrgAccess | null,
   opts?: NavTourOptions,
 ): ProductTourStep[] {
   if (guideId === 'guest') return [];
-  const copy = spaceCopy(opts?.planName);
-
-  switch (guideId) {
-    case 'super_admin':
-      return buildSteps([
-        { tourId: 'nav-overview' },
-        { tourId: 'nav-tenants' },
-        { tourId: 'nav-users' },
-        { tourId: 'nav-events-admin' },
-        { tourId: 'nav-guests' },
-        { tourId: 'nav-templates' },
-        { tourId: 'nav-message-templates' },
-        { tourId: 'nav-catalog-admin' },
-        { tourId: 'nav-analytics' },
-        { tourId: 'nav-subscription-requests' },
-        { tourId: 'nav-subscription-plans' },
-        { tourId: 'nav-invoices' },
-        { tourId: 'nav-payouts' },
-        { tourId: 'nav-ai-tokens' },
-        { tourId: 'nav-audit' },
-        { tourId: 'nav-settings' },
-        { tourId: 'nav-guide' },
-        { tourId: 'nav-profile' },
-      ]);
-
-    case 'commercial_platform':
-      return buildSteps([
-        { tourId: 'nav-tenants' },
-        { tourId: 'nav-subscription-requests' },
-        { tourId: 'nav-invoices' },
-        { tourId: 'nav-commercial' },
-        { tourId: 'nav-guide' },
-        { tourId: 'nav-profile' },
-      ]);
-
-    case 'org_commercial':
-      return buildSteps([
-        { tourId: 'nav-org-commercial' },
-        { tourId: 'nav-guide' },
-        { tourId: 'nav-profile' },
-      ]);
-
-    case 'org_protocol':
-      return buildSteps([
-        { tourId: 'nav-dashboard' },
-        { tourId: 'nav-protocol' },
-        { tourId: 'nav-catalogue' },
-        { tourId: 'nav-publications' },
-        { tourId: 'nav-quotes' },
-        { tourId: 'nav-reservations' },
-        { tourId: 'nav-guide' },
-        { tourId: 'nav-profile' },
-      ]);
-
-    case 'staff_scope':
-    case 'owner':
-    case 'vendor':
-    case 'org_manager':
-      return buildSteps(buildOrgNavTourIds(opts?.workspace, access), copy);
-
-    case 'client':
-      return buildSteps([
-        { tourId: 'nav-client-dashboard' },
-        { tourId: 'nav-catalogue' },
-        { tourId: 'nav-simulator' },
-        { tourId: 'nav-agenda' },
-        { tourId: 'nav-tickets' },
-        { tourId: 'nav-publications' },
-        { tourId: 'nav-quotes' },
-        { tourId: 'nav-reservations' },
-        { tourId: 'nav-favorites' },
-        { tourId: 'nav-guide' },
-        { tourId: 'nav-profile' },
-      ]);
-
-    default:
-      return buildSteps(buildOrgNavTourIds(opts?.workspace, access), copy);
-  }
+  const copy = GENERIC_COPY_GUIDES.includes(guideId) ? undefined : spaceCopy(opts?.planName);
+  return buildSteps(buildNavTourTabs(guideId, access, opts), copy);
 }
 
 export function getProductTour(

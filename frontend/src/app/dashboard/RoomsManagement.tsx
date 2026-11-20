@@ -11,11 +11,11 @@ import { enabledMarketplaceCities } from '@/lib/platformCities';
 import {
   Building2, Plus, Trash2, Users, UserPlus, Check, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
-  Globe, GlobeLock, Lock, Eye, AlertTriangle, AlertCircle, ExternalLink, Accessibility, Maximize2, Armchair, X,
+  Globe, GlobeLock, Lock, Eye, AlertTriangle, AlertCircle, ExternalLink, Accessibility, Maximize2, Armchair, X, MoreHorizontal,
 } from '@/components/icons';
 import {
-  ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
-  Button, Modal, EmptyState, Alert, Input, Pagination, usePaginateItems, usePageSize,
+  ProjectCard, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
+  Button, Modal, EmptyState, Alert, Input, Pagination, usePaginateItems, usePageSize, OverflowMenu,
 } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import { ROOM_TYPE_FILTER_OPTIONS } from '@/lib/catalogueEntityFilters';
@@ -2213,7 +2213,7 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
                   ) : (
                     <LockedSectionCard
                       title="Invités simulés (avatars)"
-                      description="Remplissez la salle d’invités en 3D, habillés selon le thème de la soirée. Cette option n’est pas incluse dans votre forfait actuel."
+                      description="Non incluse dans votre forfait actuel."
                       planLabel="Business"
                     />
                   )}
@@ -2650,49 +2650,28 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
             const isList = roomsViewMode === 'list';
 
             const secondaryActions = canManage ? (
-              <>
-                {canCatalogPublish && (
-                  <button
-                    type="button"
-                    onClick={() => openListing(room)}
-                    className={iconActionClass}
-                    aria-label={isPublished ? `Fiche marketplace de ${room.name}` : `Publier ${room.name}`}
-                    title={isPublished ? 'Fiche marketplace' : 'Publier cette salle'}
-                  >
-                    {isPublished ? <Globe className="w-4 h-4 text-primary" aria-hidden /> : <GlobeLock className="w-4 h-4" aria-hidden />}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => openStaffManager(room)}
-                  className={iconActionClass}
-                  aria-label={`Gérer le staff de ${room.name}`}
-                  title="Gérer le staff"
-                >
-                  <UserPlus className="w-4 h-4" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRoomToDelete(room)}
-                  className={cn(iconActionClass, 'hover:text-danger hover:bg-danger/10')}
-                  aria-label={`Supprimer ${room.name}`}
-                  title="Supprimer la salle"
-                >
-                  <Trash2 className="w-4 h-4" aria-hidden />
-                </button>
-              </>
+              <OverflowMenu
+                align="right"
+                triggerLabel={`Autres actions pour ${room.name}`}
+                triggerClassName={iconActionClass}
+                trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+                items={[
+                  ...(canCatalogPublish
+                    ? [{
+                        id: 'listing',
+                        label: isPublished ? 'Fiche marketplace' : 'Publier',
+                        icon: isPublished ? Globe : GlobeLock,
+                        onSelect: () => openListing(room),
+                      }]
+                    : []),
+                  { id: 'staff', label: 'Staff', icon: UserPlus, onSelect: () => openStaffManager(room) },
+                  { id: 'delete', label: 'Supprimer', icon: Trash2, danger: true, onSelect: () => setRoomToDelete(room) },
+                ]}
+              />
             ) : null;
 
             const actions = isList ? (
               <>
-                <button
-                  type="button"
-                  onClick={() => setViewingRoom(room)}
-                  className="inline-flex items-center min-h-11 px-1"
-                  aria-label={`Voir les détails de ${room.name}`}
-                >
-                  <ListRowAction>Détails</ListRowAction>
-                </button>
                 {canManage && (
                   <Button
                     type="button"
@@ -2713,6 +2692,7 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
                   <Button
                     type="button"
                     size="sm"
+                    variant="secondary"
                     className="flex-1"
                     onClick={() => openEditLayout(room)}
                     leftIcon={<Edit3 className="w-4 h-4" />}
@@ -2790,10 +2770,7 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
                       ) : null}
                     </div>
 
-                    <div
-                      className="flex items-center justify-between gap-2 pt-2 border-t border-border/60"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60">
                       <div className="min-w-0 flex items-center gap-2">
                         {room.staff.length > 0 ? (
                           <div className="flex -space-x-1.5 shrink-0" aria-hidden>
@@ -2817,15 +2794,6 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
                               : `${room.staff.length} membres du staff`}
                         </p>
                       </div>
-                      {canManage && (
-                        <button
-                          type="button"
-                          onClick={() => openStaffManager(room)}
-                          className="shrink-0 inline-flex items-center min-h-11 px-2 text-xs font-semibold text-primary rounded-[var(--radius-button)] hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                        >
-                          {room.staff.length === 0 ? 'Assigner' : 'Gérer'}
-                        </button>
-                      )}
                     </div>
                   </>
                 )}
@@ -3299,7 +3267,7 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
                 {!canCatalogPublish ? (
                   <LockedSectionCard
                     title="Dispositions de la salle"
-                    description="Enregistrez plusieurs agencements (conférence, banquet, cocktail…) et laissez vos visiteurs les parcourir en 3D sur la fiche publique. Cette fonction est liée à la publication sur le catalogue, non incluse dans votre forfait actuel."
+                    description="Liée à la publication sur le catalogue, non incluse dans votre forfait actuel."
                   />
                 ) : editPane === 'layouts' ? (
                   <RoomLayoutsPanel
@@ -3332,7 +3300,7 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
                 ) : (
                   <LockedSectionCard
                     title="Publication sur le catalogue"
-                    description="Rendez votre salle visible des organisateurs : fiche publique, visite 3D, demandes de devis et réservations. Cette fonction n’est pas incluse dans votre forfait actuel."
+                    description="Non incluse dans votre forfait actuel."
                   />
                 )}
               </div>

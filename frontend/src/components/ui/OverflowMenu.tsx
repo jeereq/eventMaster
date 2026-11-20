@@ -32,6 +32,7 @@ export default function OverflowMenu({
   items,
   align = 'right',
   triggerClassName,
+  menuWidth = MENU_WIDTH,
 }: {
   trigger: React.ReactNode;
   /** Nom accessible du bouton (obligatoire si `trigger` n'est qu'une icône). */
@@ -39,6 +40,8 @@ export default function OverflowMenu({
   items: OverflowMenuItem[];
   align?: 'left' | 'right';
   triggerClassName?: string;
+  /** Largeur du panneau en pixels (208 par défaut). */
+  menuWidth?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -55,10 +58,10 @@ export default function OverflowMenu({
       spaceBelow >= menuHeight + GAP + EDGE || rect.top < menuHeight + GAP + EDGE
         ? rect.bottom + GAP
         : rect.top - menuHeight - GAP;
-    const desired = align === 'right' ? rect.right - MENU_WIDTH : rect.left;
-    const left = Math.min(Math.max(EDGE, desired), window.innerWidth - MENU_WIDTH - EDGE);
+    const desired = align === 'right' ? rect.right - menuWidth : rect.left;
+    const left = Math.min(Math.max(EDGE, desired), window.innerWidth - menuWidth - EDGE);
     setPos({ top, left });
-  }, [open, align, items.length]);
+  }, [open, align, items.length, menuWidth]);
 
   useEffect(() => {
     if (!open) return;
@@ -114,7 +117,7 @@ export default function OverflowMenu({
               position: 'fixed',
               top: pos?.top ?? 0,
               left: pos?.left ?? 0,
-              width: MENU_WIDTH,
+              width: menuWidth,
               visibility: pos ? 'visible' : 'hidden',
             }}
             className="z-[90] py-1.5 rounded-2xl border border-border bg-surface shadow-xl animate-fade-in"

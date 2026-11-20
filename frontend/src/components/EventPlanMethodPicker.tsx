@@ -10,19 +10,16 @@ export type EventPlanMethodId = 'manual' | 'ai' | 'final';
 const SIM_METHODS: Array<{
   id: Exclude<EventPlanMethodId, 'final'>;
   label: string;
-  description: string;
   icon: typeof MousePointerClick;
 }> = [
   {
     id: 'manual',
     label: 'Par critères (Direct)',
-    description: 'Calcul selon votre budget, ville et prestataires souhaités.',
     icon: MousePointerClick,
   },
   {
     id: 'ai',
     label: 'Assisté par l’IA',
-    description: 'Composition automatique selon vos envies et contraintes.',
     icon: Wand2,
   },
 ];
@@ -50,9 +47,6 @@ export default function EventPlanMethodPicker({
     <section className="space-y-4" aria-label="Choix de la méthode de simulation">
       <div className="space-y-2">
         <h2 className="text-sm font-bold text-foreground">Composer le pack budget</h2>
-        <p className="text-xs text-muted leading-relaxed max-w-2xl">
-          Choisissez une méthode pour générer vos packs salle, prestataires et équipements.
-        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {SIM_METHODS.map((item) => {
             const Icon = item.icon;
@@ -67,7 +61,7 @@ export default function EventPlanMethodPicker({
                 aria-pressed={selected}
                 onClick={() => onChange(item.id)}
                 className={cn(
-                  'text-left rounded-2xl border p-4 transition touch-manipulation cursor-pointer min-h-[7.5rem] flex flex-col gap-2',
+                  'text-left rounded-2xl border p-4 transition touch-manipulation cursor-pointer flex flex-col gap-2',
                   cardFocus,
                   isItemUpcoming && !selected && 'border-amber-500/30 bg-amber-500/5',
                   selected
@@ -79,7 +73,7 @@ export default function EventPlanMethodPicker({
                   <span className={cn(
                     'w-9 h-9 rounded-xl inline-flex items-center justify-center shrink-0',
                     selected
-                      ? 'bg-primary text-primary-foreground'
+                      ? 'bg-primary/10 text-primary'
                       : isItemUpcoming
                         ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
                         : 'bg-surface-muted text-muted',
@@ -105,26 +99,13 @@ export default function EventPlanMethodPicker({
                     )}
                   </span>
                 </div>
-                <div className="space-y-0.5 min-w-0">
-                  <p className="text-sm font-bold text-foreground">
-                    {item.label}
-                  </p>
-                  <p className="text-xs text-muted leading-relaxed">
-                    {isItemUpcoming
-                      ? 'Fonctionnalité en préparation : composition automatique des formules à venir.'
-                      : item.description}
-                  </p>
-                </div>
+                <p className="text-sm font-bold text-foreground min-w-0">
+                  {item.label}
+                </p>
               </button>
             );
           })}
         </div>
-      </div>
-
-      <div className="flex items-center gap-3" aria-hidden>
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-xs font-semibold text-muted">puis</span>
-        <span className="h-px flex-1 bg-border" />
       </div>
 
       <div className="space-y-2">
@@ -145,7 +126,7 @@ export default function EventPlanMethodPicker({
         >
           <span className={cn(
             'w-9 h-9 rounded-xl inline-flex items-center justify-center shrink-0',
-            value === 'final' ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted',
+            value === 'final' ? 'bg-primary/10 text-primary' : 'bg-surface-muted text-muted',
           )}>
             <ListChecks className="w-4 h-4" aria-hidden />
           </span>
@@ -158,11 +139,11 @@ export default function EventPlanMethodPicker({
                 </span>
               ) : null}
             </span>
-            <span className="block text-xs text-muted leading-relaxed">
-              {simReady || counts.final > 0
-                ? 'Pack budget retenu pour vos devis et réservations.'
-                : 'Lancez d’abord une simulation pour débloquer le pack final.'}
-            </span>
+            {simReady || counts.final > 0 ? null : (
+              <span className="block text-xs text-muted leading-relaxed">
+                Lancez d’abord une simulation pour débloquer le pack final.
+              </span>
+            )}
           </span>
           {value === 'final' ? (
             <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground inline-flex items-center justify-center shrink-0 mt-0.5">

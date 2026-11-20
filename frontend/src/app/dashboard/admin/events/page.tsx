@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Calendar, Eye, Loader2, LogIn, MapPin, Trash2, AlertTriangle, Heart, X
+  Calendar, Loader2, LogIn, MapPin, MoreHorizontal, SlidersHorizontal, Trash2, AlertTriangle, Heart, X
 } from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -13,7 +13,6 @@ import {
   Pagination,
   StatusPill,
   ProjectCard,
-  ListRowAction,
   SkeletonTabContent,
   ViewModeToggle,
   useViewMode,
@@ -21,8 +20,11 @@ import {
   listStackClass,
   Button,
   Modal,
+  ConfirmDialog,
+  OverflowMenu,
 } from '@/components/ui';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
+import { CatalogueChoicePills, CatalogueFilterField } from '@/components/CatalogueFilterBar';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
 import { formatFc } from '@/config/landingPricing';
 import useIsMobile from '@/hooks/useIsMobile';
@@ -83,6 +85,9 @@ export default function AdminEventsPage() {
   const [moderationReason, setModerationReason] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const {
     mode: viewMode,
     setViewMode,
@@ -152,13 +157,18 @@ export default function AdminEventsPage() {
     }
   };
 
-  const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Supprimer l’événement « ${title} » ? Cette action est définitive.`)) return;
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      await api.delete(`/admin/events/${id}`);
+      await api.delete(`/admin/events/${pendingDelete.id}`);
+      setPendingDelete(null);
       await load();
     } catch (err: unknown) {
+      setPendingDelete(null);
       alert(err instanceof Error ? err.message : 'Erreur lors de la suppression.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -194,6 +204,8 @@ export default function AdminEventsPage() {
       </div>
     );
   }
+
+  const advancedCount = [ticketing, donations, gps].filter((v) => v !== 'ALL').length;
 
   const filterClass =
     'bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary min-h-11 shrink-0';
@@ -248,36 +260,21 @@ export default function AdminEventsPage() {
             <option value="public">Public</option>
             <option value="private">Privé</option>
           </select>
-          <select
-            value={ticketing}
-            onChange={(e) => { setTicketing(e.target.value); setPage(1); }}
-            aria-label="Filtrer par billetterie"
-            className={filterClass}
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => setFiltersOpen(true)}
+            leftIcon={<SlidersHorizontal className="w-3.5 h-3.5" />}
+            className="shrink-0 !min-h-11"
           >
-            <option value="ALL">Billetterie</option>
-            <option value="yes">Avec billets</option>
-            <option value="no">Sans billets</option>
-          </select>
-          <select
-            value={donations}
-            onChange={(e) => { setDonations(e.target.value); setPage(1); }}
-            aria-label="Filtrer par collecte de dons solidaires"
-            className={filterClass}
-          >
-            <option value="ALL">Collecte de dons</option>
-            <option value="yes">Avec collecte</option>
-            <option value="no">Sans collecte</option>
-          </select>
-          <select
-            value={gps}
-            onChange={(e) => { setGps(e.target.value); setPage(1); }}
-            aria-label="Filtrer par coordonnées GPS"
-            className={filterClass}
-          >
-            <option value="ALL">GPS</option>
-            <option value="yes">Avec GPS</option>
-            <option value="no">Sans GPS</option>
-          </select>
+            Filtres
+            {advancedCount > 0 ? (
+              <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-surface-muted px-1 text-xs font-semibold tabular-nums">
+                {advancedCount}
+              </span>
+            ) : null}
+          </Button>
           <ViewModeToggle
             storageKey="em-view-admin-events"
             value={viewMode}
@@ -353,7 +350,6 @@ export default function AdminEventsPage() {
                       </p>
                       <p className="text-xs text-muted">{dateLabel}</p>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        {visibilityChip}
                         {ticketsChip}
                         {donationChip}
                         {guestsChip}
@@ -371,64 +367,41 @@ export default function AdminEventsPage() {
                 valueMeta={viewMode === 'list' ? `${e.invitationCount} invitations` : undefined}
                 status={viewMode === 'list' ? guestsChip : undefined}
                 actions={
-                  <>
-                    <button
-                      type="button"
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        setModeration({ id: e.id, title: e.title, isBlocked: (e as any).isBlockedByAdmin });
-                        setModerationReason('');
-                      }}
-                      className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
-                      title={(e as any).isBlockedByAdmin ? "Débloquer l'événement" : "Bloquer l'événement"}
-                      aria-label={(e as any).isBlockedByAdmin ? `Débloquer l'événement ${e.title}` : `Bloquer l'événement ${e.title}`}
-                    >
-                      <AlertTriangle className="w-4 h-4" />
-                    </button>
-                    {viewMode === 'list' ? (
-                      <button
-                        type="button"
-                        onClick={() => setDetails(e)}
-                        className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
-                        title="Voir détails"
-                        aria-label={`Voir les détails de l'événement ${e.title}`}
-                      >
-                        <ListRowAction />
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setDetails(e)}
-                        className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
-                        title="Détails"
-                        aria-label={`Voir les détails de l'événement ${e.title}`}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        void openWorkspace(e.tenantId);
-                      }}
-                      disabled={openingId === e.tenantId}
-                      className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition disabled:opacity-50"
-                      title="Ouvrir l’espace"
-                      aria-label={`Ouvrir l'espace organisation de ${e.title}`}
-                    >
-                      {openingId === e.tenantId ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(e.id, e.title)}
-                      className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
-                      title="Supprimer"
-                      aria-label={`Supprimer l'événement ${e.title}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </>
+                  <OverflowMenu
+                    align="right"
+                    triggerLabel={`Autres actions pour ${e.title}`}
+                    triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    trigger={
+                      openingId === e.tenantId
+                        ? <Loader2 className="w-5 h-5 animate-spin" aria-hidden />
+                        : <MoreHorizontal className="w-5 h-5" aria-hidden />
+                    }
+                    items={[
+                      {
+                        id: 'block',
+                        label: isBlocked ? 'Débloquer' : 'Bloquer',
+                        icon: AlertTriangle,
+                        onSelect: () => {
+                          setModeration({ id: e.id, title: e.title, isBlocked: (e as any).isBlockedByAdmin });
+                          setModerationReason('');
+                        },
+                      },
+                      {
+                        id: 'workspace',
+                        label: 'Ouvrir l’espace',
+                        icon: LogIn,
+                        disabled: openingId === e.tenantId,
+                        onSelect: () => void openWorkspace(e.tenantId),
+                      },
+                      {
+                        id: 'delete',
+                        label: 'Supprimer',
+                        icon: Trash2,
+                        danger: true,
+                        onSelect: () => setPendingDelete({ id: e.id, title: e.title }),
+                      },
+                    ]}
+                  />
                 }
               />
             );
@@ -518,6 +491,78 @@ export default function AdminEventsPage() {
           )}
         </label>
       </Modal>
+
+      <Modal
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title="Filtres événements"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setTicketing('ALL');
+                setDonations('ALL');
+                setGps('ALL');
+                setPage(1);
+              }}
+            >
+              Tout effacer
+            </Button>
+            <Button type="button" onClick={() => setFiltersOpen(false)}>
+              Voir les résultats
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          <CatalogueFilterField label="Billetterie">
+            <CatalogueChoicePills
+              options={[
+                { id: 'all', label: 'Tous' },
+                { id: 'yes', label: 'Avec billets' },
+                { id: 'no', label: 'Sans billets' },
+              ]}
+              value={ticketing === 'ALL' ? 'all' : ticketing}
+              onChange={(id) => { setTicketing(id && id !== 'all' ? id : 'ALL'); setPage(1); }}
+            />
+          </CatalogueFilterField>
+          <CatalogueFilterField label="Collecte de dons">
+            <CatalogueChoicePills
+              options={[
+                { id: 'all', label: 'Tous' },
+                { id: 'yes', label: 'Avec collecte' },
+                { id: 'no', label: 'Sans collecte' },
+              ]}
+              value={donations === 'ALL' ? 'all' : donations}
+              onChange={(id) => { setDonations(id && id !== 'all' ? id : 'ALL'); setPage(1); }}
+            />
+          </CatalogueFilterField>
+          <CatalogueFilterField label="GPS">
+            <CatalogueChoicePills
+              options={[
+                { id: 'all', label: 'Tous' },
+                { id: 'yes', label: 'Avec GPS' },
+                { id: 'no', label: 'Sans GPS' },
+              ]}
+              value={gps === 'ALL' ? 'all' : gps}
+              onChange={(id) => { setGps(id && id !== 'all' ? id : 'ALL'); setPage(1); }}
+            />
+          </CatalogueFilterField>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={handleDelete}
+        title="Supprimer l’événement"
+        description={`Supprimer l’événement « ${pendingDelete?.title ?? ''} » ? Cette action est définitive.`}
+        confirmLabel="Supprimer"
+        tone="danger"
+        loading={deleting}
+      />
     </div>
   );
 }

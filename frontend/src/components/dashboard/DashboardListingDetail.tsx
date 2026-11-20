@@ -167,10 +167,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           : (service?.categoryLabel || '')
       }
       title={venue?.headline || service?.title || ''}
-      subtitle={[
-        venue?.orgName || service?.orgName,
-        isBlockedByAdmin ? 'Suspendue' : !isPublic ? 'Brouillon' : null,
-      ].filter(Boolean).join(' · ')}
+      subtitle={venue?.orgName || service?.orgName || ''}
       photos={venue?.photos || service?.photos || []}
       photoIndex={photoIndex}
       onPhotoIndex={setPhotoIndex}

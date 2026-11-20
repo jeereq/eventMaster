@@ -13,7 +13,6 @@ import {
   Users,
   CreditCard,
   Sparkles,
-  Smartphone,
   ExternalLink,
   Eye,
   EyeOff,
@@ -28,6 +27,7 @@ import {
 } from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import AdminMoneyNav from '@/components/admin/AdminMoneyNav';
 import {
   PageHeader,
   Breadcrumbs,
@@ -40,6 +40,7 @@ import {
 } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import type { AdminDonationsReportResponse, EventDonationItem } from '@/lib/donationsReport';
 
 export default function AdminDonationsPage() {
@@ -56,7 +57,7 @@ export default function AdminDonationsPage() {
   const [period, setPeriod] = useState<'all' | '30d' | '90d' | '12m'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewTab, setViewTab] = useState<'overview' | 'events' | 'tenants' | 'transactions'>('overview');
+  const [viewTab, setViewTab] = useState<'overview' | 'events' | 'tenants'>('overview');
 
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -126,6 +127,7 @@ export default function AdminDonationsPage() {
           { label: 'Dons solidaires' },
         ]}
       />
+      <AdminMoneyNav active="donations" />
 
       <PageHeader
         action={
@@ -207,7 +209,6 @@ export default function AdminDonationsPage() {
             <p className="text-xl font-black text-foreground tabular-nums">
               {formatFc(summary.averageDonationFc)}
             </p>
-            <p className="text-xs text-muted">par transaction</p>
           </div>
 
           {/* Don record */}
@@ -219,7 +220,6 @@ export default function AdminDonationsPage() {
             <p className="text-xl font-black text-foreground tabular-nums">
               {formatFc(summary.highestDonationFc)}
             </p>
-            <p className="text-xs text-muted">Record plateforme</p>
           </div>
 
           {/* Événements actifs */}
@@ -231,7 +231,6 @@ export default function AdminDonationsPage() {
             <p className="text-xl font-black text-primary tabular-nums">
               {summary.eventsWithDonationsCount}
             </p>
-            <p className="text-xs text-muted">Campagnes actives</p>
           </div>
 
           {/* Organisations */}
@@ -243,7 +242,6 @@ export default function AdminDonationsPage() {
             <p className="text-xl font-black text-foreground tabular-nums">
               {summary.activeTenantsCount}
             </p>
-            <p className="text-xs text-muted">Collectrices de fonds</p>
           </div>
         </div>
       )}
@@ -251,11 +249,7 @@ export default function AdminDonationsPage() {
       {/* Répartition par canaux opérateurs (Mobile Money & Cartes) */}
       {data?.channels && data.channels.length > 0 && (
         <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 space-y-3.5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-muted flex items-center gap-1.5">
-              <Smartphone className="w-4 h-4 text-primary" />
-              Parts de marché par canal opérateur en RDC
-            </h3>
+          <div className="flex items-center justify-end">
             <span className="text-xs text-muted">
               {data.channels.length} canal{data.channels.length > 1 ? 'aux' : ''} actif{data.channels.length > 1 ? 's' : ''}
             </span>
@@ -269,7 +263,7 @@ export default function AdminDonationsPage() {
                   <span className="font-black text-rose-700 dark:text-rose-300">{ch.percent}%</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-border overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-rose-500 to-rose-600 rounded-full" style={{ width: `${ch.percent}%` }} />
+                  <div className="h-full bg-rose-500 rounded-full" style={{ width: `${ch.percent}%` }} />
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted font-medium">
                   <span className="text-foreground">{formatFc(ch.amountFc)}</span>
@@ -285,12 +279,12 @@ export default function AdminDonationsPage() {
       <div
         role="tablist"
         aria-label="Sections du reporting des dons solidaires"
-        className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] border-b border-border pb-3 shrink-0"
+        className={cn('flex w-fit max-w-full items-center overflow-x-auto [scrollbar-width:none] shrink-0', SEGMENTED_TRACK)}
       >
         {([
-          ['overview', 'Vue générale & Transactions', Heart],
-          ['events', 'Top Événements collecteurs', Calendar],
-          ['tenants', 'Top Organisations', Building2],
+          ['overview', 'Vue générale', Heart],
+          ['events', 'Événements', Calendar],
+          ['tenants', 'Organisations', Building2],
         ] as const).map(([id, label, Icon]) => (
           <button
             key={id}
@@ -298,13 +292,7 @@ export default function AdminDonationsPage() {
             role="tab"
             aria-selected={viewTab === id}
             onClick={() => setViewTab(id)}
-            className={cn(
-              'inline-flex items-center gap-2 px-3.5 py-2 min-h-11 rounded-xl text-xs font-semibold transition touch-manipulation whitespace-nowrap shrink-0',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-              viewTab === id
-                ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'bg-surface text-muted hover:text-foreground border border-border',
-            )}
+            className={segmentedItem(viewTab === id, 'inline-flex items-center gap-2 whitespace-nowrap shrink-0')}
           >
             <Icon className="w-3.5 h-3.5" />
             <span>{label}</span>
@@ -323,7 +311,6 @@ export default function AdminDonationsPage() {
         <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 space-y-4 shadow-2xs">
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-foreground">Classement des événements collecteurs de dons</h3>
-            <p className="text-xs text-muted">Événements ayant récolté des contributions solidaires, classés par montant net collecté.</p>
           </div>
 
           {!data?.topEvents || data.topEvents.length === 0 ? (
@@ -343,12 +330,9 @@ export default function AdminDonationsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {data.topEvents.map((ev, idx) => (
+                  {data.topEvents.map((ev) => (
                     <tr key={ev.eventId} className="hover:bg-surface-muted/50 transition">
                       <td className="py-3.5 pr-4 font-bold text-foreground flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-surface-muted flex items-center justify-center text-xs text-muted shrink-0">
-                          {idx + 1}
-                        </span>
                         <span className="truncate max-w-xs">{ev.eventTitle}</span>
                       </td>
                       <td className="py-3.5 px-4 text-muted truncate max-w-[160px]">{ev.tenantName}</td>
@@ -398,7 +382,6 @@ export default function AdminDonationsPage() {
         <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 space-y-4 shadow-2xs">
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-foreground">Classement des organisations par dons collectés</h3>
-            <p className="text-xs text-muted">Organisations utilisatrices ayant mobilisé le plus de fonds solidaires.</p>
           </div>
 
           {!data?.topTenants || data.topTenants.length === 0 ? (
@@ -416,12 +399,9 @@ export default function AdminDonationsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {data.topTenants.map((t, idx) => (
+                  {data.topTenants.map((t) => (
                     <tr key={t.tenantId} className="hover:bg-surface-muted/50 transition">
                       <td className="py-3.5 pr-4 font-bold text-foreground flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-surface-muted flex items-center justify-center text-xs text-muted shrink-0">
-                          {idx + 1}
-                        </span>
                         <span>{t.tenantName}</span>
                       </td>
                       <td className="py-3.5 px-4 text-muted tabular-nums">{t.eventsCount}</td>
@@ -449,7 +429,7 @@ export default function AdminDonationsPage() {
       )}
 
       {/* Section 3 : Vue générale & Transactions récentes */}
-      {(viewTab === 'overview' || viewTab === 'transactions') && (
+      {viewTab === 'overview' && (
         <div className="space-y-4">
           {/* Barre de filtres des transactions */}
           <div className="rounded-2xl border border-border bg-surface p-4 space-y-3 shadow-2xs">
@@ -495,7 +475,7 @@ export default function AdminDonationsPage() {
                         'px-2.5 min-h-11 rounded-xl text-xs font-semibold border transition touch-manipulation',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                         period === id
-                          ? 'bg-foreground text-background border-foreground'
+                          ? 'bg-surface-muted text-foreground border-foreground/30'
                           : 'border-border bg-surface text-muted hover:text-foreground',
                       )}
                     >
@@ -535,20 +515,6 @@ export default function AdminDonationsPage() {
               <span>
                 {filteredRecentDonations.length} transaction{filteredRecentDonations.length > 1 ? 's' : ''} affichée{filteredRecentDonations.length > 1 ? 's' : ''}
               </span>
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  Payé
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  En attente
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-rose-500" />
-                  Anonyme
-                </span>
-              </div>
             </div>
           </div>
 

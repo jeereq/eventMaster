@@ -71,7 +71,7 @@ export default function DashboardMobileMenuSheet({
         <div className="flex items-center justify-between pb-2 border-b border-border/60 dark:border-border-subtle/30">
           <div className="min-w-0">
             <h3 className="em-dash-title text-lg font-semibold text-foreground truncate">{title}</h3>
-            <p className="text-xs text-muted truncate">{subtitle}</p>
+            {subtitle ? <p className="text-xs text-muted truncate">{subtitle}</p> : null}
           </div>
           <button
             type="button"

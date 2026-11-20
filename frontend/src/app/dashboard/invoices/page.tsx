@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2, FileText } from '@/components/icons';
@@ -9,17 +10,31 @@ import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/Invoice
 
 export default function OrgInvoicesPage() {
   const { user, access, tenant } = useAuth();
+  const router = useRouter();
+  /** Factures vit désormais dans Forfait (?tab=invoices) quand les deux entrées sont accessibles. */
+  const redirectToBilling = Boolean(
+    user?.role === 'USER' && tenant && access?.canViewBilling && access?.canViewInvoices,
+  );
   const [invoices, setInvoices] = useState<PlatformInvoiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!access?.canViewInvoices) return;
+    if (!redirectToBilling) return;
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'invoices');
+    router.replace(`/dashboard/billing?${params.toString()}`);
+  }, [redirectToBilling, router]);
+
+  useEffect(() => {
+    if (!access?.canViewInvoices || redirectToBilling) return;
     api.get('/billing/invoices')
       .then((data) => setInvoices(data.invoices || []))
       .catch((err: any) => setError(err.message || 'Impossible de charger les factures.'))
       .finally(() => setLoading(false));
-  }, [access?.canViewInvoices]);
+  }, [access?.canViewInvoices, redirectToBilling]);
+
+  if (redirectToBilling) return <SkeletonInvoicesView />;
 
   if (user?.role !== 'USER' || !tenant) return null;
 

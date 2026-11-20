@@ -10,6 +10,7 @@ import {
   RefreshCw, X, ChevronLeft, ChevronRight, BookOpen,
   Rss, Search, Download, Globe
 } from '@/components/icons';
+import { ConfirmDialog } from '@/components/ui';
 
 interface Comment {
   id: string;
@@ -105,6 +106,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
   const [expandedImagePrefix, setExpandedImagePrefix] = useState('media');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isBulkDownloading, setIsBulkDownloading] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ kind: 'post' | 'share'; id: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -158,8 +160,6 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
     );
   }, [shares, shareSearch]);
 
-  const totalComments = useMemo(() => posts.reduce((acc, p) => acc + p.comments.length, 0), [posts]);
-  const totalLikes = useMemo(() => posts.reduce((acc, p) => acc + (p.likes?.length || 0), 0), [posts]);
 
   const handleDownloadMedia = async (
     e: React.MouseEvent,
@@ -288,7 +288,6 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
   };
 
   const handleDeletePost = async (postId: string) => {
-    if (!confirm('Voulez-vous vraiment supprimer cette publication ?')) return;
     try {
       await api.delete(`/events/${eventId}/feed/${postId}`);
       setPosts(posts.filter(p => p.id !== postId));
@@ -316,7 +315,6 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
   };
 
   const handleDeleteShare = async (shareId: string) => {
-    if (!confirm('Voulez-vous vraiment supprimer ce message du livre d\'or ?')) return;
     try {
       await api.delete(`/events/${eventId}/shares/${shareId}`);
       setShares(shares.filter((s) => s.id !== shareId));
@@ -393,18 +391,8 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-foreground">
-            Interactions & Fil d&apos;actualité
-          </h2>
-          <p className="text-sm text-muted max-w-xl">
-            Publiez des photos et annonces. Les invités like, commentent et déposent des messages dans le livre d&apos;or.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 self-start">
+      <div className="flex justify-end">
+        <div className="flex flex-wrap items-center gap-2">
           {visibleMediaCount > 0 && (
             <button
               type="button"
@@ -430,29 +418,6 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
             Actualiser
           </button>
         </div>
-      </div>
-
-      {/* Stats strip */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-card)] text-xs text-muted">
-        <span>
-          <span className="font-semibold tabular-nums text-foreground">{posts.length}</span>
-          {' '}publication{posts.length !== 1 ? 's' : ''}
-        </span>
-        <span className="text-border hidden sm:inline" aria-hidden>·</span>
-        <span>
-          <span className="font-semibold tabular-nums text-foreground">{shares.length}</span>
-          {' '}livre d&apos;or
-        </span>
-        <span className="text-border hidden sm:inline" aria-hidden>·</span>
-        <span>
-          <span className="font-semibold tabular-nums text-foreground">{totalComments}</span>
-          {' '}commentaire{totalComments !== 1 ? 's' : ''}
-        </span>
-        <span className="text-border hidden sm:inline" aria-hidden>·</span>
-        <span>
-          <span className="font-semibold tabular-nums text-foreground">{totalLikes}</span>
-          {' '}j&apos;aime
-        </span>
       </div>
 
       {/* Sub-tabs */}
@@ -643,7 +608,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
                         )}
                         <button
                           type="button"
-                          onClick={() => handleDeletePost(post.id)}
+                          onClick={() => setPendingDelete({ kind: 'post', id: post.id })}
                           className="p-2 text-muted hover:text-rose-600 hover:bg-surface-muted rounded-[var(--radius-button)] transition"
                           title="Supprimer"
                         >
@@ -753,7 +718,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
                           type="button"
                           onClick={() => handleCreateComment(post.id)}
                           disabled={commentSubmitting[post.id] || !commentContents[post.id]?.trim()}
-                          className="p-2 bg-primary hover:bg-primary-hover disabled:bg-primary/40 text-white rounded-[var(--radius-button)] transition"
+                          className="p-2 text-primary hover:bg-primary/10 disabled:opacity-40 rounded-[var(--radius-button)] transition"
                         >
                           {commentSubmitting[post.id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                         </button>
@@ -837,7 +802,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
                         )}
                         <button
                           type="button"
-                          onClick={() => handleDeleteShare(share.id)}
+                          onClick={() => setPendingDelete({ kind: 'share', id: share.id })}
                           className="p-1.5 text-muted hover:text-rose-600 hover:bg-surface-muted rounded-[var(--radius-button)] transition flex-shrink-0"
                           title="Supprimer ce message"
                         >
@@ -951,6 +916,26 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => {
+          const target = pendingDelete;
+          setPendingDelete(null);
+          if (!target) return;
+          if (target.kind === 'post') void handleDeletePost(target.id);
+          else void handleDeleteShare(target.id);
+        }}
+        title={pendingDelete?.kind === 'share' ? 'Supprimer le message' : 'Supprimer la publication'}
+        description={
+          pendingDelete?.kind === 'share'
+            ? 'Voulez-vous vraiment supprimer ce message du livre d’or ?'
+            : 'Voulez-vous vraiment supprimer cette publication ?'
+        }
+        confirmLabel="Supprimer"
+        tone="danger"
+      />
     </div>
   );
 }

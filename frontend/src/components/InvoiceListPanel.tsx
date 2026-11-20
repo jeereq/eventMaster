@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileText, Eye } from '@/components/icons';
+import { FileText } from '@/components/icons';
 import Illustration from '@/components/illustrations/Illustration';
 import InvoiceDetailModal, { type PlatformInvoiceItem } from '@/components/InvoiceDetailModal';
 import CatalogueFilterBar, {
@@ -233,31 +233,21 @@ export default function InvoiceListPanel({
               <StatusPill tone={statusTone(inv.status)}>{inv.statusLabel}</StatusPill>
             );
             const amountChip = (
-              <StatusPill tone="primary">{inv.amountFormatted}</StatusPill>
+              <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
+                {inv.amountFormatted}
+              </span>
             );
-            const actions = (
-              <>
-                {layout === 'list' ? (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedInvoiceId(inv.id)}
-                    className="inline-flex items-center"
-                    title="Voir le détail"
-                  >
-                    <ListRowAction />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedInvoiceId(inv.id)}
-                    className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
-                    title="Détail"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                )}
-              </>
-            );
+            const actions =
+              layout === 'list' ? (
+                <button
+                  type="button"
+                  onClick={() => setSelectedInvoiceId(inv.id)}
+                  className="inline-flex items-center"
+                  title="Voir le détail"
+                >
+                  <ListRowAction />
+                </button>
+              ) : undefined;
 
             return (
               <ProjectCard
@@ -286,7 +276,7 @@ export default function InvoiceListPanel({
                       {showOrganization && inv.tenantName && (
                         <p className="truncate text-xs font-medium">{inv.tenantName}</p>
                       )}
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
                         {statusChip}
                         {amountChip}
                       </div>

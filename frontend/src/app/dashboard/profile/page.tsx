@@ -16,6 +16,8 @@ import {
   Palette,
   Camera,
   Trash2,
+  ChevronDown,
+  BookOpen,
 } from '@/components/icons';
 import { Alert, SkeletonProfileView, Button, Input, PhoneInput } from '@/components/ui';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
@@ -23,12 +25,14 @@ import UserAvatar from '@/components/UserAvatar';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
 import { ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { isProtocolUser } from '@/lib/protocolAccess';
+import { useStartNavTour } from '@/hooks/useStartNavTour';
 
 function ProfilePageContent() {
   const messaging = useMessagingChannels();
   const { user, tenant, updateUserAndTenant, updateBranding, access, refreshProfile } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { startNavTour } = useStartNavTour();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -217,7 +221,7 @@ function ProfilePageContent() {
             <UserAvatar name={name} src={avatarUrl} size="lg" className="rounded-[var(--radius-button)] w-14 h-14" />
             <label
               htmlFor="profile-avatar-input"
-              className="absolute -bottom-1.5 -right-1.5 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-primary-solid text-primary-foreground cursor-pointer shadow-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background"
+              className="absolute -bottom-1.5 -right-1.5 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-surface text-foreground border border-border hover:bg-card-hover cursor-pointer shadow-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background"
             >
               {avatarUploading ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : <Camera className="w-4 h-4" aria-hidden />}
               <span className="sr-only">Changer la photo de profil</span>
@@ -247,11 +251,16 @@ function ProfilePageContent() {
             </span>
           </div>
         </div>
-        {avatarUrl && (
-          <Button type="button" size="sm" variant="secondary" disabled={avatarUploading} onClick={() => void handleRemoveAvatar()} leftIcon={<Trash2 className="w-3.5 h-3.5" />}>
-            Retirer la photo
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" size="sm" variant="secondary" onClick={startNavTour} leftIcon={<BookOpen className="w-3.5 h-3.5" />}>
+            Visite guidée
           </Button>
-        )}
+          {avatarUrl && (
+            <Button type="button" size="sm" variant="secondary" disabled={avatarUploading} onClick={() => void handleRemoveAvatar()} leftIcon={<Trash2 className="w-3.5 h-3.5" />}>
+              Retirer la photo
+            </Button>
+          )}
+        </div>
 
       </div>
 
@@ -327,11 +336,15 @@ function ProfilePageContent() {
             </div>
 
             {canEditBranding && (
-              <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
-                <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 pb-3 border-b border-border">
-                  <Palette className="w-4 h-4 text-primary" />
-                  Couleurs de l&apos;organisation
-                </h2>
+              <details className="group bg-surface border border-border rounded-[var(--radius-card)] px-5">
+                <summary className="min-h-14 flex items-center justify-between gap-2 cursor-pointer list-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-[var(--radius-button)] [&::-webkit-details-marker]:hidden">
+                  <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-primary" />
+                    Couleurs de l&apos;organisation
+                  </h2>
+                  <ChevronDown className="w-4 h-4 text-muted shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+                </summary>
+                <div className="pt-4 pb-5 space-y-4 border-t border-border">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="space-y-1.5 text-xs font-medium text-muted">
                     Couleur principale
@@ -349,14 +362,15 @@ function ProfilePageContent() {
                   </label>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" loading={brandSaving} onClick={handleSaveBranding} leftIcon={<Save className="w-3.5 h-3.5" />}>
+                  <Button type="button" size="sm" variant="secondary" loading={brandSaving} onClick={handleSaveBranding} leftIcon={<Save className="w-3.5 h-3.5" />}>
                     Enregistrer les couleurs
                   </Button>
                   <Button type="button" size="sm" variant="secondary" disabled={brandSaving} onClick={handleResetBranding}>
                     Réinitialiser
                   </Button>
                 </div>
-              </div>
+                </div>
+              </details>
             )}
 
             <div className="flex flex-wrap items-center justify-end gap-3 pt-3">

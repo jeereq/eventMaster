@@ -3,7 +3,7 @@ import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, X } from '@/components/icons';
+import { ArrowRight, ChevronDown, X } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 import { GETTING_STARTED_CHANGED_EVENT, GETTING_STARTED_STORAGE_KEY } from '@/lib/firstLoginTour';
@@ -12,6 +12,7 @@ const STORAGE_KEY = GETTING_STARTED_STORAGE_KEY;
 
 type PersistedFlow = {
   dismissed?: boolean;
+  collapsed?: boolean;
   guestsDone?: boolean;
   guestInfoDone?: boolean;
   feedDone?: boolean;
@@ -197,18 +198,29 @@ export default function GettingStartedChecklist({
     writeFlow(next);
   };
 
+  const onToggle = (e: React.SyntheticEvent<HTMLDetailsElement>) => {
+    const collapsed = !e.currentTarget.open;
+    if (collapsed === Boolean(flow.collapsed)) return;
+    const next = { ...flow, collapsed };
+    setFlow(next);
+    writeFlow(next);
+  };
+
   const laterSteps = steps.filter((s) => !s.done && s.id !== nextStep?.id);
   const openCreateHere = nextStep?.id === 'event' && Boolean(onCreateEvent);
   const nextClass =
     'inline-flex min-h-11 max-w-full items-center gap-2 rounded-full bg-primary-solid px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary-solid-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
   return (
-    <section
-      className={cn('rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5', className)}
+    <details
+      open={!flow.collapsed}
+      onToggle={onToggle}
+      className={cn('group rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5', className)}
       aria-labelledby="getting-started-title"
     >
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="getting-started-title" className="text-sm font-semibold text-foreground">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+        <h2 id="getting-started-title" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+          <ChevronDown className="w-4 h-4 text-muted transition-transform group-open:rotate-180" aria-hidden />
           Bien démarrer
         </h2>
         <div className="flex items-center gap-1">
@@ -217,14 +229,17 @@ export default function GettingStartedChecklist({
           </span>
           <button
             type="button"
-            onClick={dismiss}
+            onClick={(e) => {
+              e.preventDefault();
+              dismiss();
+            }}
             className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition"
             aria-label="Masquer le parcours"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-      </div>
+      </summary>
 
       <div className="mt-2 flex gap-1" aria-hidden>
         {steps.map((step) => (
@@ -282,6 +297,6 @@ export default function GettingStartedChecklist({
           ))}
         </p>
       )}
-    </section>
+    </details>
   );
 }

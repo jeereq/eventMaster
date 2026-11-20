@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import {
   MessageSquare, Pencil, RotateCcw, Save,
 } from '@/components/icons';
-import { SkeletonList, Button, Modal } from '@/components/ui';
+import { SkeletonList, Button, Modal, ConfirmDialog } from '@/components/ui';
 
 interface GuestMessageTemplateItem {
   id: string;
@@ -39,6 +39,7 @@ export default function GuestMessageTemplatesPanel() {
   const [editing, setEditing] = useState<GuestMessageTemplateItem | null>(null);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState<string | null>(null);
+  const [confirmResetId, setConfirmResetId] = useState<string | null>(null);
 
   const loadTemplates = async () => {
     setLoading(true);
@@ -78,7 +79,6 @@ export default function GuestMessageTemplatesPanel() {
   };
 
   const handleReset = async (id: string) => {
-    if (!confirm('Réinitialiser ce modèle aux valeurs par défaut ?')) return;
     setResetting(id);
     try {
       await api.post(`/admin/message-templates/${id}/reset`, {});
@@ -137,14 +137,14 @@ export default function GuestMessageTemplatesPanel() {
                 <p className="text-xs text-muted">{t.description || t.type}</p>
               </div>
               <div className="flex gap-2 flex-shrink-0">
-                <Button type="button" size="sm" onClick={() => setEditing({ ...t })} leftIcon={<Pencil className="w-3.5 h-3.5" />}>
+                <Button type="button" size="sm" variant="secondary" onClick={() => setEditing({ ...t })} leftIcon={<Pencil className="w-3.5 h-3.5" />}>
                   Modifier
                 </Button>
                 <Button
                   type="button"
                   size="sm"
                   variant="secondary"
-                  onClick={() => handleReset(t.id)}
+                  onClick={() => setConfirmResetId(t.id)}
                   loading={resetting === t.id}
                   leftIcon={resetting === t.id ? undefined : <RotateCcw className="w-3.5 h-3.5" />}
                 >
@@ -231,6 +231,19 @@ export default function GuestMessageTemplatesPanel() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={confirmResetId !== null}
+        onClose={() => setConfirmResetId(null)}
+        onConfirm={() => {
+          const id = confirmResetId;
+          setConfirmResetId(null);
+          if (id) void handleReset(id);
+        }}
+        title="Réinitialiser le modèle"
+        description="Réinitialiser ce modèle aux valeurs par défaut ?"
+        confirmLabel="Réinitialiser"
+      />
     </div>
   );
 }

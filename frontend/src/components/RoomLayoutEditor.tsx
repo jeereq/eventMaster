@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useHideAiFabWhileVisible } from '@/components/landing/useHideAiFabWhileVisible';
 import { ROOM_INTRO_VIEWS, introViewLabel, resolveIntroView, type RoomIntroView } from '@/lib/roomIntroView';
 import {
@@ -201,8 +202,8 @@ import WallElevationEditor from '@/components/room/WallElevationEditor';
 import { ItemPlacementFields } from '@/components/room/ItemPlacementFields';
 import LedShowControls from '@/components/room/LedShowControls';
 import { STRING_LIGHT_LAYOUT_LABELS, STRING_LIGHT_MOUNT_LABELS, STRING_LIGHT_STYLE_LABELS } from '@/lib/roomStringLights';
-import { START_EDITOR_TOUR_EVENT } from '@/components/room/RoomEditorPlanCard';
-import { buildEditorTour, editorTourSummary, EDITOR_TOUR_SEEN_KEY, type EditorTourAction } from '@/lib/roomEditorTour';
+import { EDITOR_TOOLBAR_MORE_GROUPS } from '@/lib/roomEditorGuide';
+import { buildEditorTour, editorTourSummary, EDITOR_TOUR_SEEN_KEY, START_EDITOR_TOUR_EVENT, type EditorTourAction } from '@/lib/roomEditorTour';
 import { BAR_BACK_LABELS, BAR_FRONT_LABELS, BAR_METAL_LABELS, BAR_STOOL_LABELS, BAR_STYLE_DESIGN, BAR_TOP_LABELS } from '@/lib/roomBarDesign';
 import {
   copyAmbienceShareLink,
@@ -539,6 +540,7 @@ function EditorToolGroup({
   onToggle,
   icon,
   closeOnPick = false,
+  inline = false,
   children,
 }: {
   id: EditorToolGroupId;
@@ -548,6 +550,8 @@ function EditorToolGroup({
   icon?: React.ReactNode;
   /** Menu d’ajout : se referme après un choix pour laisser voir l’élément posé. */
   closeOnPick?: boolean;
+  /** Dans le panneau « Plus » : le menu se déplie sous son bouton, dans le flux. */
+  inline?: boolean;
   children: React.ReactNode;
 }) {
   const items = React.Children.toArray(children).filter(Boolean);
@@ -556,8 +560,9 @@ function EditorToolGroup({
   const panelId = `editor-tool-group-${id}`;
 
   // Menu flottant (desktop) : clic à l’extérieur ou Échap referme sans bouger le plan.
+  // Dans « Plus », c’est le panneau qui gère clic extérieur et Échap pour tous ses menus.
   useEffect(() => {
-    if (!open) return;
+    if (!open || inline) return;
     const onPointer = (event: PointerEvent) => {
       const node = wrapRef.current;
       if (!node || !(event.target instanceof Element)) return;
@@ -576,11 +581,11 @@ function EditorToolGroup({
       document.removeEventListener('pointerdown', onPointer);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open, id, onToggle]);
+  }, [open, inline, id, onToggle]);
 
   if (items.length === 0) return null;
   return (
-    <div ref={wrapRef} data-tool-group={id} className="contents lg:relative lg:inline-flex">
+    <div ref={wrapRef} data-tool-group={id} className={inline ? 'flex flex-wrap items-center gap-1.5 w-full' : 'contents lg:relative lg:inline-flex'}>
       <button
         type="button"
         className={cn(
@@ -602,11 +607,11 @@ function EditorToolGroup({
       {open ? (
         <div
           id={panelId}
-          ref={keepPanelOnScreen}
+          ref={inline ? undefined : keepPanelOnScreen}
           className={cn(
             'basis-full w-full flex flex-wrap items-center gap-1.5',
-            'lg:absolute lg:left-0 lg:top-full lg:z-40 lg:mt-2 lg:w-max lg:max-w-[min(40rem,calc(100vw-4rem))]',
-            'lg:p-2 lg:rounded-[var(--radius-card)] lg:border lg:border-border lg:bg-surface lg:shadow-xl',
+            !inline && 'lg:absolute lg:left-0 lg:top-full lg:z-40 lg:mt-2 lg:w-max lg:max-w-[min(40rem,calc(100vw-4rem))]',
+            !inline && 'lg:p-2 lg:rounded-[var(--radius-card)] lg:border lg:border-border lg:bg-surface lg:shadow-xl',
           )}
           onClick={closeOnPick ? (e) => {
             // Seuls les boutons referment : un champ ou un import de fichier garde le menu ouvert.
@@ -617,6 +622,157 @@ function EditorToolGroup({
         </div>
       ) : null}
     </div>
+  );
+}
+
+const MORE_PANEL_GAP = 8;
+const MORE_PANEL_EDGE = 8;
+
+/**
+ * Bouton « Plus » du groupe « Ajouter » : les menus suivant les cinq premiers s’y déplient.
+ * Le panneau est rendu hors de l’éditeur (portail) pour ne jamais être coupé par le mode agrandi.
+ * La barre d’outils existe en deux exemplaires (ordinateur / mobile) : seul celui dont le bouton
+ * est visible affiche le panneau.
+ */
+function EditorToolMore({
+  open,
+  onToggle,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  // null : pas encore mesuré ; 'hidden' : bouton de l’exemplaire masqué, pas de panneau.
+  const [pos, setPos] = useState<{ top: number; left: number; maxWidth: number; maxHeight: number } | 'hidden' | null>(null);
+  const panelId = 'editor-tool-group-more';
+  const placed = pos !== null && pos !== 'hidden' ? pos : null;
+  const shown = open && placed !== null;
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const update = () => {
+      const trigger = triggerRef.current;
+      if (!trigger || trigger.getClientRects().length === 0) {
+        setPos('hidden');
+        return;
+      }
+      const rect = trigger.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const maxWidth = Math.min(640, vw - MORE_PANEL_EDGE * 2);
+      const width = Math.min(panelRef.current?.offsetWidth ?? 0, maxWidth);
+      const height = panelRef.current?.offsetHeight ?? 0;
+      const left = Math.max(MORE_PANEL_EDGE, Math.min(rect.left, vw - MORE_PANEL_EDGE - width));
+      const below = vh - rect.bottom - MORE_PANEL_GAP - MORE_PANEL_EDGE;
+      const above = rect.top - MORE_PANEL_GAP - MORE_PANEL_EDGE;
+      const placeAbove = below < 200 && above > below;
+      const maxHeight = Math.max(120, placeAbove ? above : below);
+      const top = placeAbove
+        ? Math.max(MORE_PANEL_EDGE, rect.top - MORE_PANEL_GAP - Math.min(height, maxHeight))
+        : rect.bottom + MORE_PANEL_GAP;
+      setPos((prev) =>
+        prev && prev !== 'hidden' && prev.top === top && prev.left === left && prev.maxWidth === maxWidth && prev.maxHeight === maxHeight
+          ? prev
+          : { top, left, maxWidth, maxHeight },
+      );
+    };
+    update();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    if (panelRef.current) observer?.observe(panelRef.current);
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+      setPos(null);
+    };
+  }, [open, shown]);
+
+  // Ouvert au clavier depuis son bouton : le focus passe au premier menu du panneau.
+  useEffect(() => {
+    if (!shown || document.activeElement !== triggerRef.current) return;
+    panelRef.current?.querySelector<HTMLElement>('button')?.focus({ preventScroll: true });
+  }, [shown]);
+
+  // Clic à l’extérieur ou Échap referme le panneau (et le menu déplié dedans).
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: PointerEvent) => {
+      if (event.target instanceof Element && event.target.closest('[data-tool-group="more"]')) return;
+      onClose();
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      const fromPanel = event.target instanceof Node && panelRef.current?.contains(event.target);
+      onClose();
+      if (fromPanel) triggerRef.current?.focus();
+    };
+    document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, onClose]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        data-tool-group="more"
+        data-tour="tool-more"
+        className={cn(
+          'inline-flex items-center gap-1.5 shrink-0 min-h-11 px-3 rounded-full border text-sm font-medium transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+          open
+            ? 'bg-primary-solid text-primary-foreground border-transparent'
+            : 'bg-surface border-border text-foreground hover:bg-surface-muted',
+        )}
+        aria-expanded={shown}
+        aria-controls={shown ? panelId : undefined}
+        onClick={onToggle}
+      >
+        Plus
+        <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 opacity-80 transition-transform', open && 'rotate-180')} aria-hidden />
+      </button>
+      {open && pos !== 'hidden' && typeof document !== 'undefined'
+        ? createPortal(
+          <div
+            ref={panelRef}
+            id={panelId}
+            data-tool-group="more"
+            role="group"
+            aria-label="Plus d’outils d’ajout"
+            style={{
+              position: 'fixed',
+              top: placed?.top ?? 0,
+              left: placed?.left ?? 0,
+              maxWidth: placed?.maxWidth,
+              maxHeight: placed?.maxHeight,
+              visibility: placed ? 'visible' : 'hidden',
+            }}
+            className="z-[11100] w-max overflow-y-auto overscroll-contain flex flex-col items-start gap-2 p-2 rounded-[var(--radius-card)] border border-border bg-surface shadow-xl"
+            onClick={(event) => {
+              // Un choix dans un menu déplié referme aussi « Plus », pour laisser voir l’élément posé.
+              const target = event.target;
+              if (target instanceof Element && target.closest('button') && target.closest('[id^="editor-tool-group-"]:not(#editor-tool-group-more)')) {
+                onClose();
+              }
+            }}
+          >
+            {children}
+          </div>,
+          document.body,
+        )
+        : null}
+    </>
   );
 }
 
@@ -1066,6 +1222,18 @@ export default function RoomLayoutEditor({
   const toggleToolbarGroup = useCallback((id: EditorToolGroupId) => {
     setToolbarGroup((current) => (current === id ? null : id));
   }, []);
+  // « Plus » du groupe « Ajouter » : ouvert par son bouton, ou parce qu’un de ses menus est déplié.
+  const [toolbarMoreOpen, setToolbarMoreOpen] = useState(false);
+  const toolbarMoreShown = toolbarMoreOpen
+    || (toolbarGroup !== null && (EDITOR_TOOLBAR_MORE_GROUPS as readonly string[]).includes(toolbarGroup));
+  const closeToolbarMore = useCallback(() => {
+    setToolbarMoreOpen(false);
+    setToolbarGroup((current) => (current !== null && (EDITOR_TOOLBAR_MORE_GROUPS as readonly string[]).includes(current) ? null : current));
+  }, []);
+  const toggleToolbarMore = useCallback(() => {
+    if (toolbarMoreShown) closeToolbarMore();
+    else setToolbarMoreOpen(true);
+  }, [toolbarMoreShown, closeToolbarMore]);
   const [wallEditMode, setWallEditMode] = useState(false);
   const [lockOrbit, setLockOrbit] = useState(true);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
@@ -5571,7 +5739,7 @@ export default function RoomLayoutEditor({
             {accordion === 'config' && (
               <div id="editor-panel-config" className="p-4 bg-surface space-y-4 border-t border-border">
                 <div className="space-y-2">
-                  <p className="text-xs font-bold uppercase text-muted">Dimensions de la zone</p>
+                  <p className="text-xs font-semibold text-foreground">Dimensions de la zone</p>
                   <div className="grid grid-cols-2 gap-2">
                     <label className="text-xs space-y-1">
                       <span className="font-semibold text-muted">Largeur (m)</span>
@@ -5660,7 +5828,7 @@ export default function RoomLayoutEditor({
       return (
         <div className="space-y-3">
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
-            <p className="text-xs font-bold uppercase text-muted flex items-center gap-1">
+            <p className="text-xs font-semibold text-foreground flex items-center gap-1">
               <BrickWall className="w-3.5 h-3.5" /> Mur sélectionné
             </p>
             <RoomWallEditorPanel
@@ -5731,7 +5899,7 @@ export default function RoomLayoutEditor({
       return (
         <div className="space-y-3">
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
-            <p className="text-xs font-bold uppercase text-muted">
+            <p className="text-xs font-semibold text-foreground">
               {isDoor
                 ? 'Porte & Entrée'
                 : isAisle
@@ -9296,9 +9464,11 @@ export default function RoomLayoutEditor({
       <Gate allowed={caps.fixtureKinds.includes('perimeter')} need={{ fixture: 'perimeter' }}><button type="button" onClick={() => addFixture('perimeter')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Périmètre</button></Gate>
       </EditorToolGroup>
 
+      <EditorToolMore open={toolbarMoreShown} onToggle={toggleToolbarMore} onClose={closeToolbarMore}>
       <EditorToolGroup
         id="scene"
         closeOnPick
+        inline
         label="Décor"
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
@@ -9418,6 +9588,7 @@ export default function RoomLayoutEditor({
       <EditorToolGroup
         id="outdoor"
         closeOnPick
+        inline
         label="Extérieur"
         icon={<Trees className="w-3.5 h-3.5" aria-hidden />}
         openId={toolbarGroup}
@@ -9477,6 +9648,7 @@ export default function RoomLayoutEditor({
         <EditorToolGroup
           id="custom"
           closeOnPick
+          inline
           label="Importer"
           icon={<ImagePlus className="w-3.5 h-3.5" aria-hidden />}
           openId={toolbarGroup}
@@ -9500,6 +9672,7 @@ export default function RoomLayoutEditor({
           </button>
         </EditorToolGroup>
       ) : null}
+      </EditorToolMore>
       </ToolbarCluster>
       <ToolbarCluster label="Vue" labelClassName="lg:sr-only">
       <EditorToolGroup

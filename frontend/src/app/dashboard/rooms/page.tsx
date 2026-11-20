@@ -9,7 +9,6 @@ import { canPublishVenueCatalog } from '@/lib/planAccess';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
 import { CalendarCheck } from '@/components/icons';
 import RoomsManagement from '../RoomsManagement';
-import RoomEditorPlanCard from '@/components/room/RoomEditorPlanCard';
 
 export default function DashboardRoomsPage() {
   useRememberListReturn();
@@ -36,7 +35,6 @@ export default function DashboardRoomsPage() {
 
   return (
     <div className="space-y-6 w-full">
-      <RoomEditorPlanCard level={planFeatures?.roomEditorLevel} themesFixtures={planFeatures?.roomThemesFixtures} />
       <RoomsManagement
         headerAction={
           catalogPublish ? (

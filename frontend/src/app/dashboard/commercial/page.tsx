@@ -160,14 +160,14 @@ export default function CommercialDashboardPage() {
 
  <div className="grid sm:grid-cols-3 gap-4">
  <div className="bg-white dark:bg-background border rounded-2xl p-5">
- <div className="text-xs font-bold uppercase text-muted">Organisations</div>
+ <div className="text-xs font-semibold text-muted">Organisations</div>
  <div className="text-2xl font-black mt-1 flex items-center gap-2">
  <Building2 className="w-5 h-5 text-primary" />
  {data.stats.organizations}
  </div>
  </div>
  <div className="bg-white dark:bg-background border rounded-2xl p-5">
- <div className="text-xs font-bold uppercase text-muted">Commission ce mois</div>
+ <div className="text-xs font-semibold text-muted">Commission ce mois</div>
  <div className="text-2xl font-black mt-1 flex items-center gap-2">
  <TrendingUp className="w-5 h-5 text-emerald-600" />
  {data.stats.monthlyCommission.toLocaleString('fr-FR')} FC
@@ -177,7 +177,7 @@ export default function CommercialDashboardPage() {
  )}
  </div>
  <div className="bg-white dark:bg-background border rounded-2xl p-5">
- <div className="text-xs font-bold uppercase text-muted">Total commissions</div>
+ <div className="text-xs font-semibold text-muted">Total commissions</div>
  <div className="text-2xl font-black mt-1 flex items-center gap-2">
  <Wallet className="w-5 h-5 text-amber-600" />
  {data.stats.totalCommission.toLocaleString('fr-FR')} FC
@@ -185,18 +185,18 @@ export default function CommercialDashboardPage() {
  </div>
  </div>
 
- <div className="bg-primary-solid text-primary-foreground rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+ <div className="bg-surface text-foreground border border-border rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
  <div>
- <p className="text-primary-foreground/80 text-sm font-semibold">Votre code parrainage</p>
+ <p className="text-muted text-sm font-semibold">Votre code parrainage</p>
  <p className="text-2xl font-black tracking-wider">{data.referralCode}</p>
- <p className="text-primary-foreground/80 text-xs mt-1">{Math.round(data.commissionRate * 100)} % au premier paiement, puis {Math.round((data.renewalCommissionRate ?? 0.2) * 100)} % sur les factures suivantes. Versé par EventMaster, en Mobile Money ou par virement.</p>
+ <p className="text-muted text-xs mt-1">{Math.round(data.commissionRate * 100)} % au premier paiement, puis {Math.round((data.renewalCommissionRate ?? 0.2) * 100)} % sur les factures suivantes.</p>
  </div>
- <ReferralShareButtons referralCode={data.referralCode} />
+ <ReferralShareButtons referralCode={data.referralCode} className="[&_button]:!bg-surface [&_button]:!text-foreground [&_button]:!border-border/80 [&_button:hover]:!bg-card-hover" />
  </div>
 
  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
  <h2 className="font-bold text-lg">Organisations parrainées</h2>
- <Button onClick={() => setShowForm(!showForm)} className="w-full sm:w-auto">
+ <Button onClick={() => setShowForm(!showForm)} variant={showForm ? 'secondary' : 'primary'} className="w-full sm:w-auto">
  <PlusCircle className="w-4 h-4" />
  Nouvelle organisation
  </Button>
@@ -252,7 +252,7 @@ export default function CommercialDashboardPage() {
  </div>
  </div>
  <div>
- <label className="block text-xs font-bold text-muted uppercase mb-2">Validation du compte manager (OTP)</label>
+ <label className="block text-xs font-semibold text-muted mb-2">Validation du compte manager (OTP)</label>
  {canChooseOtpChannel ? (
  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-md">
  {authOtpMethodOptions(authChannels).includes('EMAIL') && (
@@ -298,7 +298,7 @@ export default function CommercialDashboardPage() {
  <div className="flex flex-wrap items-center gap-2 text-xs">
  {o.managerIsEmailVerified === false ? (
  <>
- <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+ <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
  En attente OTP
  </span>
  {o.managerId && (
@@ -314,7 +314,7 @@ export default function CommercialDashboardPage() {
  )}
  </>
  ) : (
- <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+ <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
  Validé
  </span>
  )}
@@ -346,7 +346,7 @@ export default function CommercialDashboardPage() {
  <td>
  {o.managerIsEmailVerified === false ? (
  <div className="flex flex-col gap-1">
- <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 w-fit">
+ <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 w-fit">
  En attente OTP
  </span>
  {o.managerId && (
@@ -362,7 +362,7 @@ export default function CommercialDashboardPage() {
  )}
  </div>
  ) : (
- <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+ <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
  Validé
  </span>
  )}

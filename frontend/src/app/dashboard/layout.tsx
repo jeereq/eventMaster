@@ -4,15 +4,15 @@ import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 import React, { useEffect, useState, useSyncExternalStore, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useAuth, type OrgAccess } from '@/context/AuthContext';
-import { getWorkspaceModules, type WorkspaceModules } from '@/lib/planAccess';
+import { useAuth } from '@/context/AuthContext';
+import { getWorkspaceModules } from '@/lib/planAccess';
 import { useTheme } from '@/context/ThemeContext';
 import {
  Calendar, Users, Mail, CreditCard, LayoutDashboard,
- LogOut, Menu, X, Loader2, ShieldCheck, User, Sun, Moon, BarChart3,
- Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
- PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet, Bell,
- Inbox, Sparkles, Heart, Rss, Coins, LayoutGrid,
+ LogOut, Loader2, ShieldCheck, Sun, Moon, BarChart3,
+ Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock,
+ PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Bell,
+ Inbox, Sparkles, Heart, Rss, LayoutGrid,
 } from '@/components/icons';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import PWAInstallCta from '@/components/PWAInstallCta';
@@ -35,30 +35,25 @@ import UserAvatar from '@/components/UserAvatar';
 import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import { LANDING_PLANS, isB2cPlanId } from '@/config/landingPricing';
+import { LANDING_PLANS } from '@/config/landingPricing';
 import { planDisplayName } from '@/lib/planCatalogDb';
 import { TourProvider } from '@/context/TourContext';
-import { useStartNavTour } from '@/hooks/useStartNavTour';
 import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
 import FirstLoginTourHost from '@/components/guide/FirstLoginTourHost';
-import { useAdminPendingCounts, type AdminPendingCounts } from '@/components/admin/useAdminPendingCounts';
+import { useAdminPendingCounts } from '@/components/admin/useAdminPendingCounts';
+import {
+ buildDashboardNav,
+ isVenuePlan,
+ navItemIsActive,
+ type NavIconName,
+ type NavSection,
+} from '@/lib/dashboardNav';
 
-interface NavItem {
- name: string;
- href: string;
- tab?: string;
- tourId?: string;
- /** Texte d’aide pour l’infobulle */
- description?: string;
- icon: React.ComponentType<{ className?: string }>;
- /** Pastille « à traiter » (ex. demandes en attente) */
- badge?: number;
-}
-
-interface NavSection {
- label?: string;
- items: NavItem[];
-}
+const NAV_ICONS: Record<NavIconName, React.ComponentType<{ className?: string }>> = {
+ LayoutDashboard, BarChart3, Calendar, Ticket, ScanLine, Mail, Store, Sparkles, Inbox,
+ CalendarCheck, Building2, Briefcase, Rss, Users, CreditCard, FileText, Bell,
+ Clock, Heart, LayoutGrid, MessageSquare, Key, ScrollText,
+};
 
 function navHrefKey(href: string, tab?: string) {
   const qIndex = href.indexOf('?');
@@ -83,66 +78,6 @@ function filterNavForMobileSheet(sections: NavSection[], bottomItems: MobileBott
     .filter((section) => section.items.length > 0);
 }
 
-function navItemIsActive(pathname: string, search: string, item: NavItem, currentTab: string) {
- if (item.tab) return pathname === '/dashboard' && currentTab === item.tab;
- const qIndex = item.href.indexOf('?');
- const path = qIndex >= 0 ? item.href.slice(0, qIndex) : item.href;
- const query = qIndex >= 0 ? item.href.slice(qIndex + 1) : '';
- const have = new URLSearchParams(search);
- const protocolDeskActive =
-  pathname === '/dashboard/protocol'
-  || ((pathname === '/dashboard/events' || pathname.startsWith('/dashboard/events/'))
-    && have.get('mode') === 'protocol');
-
- // Entrée dédiée /dashboard/protocol + desk events?mode=protocol
- if (path === '/dashboard/protocol' || (path === '/dashboard/events' && new URLSearchParams(query).get('mode') === 'protocol')) {
-  return protocolDeskActive;
- }
-
- const pathMatch = pathname === path || (path !== '/dashboard' && pathname.startsWith(`${path}/`)) || pathname.startsWith(`${path}?`);
- // /dashboard/events et /dashboard/events/:id
- const eventsPathMatch =
-  path === '/dashboard/events' &&
-  (pathname === '/dashboard/events' || pathname.startsWith('/dashboard/events/'));
- const effectivePathMatch = path === '/dashboard/events' ? eventsPathMatch : pathMatch;
- if (!effectivePathMatch) return false;
- if (item.href === '/dashboard/billing' && pathname.startsWith('/dashboard/billing/')) return false;
- if (query) {
-  const want = new URLSearchParams(query);
-  for (const [key, value] of want.entries()) {
-   if (key === 'tab' && path === '/dashboard/bookings') continue;
-   if (have.get(key) !== value) return false;
-  }
-  // Réservations vs packs/favoris (même path /dashboard/bookings)
-  if (path === '/dashboard/bookings' && want.has('tab')) {
-   const haveTab = have.get('tab') || 'bookings';
-   if (haveTab !== want.get('tab')) return false;
-  }
-  // Onglets Catalogue (hub=plan vs tab=plan)
-  if (path === '/dashboard/catalogue' && (want.has('tab') || want.has('hub'))) {
-   const wantTab = want.get('hub') || want.get('tab');
-   const haveTab = have.get('hub') || have.get('tab') || 'explore';
-   if (haveTab !== wantTab) return false;
-   return true;
-  }
-  return pathname === path || (path === '/dashboard/events' && eventsPathMatch);
- }
- // « Événements » (sans mode) : pas actif quand on est en desk protocole
- if (path === '/dashboard/events' && !query) {
-  if (have.get('mode') === 'protocol') return false;
- }
- if (path === '/dashboard/bookings' && pathname === '/dashboard/bookings') {
-  return true;
- }
- if (path === '/dashboard/catalogue' && pathname === '/dashboard/catalogue') {
-  if (have.get('kind') === 'event') return false;
-  const currentTab = have.get('hub') || have.get('tab') || 'explore';
-  if (currentTab !== 'explore') return false;
-  return true;
- }
- return true;
-}
-
 /** Infobulles par défaut (sidebar réduite). */
 const NAV_TOOLTIPS: Record<string, string> = {
  Accueil: 'File du jour : demandes, licences, factures',
@@ -156,10 +91,8 @@ const NAV_TOOLTIPS: Record<string, string> = {
  'Demandes abonnement': 'Approuver ou refuser les forfaits',
  'Forfaits & tarifs': 'Configurer les plans SaaS',
  Factures: 'Historique et détail des factures',
- 'Versements SaaS': 'Commissions des commerciaux plateforme',
  'Réglages plateforme': 'Intégrations e-mail, WhatsApp…',
  'Guide utilisateur': 'Visite guidée de votre espace',
- 'Mon compte': 'Profil et sécurité du compte',
  Salles: 'Plans 2D, publication et disponibilités',
  Équipe: 'Managers et protocole d’accueil',
  Marketplace: 'Prestations, matériel & équipements et réservations reçues',
@@ -189,479 +122,6 @@ function withNavTips(sections: NavSection[]): NavSection[] {
  }));
 }
 
-function navSection(label: string | undefined, items: NavItem[]): NavSection | null {
- return items.length ? { label, items } : null;
-}
-
-function buildNavSections(...sections: Array<NavSection | null>): NavSection[] {
- return sections.filter((section): section is NavSection => Boolean(section?.items.length));
-}
-
-/** Forfait et factures : réservés aux profils qui y ont accès, rangés avec les paramètres du compte. */
-function billingNavItems(access?: OrgAccess | null): NavItem[] {
- return [
-  ...(access?.canViewBilling
-   ? [{ name: 'Forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
-   : []),
-  ...(access?.canViewInvoices
-   ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
-   : []),
- ];
-}
-
-function compteNavItems(extra: NavItem[] = []): NavItem[] {
- return [
-  ...extra,
-  { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
-  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
-  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
- ];
-}
-
-/**
- * Organisateur B2B (forfaits Business, Premium, Entreprise) : menu rangé par métier,
- * du pilotage au jour J, puis achats, vitrine et administration de l’organisation.
- */
-function buildB2bOrganizerNav(opts: {
- access?: OrgAccess | null;
- workspace: WorkspaceModules;
- allStudiosBlocked?: boolean;
-}): NavSection[] {
- const { access, workspace, allStudiosBlocked } = opts;
- return buildNavSections(
-  navSection('Pilotage', [
-   { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard, description: 'À traiter, indicateurs et agenda de l’organisation' },
-   ...(workspace.showAnalytics
-    ? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3, description: 'Réponses, présences et check-in par événement' }]
-    : []),
-  ]),
-  navSection('Événements', [
-   ...(workspace.showEvents
-    ? [
-      { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar, description: 'Créer, suivre et gérer les invités' },
-      { name: 'Billetterie', href: '/dashboard/tickets', tourId: 'nav-tickets-org', icon: Ticket, description: 'Commandes, recettes et contrôle d’accès' },
-     ]
-    : []),
-   ...(workspace.showProtocol
-    ? [{ name: 'Protocole', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine, description: 'Scan QR et accueil le jour J' }]
-    : []),
-   ...(workspace.showTemplates
-    ? [{ name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail, description: 'Invitations et faire-part' }]
-    : []),
-  ]),
-  navSection('Achats & prestataires', [
-   { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, matériel & équipements' },
-   ...(!allStudiosBlocked
-    ? [{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Budget IA, formules clés en main et devis' }]
-    : []),
-   { name: 'Demandes de devis', href: '/dashboard/quotes', tourId: 'nav-quotes', icon: Inbox, description: 'Devis demandés et reçus' },
-   { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck, description: 'Réservations de salles et prestations' },
-  ]),
-  navSection('Vitrine', [
-   ...(workspace.showRooms
-    ? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2, description: 'Plans 2D / 3D et publication au catalogue' }]
-    : []),
-   ...(workspace.showMarketplace
-    ? [{ name: 'Mes offres', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Briefcase, description: 'Fiches vendeur publiées au catalogue' }]
-    : []),
-   { name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Photos et actualités de vos événements' },
-  ]),
-  navSection('Organisation', [
-   ...(workspace.showTeam
-    ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users, description: 'Managers, protocole et droits d’accès' }]
-    : []),
-  ]),
-  navSection('Paramètres', compteNavItems(billingNavItems(access))),
- );
-}
-
-function buildDashboardNav(opts: {
- role?: string;
- access?: OrgAccess | null;
- workspace: WorkspaceModules;
- accountKind?: string | null;
- isClientAccount: boolean;
- commercialNetwork?: boolean;
- tenantPlan?: string | null;
- audience?: string | null;
- commercialPermissions?: import('@/context/AuthContext').CommercialGrantedPermissions | null;
- allStudiosBlocked?: boolean;
- adminCounts?: AdminPendingCounts;
- /** Le forfait inclut des salles (indépendamment des droits du membre connecté). */
- venuePlan?: boolean;
-}): NavSection[] {
- const { role, access, workspace, accountKind, isClientAccount, tenantPlan, audience, commercialPermissions, allStudiosBlocked, adminCounts, venuePlan } = opts;
- const vendorOnly = accountKind === 'VENDOR';
- // Le type salle / prestataire dépend du forfait, pas des droits du membre : un membre
- // d'un compte Salle sans droit de gestion reste dans un espace « salle ».
- const isServiceProvider =
-  tenantPlan === 'SERVICE' ||
-  audience === 'SERVICE' ||
-  (vendorOnly && !venuePlan);
-
- if (role === 'SUPER_ADMIN') {
-  return buildNavSections(
-   navSection('Pilotage', [
-    { name: 'Accueil', href: '/dashboard?tab=overview', tab: 'overview', tourId: 'nav-overview', icon: LayoutDashboard, description: 'Ce qui attend une action aujourd’hui' },
-    { name: 'Analyses', href: '/dashboard?tab=analytics&section=overview', tab: 'analytics', tourId: 'nav-analytics', icon: BarChart3 },
-   ]),
-   navSection('Organisations', [
-    { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2, badge: adminCounts?.licensesExpiring },
-    { name: 'Utilisateurs', href: '/dashboard?tab=users', tab: 'users', tourId: 'nav-users', icon: Users },
-    { name: 'Événements', href: '/dashboard/admin/events', tourId: 'nav-events-admin', icon: Calendar, description: 'Événements de toutes les organisations' },
-    { name: 'Invités', href: '/dashboard/admin/guests', tourId: 'nav-guests', icon: Users, description: 'Invités de toutes les organisations' },
-   ]),
-   navSection('Facturation', [
-    { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock, badge: adminCounts?.pendingRequests },
-    { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText, badge: adminCounts?.unpaidInvoices },
-    { name: 'Paiements', href: '/dashboard/admin/payments', tourId: 'nav-payments-admin', icon: CreditCard },
-    { name: 'Versements SaaS', href: '/dashboard/admin/payouts', tourId: 'nav-payouts', icon: Wallet, badge: adminCounts?.saasPayoutsDue },
-    { name: 'Dons solidaires', href: '/dashboard/admin/donations', tourId: 'nav-donations-admin', icon: Heart },
-    { name: 'Jetons IA', href: '/dashboard/admin/ai-tokens', tourId: 'nav-ai-tokens', icon: Coins },
-    { name: 'Forfaits & tarifs', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', tourId: 'nav-subscription-plans', icon: CreditCard },
-   ]),
-   navSection('Contenu & vitrine', [
-    { name: 'Modèles invitation', href: '/dashboard?tab=templates', tab: 'templates', tourId: 'nav-templates', icon: FileText },
-    { name: 'Plans 2D / 3D vitrine', href: '/plans-3d', tourId: 'nav-showcase-plans', icon: LayoutGrid, description: 'Gestion et édition des plans 2D/3D affichés en vitrine' },
-    { name: 'Messages automatiques', href: '/dashboard?tab=message-templates', tab: 'message-templates', tourId: 'nav-message-templates', icon: MessageSquare },
-    { name: 'Catalogue', href: '/dashboard/admin/catalogue', tourId: 'nav-catalog-admin', icon: Store },
-   ]),
-   navSection('Système', [
-    { name: 'Réglages plateforme', href: '/dashboard?tab=settings', tab: 'settings', tourId: 'nav-settings', icon: Key },
-    { name: 'Journal d’audit', href: '/dashboard/audit', tourId: 'nav-audit', icon: ScrollText },
-   ]),
-   navSection('Compte', compteNavItems()),
-  );
- }
-
- if (role === 'COMMERCIAL') {
-  const delegatedItems: NavItem[] = [];
-  if (commercialPermissions?.canManageTemplates) {
-   delegatedItems.push({
-    name: 'Modèles invitation',
-    href: '/dashboard?tab=templates',
-    tab: 'templates',
-    tourId: 'nav-templates',
-    icon: FileText,
-    description: 'Conception et modification des modèles d’invitation',
-   });
-  }
-  if (commercialPermissions?.canManageMessageTemplates) {
-   delegatedItems.push({
-    name: 'Messages automatiques',
-    href: '/dashboard?tab=message-templates',
-    tab: 'message-templates',
-    tourId: 'nav-message-templates',
-    icon: MessageSquare,
-    description: 'Modèles WhatsApp et e-mail de rappel',
-   });
-  }
-  if (commercialPermissions?.canManageCatalog) {
-   delegatedItems.push({
-    name: 'Catalogue plateforme',
-    href: '/dashboard/admin/catalogue',
-    tourId: 'nav-catalog-admin',
-    icon: Store,
-    description: 'Modération des prestataires et offres',
-   });
-  }
-  if (commercialPermissions?.canManageEvents) {
-   delegatedItems.push({
-    name: 'Événements plateforme',
-    href: '/dashboard/admin/events',
-    tourId: 'nav-events-admin',
-    icon: Calendar,
-    description: 'Supervision des événements créés',
-   });
-  }
-  if (commercialPermissions?.canManageGuests) {
-   delegatedItems.push({
-    name: 'Invités plateforme',
-    href: '/dashboard/admin/guests',
-    tourId: 'nav-guests',
-    icon: Users,
-    description: 'Supervision des listes d’invités',
-   });
-  }
-  if (commercialPermissions?.canManageShowcasePlans) {
-   delegatedItems.push({
-    name: 'Plans 2D / 3D vitrine',
-    href: '/plans-3d',
-    tourId: 'nav-showcase-plans',
-    icon: LayoutGrid,
-    description: 'Gestion, édition et sélection des plans 2D/3D vitrine',
-   });
-  }
-
-  return buildNavSections(
-   navSection('Portefeuille', [
-    { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2 },
-    { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
-    { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
-   ]),
-   delegatedItems.length ? navSection('Accès réservés délégués', delegatedItems) : null,
-   navSection('Gains', [
-    { name: 'Parrainage & commissions', href: '/dashboard/commercial', tourId: 'nav-commercial', icon: Briefcase },
-   ]),
-   navSection('Compte', compteNavItems()),
-  );
- }
-
- if (access?.level === 'commercial') {
-  return buildNavSections(
-   navSection('Réseau', [
-    { name: 'Réseau commercial', href: '/dashboard/org-commercial', tourId: 'nav-org-commercial', icon: Briefcase },
-   ]),
-   navSection('Compte', compteNavItems()),
-  );
- }
-
- if (access?.isProtocolOnly) {
-  return buildNavSections(
-   navSection('Accueil', [
-    { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard, description: 'Accueils du jour, check-in et tâches' },
-   ]),
-   navSection('Jour J', [
-    { name: 'Protocole', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine, description: 'Accueil QR, événements et tâches du jour' },
-   ]),
-   navSection('Marketplace', [
-    { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires et matériel & équipements — comme le catalogue client' },
-    { name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Photos et actualités des salles et prestations' },
-    { name: 'Demandes de devis', href: '/dashboard/quotes', tourId: 'nav-quotes', icon: Inbox },
-    { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
-   ]),
-   navSection('Suivi', [
-    { name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },
-   ]),
-   navSection('Compte', compteNavItems()),
-  );
- }
-
- if (isClientAccount) {
-  return buildNavSections(
-   navSection('Mon Espace', [
-    { name: 'Accueil', href: '/dashboard', tourId: 'nav-client-dashboard', icon: LayoutDashboard, description: 'Ce qui vous attend, vos activités et la recherche rapide' },
-    { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, matériel & équipements et fiches publiques' },
-    { name: 'Événements', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
-    ...(!allStudiosBlocked ? [{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator', icon: Sparkles, description: 'Simulateur budget IA, assemblage de packs et devis groupés' }] : []),
-   ]),
-   navSection('Mes activités', [
-    { name: 'Demandes de devis', href: '/dashboard/quotes', tourId: 'nav-quotes', icon: Inbox, description: 'Devis reçus et échanges avec les prestataires' },
-    { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck, description: 'Dates confirmées et acomptes' },
-    { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
-    { name: 'Mes favoris', href: '/dashboard/catalogue?tab=favorites', tourId: 'nav-favorites', icon: Heart, description: 'Salles et prestataires mis de côté' },
-    { name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Fil des réalisations des salles et prestations' },
-   ]),
-   navSection('Compte', compteNavItems()),
-  );
- }
-
-	if (isServiceProvider || vendorOnly) {
-		// Salle ou prestataire : le travail du jour d’abord (devis, réservations),
-		// puis la vitrine, le suivi, le réseau ; l’abonnement passe en bas.
-		const venue = !isServiceProvider && workspace.showRooms;
-		const activityItems: NavItem[] = [
-			{
-				name: 'Demandes de devis',
-				href: '/dashboard/quotes',
-				tourId: 'nav-quotes',
-				icon: Inbox,
-				description: 'Demandes reçues des clients et organisateurs : répondre, chiffrer',
-			},
-			{
-				name: 'Réservations & planning',
-				href: '/dashboard/bookings?tab=bookings',
-				tourId: 'nav-reservations',
-				icon: CalendarCheck,
-				description: 'Dates confirmées, acomptes et disponibilités',
-			},
-		];
-
-		const showcaseItems: NavItem[] = [
-			...(venue
-				? [{ name: 'Mes salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2, description: 'Fiches catalogue, plans 2D/3D et staff de vos salles' }]
-				: []),
-			...((workspace.showMarketplace || isServiceProvider) && access?.canManageRooms
-				? [{
-					name: venue ? 'Mes offres' : 'Mes prestations',
-					href: '/dashboard/marketplace',
-					tourId: 'nav-marketplace',
-					icon: Briefcase,
-					description: 'Publier et gérer vos fiches vendeur (traiteur, déco, DJ, photo, matériel…)',
-				}]
-				: []),
-			{
-				name: 'Réalisations',
-				href: '/dashboard/publications',
-				tourId: 'nav-publications',
-				icon: Rss,
-				description: 'Photos de vos derniers événements, visibles dans le catalogue',
-			},
-		];
-
-		const eventItems: NavItem[] = [
-			...(workspace.showEvents
-				? [
-					{ name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
-					{ name: 'Billetterie', href: '/dashboard/tickets', tourId: 'nav-tickets-org', icon: Ticket },
-				]
-				: []),
-			...(workspace.showProtocol
-				? [{ name: 'Protocole', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine }]
-				: []),
-			...(workspace.showTemplates
-				? [{ name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail }]
-				: []),
-		];
-
-		const networkItems: NavItem[] = [
-			{
-				name: 'Explorer le catalogue',
-				href: '/dashboard/catalogue',
-				tourId: 'nav-catalogue',
-				icon: Store,
-				description: 'Salles, confrères et équipements du réseau',
-			},
-			...(!allStudiosBlocked ? [{
-				name: 'Simulateur IA',
-				href: '/dashboard/catalogue?tab=plan&planView=ai',
-				tourId: 'nav-simulator-org',
-				icon: Sparkles,
-				description: 'Simulateur budget IA et packs 3 formules',
-			}] : []),
-		];
-
-		return buildNavSections(
-			navSection('Accueil', [
-				{ name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard, description: 'Ce qui attend une réponse aujourd’hui' },
-			]),
-			navSection('Activité', activityItems),
-			navSection('Ma vitrine', showcaseItems),
-			navSection('Mes événements', eventItems),
-			navSection('Réseau', networkItems),
-			navSection('Organisation', [
-				...(workspace.showTeam ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }] : []),
-			]),
-			navSection('Paramètres', compteNavItems(billingNavItems(access))),
-		);
-	}
-
-	// Particulier (B2C) : menu rangé dans l’ordre de préparation d’une fête, sans jargon pro.
-	if (!vendorOnly && ((tenantPlan && isB2cPlanId(tenantPlan)) || audience === 'B2C')) {
-		return buildNavSections(
-			navSection('Accueil', [
-				{ name: 'Ma fête', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard, description: 'Prochaine fête, réponses des invités et étape suivante' },
-			]),
-			navSection('Préparer', [
-				...(workspace.showEvents
-					? [{ name: 'Mes fêtes', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar, description: 'Invités, faire-part, plan de table et tâches' }]
-					: []),
-				...(workspace.showRooms
-					? [{ name: 'Plans de salle', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2, description: 'Tables, allées et décor en 2D / 3D' }]
-					: []),
-				...(workspace.showTemplates
-					? [{ name: 'Faire-part', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail, description: 'Modèles d’invitation' }]
-					: []),
-				...(workspace.showProtocol
-					? [{ name: 'Accueil jour J', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine, description: 'Scan des QR à l’entrée' }]
-					: []),
-			]),
-			navSection('Prestataires', [
-				{ name: 'Salles & prestataires', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Traiteur, déco, DJ, photo, salles' },
-				...(!allStudiosBlocked ? [{ name: 'Budget IA', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA et 3 formules' }] : []),
-				{ name: 'Demandes de devis', href: '/dashboard/quotes', tourId: 'nav-quotes', icon: Inbox },
-				{ name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
-			]),
-			navSection('Plus d’outils', [
-				...(workspace.showEvents
-					? [{ name: 'Billetterie & dons', href: '/dashboard/tickets', tourId: 'nav-tickets-org', icon: Ticket, description: 'Entrées payantes et cagnotte' }]
-					: []),
-				...(workspace.showAnalytics
-					? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 }]
-					: []),
-				{ name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Photos des salles et prestataires' },
-				...(workspace.showTeam
-					? [{ name: 'Co-organisateurs', href: '/dashboard/team', tourId: 'nav-team', icon: Users, description: 'Famille ou amis qui vous aident' }]
-					: []),
-			]),
-			navSection('Paramètres', compteNavItems(billingNavItems(access))),
-		);
-	}
-
-	if (audience === 'B2B' && tenantPlan && tenantPlan !== 'FREE' && !vendorOnly && workspace.showEvents) {
-		return buildB2bOrganizerNav({ access, workspace, allStudiosBlocked });
-	}
-
-	const primarySectionLabel =
-		workspace.showEvents && workspace.showRooms
-			? 'Événements & Salles'
-			: workspace.showEvents
-				? 'Événements'
-				: workspace.showRooms
-					? 'Salles & Espaces'
-					: 'Espaces & Activités';
-
-	const primaryItems: NavItem[] = [
-		...(workspace.showEvents
-			? [{ name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar }]
-			: []),
-		...(workspace.showRooms
-			? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2 }]
-			: []),
-		...(workspace.showEvents || workspace.showProtocol || access?.isProtocolOnly
-			? [
-					{
-						name: 'Billetterie',
-						href: '/dashboard/tickets',
-						tourId: 'nav-tickets-org',
-						icon: Ticket,
-						description: 'Commandes, entrées, ventes par zone et contrôle d’accès',
-					},
-				]
-			: []),
-		...(workspace.showProtocol
-			? [{ name: 'Protocole', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine }]
-			: []),
-		...(workspace.showTemplates
-			? [{ name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail }]
-			: []),
-		...(workspace.showAnalytics
-			? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 }]
-			: []),
-	];
-
-	const marketItems: NavItem[] = [
-		...(workspace.showBrowseCatalogue
-			? [
-					{ name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, prestataires, matériel & équipements (comme le client)' },
-					...(!allStudiosBlocked ? [{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA, 3 formules clés en main et devis' }] : []),
-					{ name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Grille de réalisations et création de posts liés aux salles / prestations' },
-				]
-			: []),
-		...(workspace.showEvents || workspace.showBrowseCatalogue || vendorOnly
-			? [
-					{ name: 'Demandes de devis', href: '/dashboard/quotes', tourId: 'nav-quotes', icon: Inbox },
-					{ name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
-				]
-			: []),
-		...(workspace.showMarketplace
-			? [{ name: 'Mes offres', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Briefcase, description: 'Publier et gérer vos fiches vendeur (salle / prestataire / matériel & équipements)' }]
-			: []),
-	];
-
-	return buildNavSections(
-		navSection('Accueil', [
-			{ name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
-		]),
-		navSection(primarySectionLabel, primaryItems),
-		navSection(vendorOnly ? 'Offres & Marketplace' : 'Marketplace', marketItems),
-		navSection('Organisation', workspace.showTeam
-			? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
-			: []),
-		navSection('Paramètres', compteNavItems(billingNavItems(access))),
-	);
-}
-
 function SidebarNav({
  sections,
  pathname,
@@ -681,7 +141,6 @@ function SidebarNav({
  const searchParams = useSearchParams();
  const currentTab = searchParams.get('tab') || fallbackTab;
  const { unreadCount } = useNotificationInbox();
- const { startNavTour } = useStartNavTour();
 
  const isSheet = variant === 'sheet';
 
@@ -699,7 +158,7 @@ function SidebarNav({
  )}
  <div className={cn(isSheet ? 'grid grid-cols-1 gap-1.5' : 'space-y-0.5')}>
  {section.items.map((item) => {
- const Icon = item.icon;
+ const Icon = NAV_ICONS[item.icon];
  const isActive = navItemIsActive(pathname, searchParams.toString(), item, currentTab);
 
  const isNotifications = item.href === '/dashboard/notifications';
@@ -732,15 +191,9 @@ function SidebarNav({
  <Link
  href={item.href}
  data-tour={item.tourId}
- onClick={(e) => {
+ onClick={() => {
   if (document.body.dataset.emTour === '1') return;
   setMobileMenuOpen(false);
-  if (item.tourId === 'nav-guide') {
-    e.preventDefault();
-    // Laisse le menu mobile se refermer avant que la visite cible les onglets.
-    window.setTimeout(startNavTour, isSheet ? 250 : 0);
-    return;
-  }
   if (typeof window !== 'undefined' && pathname === '/dashboard/catalogue') {
     if (item.href === '/dashboard/catalogue') {
       window.dispatchEvent(new CustomEvent('em-switch-tab', { detail: 'explore' }));
@@ -793,9 +246,6 @@ function SidebarNav({
  {!collapsed && (
  <span className="min-w-0 flex-1 text-left">
   <span className="block truncate text-sm leading-snug">{item.name}</span>
-  {isSheet && item.description ? (
-    <span className="mt-0.5 block text-xs font-normal text-muted leading-snug line-clamp-2">{messaging.adapt(item.description)}</span>
-  ) : null}
  </span>
  )}
  {!collapsed && isNotifications ? (
@@ -1098,10 +548,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   commercialPermissions: user?.commercialPermissions,
   allStudiosBlocked,
   adminCounts,
-  venuePlan:
-   planFeatures?.audience === 'VENUE'
-   || planFeatures?.audience === 'CATALOG'
-   || (planQuota ? (planQuota.limits.maxRooms ?? 0) > 0 : workspace.showRooms),
+  venuePlan: isVenuePlan({
+   audience: planFeatures?.audience,
+   maxRooms: planQuota?.limits.maxRooms,
+   quotaLoaded: Boolean(planQuota),
+   workspace,
+  }),
  });
  const showRealisations = navSections.some((section) =>
   section.items.some((item) => item.href === '/dashboard/publications'),
@@ -1152,15 +604,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               >
                 {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </button>
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 rounded-full text-foreground hover:bg-surface-muted transition touch-manipulation"
-                aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-                aria-expanded={mobileMenuOpen}
-                aria-controls="dashboard-mobile-menu-sheet"
-              >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
             </div>
           </div>
         </header>
@@ -1185,19 +628,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <SiteBrandMark
                 href="/dashboard"
                 showLabel={!sidebarCollapsed}
-                meta={
-                  sidebarCollapsed
-                    ? undefined
-                    : user?.role === 'SUPER_ADMIN'
-                      ? 'Console plateforme'
-                      : user?.role === 'COMMERCIAL'
-                        ? 'Espace commercial'
-                        : isClientAccount
-                          ? 'Espace client'
-                          : tenant?.accountKind === 'VENDOR'
-                            ? 'Espace marketplace'
-                            : 'Workspace'
-                }
               />
               <div className={cn('flex items-center gap-1', sidebarCollapsed && 'flex-col')}>
                 <Tooltip content={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} side="right">
@@ -1214,37 +644,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             {/* Contexte tenant / admin */}
-            {!sidebarCollapsed && (
-              <>
-                {user?.role === 'SUPER_ADMIN' ? (
-                  <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl bg-primary/5 border border-primary/15">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <ShieldCheck className="w-4 h-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="font-semibold text-sm text-foreground leading-tight">Super Admin</div>
-                      <div className="text-xs text-muted leading-tight">Toute la plateforme</div>
-                    </div>
-                  </div>
-                ) : user?.role === 'COMMERCIAL' ? (
-                  <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
-                    <div className="text-xs text-muted font-medium">Rôle global</div>
-                    <div className="font-semibold text-sm mt-0.5 text-foreground">Commercial plateforme</div>
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-xs font-bold text-amber-700 dark:text-amber-300">
-                      <Briefcase className="w-3.5 h-3.5" />
-                      Parrainage
-                    </div>
-                  </div>
-                ) : tenant ? (
-                  <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
-                    <div className="font-bold text-foreground text-sm truncate" title={tenant.name}>
-                      {tenant.name}
-                    </div>
-                    <TenantPlanLink isClient={isClientAccount} planLabel={tenantPlanLabel} canOpen={canOpenBilling} onNavigate={() => setMobileMenuOpen(false)} />
-                  </div>
-                ) : null}
-              </>
-            )}
+            {!sidebarCollapsed && user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' && tenant ? (
+              <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
+                <div className="font-bold text-foreground text-sm truncate" title={tenant.name}>
+                  {tenant.name}
+                </div>
+                <TenantPlanLink isClient={isClientAccount} planLabel={tenantPlanLabel} canOpen={canOpenBilling} onNavigate={() => setMobileMenuOpen(false)} />
+              </div>
+            ) : null}
 
             <Suspense
               fallback={
@@ -1322,34 +729,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             setMobileMenuOpen(false);
           }}
           title="Menu & navigation"
-          subtitle={
-            user?.role === 'SUPER_ADMIN'
-              ? 'Console plateforme'
-              : user?.role === 'COMMERCIAL'
-                ? 'Espace commercial'
-                : isClientAccount
-                  ? 'Espace client'
-                  : tenant?.accountKind === 'VENDOR'
-                    ? 'Espace marketplace'
-                    : tenant?.name || 'Workspace'
-          }
+          subtitle=""
         >
-          {user?.role === 'SUPER_ADMIN' ? (
-            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl bg-primary/5 border border-primary/15">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <ShieldCheck className="w-4 h-4" />
-              </span>
-              <div className="min-w-0">
-                <div className="font-semibold text-sm text-foreground leading-tight">Super Admin</div>
-                <div className="text-xs text-muted leading-tight">Toute la plateforme</div>
-              </div>
-            </div>
-          ) : user?.role === 'COMMERCIAL' ? (
-            <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
-              <div className="text-xs text-muted font-medium">Rôle global</div>
-              <div className="font-semibold text-sm mt-0.5 text-foreground">Commercial plateforme</div>
-            </div>
-          ) : tenant ? (
+          {user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' && tenant ? (
             <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
               <div className="font-bold text-foreground text-sm truncate" title={tenant.name}>{tenant.name}</div>
               <TenantPlanLink isClient={isClientAccount} planLabel={tenantPlanLabel} canOpen={canOpenBilling} onNavigate={() => setMobileMenuOpen(false)} />
@@ -1396,7 +778,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   logout();
                   setMobileMenuOpen(false);
                 }}
-                className="flex w-full items-center justify-center gap-2 min-h-11 px-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/15 transition active:scale-95 touch-manipulation"
+                className="flex w-full items-center justify-center gap-2 min-h-11 px-3 rounded-2xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition active:scale-95 touch-manipulation"
               >
                 <LogOut className="w-4 h-4" />
                 Déconnexion

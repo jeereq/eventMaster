@@ -7,7 +7,7 @@ import {
   Wand2, Paintbrush, Settings2, CheckCircle2, AlertCircle, Coins, Eye, Tag, SlidersHorizontal,
   ZoomIn, ZoomOut, Columns, ShieldCheck, Grid, RotateCcw, Sun, Building2,
 } from '@/components/icons';
-import { Button } from '@/components/ui';
+import { Button, ConfirmDialog } from '@/components/ui';
 import Modal from '@/components/ui/Modal';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
@@ -417,6 +417,13 @@ export default function TablePlanner({
   const plannerHeightM = roomLayoutBlueprint?.canvas?.heightM ?? 16;
 
   const [safe3DMode, setSafe3DMode] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    title: string;
+    description: string;
+    confirmLabel: string;
+    tone: 'default' | 'danger';
+    action: () => void;
+  } | null>(null);
   // Invités placés visibles en 3D : chacun à sa place, cliquable pour voir la salle avec ses yeux.
   const [show3DGuests, setShow3DGuests] = useState(true);
   const seatOccupants = useMemo(() => {
@@ -494,22 +501,19 @@ export default function TablePlanner({
      .map((id) => guests.find((g) => g.id === id))
      .filter((g) => g && (g.category === 'Billet' || Boolean((g.preferences as any)?.ticketOrderId)));
 
-   if (ticketGuests.length > 0) {
-     const names = ticketGuests.map((g) => `${g?.firstName} ${g?.lastName}`).join(', ');
-     if (
-       !confirm(
-         `⚠️ ATTENTION : Cette table contient des participants ayant déjà acheté leur billet (${names}).\n\nSupprimer cette table va annuler leur attribution de place payée. Confirmez-vous cette action ?`,
-       )
-     ) {
-       return;
-     }
-   } else if (
-     !confirm('Voulez-vous vraiment supprimer cette table ? Tous les invités installés à cette table seront libérés.')
-   ) {
-     return;
-   }
-   setTables(tables.filter((t) => t.id !== tableId));
- if (activeTableId === tableId) setActiveTableId(null);
+   const description = ticketGuests.length > 0
+     ? `Cette table contient des participants ayant déjà acheté leur billet (${ticketGuests.map((g) => `${g?.firstName} ${g?.lastName}`).join(', ')}). Supprimer cette table va annuler leur attribution de place payée. Confirmez-vous cette action ?`
+     : 'Voulez-vous vraiment supprimer cette table ? Tous les invités installés à cette table seront libérés.';
+   setPendingConfirm({
+     title: 'Supprimer la table',
+     description,
+     confirmLabel: 'Supprimer',
+     tone: 'danger',
+     action: () => {
+       setTables((prev) => prev.filter((t) => t.id !== tableId));
+       setActiveTableId((current) => (current === tableId ? null : current));
+     },
+   });
  };
 
  // Open edit modal for table
@@ -674,12 +678,19 @@ export default function TablePlanner({
  };
 
  const handleClearAssignments = () => {
- if (!confirm('Libérer tous les sièges ? Les tables restent en place.')) return;
- setTables(tables.map((table) => {
- const seats: Record<number, string | null> = {};
- for (let i = 0; i < table.capacity; i++) seats[i] = null;
- return { ...table, seats };
- }));
+ setPendingConfirm({
+   title: 'Libérer les sièges',
+   description: 'Libérer tous les sièges ? Les tables restent en place.',
+   confirmLabel: 'Libérer',
+   tone: 'danger',
+   action: () => {
+     setTables((prev) => prev.map((table) => {
+       const seats: Record<number, string | null> = {};
+       for (let i = 0; i < table.capacity; i++) seats[i] = null;
+       return { ...table, seats };
+     }));
+   },
+ });
  };
 
  const handleLayoutGrid = () => {
@@ -847,7 +858,7 @@ export default function TablePlanner({
           <p className="text-xs text-muted max-w-sm">
             Ajoutez des tables ou importez le plan depuis la salle liée pour activer l’aperçu 3D.
           </p>
-          {canImportRoomLayout && onImportRoomLayout ? (
+          {isExpanded && canImportRoomLayout && onImportRoomLayout ? (
             <button
               type="button"
               onClick={() => onImportRoomLayout(tables.length > 0)}
@@ -910,6 +921,7 @@ export default function TablePlanner({
                 })}
               </div>
 
+              {isExpanded && (
               <div className="flex items-center gap-1.5 shrink-0">
                 <Button
                   size="sm"
@@ -932,6 +944,7 @@ export default function TablePlanner({
                   Gérer tarifs
                 </Button>
               </div>
+              )}
             </div>
           )}
 
@@ -1003,7 +1016,7 @@ export default function TablePlanner({
                   className={cn(
                     'inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-xs font-semibold transition shadow-sm',
                     show3DGuests
-                      ? 'bg-primary-solid text-primary-foreground border-primary'
+                      ? 'bg-background text-foreground border-background'
                       : 'bg-foreground/80 hover:bg-foreground border-background/20 text-background',
                   )}
                   title={show3DGuests
@@ -1105,13 +1118,6 @@ export default function TablePlanner({
             })()}
           </div>
 
-          <p className="hidden sm:block text-xs text-muted leading-relaxed">
-            Vue 3D interactive — sélectionnez ou peignez les tables directement en 3D. Pour placer manuellement les convives par siège, basculez en{' '}
-            <button type="button" onClick={() => setPlannerView('2d')} className="font-semibold text-primary hover:underline">
-              vue 2D
-            </button>
-            .
-          </p>
         </div>
       )}
 
@@ -1183,19 +1189,13 @@ export default function TablePlanner({
               />
             </Room3DErrorBoundary>
 
-            {/* Hint de navigation bas */}
-            <div className="absolute bottom-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-foreground/90 border border-background/20 text-xs text-background">
-              <div className="flex items-center gap-3">
-                <span>🖱️ <strong>Rotation 3D :</strong> Clic gauche &amp; glisser</span>
-                <span>🔍 <strong>Zoom :</strong> Molette / Pincement tactile</span>
-                <span>↔️ <strong>Translation :</strong> Clic droit &amp; glisser</span>
-              </div>
-              {active3DTable && (
+            {active3DTable && (
+              <div className="absolute bottom-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-foreground/90 border border-background/20 text-xs text-background">
                 <span className="font-bold text-amber-300">
                   Table active : {active3DTable.name} ({active3DTable.capacity} places)
                 </span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1206,6 +1206,7 @@ export default function TablePlanner({
     <div className="space-y-4 flex-1 flex flex-col min-h-0">
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-surface border border-border rounded-[var(--radius-card)] shadow-sm shrink-0">
         <div className="flex items-center gap-2">
+          {isExpanded && (
           <Button
             size="sm"
             variant="ghost"
@@ -1217,8 +1218,9 @@ export default function TablePlanner({
             {tables.length >= caps.maxTables ? <Lock className="w-4 h-4 mr-1.5 opacity-70" /> : <PlusCircle className="w-4 h-4 mr-1.5" />}
             Nouvelle table
           </Button>
-          
-          {canImportRoomLayout && onImportRoomLayout && (
+          )}
+
+          {isExpanded && canImportRoomLayout && onImportRoomLayout && (
             <Button
               size="sm"
               variant="secondary"
@@ -1237,7 +1239,18 @@ export default function TablePlanner({
               size="sm"
               variant="ghost"
               onClick={() => {
-                if (tables.length > 0 && !confirm('Mettre à jour depuis la salle en conservant les places ?')) return;
+                if (tables.length > 0) {
+                  setPendingConfirm({
+                    title: 'Importer le plan type',
+                    description: 'Mettre à jour depuis la salle en conservant les places ?',
+                    confirmLabel: 'Importer',
+                    tone: 'default',
+                    action: () => {
+                      void onImportRoomLayout?.(true);
+                    },
+                  });
+                  return;
+                }
                 onImportRoomLayout?.(true);
               }}
               loading={importingLayout}
@@ -1252,9 +1265,10 @@ export default function TablePlanner({
         <div className="flex flex-wrap items-center gap-2">
           <Button
        size="sm"
+       variant="secondary"
        onClick={handleAutoAssign}
        disabled={unassignedGuests.length === 0}
-            className="bg-gradient-to-r from-primary to-primary-hover text-white transition shadow-sm font-semibold border-0"
+            className="transition shadow-sm font-semibold"
             title={caps.canAutoAssign ? "Placement Magique : regroupe les invités par catégorie" : "Le placement magique nécessite un forfait supérieur"}
      >
             {caps.canAutoAssign ? <Sparkles className="w-4 h-4 mr-1.5" /> : <Lock className="w-4 h-4 mr-1.5 opacity-80" />}
@@ -1273,6 +1287,7 @@ export default function TablePlanner({
             <span className="sm:hidden">Partage</span>
           </Button>
 
+          {isExpanded && (
           <Button
             size="sm"
             onClick={handleSavePlan}
@@ -1284,6 +1299,7 @@ export default function TablePlanner({
             <Save className="w-4 h-4 mr-1.5" />
             Enregistrer
           </Button>
+          )}
 
           {/* Zoom 2D */}
           <div className="inline-flex items-center gap-1 bg-surface-muted/70 p-1 rounded-xl border border-border">
@@ -1800,13 +1816,7 @@ export default function TablePlanner({
               <div className="flex items-center gap-2">
                 <Coins className="w-4 h-4 text-amber-500" />
                 <p className="text-sm font-bold text-foreground">Tarification & Répartition des zones de billetterie</p>
-                <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 ">
-                  Événement payant
-                </span>
  </div>
-              <p className="hidden sm:block text-xs text-muted mt-0.5">
-                Répartissez vos tables par zones (VIP, Carré d’Or, Standard). Les billets vendus sur la plateforme appliquent automatiquement ces tarifs.
-              </p>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
@@ -1826,7 +1836,7 @@ export default function TablePlanner({
                 type="button"
                 disabled={tables.length === 0 || pricingZones.length === 0}
                 onClick={() => setShowDistributeModal(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[var(--radius-button)] bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold transition shadow-xs disabled:opacity-50 disabled:pointer-events-none"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-foreground text-xs font-semibold transition shadow-2xs disabled:opacity-50 disabled:pointer-events-none"
                 title="Répartir automatiquement les tables dans les zones"
               >
                 <Sparkles className="w-3.5 h-3.5" />
@@ -1933,13 +1943,6 @@ export default function TablePlanner({
                   <span className="font-semibold text-foreground">{ticketingSummary.unassigned.tableCount} table{ticketingSummary.unassigned.tableCount > 1 ? 's' : ''} sans zone</span>
                   <p className="text-xs text-muted">{ticketingSummary.unassigned.seatCount} places en attente</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowDistributeModal(true)}
-                  className="ml-1 px-3 py-1.5 min-h-8 rounded-lg bg-surface-muted hover:bg-surface border border-border text-foreground font-medium text-xs transition shadow-2xs"
-                >
-                  Répartir
-                </button>
               </div>
             )}
           </div>
@@ -1956,7 +1959,7 @@ export default function TablePlanner({
               <button
                 type="button"
                 onClick={() => setPaintZoneId(null)}
-                className="px-3 py-1.5 min-h-[32px] rounded text-xs font-semibold bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition shrink-0"
+                className="px-3 py-1.5 min-h-[32px] rounded text-xs font-semibold border border-primary/30 bg-surface text-primary hover:bg-surface-muted transition shrink-0"
               >
                 Quitter (Échap)
               </button>
@@ -1990,13 +1993,6 @@ export default function TablePlanner({
        </span>
      )}
    </div>
-   <p className="text-muted text-xs">
- {roomName ? (
-       <>Synchronisé avec la salle. Vous pouvez réimporter les dernières modifications de structure (murs, scènes) tout en conservant les places déjà assignées.</>
- ) : (
- 'Importer le modèle de la salle liée (places conservées si possible).'
- )}
- </p>
  </div>
  <div className="flex flex-wrap items-center gap-2 shrink-0">
    <Link
@@ -2009,7 +2005,7 @@ export default function TablePlanner({
  type="button"
  disabled={importingLayout}
  onClick={() => onImportRoomLayout(tables.length > 0)}
-     className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-solid hover:bg-primary-solid-hover disabled:opacity-60 text-primary-foreground text-xs font-bold rounded-[var(--radius-button)] transition shadow-2xs"
+     className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-border bg-surface hover:bg-surface-muted disabled:opacity-60 text-foreground text-xs font-semibold rounded-[var(--radius-button)] transition shadow-2xs"
  >
  {importingLayout ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
  {tables.length > 0 ? 'Mettre à jour depuis la salle' : 'Importer depuis la salle'}
@@ -2039,9 +2035,7 @@ export default function TablePlanner({
             Plan de table
  </h2>
  <p className="text-muted text-sm mt-0.5">
- {plannerView === '3d'
-              ? `3D ${previewQuality === 'showcase' ? 'showcase' : 'standard'} · orbitez pour inspecter la salle`
-   : `${tables.length}/${caps.maxTables} tables · ${caps.label}${caps.canSnapGrid ? ' · grille' : ''}${caps.canRotate ? ' · rotation' : ''}`}
+   {`${tables.length}/${caps.maxTables} tables · ${caps.label}${caps.canSnapGrid ? ' · grille' : ''}${caps.canRotate ? ' · rotation' : ''}`}
  </p>
  </div>
  <div className="flex flex-wrap gap-2">
@@ -2057,7 +2051,7 @@ export default function TablePlanner({
  className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-surface border border-border text-foreground hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-xs sm:text-sm transition"
  >
  <Plus className="w-4 h-4" />
- Ajouter une Table
+ Ajouter une table
  </button>
  <button
  onClick={handleSavePlan}
@@ -2072,7 +2066,7 @@ export default function TablePlanner({
  ) : (
  <>
  <Check className="w-4 h-4" />
- Sauvegarder le Plan
+ Sauvegarder le plan
  </>
  )}
  </button>
@@ -2101,7 +2095,7 @@ export default function TablePlanner({
                       className={cn(
                         'px-2.5 py-1 min-h-[32px] rounded-lg text-xs font-bold transition-all touch-manipulation',
                         isActive
-                          ? 'bg-foreground text-background shadow-xs'
+                          ? 'bg-surface text-foreground shadow-xs'
                           : 'text-muted hover:text-foreground hover:bg-surface'
                       )}
                       title={`Hauteur du plan : ${cfg.label} (${cfg.px}px)`}
@@ -2187,12 +2181,7 @@ export default function TablePlanner({
  </button>
  )}
  </div>
- ) : (
- <div className="bg-surface border border-border rounded-[var(--radius-card)] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs text-muted font-medium flex flex-wrap items-center gap-2">
- <Box className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span>Vue 3D interactive · orbitez, zoomez et sélectionnez ou peignez les zones de tables en 3D</span>
- </div>
- )}
+ ) : null}
 
           {!isExpanded && (plannerView === '3d' ? render3DPreview(currentHeightClass) : renderCanvas(currentHeightClass))}
  </div>
@@ -2278,9 +2267,6 @@ export default function TablePlanner({
  <LayoutGrid className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
  <span className="truncate">Plan de table</span>
  </h3>
- <p className="text-xs text-muted mt-0.5 hidden sm:block">
- Survolez une table pour afficher son type, sa capacité et les invités placés.
- </p>
  </div>
             <div className="flex items-center gap-2 shrink-0">
               <PlanViewToggle value={plannerView} onChange={setPlannerView} />
@@ -3121,6 +3107,20 @@ export default function TablePlanner({
           </div>
         </Modal>
       )}
+
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        onClose={() => setPendingConfirm(null)}
+        onConfirm={() => {
+          const pending = pendingConfirm;
+          setPendingConfirm(null);
+          pending?.action();
+        }}
+        title={pendingConfirm?.title ?? ''}
+        description={pendingConfirm?.description ?? ''}
+        confirmLabel={pendingConfirm?.confirmLabel}
+        tone={pendingConfirm?.tone}
+      />
     </div>
   );
 }
