@@ -3351,7 +3351,7 @@ const TEMPLATE_DRESSINGS: Record<string, (bp: RoomLayoutBlueprint) => TemplateDr
   }),
   'chairs-cinema': () => ({
     walls: { texture: 'fluted', color: '#2a2230' },
-    metadata: { floorType: 'moquette', lightingPreset: 'night', wallPaintColor: '#2a2230' },
+    metadata: { floorType: 'moquette', lightingPreset: 'banquet', wallPaintColor: '#2a2230' },
   }),
   'chairs-grid': () => ({
     walls: { texture: 'limewash', color: '#f1ece4' },
@@ -3635,7 +3635,7 @@ const TEMPLATE_TABLE_SETTINGS: Record<string, TemplateTableSetting> = {
   'beach-wedding': { table: { couvertStyle: 'rattan', chairStyle: 'acapulco', chairSeatColor: '#f5efe3' }, centerpieces: ['tropical', 'lanterns'] },
   'vineyard-long-table': { table: { couvertStyle: 'rustic' } },
   'tent-garden': {
-    table: { tableSurface: 'linen', tableColor: '#f7f5f0', hasCouverts: true, couvertStyle: 'scalloped', chairType: 'CROSSBACK', chairStyle: 'crossback', seatMaterial: 'wood' },
+    table: { tableSurface: 'linen', tableColor: '#f7f5f0', hasCouverts: true, couvertStyle: 'scalloped', chairType: 'CROSSBACK', chairStyle: 'crossback', seatMaterial: 'wood', chairSeatColor: '#e8dcc6', chairFrameColor: '#8b5a2b' },
     centerpieces: ['pampas', 'greeneryRunner'],
     bars: [{ style: 'cart', x: 50, y: 85, lengthM: 2.4 }],
   },
@@ -3645,17 +3645,17 @@ const TEMPLATE_TABLE_SETTINGS: Record<string, TemplateTableSetting> = {
     spread: { cols: 4, x: [18, 82], y: [26, 70], stagger: true },
     bars: [{ style: 'gin', x: 22, y: 95 }],
   },
-  classroom: { table: { tableSurface: 'whiteLacquer', chairType: 'BANQUET', chairStyle: 'scandi', seatMaterial: 'plastic', chairSeatColor: '#e7e5e4' } },
+  classroom: { table: { tableSurface: 'whiteLacquer', chairType: 'BANQUET', chairStyle: 'scandi', seatMaterial: 'plastic', chairSeatColor: '#334155', chairFrameColor: '#d6d3d1' } },
   boardroom: { table: { tableSurface: 'walnut', chairType: 'ARMCHAIR', chairStyle: 'modern', seatMaterial: 'leather', chairSeatColor: '#1c1917' } },
   'conference-ushape': {
-    table: { tableSurface: 'linen', tableColor: '#1e293b', chairType: 'BANQUET', chairStyle: 'modern', seatMaterial: 'mesh', chairSeatColor: '#1f2937' },
+    table: { tableSurface: 'linen', tableColor: '#f1f5f9', chairType: 'BANQUET', chairStyle: 'modern', seatMaterial: 'mesh', chairSeatColor: '#1f2937' },
   },
   'conference-standard': { rows: { chairStyle: 'modern', seatMaterial: 'mesh', chairSeatColor: '#1f2937' } },
   'amphitheater-small': { rows: { chairStyle: 'cinema', seatMaterial: 'fabric', chairSeatColor: '#1e3a5f' } },
   'amphitheater-slope': { rows: { chairStyle: 'cinema', seatMaterial: 'fabric', chairSeatColor: '#334155' } },
   'chairs-theater': { rows: { chairType: 'THEATER', chairStyle: 'cinema', seatMaterial: 'velvet', chairSeatColor: '#7f1d1d' } },
   'chairs-cinema': { rows: { chairType: 'THEATER', chairStyle: 'cinema', seatMaterial: 'velvet', chairSeatColor: '#7f1d1d' } },
-  'chairs-grid': { chairs: { chairType: 'BANQUET', chairStyle: 'chiavari', seatMaterial: 'fabric', chairSeatColor: '#fafaf9', chairFrameColor: '#f5f5f4' } },
+  'chairs-grid': { chairs: CHIAVARI_GOLD },
   'restaurant-bistrot': { table: { hasCouverts: true, couvertStyle: 'bistro', chairType: 'BANQUET', chairStyle: 'bistro', seatMaterial: 'rattan' }, barStyle: 'wine' },
   'restaurant-terrasse': { table: { hasCouverts: true, couvertStyle: 'bistro', chairType: 'BANQUET', chairStyle: 'bistro', seatMaterial: 'rattan' } },
   'restaurant-patio-guinguette': { table: { hasCouverts: true, couvertStyle: 'scalloped', chairType: 'BANQUET', chairStyle: 'tolix', chairFrameColor: '#2f6f5e' }, centerpieces: ['lanterns'], barStyle: 'beer' },
