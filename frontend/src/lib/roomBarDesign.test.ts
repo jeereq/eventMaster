@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { BAR_STYLE_DESIGN, resolveBarDesign } from './roomBarDesign.ts';
+import { BAR_BACK_LABELS, BAR_FRONT_LABELS, BAR_STYLE_DESIGN, BAR_TOP_LABELS, resolveBarDesign } from './roomBarDesign.ts';
 
 describe('resolveBarDesign', () => {
   it('donne à chaque type de bar son propre habillage', () => {
@@ -22,4 +22,15 @@ describe('resolveBarDesign', () => {
     const d = resolveBarDesign('tea', { barFront: 'gold', barMetal: 42, barBack: 'toString' });
     assert.deepEqual(d, BAR_STYLE_DESIGN.tea);
   });
+});
+
+it('les nouveaux bars ont un habillage complet par défaut', () => {
+  for (const style of ['tiki', 'gin', 'dessert', 'iceCream', 'neonClub', 'oyster', 'cart'] as const) {
+    const d = resolveBarDesign(style);
+    assert.ok(BAR_FRONT_LABELS[d.front], `${style} façade`);
+    assert.ok(BAR_TOP_LABELS[d.top], `${style} plateau`);
+    assert.ok(BAR_BACK_LABELS[d.back], `${style} arrière-bar`);
+  }
+  assert.equal(resolveBarDesign('tiki').back, 'tiki');
+  assert.equal(resolveBarDesign('dessert', { barFront: 'neon' }).front, 'neon');
 });

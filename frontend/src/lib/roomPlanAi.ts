@@ -292,6 +292,7 @@ const CHAIR_STYLES = new Set<ChairStyle>([
   'classic', 'chiavari', 'napoleon', 'ghost', 'lounge', 'crossback', 'louis', 'ovalBack',
   'wishbone', 'tiffany', 'phoenix', 'panton', 'tolix', 'club', 'bergere', 'modern',
   'windsor', 'bistro', 'scandi',
+  'throne', 'peacock', 'egg', 'tulip', 'ladderBack', 'barrel', 'shell', 'acapulco', 'parsons',
 ]);
 const SEAT_MATERIALS = new Set<SeatMaterial>([
   'velvet', 'wood', 'fabric', 'leather', 'plastic', 'linen',
@@ -1176,6 +1177,7 @@ function applyFixtureLook(
     const allowed: RoomLayoutBlueprint['fixtures'][number]['barStyle'][] = [
       'cocktail', 'wine', 'champagne', 'beer', 'coffee', 'whiskey',
       'island', 'lShaped', 'juice', 'mocktail', 'tapas', 'tea',
+      'tiki', 'gin', 'dessert', 'iceCream', 'neonClub', 'oyster', 'cart',
     ];
     if (allowed.includes(item.barStyle as typeof allowed[number])) {
       next = { ...next, barStyle: item.barStyle as typeof allowed[number] };

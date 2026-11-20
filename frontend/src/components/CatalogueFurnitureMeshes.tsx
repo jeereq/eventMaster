@@ -14,6 +14,7 @@ import { CatalogueArcTable } from '@/components/roomCelebrationMeshes';
 import { TableBase } from '@/components/room/TableBaseMeshes';
 import { SurfaceMat, type SurfaceFinish } from '@/components/room/SurfaceMaterial';
 import { withRepeat } from '@/lib/roomSurfaceFinish';
+import { EXTRA_CHAIR_STYLES, ExtraChairStyleMesh, type ExtraChairContext } from '@/components/room/ChairStyleMeshes';
 import { cushionGeometry, drapedRectSkirtGeometry, drapedSkirtGeometry, legGeometry, moldedDiscGeometry, softBoxGeometry } from '@/components/room/furnitureGeometry';
 
 type MatProps = {
@@ -199,6 +200,8 @@ function CatalogueChairMesh({
   chairType,
   chairStyle,
   seatMaterial,
+  seatColor,
+  frameColor,
   imageUrl,
   position,
   rotationY = 0,
@@ -206,13 +209,15 @@ function CatalogueChairMesh({
   chairType: ChairType;
   chairStyle?: ChairStyle;
   seatMaterial?: SeatMaterial;
+  seatColor?: string;
+  frameColor?: string;
   imageUrl?: string;
   position: [number, number, number];
   rotationY?: number;
 }) {
   const visual = useMemo(
-    () => resolveChairVisual(chairType, chairStyle, seatMaterial),
-    [chairType, chairStyle, seatMaterial],
+    () => resolveChairVisual(chairType, chairStyle, seatMaterial, { seat: seatColor, frame: frameColor }),
+    [chairType, chairStyle, seatMaterial, seatColor, frameColor],
   );
   const fabric = useMemo(
     () => resolveSeatFabricMap(seatMaterial, visual.seatColor),
@@ -231,6 +236,46 @@ function CatalogueChairMesh({
   const backH = visual.backHeight * visual.scale;
   const seatTint = visual.seatColor;
   const style = chairStyle ?? (chairType === 'ARMCHAIR' ? 'classic' : undefined);
+
+  // Styles ajoutés (trône, paon, œuf, tulipe…) : modèles dédiés, pour toute chaise « assise ».
+  const extraStyleAllowed = chairType !== 'STOOL' && chairType !== 'THEATER' && chairType !== 'WHEELCHAIR' && chairType !== 'POUF' && chairType !== 'BARSTOOL';
+  if (style && extraStyleAllowed && EXTRA_CHAIR_STYLES.has(style)) {
+    const ctx: ExtraChairContext = {
+      seatH,
+      sw,
+      sd,
+      backH,
+      seatColor: seatTint,
+      frameColor: visual.frameColor,
+      seat: (o = {}) => (
+        <Mat
+          color={seatTint}
+          map={map}
+          normalMap={seatNormal}
+          normalScale={fabric.normalScale}
+          roughness={o.roughness ?? fabric.roughness}
+          metalness={o.metalness ?? fabric.metalness}
+          side={o.side}
+          clearcoat={o.clearcoat}
+        />
+      ),
+      frame: (o = {}) => (
+        <Mat
+          finish={frameFinish}
+          color={visual.frameColor}
+          roughness={o.roughness ?? 0.42}
+          metalness={o.metalness ?? 0.3}
+          side={o.side}
+          clearcoat={o.clearcoat}
+        />
+      ),
+    };
+    return (
+      <group position={position} rotation={[0, rotationY, 0]}>
+        <ExtraChairStyleMesh style={style} c={ctx} />
+      </group>
+    );
+  }
 
   if (chairType === 'STOOL') {
     return (
@@ -810,7 +855,7 @@ function CatalogueChairMesh({
           ))}
           {/* Galette d'assise amovible, bombée */}
           <mesh position={[0, seatH + 0.035, 0.005]} geometry={cushionGeometry(sw * 0.86, 0.035, sd * 0.84, 0.4)} castShadow receiveShadow>
-            <Mat color="#f8fafc" finish="linen" roughness={0.75} />
+            <Mat color={seatColor ? seatTint : '#f8fafc'} finish="linen" roughness={0.75} />
           </mesh>
           {style === 'tiffany' && (
             <>
@@ -935,6 +980,8 @@ export function CatalogueChair({
   chairType,
   chairStyle,
   seatMaterial,
+  seatColor,
+  frameColor,
   imageUrl,
   position,
   rotationY = 0,
@@ -944,6 +991,10 @@ export function CatalogueChair({
   chairType: ChairType;
   chairStyle?: ChairStyle;
   seatMaterial?: SeatMaterial;
+  /** Couleur d’assise choisie dans l’éditeur. */
+  seatColor?: string;
+  /** Couleur de structure choisie dans l’éditeur. */
+  frameColor?: string;
   imageUrl?: string;
   position: [number, number, number];
   rotationY?: number;
@@ -965,6 +1016,8 @@ export function CatalogueChair({
         chairType={chairType}
         chairStyle={chairStyle}
         seatMaterial={seatMaterial}
+        seatColor={seatColor}
+        frameColor={frameColor}
         imageUrl={imageUrl}
         position={[0, 0, 0]}
         rotationY={0}

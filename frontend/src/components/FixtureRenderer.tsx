@@ -878,6 +878,12 @@ export default function FixtureRenderer({
       style === 'mocktail' ? ['#db2777', '#7c3aed', '#06b6d4'] :
       style === 'tapas' ? ['#7f1d1d', '#854d0e'] :
       style === 'tea' ? ['#78716c', '#a8a29e'] :
+      style === 'tiki' ? ['#7c2d12', '#b45309', '#f59e0b'] :
+      style === 'gin' ? ['#9fd3c7', '#2f5d4e', '#e0f2fe'] :
+      style === 'dessert' ? ['#f472b6', '#a78bfa', '#facc15', '#34d399'] :
+      style === 'iceCream' ? ['#fde68a', '#fbcfe8', '#bbf7d0'] :
+      style === 'neonClub' ? ['#22d3ee', '#a855f7', '#ec4899'] :
+      style === 'oyster' ? ['#d9f99d', '#facc15'] :
       ['#14532d', '#7f1d1d', '#1e3a5f', '#854d0e'];
     return (
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>

@@ -66,7 +66,16 @@ export type ChairStyle =
   | 'windsor'
   | 'bistro'
   | 'scandi'
-  | 'cinema';
+  | 'cinema'
+  | 'throne'
+  | 'peacock'
+  | 'egg'
+  | 'tulip'
+  | 'ladderBack'
+  | 'barrel'
+  | 'shell'
+  | 'acapulco'
+  | 'parsons';
 /** Matériau d’assise. */
 export type SeatMaterial =
   | 'velvet'
@@ -139,7 +148,14 @@ export type BarStyle =
   | 'juice'
   | 'mocktail'
   | 'tapas'
-  | 'tea';
+  | 'tea'
+  | 'tiki'
+  | 'gin'
+  | 'dessert'
+  | 'iceCream'
+  | 'neonClub'
+  | 'oyster'
+  | 'cart';
 export type RoofStyle =
   | 'flat'
   | 'tentSwag'
@@ -219,7 +235,9 @@ export type RoomFixtureKind =
   | 'customElement';
 export type FloorDecalKind = 'rose' | 'butterfly' | 'custom' | 'path';
 export type PedestalStyle = 'squareWhite' | 'columnGold';
-export type CenterpieceStyle = 'floral' | 'greeneryRunner' | 'candleCluster';
+export type { CenterpieceStyle, CouvertStyle } from './roomTableware.ts';
+import type { CenterpieceStyle, CouvertStyle } from './roomTableware.ts';
+export { centerpieceStyleLabels, couvertStyleLabels } from './roomTableware.ts';
 export type StageRoofStyle = 'none' | 'gabled';
 export type StageRig = 'none' | 'truss' | 'concert' | 'wedding';
 export const stageRigLabels: Record<StageRig, string> = {
@@ -630,7 +648,7 @@ export interface RoomLayoutBlueprint {
     frameColor?: string;
     /** Porte : finition des poignées et paumelles. */
     hardwareFinish?: import('@/lib/roomHomeFurniture').HomeMetalFinish;
-    couvertStyle?: 'classic' | 'gold' | 'festive';
+    couvertStyle?: CouvertStyle;
     /** Style d’allée centrale / tapis d’honneur (Pinterest). */
     aisleStyle?: AisleStyle;
     /** Bordure dorée / satinée sur l’allée. */
@@ -707,14 +725,18 @@ export interface RoomLayoutBlueprint {
         chairType: ChairType;
         chairStyle?: ChairStyle;
         seatMaterial?: SeatMaterial;
+        /** Couleur d’assise / tissu choisie (sinon celle du matériau). */
+        chairSeatColor?: string;
+        /** Couleur de structure (pieds, dossier) choisie. */
+        chairFrameColor?: string;
         chairImageUrl?: string;
         tableColor?: string;
         tableSurface?: TableSurfaceStyle;
         tableImageUrl?: string;
         /** Nappe / couverts sur la table. */
         hasCouverts?: boolean;
-        /** classic | gold | festive */
-        couvertStyle?: 'classic' | 'gold' | 'festive';
+        /** Service d’assiettes (porcelaine, or, rotin, marbre…). */
+        couvertStyle?: CouvertStyle;
         /** Centre de table (vase or + bouquet). */
         hasCenterpiece?: boolean;
         /** Style du centre : bouquet haut, runner verdure, ou grappe de bougies. */
@@ -759,6 +781,8 @@ export interface RoomLayoutBlueprint {
         chairType: ChairType;
         chairStyle?: ChairStyle;
         seatMaterial?: SeatMaterial;
+        chairSeatColor?: string;
+        chairFrameColor?: string;
         chairImageUrl?: string;
         label?: string;
         x: number;
@@ -776,6 +800,8 @@ export interface RoomLayoutBlueprint {
         chairType: ChairType;
         chairStyle?: ChairStyle;
         seatMaterial?: SeatMaterial;
+        chairSeatColor?: string;
+        chairFrameColor?: string;
         chairImageUrl?: string;
         tier: number;
         x: number;
@@ -1314,6 +1340,8 @@ export function createBlueprintChair(
     chairType?: ChairType;
     chairStyle?: ChairStyle;
     seatMaterial?: SeatMaterial;
+    chairSeatColor?: string;
+    chairFrameColor?: string;
     x?: number;
     y?: number;
     rotation?: number;
@@ -1326,6 +1354,8 @@ export function createBlueprintChair(
     chairType,
     chairStyle: defaults.chairStyle ?? (chairType === 'ARMCHAIR' ? 'lounge' : 'classic'),
     seatMaterial: defaults.seatMaterial ?? (chairType === 'ARMCHAIR' ? 'velvet' : 'fabric'),
+    ...(defaults.chairSeatColor ? { chairSeatColor: defaults.chairSeatColor } : {}),
+    ...(defaults.chairFrameColor ? { chairFrameColor: defaults.chairFrameColor } : {}),
     label: chairType === 'ARMCHAIR' ? `Fauteuil ${index}` : `Chaise ${index}`,
     x: defaults.x ?? 40 + Math.random() * 20,
     y: defaults.y ?? 40 + Math.random() * 20,
@@ -1383,6 +1413,8 @@ export function detachOneTableChair(
     chairType: table.chairType,
     chairStyle: table.chairStyle,
     seatMaterial: table.seatMaterial,
+    chairSeatColor: table.chairSeatColor,
+    chairFrameColor: table.chairFrameColor,
     ...pose,
   });
   const remaining = capacity - hidden.size;
@@ -1419,6 +1451,8 @@ export function detachTableChairs(
       chairType: table.chairType,
       chairStyle: table.chairStyle,
       seatMaterial: table.seatMaterial,
+      chairSeatColor: table.chairSeatColor,
+      chairFrameColor: table.chairFrameColor,
       // Même position et orientation que la chaise attachée (face au plateau).
       ...tableSeatCanvasPose(table, i, blueprint.canvas),
     }));
@@ -2109,6 +2143,15 @@ export const chairStyleLabels: Record<ChairStyle, string> = {
   bistro: 'Bistrot cannée',
   scandi: 'Coque scandinave',
   cinema: 'Fauteuil cinéma (haut dossier)',
+  throne: 'Trône royal (mariés)',
+  peacock: 'Fauteuil paon en rotin',
+  egg: 'Fauteuil œuf (cocon)',
+  tulip: 'Chaise tulipe (pied central)',
+  ladderBack: 'Paillée champêtre (échelle)',
+  barrel: 'Fauteuil tonneau',
+  shell: 'Fauteuil coquillage (cannelé)',
+  acapulco: 'Acapulco (cordage tressé)',
+  parsons: 'Parsons tapissée',
 };
 
 export const seatMaterialLabels: Record<SeatMaterial, string> = {
@@ -6386,6 +6429,8 @@ export function applyTableStyleToAll(
       chairType: fields.includes('chairType') ? source.chairType : item.chairType,
       chairStyle: fields.includes('chairStyle') ? source.chairStyle : item.chairStyle,
       seatMaterial: fields.includes('seatMaterial') ? source.seatMaterial : item.seatMaterial,
+      chairSeatColor: fields.includes('chairStyle') || fields.includes('seatMaterial') ? source.chairSeatColor : item.chairSeatColor,
+      chairFrameColor: fields.includes('chairStyle') || fields.includes('seatMaterial') ? source.chairFrameColor : item.chairFrameColor,
       tableColor: fields.includes('tableColor') ? source.tableColor : item.tableColor,
       tableSurface: fields.includes('tableSurface') ? source.tableSurface : item.tableSurface,
       capacity: fields.includes('capacity') ? source.capacity : item.capacity,
@@ -7626,6 +7671,13 @@ export const barStyleLabels: Record<BarStyle, string> = {
   mocktail: 'Bar mocktails',
   tapas: 'Bar tapas',
   tea: 'Salon de thé',
+  tiki: 'Bar tiki (rhum)',
+  gin: 'Bar à gin botanique',
+  dessert: 'Candy bar & desserts',
+  iceCream: 'Bar à glaces',
+  neonClub: 'Bar club néon',
+  oyster: 'Bar à huîtres',
+  cart: 'Bar mobile (chariot)',
 };
 
 export const barStyleHints: Record<BarStyle, string> = {
@@ -7641,6 +7693,13 @@ export const barStyleHints: Record<BarStyle, string> = {
   mocktail: 'Sirop, agrumes, sans alcool',
   tapas: 'Planches et petites assiettes',
   tea: 'Urne, théière, tasses porcelaine',
+  tiki: 'Bambou, toit de paille, ananas et rhums',
+  gin: 'Ballons de gin, agrumes et plantes aromatiques',
+  dessert: 'Bocaux de bonbons, macarons et pièce montée',
+  iceCream: 'Vitrine de bacs à glace, cornets et coupes',
+  neonClub: 'Façade LED, néons et bouteilles premium',
+  oyster: 'Banc de glace pilée, huîtres et citrons',
+  cart: 'Chariot à roues et auvent rayé, à déplacer partout',
 };
 
 export const barStylePresets: Record<BarStyle, { w: number; h: number; label: string; color: string }> = {
@@ -7656,6 +7715,13 @@ export const barStylePresets: Record<BarStyle, { w: number; h: number; label: st
   mocktail: { w: 24, h: 10, label: 'Bar mocktails', color: '#f6a5c9' },
   tapas: { w: 26, h: 10, label: 'Bar tapas', color: '#f3dccb' },
   tea: { w: 22, h: 9, label: 'Salon de thé', color: '#8b6a47' },
+  tiki: { w: 26, h: 10, label: 'Bar tiki', color: '#a8844f' },
+  gin: { w: 24, h: 10, label: 'Bar à gin', color: '#2f5d4e' },
+  dessert: { w: 24, h: 10, label: 'Candy bar', color: '#f9c6d6' },
+  iceCream: { w: 22, h: 9, label: 'Bar à glaces', color: '#bfe3ef' },
+  neonClub: { w: 28, h: 10, label: 'Bar club néon', color: '#111827' },
+  oyster: { w: 24, h: 10, label: 'Bar à huîtres', color: '#e8e4dc' },
+  cart: { w: 12, h: 7, label: 'Bar mobile', color: '#f4ede4' },
 };
 
 /** Tailles réelles (m) des podiums : largeur × profondeur. */
@@ -7707,6 +7773,13 @@ export const barStyleSizeM: Record<BarStyle, { w: number; d: number }> = {
   mocktail: { w: 4, d: 2.1 },
   tapas: { w: 4.4, d: 2.1 },
   tea: { w: 3.6, d: 2 },
+  tiki: { w: 4.4, d: 2.2 },
+  gin: { w: 4.2, d: 2.2 },
+  dessert: { w: 4, d: 2.1 },
+  iceCream: { w: 3.6, d: 2 },
+  neonClub: { w: 5, d: 2.2 },
+  oyster: { w: 4, d: 2.1 },
+  cart: { w: 1.8, d: 1.2 },
 };
 
 /** Tailles réelles (m) des écrans et appareils. */
@@ -7745,12 +7818,6 @@ export const roofStyleLabels: Record<RoofStyle, string> = {
   clearTent: 'Tente cristal transparente',
   barrel: 'Voûte en berceau (Hangar)',
   sawtooth: 'Sheds industriels (Dents de scie)',
-};
-
-export const centerpieceStyleLabels: Record<CenterpieceStyle, string> = {
-  floral: 'Bouquet haut',
-  greeneryRunner: 'Runner verdure',
-  candleCluster: 'Bougies',
 };
 
 export const flowerTypeLabels: Record<FlowerType, string> = {

@@ -23,6 +23,13 @@ const BOTTLE_COLORS: Record<BarStyle, string[]> = {
   mocktail: ['#db2777', '#7c3aed', '#06b6d4', '#84cc16'],
   tapas: ['#7f1d1d', '#854d0e', '#14532d'],
   tea: ['#78716c', '#a8a29e', '#44403c', '#d6d3d1'],
+  tiki: ['#7c2d12', '#b45309', '#f59e0b', '#14532d', '#451a03'],
+  gin: ['#cfe8e1', '#9fd3c7', '#2f5d4e', '#e0f2fe', '#1e3a5f'],
+  dessert: ['#f472b6', '#a78bfa', '#facc15', '#34d399'],
+  iceCream: ['#fde68a', '#fbcfe8', '#bbf7d0', '#fef3c7'],
+  neonClub: ['#1e3a8a', '#4c1d95', '#0f172a', '#14532d', '#7f1d1d'],
+  oyster: ['#d9f99d', '#fef9c3', '#14532d', '#ecfccb'],
+  cart: ['#854d0e', '#14532d', '#7f1d1d', '#1e3a5f'],
 };
 
 const BAR_GLASS_MAX = 14;
@@ -44,6 +51,13 @@ const GLASS_TINT: Record<BarStyle, string> = {
   mocktail: '#f9a8d4',
   tapas: '#fed7aa',
   tea: '#f5f0e8',
+  tiki: '#fb923c',
+  gin: '#ecfccb',
+  dessert: '#fbcfe8',
+  iceCream: '#fef3c7',
+  neonClub: '#60a5fa',
+  oyster: '#fef9c3',
+  cart: '#fde68a',
 };
 
 function Mat({
@@ -296,7 +310,12 @@ function glassSpec(style: BarStyle): GlassSpec {
       return { profile: 'rocks', liquid: [0.036, 0.037, 0.014, 0.04] };
     case 'juice':
     case 'mocktail':
+    case 'tiki':
       return { profile: 'highball', liquid: [0.029, 0.031, 0.014, 0.12] };
+    case 'gin':
+      return { profile: 'wine', liquid: [0.024, 0.04, 0.112, 0.16] };
+    case 'oyster':
+      return { profile: 'flute', liquid: [0.014, 0.022, 0.1, 0.18] };
     case 'coffee':
     case 'tea':
       return { profile: 'cup', liquid: [0.028, 0.028, 0.04, 0.052], saucer: true };
@@ -448,6 +467,27 @@ function InstancedParts({
       {children}
     </instancedMesh>
   );
+}
+
+const bambooCache = new Map<string, THREE.BufferGeometry>();
+/** Canne de bambou : tube avec renflement à chaque nœud (≈ tous les 30 cm). */
+function bambooCane(h: number, r: number, seed: number): THREE.BufferGeometry {
+  const key = `${h.toFixed(3)}-${r.toFixed(4)}-${seed % 4}`;
+  const hit = bambooCache.get(key);
+  if (hit) return hit;
+  const pts: THREE.Vector2[] = [];
+  const nodes = Math.max(2, Math.round(h / 0.3));
+  const off = (seed % 4) * 0.05;
+  for (let i = 0; i <= 80; i += 1) {
+    const t = i / 80;
+    const y = t * h;
+    const phase = ((y / h) * nodes + off) % 1;
+    const bump = Math.exp(-Math.pow((phase - 0.5) / 0.035, 2)) * 0.18;
+    pts.push(new THREE.Vector2(r * (1 + bump), y - h / 2));
+  }
+  const g = new THREE.LatheGeometry(pts, 12);
+  bambooCache.set(key, g);
+  return g;
 }
 
 /** Teintes de bois proches du blanc : multipliées par la couleur du bar, elles varient les lames. */
@@ -671,6 +711,76 @@ function BarFrontFace({ kind, w, y0, y1, body, metal }: { kind: BarFront; w: num
         </group>
       );
     }
+    case 'bamboo': {
+      // Cannes de bambou verticales jointives, nœuds marqués, liens en corde.
+      const n = Math.max(8, Math.floor(w / 0.05));
+      const pitch = w / n;
+      return (
+        <group>
+          <mesh position={[0, yc, 0.004]}>
+            <boxGeometry args={[w, h, 0.008]} />
+            <meshStandardMaterial color="#3b2a17" roughness={0.9} />
+          </mesh>
+          {Array.from({ length: n }).map((_, i) => (
+            <mesh key={i} position={[(i + 0.5 - n / 2) * pitch, yc, 0.025]} geometry={bambooCane(h - 0.02, pitch * 0.47, i)} castShadow>
+              <SurfaceMat color={i % 3 === 0 ? '#c9a46a' : i % 3 === 1 ? '#b8935a' : '#d4b27a'} finish="wood" roughness={0.45} clearcoat={0.3} repeat={[0.2, 1]} vertical />
+            </mesh>
+          ))}
+          {[0.2, 0.8].map((t) => (
+            <mesh key={t} position={[0, y0 + h * t, 0.05]}>
+              <boxGeometry args={[w, 0.025, 0.006]} />
+              <meshStandardMaterial color="#8a6a3e" roughness={1} />
+            </mesh>
+          ))}
+        </group>
+      );
+    }
+    case 'neon': {
+      // Laque noire brillante et lignes LED horizontales qui changent de teinte.
+      const lines = Math.max(3, Math.round(h / 0.16));
+      const tints = ['#22d3ee', '#a855f7', '#ec4899', '#3b82f6'];
+      return (
+        <group>
+          <mesh position={[0, yc, 0.01]} castShadow receiveShadow>
+            <boxGeometry args={[w, h, 0.02]} />
+            <SurfaceMat color="#0b0b10" finish="lacquer" roughness={0.12} clearcoat={1} />
+          </mesh>
+          {Array.from({ length: lines }).map((_, i) => (
+            <mesh key={i} position={[0, y0 + ((i + 0.5) / lines) * h, 0.024]}>
+              <boxGeometry args={[w * 0.96, 0.012, 0.008]} />
+              <meshStandardMaterial color={tints[i % tints.length]} emissive={tints[i % tints.length]} emissiveIntensity={2.2} toneMapped={false} />
+            </mesh>
+          ))}
+          {[-1, 1].map((sd) => (
+            <mesh key={sd} position={[sd * (w / 2 - 0.01), yc, 0.026]}>
+              <boxGeometry args={[0.02, h, 0.012]} />
+              <MetalMat metal={metal} />
+            </mesh>
+          ))}
+        </group>
+      );
+    }
+    case 'stripes': {
+      // Lames verticales laquées en alternance couleur du bar / crème (candy bar, glacier).
+      const n = Math.max(6, Math.round(w / 0.12));
+      const pitch = w / n;
+      return (
+        <group>
+          {Array.from({ length: n }).map((_, i) => (
+            <mesh key={i} position={[(i + 0.5 - n / 2) * pitch, yc, 0.012]} castShadow receiveShadow>
+              <boxGeometry args={[pitch - 0.002, h, 0.024]} />
+              <SurfaceMat color={i % 2 ? '#fbf7f0' : body} finish="lacquer" roughness={0.28} clearcoat={0.6} />
+            </mesh>
+          ))}
+          {[y0 + 0.015, y1 - 0.015].map((y) => (
+            <mesh key={y} position={[0, y, 0.03]} castShadow>
+              <boxGeometry args={[w, 0.03, 0.03]} />
+              <MetalMat metal={metal} repeat={[6, 1]} />
+            </mesh>
+          ))}
+        </group>
+      );
+    }
     default: {
       const slatCount = Math.max(6, Math.min(28, Math.round(w * 5)));
       return (
@@ -705,6 +815,8 @@ function BarTopSurface({ kind, w, d }: { kind: BarTop; w: number; d: number }) {
       return <GenSurface name="terrazzo-venetian" repeat={[w / 1.4, d / 1.4]} roughness={0.22} normalScale={0.3} clearcoat={0.5} />;
     case 'concrete':
       return <GenSurface name="concrete-polished" repeat={[w / 2, d / 2]} color="#e7e3de" roughness={0.45} normalScale={0.35} />;
+    case 'quartz':
+      return <GenSurface name="terrazzo-classic" repeat={[w / 3, d / 3]} color="#fbfaf8" roughness={0.12} normalScale={0.1} clearcoat={0.9} />;
     case 'zinc':
     default:
       return <SurfaceMat color="#a9adb3" finish="metal" metalness={0.85} roughness={0.36} repeat={[Math.max(1, w / 1.2), 1]} />;
@@ -712,7 +824,7 @@ function BarTopSurface({ kind, w, d }: { kind: BarTop; w: number; d: number }) {
 }
 
 /** Épaisseur visible du plateau : le bois et le zinc se lisent plus épais que la pierre. */
-const TOP_THICKNESS: Record<BarTop, number> = { marble: 0.05, blackMarble: 0.05, oak: 0.065, walnut: 0.065, zinc: 0.045, terrazzo: 0.05, concrete: 0.06 };
+const TOP_THICKNESS: Record<BarTop, number> = { marble: 0.05, blackMarble: 0.05, oak: 0.065, walnut: 0.065, zinc: 0.045, terrazzo: 0.05, concrete: 0.06, quartz: 0.04 };
 
 /* ---------------------------------------------------------------------------------------------
  * Tabourets (assise à 75–78 cm pour un comptoir à 1,10–1,15 m). Clients vers +z.
@@ -727,6 +839,11 @@ const STOOL_TINT: Partial<Record<BarStyle, string>> = {
   coffee: '#7a5232',
   wine: '#6b4428',
   tapas: '#5c3a22',
+  tiki: '#c79a5b',
+  gin: '#1f4d3a',
+  dessert: '#f2a7c0',
+  iceCream: '#7dd3fc',
+  neonClub: '#18181b',
 };
 
 function BarStoolModel({ kind, metal, tint, x, z }: { kind: BarStool; metal: BarMetal; tint?: string; x: number; z: number }) {
@@ -861,6 +978,15 @@ export function EventBarMesh(props: EventBarMeshProps) {
   // Emprise « en longueur » dans le sens de la profondeur (bar dessiné verticalement sur le plan) :
   // on oriente le comptoir sur le grand côté au lieu d’écraser un bar de 6 m en 1,8 m de façade.
   const { w, d, style = 'cocktail' } = props;
+  if (style === 'cart') {
+    return d > w * 1.25 ? (
+      <group rotation={[0, Math.PI / 2, 0]}>
+        <BarCartMesh {...props} w={d} d={w} />
+      </group>
+    ) : (
+      <BarCartMesh {...props} />
+    );
+  }
   if (style !== 'island' && d > w * 1.25) {
     return (
       <group rotation={[0, Math.PI / 2, 0]}>
@@ -1412,6 +1538,141 @@ function CafeBack({ w, backD, style, metal }: { w: number; backD: number; style:
   );
 }
 
+/** Paillote tiki : étagères en bambou, auvent de chaume sur poteaux, masques sculptés. */
+function TikiBack({ w, backD, style, colors }: { w: number; backD: number; style: BarStyle; colors: string[] }) {
+  const baseH = BACK_BASE_H;
+  const W = w * 0.96;
+  const shelfYs = [baseH + 0.4, baseH + 0.8];
+  const shelfZ = -backD / 2 + 0.15;
+  const slots = useMemo(
+    () => shelfSlots(style, colors, W * 0.8, [{ y: baseH + 0.03, fill: 0.5 }, ...shelfYs.map((y) => ({ y: y + 0.03, fill: 0.85 }))], shelfZ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [style, colors, W, shelfZ],
+  );
+  const roofY = baseH + 1.45;
+  const posts = Math.max(2, Math.round(W / 1.5) + 1);
+  return (
+    <group>
+      <BackCabinet W={W} backD={backD} metal="black" wood="#5b3b1e" door="#7a5531" />
+      {/* Fond en natte de paille */}
+      <mesh position={[0, baseH + 0.62, -backD / 2 + 0.02]}>
+        <boxGeometry args={[W, 1.24, 0.02]} />
+        <SurfaceMat color="#cfae74" finish="rattan" roughness={0.9} repeat={[W / 0.6, 2]} />
+      </mesh>
+      {shelfYs.map((y) => (
+        <group key={y} position={[0, y, shelfZ]}>
+          {[-0.04, 0, 0.04].map((dz) => (
+            <mesh key={dz} position={[0, 0, dz * 2.4]} rotation={[0, 0, Math.PI / 2]} geometry={bambooCane(W * 0.86, 0.022, Math.round(y * 10))} castShadow>
+              <SurfaceMat color="#c9a46a" finish="wood" roughness={0.45} clearcoat={0.3} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+      <BottleSet slots={slots} />
+      {/* Poteaux bambou et chaume */}
+      {Array.from({ length: posts }).map((_, i) => (
+        <mesh key={i} position={[((i / (posts - 1)) - 0.5) * W, roofY / 2, -backD / 2 + 0.05]} geometry={bambooCane(roofY, 0.04, i)} castShadow>
+          <SurfaceMat color="#b8935a" finish="wood" roughness={0.5} />
+        </mesh>
+      ))}
+      <group position={[0, roofY + 0.06, backD * 0.6]} rotation={[0.42, 0, 0]}>
+        {Array.from({ length: 4 }).map((_, k) => (
+          <mesh key={k} position={[0, -k * 0.05, -k * 0.32]} castShadow receiveShadow>
+            <boxGeometry args={[W + 0.4, 0.09, 0.42]} />
+            <SurfaceMat color={k % 2 ? '#c8a25c' : '#b48c48'} finish="rattan" roughness={1} repeat={[W / 0.25, 1]} vertical />
+          </mesh>
+        ))}
+        {/* Frange de chaume qui pend en bord d’auvent */}
+        {Array.from({ length: Math.round((W + 0.4) / 0.05) }).map((_, i, arr) => (
+          <mesh key={`f${i}`} position={[((i + 0.5) / arr.length - 0.5) * (W + 0.4), -0.1, 0.2]} rotation={[-0.42, 0, (rand(i) - 0.5) * 0.3]}>
+            <boxGeometry args={[0.035, 0.14 + rand(i * 3) * 0.06, 0.012]} />
+            <meshStandardMaterial color="#c49a52" roughness={1} />
+          </mesh>
+        ))}
+      </group>
+      {/* Masques tiki sculptés */}
+      {[-1, 1].map((sd) => (
+        <group key={sd} position={[sd * (W / 2 - 0.2), baseH + 1.05, -backD / 2 + 0.06]}>
+          <mesh castShadow>
+            <capsuleGeometry args={[0.1, 0.22, 4, 12]} />
+            <SurfaceMat color="#6b4423" finish="wood" roughness={0.6} />
+          </mesh>
+          {[-0.04, 0.04].map((x) => (
+            <mesh key={x} position={[x, 0.07, 0.09]}>
+              <sphereGeometry args={[0.025, 10, 8]} />
+              <meshStandardMaterial color="#f5f5f4" roughness={0.6} />
+            </mesh>
+          ))}
+          <mesh position={[0, -0.06, 0.09]}>
+            <boxGeometry args={[0.1, 0.03, 0.02]} />
+            <meshStandardMaterial color="#2b1a0e" roughness={0.8} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** Candy bar : étagères laquées blanches garnies de bocaux de bonbons multicolores. */
+function CandyBack({ w, backD, metal }: { w: number; backD: number; metal: BarMetal }) {
+  const baseH = BACK_BASE_H;
+  const W = w * 0.96;
+  const shelfYs = [baseH + 0.04, baseH + 0.44, baseH + 0.84];
+  const shelfZ = -backD / 2 + 0.15;
+  const candy = ['#f472b6', '#fb7185', '#a78bfa', '#60a5fa', '#34d399', '#facc15', '#fb923c', '#f9a8d4'];
+  const jars = useMemo(() => {
+    const out: Array<{ x: number; y: number; h: number; r: number; c: string }> = [];
+    shelfYs.forEach((y, row) => {
+      const n = Math.floor((W * 0.9) / 0.17);
+      for (let i = 0; i < n; i += 1) {
+        const seed = row * 31 + i * 7;
+        out.push({ x: (i + 0.5 - n / 2) * 0.17, y, h: 0.16 + rand(seed) * 0.12, r: 0.055 + rand(seed + 1) * 0.015, c: candy[(i + row * 3) % candy.length] });
+      }
+    });
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [W]);
+  return (
+    <group>
+      <BackCabinet W={W} backD={backD} metal={metal} wood="#f5f0e8" door="#fbf7f0" />
+      <mesh position={[0, baseH + 0.65, -backD / 2 + 0.02]}>
+        <boxGeometry args={[W, 1.3, 0.02]} />
+        <SurfaceMat color="#fce7f3" finish="lacquer" roughness={0.3} />
+      </mesh>
+      {shelfYs.slice(1).map((y) => (
+        <mesh key={y} position={[0, y - 0.015, shelfZ]} castShadow receiveShadow>
+          <boxGeometry args={[W * 0.96, 0.03, 0.26]} />
+          <SurfaceMat color="#ffffff" finish="lacquer" roughness={0.25} />
+        </mesh>
+      ))}
+      {jars.map((j, i) => (
+        <group key={i} position={[j.x, j.y, shelfZ]}>
+          {/* Bonbons (masse colorée) dans un bocal en verre à couvercle */}
+          <mesh position={[0, j.h * 0.38, 0]}>
+            <cylinderGeometry args={[j.r * 0.9, j.r * 0.9, j.h * 0.72, 16]} />
+            <meshStandardMaterial color={j.c} roughness={0.35} />
+          </mesh>
+          <mesh position={[0, j.h / 2, 0]}>
+            <cylinderGeometry args={[j.r, j.r, j.h, 18, 1, true]} />
+            <meshPhysicalMaterial color="#f8fafc" roughness={0.04} transparent opacity={0.28} clearcoat={1} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, j.h + 0.012, 0]} castShadow>
+            <cylinderGeometry args={[j.r * 0.7, j.r * 0.75, 0.025, 16]} />
+            <MetalMat metal={metal} plain />
+          </mesh>
+        </group>
+      ))}
+      {/* Guirlande de fanions */}
+      {Array.from({ length: Math.round(W / 0.22) }).map((_, i, arr) => (
+        <mesh key={`b${i}`} position={[((i + 0.5) / arr.length - 0.5) * W, baseH + 1.24 - Math.sin(((i + 0.5) / arr.length) * Math.PI) * 0.08, -backD / 2 + 0.06]} rotation={[0, 0, Math.PI]}>
+          <coneGeometry args={[0.06, 0.12, 3]} />
+          <meshStandardMaterial color={candy[i % candy.length]} roughness={0.8} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function BarBackUnit({ w, backD, style, colors, design }: { w: number; backD: number; style: BarStyle; colors: string[]; design: BarDesign }) {
   switch (design.back) {
     case 'wineWall':
@@ -1420,6 +1681,10 @@ function BarBackUnit({ w, backD, style, colors, design }: { w: number; backD: nu
       return <KegsBack w={w} backD={backD} metal={design.metal} />;
     case 'cafe':
       return <CafeBack w={w} backD={backD} style={style} metal={design.metal} />;
+    case 'tiki':
+      return <TikiBack w={w} backD={backD} style={style} colors={colors} />;
+    case 'candy':
+      return <CandyBack w={w} backD={backD} metal={design.metal} />;
     default:
       return <ShelvedBackBar w={w} backD={backD} style={style} colors={colors} kind={design.back} metal={design.metal} />;
   }
@@ -1681,6 +1946,256 @@ function EventBarBody({
           </group>
         ))
       ) : null}
+      {style === 'tiki' ? (
+        <group position={[-w * 0.28, height, barTopZ - 0.02]}>
+          {/* Ananas et mugs tiki */}
+          <mesh position={[0, 0.1, 0]} scale={[1, 1.35, 1]} castShadow>
+            <sphereGeometry args={[0.075, 16, 12]} />
+            <SurfaceMat color="#c58a2c" finish="rattan" roughness={0.7} repeat={2} />
+          </mesh>
+          {Array.from({ length: 7 }).map((_, i) => (
+            <mesh key={i} position={[Math.cos(i) * 0.02, 0.24, Math.sin(i) * 0.02]} rotation={[Math.cos(i * 0.9) * 0.5, 0, Math.sin(i * 0.9) * 0.5]} scale={[1, 1, 0.2]} castShadow>
+              <coneGeometry args={[0.02, 0.16, 6]} />
+              <meshStandardMaterial color="#3f7d3a" roughness={0.7} />
+            </mesh>
+          ))}
+          {[0.2, 0.34, 0.48].map((x, i) => (
+            <mesh key={x} position={[x, 0.08, 0.02]} castShadow>
+              <cylinderGeometry args={[0.042, 0.036, 0.16, 12]} />
+              <SurfaceMat color={['#7c4a1e', '#0f766e', '#b45309'][i]} finish="ceramic" roughness={0.35} />
+            </mesh>
+          ))}
+        </group>
+      ) : null}
+      {style === 'gin' ? (
+        <group position={[-w * 0.3, height, barTopZ - 0.03]}>
+          {/* Herbes aromatiques en pot, agrumes */}
+          {[0, 0.2].map((x, i) => (
+            <group key={x} position={[x, 0, 0]}>
+              <mesh position={[0, 0.06, 0]} castShadow>
+                <cylinderGeometry args={[0.06, 0.05, 0.12, 16]} />
+                <SurfaceMat color="#b4532a" finish="ceramic" roughness={0.75} />
+              </mesh>
+              {Array.from({ length: 9 }).map((_, k) => (
+                <mesh key={k} position={[Math.cos(k * 2.4) * 0.03, 0.17 + (k % 3) * 0.03, Math.sin(k * 2.4) * 0.03]} castShadow>
+                  <sphereGeometry args={[0.03, 8, 6]} />
+                  <meshStandardMaterial color={i ? '#4d7c3f' : '#6b8f5e'} roughness={0.85} />
+                </mesh>
+              ))}
+            </group>
+          ))}
+          <mesh position={[0.42, 0.03, 0]} castShadow>
+            <cylinderGeometry args={[0.12, 0.08, 0.06, 20]} />
+            <SurfaceMat color="#e5e7eb" finish="ceramic" roughness={0.3} />
+          </mesh>
+          {Array.from({ length: 5 }).map((_, k) => (
+            <mesh key={k} position={[0.42 + Math.cos(k * 1.3) * 0.05, 0.08, Math.sin(k * 1.3) * 0.05]} castShadow>
+              <sphereGeometry args={[0.033, 12, 10]} />
+              <meshStandardMaterial color={k % 2 ? '#a3e635' : '#facc15'} roughness={0.5} />
+            </mesh>
+          ))}
+        </group>
+      ) : null}
+      {style === 'dessert' ? (
+        <group position={[-w * 0.28, height, barTopZ - 0.03]}>
+          {/* Pièce montée sur présentoir */}
+          {[0.16, 0.12, 0.08].map((r, k) => (
+            <mesh key={r} position={[0, 0.06 + k * 0.1, 0]} castShadow>
+              <cylinderGeometry args={[r, r, 0.09, 28]} />
+              <meshStandardMaterial color={['#fdf2f8', '#fce7f3', '#fbcfe8'][k]} roughness={0.6} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.34, 0]} castShadow>
+            <sphereGeometry args={[0.03, 12, 10]} />
+            <meshStandardMaterial color="#e11d48" roughness={0.6} />
+          </mesh>
+          {/* Tour de macarons */}
+          <group position={[0.42, 0, 0]}>
+            {Array.from({ length: 6 }).flatMap((_, row) => {
+              const r = 0.1 - row * 0.015;
+              const n = Math.max(4, Math.round((Math.PI * 2 * r) / 0.045));
+              return Array.from({ length: n }).map((__, k) => (
+                <mesh key={`${row}-${k}`} position={[Math.cos((k / n) * Math.PI * 2 + row) * r, 0.03 + row * 0.045, Math.sin((k / n) * Math.PI * 2 + row) * r]} scale={[1, 0.65, 1]} castShadow>
+                  <sphereGeometry args={[0.022, 10, 8]} />
+                  <meshStandardMaterial color={['#f9a8d4', '#c4b5fd', '#fde68a', '#a7f3d0', '#fdba74'][(k + row) % 5]} roughness={0.7} />
+                </mesh>
+              ));
+            })}
+          </group>
+        </group>
+      ) : null}
+      {style === 'iceCream' ? (
+        <group position={[0, height, barTopZ - 0.04]}>
+          {/* Vitrine réfrigérée bombée et bacs de glaces */}
+          <mesh position={[0, 0.02, 0]} castShadow>
+            <boxGeometry args={[Math.min(1.8, w * 0.55), 0.04, 0.3]} />
+            <SurfaceMat color="#d4d4d8" finish="metal" metalness={0.9} roughness={0.25} />
+          </mesh>
+          {Array.from({ length: Math.max(4, Math.floor(Math.min(1.8, w * 0.55) / 0.2)) }).map((_, i, arr) => (
+            <mesh key={i} position={[((i + 0.5) / arr.length - 0.5) * Math.min(1.8, w * 0.55), 0.06, 0]} scale={[1, 0.5, 1]} castShadow>
+              <sphereGeometry args={[0.075, 16, 10]} />
+              <meshStandardMaterial color={['#fde68a', '#fbcfe8', '#bbf7d0', '#7c2d12', '#fecaca', '#e0e7ff'][i % 6]} roughness={0.85} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.16, -0.02]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.16, 0.16, Math.min(1.8, w * 0.55), 24, 1, true, 0, Math.PI]} />
+            <meshPhysicalMaterial color="#f8fafc" roughness={0.03} transparent opacity={0.22} clearcoat={1} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+          {/* Cornets */}
+          {[0, 1, 2].map((k) => (
+            <mesh key={k} position={[Math.min(1.8, w * 0.55) / 2 + 0.12 + k * 0.07, 0.07, 0.05]} rotation={[Math.PI, 0, 0]} castShadow>
+              <coneGeometry args={[0.025, 0.12, 12]} />
+              <SurfaceMat color="#d9a25b" finish="rattan" roughness={0.8} />
+            </mesh>
+          ))}
+        </group>
+      ) : null}
+      {style === 'neonClub' ? (
+        <group position={[-w * 0.3, height, barTopZ - 0.03]}>
+          {/* Seaux à champagne lumineux */}
+          {[0, 0.35].map((x) => (
+            <group key={x} position={[x, 0, 0]}>
+              <mesh position={[0, 0.1, 0]}>
+                <cylinderGeometry args={[0.12, 0.09, 0.2, 24]} />
+                <meshStandardMaterial color="#a5f3fc" emissive="#22d3ee" emissiveIntensity={1.4} transparent opacity={0.75} toneMapped={false} />
+              </mesh>
+              {[0, 1].map((k) => (
+                <mesh key={k} position={[(k - 0.5) * 0.08, 0.24, 0]} rotation={[0, 0, (k - 0.5) * 0.4]} castShadow>
+                  <cylinderGeometry args={[0.012, 0.036, 0.3, 12]} />
+                  <Mat color="#111827" finish="glass" roughness={0.1} opacity={0.95} />
+                </mesh>
+              ))}
+            </group>
+          ))}
+        </group>
+      ) : null}
+      {style === 'oyster' ? (
+        <group position={[0, height, barTopZ - 0.03]}>
+          {/* Plateau de glace pilée : huîtres ouvertes et citrons */}
+          {[-0.45, 0.45].map((x) => (
+            <group key={x} position={[x * Math.min(1, w / 3), 0, 0]}>
+              <mesh position={[0, 0.03, 0]} castShadow>
+                <cylinderGeometry args={[0.24, 0.2, 0.06, 32]} />
+                <SurfaceMat color="#d4d4d8" finish="metal" metalness={0.92} roughness={0.2} />
+              </mesh>
+              <mesh position={[0, 0.06, 0]}>
+                <cylinderGeometry args={[0.22, 0.22, 0.02, 32]} />
+                <meshPhysicalMaterial color="#f1f8fb" roughness={0.45} clearcoat={0.6} />
+              </mesh>
+              {Array.from({ length: 10 }).map((_, k) => (
+                <group key={k} position={[Math.cos((k / 10) * Math.PI * 2) * 0.15, 0.078, Math.sin((k / 10) * Math.PI * 2) * 0.15]} rotation={[0, (k / 10) * Math.PI * 2, 0]}>
+                  <mesh scale={[1.3, 0.3, 0.9]} castShadow>
+                    <sphereGeometry args={[0.035, 12, 8]} />
+                    <SurfaceMat color="#8a8f87" finish="stone" roughness={0.9} />
+                  </mesh>
+                  <mesh position={[0, 0.008, 0]} scale={[1.05, 0.15, 0.7]}>
+                    <sphereGeometry args={[0.03, 12, 8]} />
+                    <meshPhysicalMaterial color="#d8d2c2" roughness={0.2} clearcoat={1} />
+                  </mesh>
+                </group>
+              ))}
+              {[0, 1].map((k) => (
+                <mesh key={k} position={[(k - 0.5) * 0.06, 0.09, 0]} scale={[1, 0.8, 1]} castShadow>
+                  <sphereGeometry args={[0.026, 12, 10]} />
+                  <meshStandardMaterial color="#facc15" roughness={0.5} />
+                </mesh>
+              ))}
+            </group>
+          ))}
+        </group>
+      ) : null}
+    </group>
+  );
+}
+
+/**
+ * Bar mobile (chariot) : caisson sur deux grandes roues et brancard, plateau bois, auvent rayé
+ * sur deux mâts, bouteilles et verres. Se pose partout (jardin, cocktail, plage). Clients vers +z.
+ */
+function BarCartMesh({ w, d, color, selected = false }: EventBarMeshProps) {
+  const body = selected ? '#c7d2fe' : color ?? '#f4ede4';
+  const cw = Math.max(1.2, Math.min(2.2, w * 0.86));
+  const cd = Math.max(0.6, Math.min(0.9, d * 0.6));
+  const topY = 1.0;
+  const stripe = '#b91c1c';
+  const slots = useMemo(
+    () => Array.from({ length: 9 }, (_, i) => bottleSlot('cocktail', BOTTLE_COLORS.cocktail, i * 13 + 3, (i + 0.5 - 4.5) * 0.1, topY + 0.03, -cd / 2 + 0.12)),
+    [cd],
+  );
+  const awningStripes = Math.max(6, Math.round(cw / 0.18));
+  return (
+    <group>
+      {/* Caisson à lames rayées */}
+      <group position={[0, 0, cd / 2]}>
+        <BarFrontFace kind="stripes" w={cw} y0={0.32} y1={topY - 0.04} body={body} metal="brass" />
+      </group>
+      <mesh position={[0, (topY + 0.32) / 2 - 0.02, 0]} castShadow receiveShadow>
+        <boxGeometry args={[cw, topY - 0.36, cd]} />
+        <SurfaceMat color="#fbf7f0" finish="lacquer" roughness={0.3} />
+      </mesh>
+      <mesh position={[0, topY - 0.02, 0.03]} castShadow receiveShadow>
+        <boxGeometry args={[cw + 0.1, 0.045, cd + 0.12]} />
+        <SurfaceMat color="#9a6b43" finish="wood" roughness={0.45} clearcoat={0.3} repeat={[cw / 1.2, 1]} />
+      </mesh>
+      {/* Roues à rayons */}
+      {[-1, 1].map((sd) => (
+        <group key={sd} position={[sd * (cw / 2 + 0.03), 0.34, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <mesh castShadow>
+            <torusGeometry args={[0.32, 0.025, 10, 40]} />
+            <SurfaceMat color="#3b2416" finish="wood" roughness={0.5} />
+          </mesh>
+          {Array.from({ length: 8 }).map((_, k) => (
+            <mesh key={k} rotation={[0, 0, (k / 8) * Math.PI]}>
+              <boxGeometry args={[0.63, 0.016, 0.016]} />
+              <SurfaceMat color="#3b2416" finish="wood" roughness={0.5} />
+            </mesh>
+          ))}
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.06, 16]} />
+            <MetalMat metal="brass" plain />
+          </mesh>
+        </group>
+      ))}
+      {/* Béquille et brancard */}
+      <mesh position={[0, 0.17, -cd / 2 + 0.05]} castShadow>
+        <boxGeometry args={[0.04, 0.34, 0.04]} />
+        <MetalMat metal="black" />
+      </mesh>
+      {[-1, 1].map((sd) => (
+        <mesh key={`h${sd}`} position={[sd * cw * 0.3, 0.75, -cd / 2 - 0.3]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.015, 0.015, 0.6, 10]} />
+          <MetalMat metal="brass" />
+        </mesh>
+      ))}
+      {/* Mâts et auvent rayé */}
+      {[-1, 1].map((sd) => (
+        <mesh key={`m${sd}`} position={[sd * (cw / 2 - 0.04), topY + 0.6, -cd / 2 + 0.06]} castShadow>
+          <cylinderGeometry args={[0.018, 0.018, 1.2, 10]} />
+          <MetalMat metal="brass" />
+        </mesh>
+      ))}
+      <group position={[0, topY + 1.2, 0.05]} rotation={[0.35, 0, 0]}>
+        {Array.from({ length: awningStripes }).map((_, i) => (
+          <mesh key={i} position={[((i + 0.5) / awningStripes - 0.5) * (cw + 0.2), 0, 0]} castShadow>
+            <boxGeometry args={[(cw + 0.2) / awningStripes, 0.012, cd + 0.35]} />
+            <SurfaceMat color={i % 2 ? '#fbf7f0' : stripe} finish="fabric" roughness={0.85} />
+          </mesh>
+        ))}
+        {/* Lambrequin festonné */}
+        {Array.from({ length: awningStripes * 2 }).map((_, i) => (
+          <mesh key={`v${i}`} position={[((i + 0.5) / (awningStripes * 2) - 0.5) * (cw + 0.2), -0.05, (cd + 0.35) / 2]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[(cw + 0.2) / (awningStripes * 4), (cw + 0.2) / (awningStripes * 4), 0.01, 12, 1, false, 0, Math.PI]} />
+            <SurfaceMat color={Math.floor(i / 2) % 2 ? '#fbf7f0' : stripe} finish="fabric" roughness={0.85} />
+          </mesh>
+        ))}
+      </group>
+      <BottleSet slots={slots} />
+      <BarGlassSet style="cocktail" positions={[[-0.35, 0.12], [-0.22, 0.16], [0.22, 0.14], [0.36, 0.1]]} y={topY} />
+      {/* Seau à glace */}
+      <mesh position={[cw * 0.32, topY + 0.1, 0]} castShadow>
+        <cylinderGeometry args={[0.11, 0.08, 0.2, 20]} />
+        <SurfaceMat color="#e5e7eb" finish="chrome" metalness={1} roughness={0.1} />
+      </mesh>
     </group>
   );
 }

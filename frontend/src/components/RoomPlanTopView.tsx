@@ -17,6 +17,7 @@ import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { resolveFloorTopViewStyle } from '@/lib/roomFloorUtils';
 import { isProceduralFloor, proceduralFloorDataUrl } from '@/lib/roomFloorProcedural';
 import { resolveChairVisual } from '@/lib/roomChairVisual';
+import { centerpieceStyleColor, isCenterpieceStyle, resolveCouvertSpec } from '@/lib/roomTableware';
 import { planRotationScreenDeg } from '@/lib/tablePlanUtils';
 import { TABLE_DEFAULT_TEXTURE, TABLE_SURFACE_TEXTURES, resolveTableSurface } from '@/lib/roomTableSurface';
 import { zoneTopViewStyle } from '@/lib/roomZoneSurface';
@@ -42,7 +43,7 @@ const STAGE_SKIRT = '#1c1a19';
 
 const noopSubscribe = () => () => {};
 
-type ChairLook = { chairType: ChairType; chairStyle?: ChairStyle; seatMaterial?: SeatMaterial };
+type ChairLook = { chairType: ChairType; chairStyle?: ChairStyle; seatMaterial?: SeatMaterial; chairSeatColor?: string; chairFrameColor?: string };
 
 function isNearWhite(color: string): boolean {
   const hex = color.trim().toLowerCase();
@@ -59,9 +60,12 @@ function isDark(color: string): boolean {
   return 0.299 * r + 0.587 * g + 0.114 * b < 110;
 }
 
+/** Styles à assise ronde vus du dessus (coque, tonneau, paon…). */
+const ROUND_CHAIR_STYLES = new Set<ChairStyle>(['egg', 'tulip', 'barrel', 'peacock', 'acapulco']);
+
 /** Une chaise vue du dessus : assise et dossier aux couleurs de la 3D, dossier en haut à 0°. */
 function ChairGlyph({ seat, look }: { seat: TopViewSeat; look: ChairLook }) {
-  const visual = resolveChairVisual(look.chairType, look.chairStyle, look.seatMaterial);
+  const visual = resolveChairVisual(look.chairType, look.chairStyle, look.seatMaterial, { seat: look.chairSeatColor, frame: look.chairFrameColor });
   const w = Math.max(0.3, visual.seatSize[0] * visual.scale + 0.02);
   const d = Math.max(0.28, visual.seatSize[2] * visual.scale);
   const back = visual.backHeight > 0 ? 0.07 : 0;
@@ -75,7 +79,7 @@ function ChairGlyph({ seat, look }: { seat: TopViewSeat; look: ChairLook }) {
         y={-d / 2}
         width={w}
         height={d}
-        rx={look.chairType === 'POUF' || look.chairType === 'STOOL' || look.chairType === 'BARSTOOL' ? w / 2 : 0.06}
+        rx={look.chairType === 'POUF' || look.chairType === 'STOOL' || look.chairType === 'BARSTOOL' || (look.chairStyle && ROUND_CHAIR_STYLES.has(look.chairStyle)) ? w / 2 : 0.06}
         fill={visual.seatColor}
         stroke={OUTLINE}
         strokeWidth={0.6}
@@ -184,17 +188,17 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
       if (item.kind === 'table') {
         const top = topViewTable(item, W, H);
         tables.push({ item, top });
-        const look = { chairType: item.chairType, chairStyle: item.chairStyle, seatMaterial: item.seatMaterial };
+        const look = { chairType: item.chairType, chairStyle: item.chairStyle, seatMaterial: item.seatMaterial, chairSeatColor: item.chairSeatColor, chairFrameColor: item.chairFrameColor };
         for (const seat of top.seats) chairs.push({ key: `${item.id}-${seat.index}`, seat, look });
       } else if (item.kind === 'row') {
         const row = topViewRow(item, blueprint.fixtures, W, H);
-        const look = { chairType: item.chairType, chairStyle: item.chairStyle, seatMaterial: item.seatMaterial };
+        const look = { chairType: item.chairType, chairStyle: item.chairStyle, seatMaterial: item.seatMaterial, chairSeatColor: item.chairSeatColor, chairFrameColor: item.chairFrameColor };
         for (const seat of row.seats) chairs.push({ key: `${item.id}-${seat.index}`, seat, look });
       } else if (item.kind === 'chair') {
         chairs.push({
           key: item.id,
           seat: topViewFreeChair(item, W, H),
-          look: { chairType: item.chairType, chairStyle: item.chairStyle, seatMaterial: item.seatMaterial },
+          look: { chairType: item.chairType, chairStyle: item.chairStyle, seatMaterial: item.seatMaterial, chairSeatColor: item.chairSeatColor, chairFrameColor: item.chairFrameColor },
         });
       }
     }
@@ -352,10 +356,38 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
                   vectorEffect="non-scaling-stroke"
                 />
                 {dressed && item.shape !== 'arc' ? (
-                  <circle r={Math.min(0.16, top.size[1] / 5)} fill="#7fa36b" stroke="#f9a8d4" strokeWidth={0.04} />
+                  <circle
+                    r={Math.min(0.16, top.size[1] / 5)}
+                    fill={isCenterpieceStyle(item.centerpieceStyle) ? centerpieceStyleColor[item.centerpieceStyle] : '#7fa36b'}
+                    stroke="#f9a8d4"
+                    strokeWidth={0.04}
+                  />
                 ) : null}
               </g>
             );
+          })}
+
+          {/* Assiettes : une pastille par convive, aux couleurs du service choisi. */}
+          {geometry.tables.map(({ item, top }) => {
+            if (!(item.hasCouverts || meta.dressAllTables === true) || item.shape === 'cocktail' || item.shape === 'highTop') return null;
+            const spec = resolveCouvertSpec(item.couvertStyle);
+            return top.seats.map((seat) => {
+              const dx = top.cx - seat.x;
+              const dy = top.cy - seat.y;
+              const len = Math.hypot(dx, dy) || 1;
+              const k = Math.min(0.5, len * 0.6) / len;
+              return (
+                <circle
+                  key={`${item.id}-p-${seat.index}`}
+                  cx={seat.x + dx * k}
+                  cy={seat.y + dy * k}
+                  r={0.13}
+                  fill={spec.plate}
+                  stroke={spec.charger === 'none' ? spec.rim ?? OUTLINE : spec.chargerColor}
+                  strokeWidth={0.04}
+                />
+              );
+            });
           })}
 
           {artStrips.map((a) => (
