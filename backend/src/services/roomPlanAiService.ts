@@ -47,7 +47,10 @@ const WALL_TEXTURES = new Set([
   'plaster', 'brick', 'wood', 'concrete', 'wallpaper', 'stone',
   'tadelakt', 'travertine', 'metroTile', 'woodPanel',
 ]);
-const CHAIR_STYLES = new Set(['classic', 'chiavari', 'napoleon', 'ghost', 'lounge', 'crossback', 'louis', 'ovalBack']);
+const CHAIR_STYLES = new Set([
+  'classic', 'chiavari', 'napoleon', 'ghost', 'lounge', 'crossback', 'louis', 'ovalBack',
+  'throne', 'peacock', 'egg', 'tulip', 'ladderBack', 'barrel', 'shell', 'acapulco', 'parsons',
+]);
 const SEAT_MATERIALS = new Set(['velvet', 'wood', 'fabric', 'leather', 'plastic', 'linen']);
 const AISLE_STYLES = new Set([
   'royalRed', 'whiteMirror', 'botanicalRunner', 'rusticWood', 'damaskGold', 'ledRunway', 'blackVelvet',
@@ -117,6 +120,7 @@ const ROOF_STYLES = new Set([
 ]);
 const BAR_STYLES = new Set([
   'cocktail', 'wine', 'champagne', 'beer', 'coffee', 'whiskey', 'island', 'lShaped', 'juice', 'mocktail', 'tapas', 'tea',
+  'tiki', 'gin', 'dessert', 'iceCream', 'neonClub', 'oyster', 'cart',
 ]);
 const PODIUM_STYLES = new Set(['speaker', 'lectern', 'couple', 'circular', 'runway', 'bandRiser', 'honor', 'steps']);
 const INSTRUMENT_STYLES = new Set([
@@ -1311,7 +1315,7 @@ Required JSON fields:
     "label": string, "zoneKind": "dance"|"vip"|"buffet"|"carpet"|"custom"|"plot",
     "color": "#rrggbb", "surface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
     "material": "wood"|"carpet"|"vinyl"|"led"|"marble"|"concrete"|"parquet"|"epoxy",
-    "chairStyle": "classic"|"chiavari"|"napoleon"|"ghost"|"lounge"|"crossback"|"louis"|"ovalBack",
+    "chairStyle": "classic"|"chiavari"|"napoleon"|"ghost"|"lounge"|"crossback"|"louis"|"ovalBack"|"throne"|"peacock"|"egg"|"tulip"|"ladderBack"|"barrel"|"shell"|"acapulco"|"parsons",
     "seatMaterial": "velvet"|"wood"|"fabric"|"leather"|"plastic"|"linen",
     "aisleStyle": "royalRed"|"whiteMirror"|"botanicalRunner"|"rusticWood"|"damaskGold"|"ledRunway"|"blackVelvet",
     "hasPetals": true,
@@ -1320,7 +1324,7 @@ Required JSON fields:
     "pedestalStyle": "squareWhite"|"columnGold",
     "podiumStyle": "speaker"|"lectern"|"couple"|"circular"|"runway"|"bandRiser"|"honor"|"steps",
     "instrumentStyle": "piano"|"keyboard"|"drums"|"guitar"|"bass"|"micStand"|"sax"|"violin"|"amp"|"speaker",
-    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"|"island"|"lShaped"|"juice"|"mocktail"|"tapas"|"tea",
+    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"|"island"|"lShaped"|"juice"|"mocktail"|"tapas"|"tea"|"tiki"|"gin"|"dessert"|"iceCream"|"neonClub"|"oyster"|"cart",
     "chandelierStyle": "crystalCascade"|"brassRings"|"bohoPampas"|"botanicalHalo"|"fairyCanopy"|"candleCandelabra"|"modernMinimal"|"lantern",
     "poolShape": "rectangle"|"rounded"|"oval"|"round"|"kidney"|"lShape"|"freeform",
     "tier": 0-30
@@ -1433,12 +1437,12 @@ JSON schema:
     "label": string, "zoneKind": "dance"|"vip"|"buffet"|"carpet"|"custom"|"plot",
     "color": "#rrggbb", "surface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
     "material": "wood"|"carpet"|"vinyl"|"led"|"marble"|"concrete"|"parquet"|"epoxy",
-    "chairStyle": "classic"|"chiavari"|"napoleon"|"ghost"|"lounge"|"crossback"|"louis"|"ovalBack",
+    "chairStyle": "classic"|"chiavari"|"napoleon"|"ghost"|"lounge"|"crossback"|"louis"|"ovalBack"|"throne"|"peacock"|"egg"|"tulip"|"ladderBack"|"barrel"|"shell"|"acapulco"|"parsons",
     "seatMaterial": "velvet"|"wood"|"fabric"|"leather"|"plastic"|"linen",
     "aisleStyle": "royalRed"|"whiteMirror"|"botanicalRunner"|"rusticWood"|"damaskGold"|"ledRunway"|"blackVelvet",
     "podiumStyle": "speaker"|"lectern"|"couple"|"circular"|"runway"|"bandRiser"|"honor"|"steps",
     "instrumentStyle": "piano"|"keyboard"|"drums"|"guitar"|"bass"|"micStand"|"sax"|"violin"|"amp"|"speaker",
-    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"|"island"|"lShaped"|"juice"|"mocktail"|"tapas"|"tea",
+    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"|"island"|"lShaped"|"juice"|"mocktail"|"tapas"|"tea"|"tiki"|"gin"|"dessert"|"iceCream"|"neonClub"|"oyster"|"cart",
     "chandelierStyle": "crystalCascade"|"brassRings"|"bohoPampas"|"botanicalHalo"|"fairyCanopy"|"candleCandelabra"|"modernMinimal"|"lantern",
     "poolShape": "rectangle"|"rounded"|"oval"|"round"|"kidney"|"lShape"|"freeform",
     "tier": 0-30

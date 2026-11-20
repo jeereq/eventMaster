@@ -22,6 +22,8 @@ export function RowSeatsLOD({
   chairType,
   chairStyle,
   seatMaterial,
+  chairSeatColor,
+  chairFrameColor,
   chairImageUrl,
   selected,
   selectedSeatIndices = [],
@@ -43,6 +45,8 @@ export function RowSeatsLOD({
   chairType: ChairType;
   chairStyle?: ChairStyle;
   seatMaterial?: SeatMaterial;
+  chairSeatColor?: string;
+  chairFrameColor?: string;
   chairImageUrl?: string;
   selected: boolean;
   selectedSeatIndices?: number[];
@@ -56,8 +60,8 @@ export function RowSeatsLOD({
   rowName?: string;
 }) {
   const visual = useMemo(
-    () => resolveChairVisual(chairType, chairStyle, seatMaterial),
-    [chairType, chairStyle, seatMaterial],
+    () => resolveChairVisual(chairType, chairStyle, seatMaterial, { seat: chairSeatColor, frame: chairFrameColor }),
+    [chairType, chairStyle, seatMaterial, chairSeatColor, chairFrameColor],
   );
   const color = visual.seatColor;
   const frame = visual.frameColor;
@@ -200,6 +204,8 @@ export function RowSeatsLOD({
                 chairType={chairType}
                 chairStyle={chairStyle}
                 seatMaterial={seatMaterial}
+                seatColor={chairSeatColor}
+                frameColor={chairFrameColor}
                 imageUrl={chairImageUrl}
                 position={[p.localX, p.y, p.localZ]}
                 rotationY={p.faceY}

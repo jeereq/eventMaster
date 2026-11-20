@@ -140,12 +140,40 @@ const CHAIR_STYLE_TWEAKS: Record<ChairStyle, Partial<ChairVisual>> = {
   bistro: { backHeight: 0.5, seatSize: [0.4, 0.035, 0.38], scale: 0.98, hasArms: false, cushion: false },
   scandi: { backHeight: 0.42, seatSize: [0.46, 0.05, 0.44], scale: 1, hasArms: false, cushion: false },
   cinema: { backHeight: 0.82, seatSize: [0.52, 0.15, 0.52], scale: 1.12, hasArms: true, cushion: true },
+  throne: { backHeight: 0.85, seatSize: [0.56, 0.1, 0.52], scale: 1.12, hasArms: true, cushion: true },
+  peacock: { backHeight: 0.95, seatSize: [0.56, 0.08, 0.52], scale: 1, hasArms: true, cushion: true },
+  egg: { backHeight: 0.8, seatSize: [0.7, 0.1, 0.66], scale: 1, hasArms: true, cushion: true },
+  tulip: { backHeight: 0.36, seatSize: [0.5, 0.05, 0.5], scale: 1, hasArms: false, cushion: true },
+  ladderBack: { backHeight: 0.62, seatSize: [0.42, 0.03, 0.4], scale: 1, hasArms: false, cushion: false },
+  barrel: { backHeight: 0.48, seatSize: [0.62, 0.1, 0.62], scale: 1, hasArms: true, cushion: true },
+  shell: { backHeight: 0.52, seatSize: [0.6, 0.12, 0.56], scale: 1, hasArms: false, cushion: true },
+  acapulco: { backHeight: 0.6, seatSize: [0.66, 0.04, 0.66], scale: 1, hasArms: false, cushion: false },
+  parsons: { backHeight: 0.62, seatSize: [0.46, 0.1, 0.48], scale: 1, hasArms: false, cushion: true },
 };
+
+/** Teintes par défaut des styles ajoutés quand aucun matériau n’est choisi. */
+const CHAIR_STYLE_DEFAULT_COLORS: Partial<Record<ChairStyle, { seat: string; frame: string }>> = {
+  throne: { seat: '#7f1d1d', frame: '#c9a227' },
+  peacock: { seat: '#f5f0e8', frame: '#c79a5b' },
+  egg: { seat: '#9f1239', frame: '#f8fafc' },
+  tulip: { seat: '#9ca3af', frame: '#f8fafc' },
+  ladderBack: { seat: '#d9b77e', frame: '#7a5536' },
+  barrel: { seat: '#0f766e', frame: '#c9a227' },
+  shell: { seat: '#f2b8c6', frame: '#c9a227' },
+  acapulco: { seat: '#facc15', frame: '#1c1917' },
+  parsons: { seat: '#e7e2d8', frame: '#5b3a22' },
+};
+
+/** Couleurs choisies librement dans l’éditeur (assise, structure) : priment sur le matériau. */
+export type ChairColorOverrides = { seat?: string; frame?: string };
+
+const HEX = /^#[0-9a-f]{6}$/i;
 
 export function resolveChairVisual(
   chairType: ChairType,
   style?: ChairStyle,
   material?: SeatMaterial,
+  colors?: ChairColorOverrides,
 ): ChairVisual {
   const base = { ...CHAIR_VISUALS[chairType] };
   if (chairType === 'ARMCHAIR' || style || chairType === 'CROSSBACK' || chairType === 'GHOST' || chairType === 'BARSTOOL') {
@@ -238,5 +266,12 @@ export function resolveChairVisual(
     base.frameColor = '#292524';
     base.cushion = true;
   }
+  const styleColors = style ? CHAIR_STYLE_DEFAULT_COLORS[style] : undefined;
+  if (styleColors && (!material || material === 'fabric')) {
+    base.seatColor = styleColors.seat;
+    base.frameColor = styleColors.frame;
+  }
+  if (colors?.seat && HEX.test(colors.seat)) base.seatColor = colors.seat;
+  if (colors?.frame && HEX.test(colors.frame)) base.frameColor = colors.frame;
   return base;
 }

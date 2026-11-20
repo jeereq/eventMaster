@@ -110,6 +110,7 @@ import {
   CatalogueAisle,
 } from '@/components/CatalogueAmbiance';
 import { RowSeatsLOD } from '@/components/RowSeatsLOD';
+import { EXTRA_CENTERPIECES, ExtraCenterpiece, PlaceSetting } from '@/components/room/TablewareMeshes';
 import {
   FloralArchMesh,
   TallCenterpiece,
@@ -1998,6 +1999,8 @@ function RealisticChair(props: {
   chairType: ChairType;
   chairStyle?: ChairStyle;
   seatMaterial?: SeatMaterial;
+  seatColor?: string;
+  frameColor?: string;
   imageUrl?: string;
   position: [number, number, number];
   rotationY?: number;
@@ -2106,113 +2109,6 @@ function StandingTableGlass({ position }: { position: [number, number, number] }
   );
 }
 
-function PlaceSetting({
-  style = 'classic',
-  position,
-  rotationY,
-}: {
-  style?: 'classic' | 'gold' | 'festive';
-  position: [number, number, number];
-  rotationY: number;
-}) {
-  const plate = style === 'gold' ? '#fbf8ee' : style === 'festive' ? '#fdf2f8' : '#fafaf9';
-  const rim = style === 'gold' ? '#d4af37' : style === 'festive' ? '#db2777' : '#cbd5e1';
-  const metal = style === 'gold' ? '#d4af37' : '#cbd5e1';
-  const glass = style === 'festive' ? '#fce7f3' : '#f8fafc';
-
-  return (
-    // Modèle dessiné à mi-échelle : ×1,9 donne une sous-assiette de Ø31 cm et des couverts de 23 cm.
-    <group position={position} rotation={[0, rotationY, 0]} scale={PLACE_SETTING_SCALE}>
-      {/* 1. Sous-assiette (Charger plate) biseautée */}
-      <mesh castShadow receiveShadow>
-        <cylinderGeometry args={[0.076, 0.082, 0.007, 24]} />
-        <meshPhysicalMaterial
-          color={style === 'gold' ? '#c9a227' : style === 'festive' ? '#be185d' : '#e2e8f0'}
-          metalness={style === 'gold' ? 0.9 : style === 'festive' ? 0.35 : 0.85}
-          roughness={0.16}
-          clearcoat={0.7}
-        />
-      </mesh>
-      {/* 2. Assiette plate principale en porcelaine fine */}
-      <mesh position={[0, 0.005, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.063, 0.059, 0.005, 24]} />
-        <meshPhysicalMaterial
-          color={plate}
-          metalness={0.04}
-          roughness={0.1}
-          clearcoat={0.95}
-          clearcoatRoughness={0.08}
-        />
-      </mesh>
-      {/* 3. Filet décoratif intérieur sur l'assiette */}
-      <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.043, 0.046, 24]} />
-        <meshStandardMaterial
-          color={rim}
-          metalness={style === 'gold' ? 0.9 : 0.4}
-          roughness={0.2}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      {/* 4. Serviette en tissu pliée */}
-      <mesh position={[0, 0.011, 0]} rotation={[0, 0.15, 0]} castShadow>
-        <boxGeometry args={[0.042, 0.005, 0.068]} />
-        <meshStandardMaterial color="#fcfbf9" roughness={0.88} />
-      </mesh>
-      {/* Rond de serviette */}
-      <mesh position={[0, 0.015, 0]} rotation={[0, 0.15, 0]}>
-        <cylinderGeometry args={[0.011, 0.011, 0.012, 16]} />
-        <meshStandardMaterial color={metal} metalness={0.92} roughness={0.14} />
-      </mesh>
-      {/* 5. Couverts réfléchissants */}
-      {/* Couteau à droite du convive (convive en -Z, regard vers +Z : sa droite est en -X) */}
-      <mesh position={[-0.092, 0.005, 0.004]} rotation={[0, 0, -0.06]} castShadow>
-        <boxGeometry args={[0.009, 0.003, 0.125]} />
-        <meshStandardMaterial color={metal} metalness={0.96} roughness={0.08} />
-      </mesh>
-      {/* Fourchette à gauche */}
-      <mesh position={[0.092, 0.005, 0.004]} rotation={[0, 0, 0.06]} castShadow>
-        <boxGeometry args={[0.01, 0.003, 0.12]} />
-        <meshStandardMaterial color={metal} metalness={0.96} roughness={0.08} />
-      </mesh>
-      {/* Petite cuillère à dessert au sommet */}
-      <mesh position={[0, 0.005, 0.084]} rotation={[0, Math.PI / 2, 0]} castShadow>
-        <boxGeometry args={[0.007, 0.0025, 0.07]} />
-        <meshStandardMaterial color={metal} metalness={0.96} roughness={0.08} />
-      </mesh>
-      {/* 6. Duo de verres à pied en cristal transparent */}
-      <group position={[-0.055, 0.004, 0.082]}>
-        <mesh position={[0, 0.002, 0]}>
-          <cylinderGeometry args={[0.013, 0.014, 0.0025, 12]} />
-          <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
-        </mesh>
-        <mesh position={[0, 0.022, 0]}>
-          <cylinderGeometry args={[0.002, 0.002, 0.038, 8]} />
-          <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
-        </mesh>
-        <mesh position={[0, 0.052, 0]}>
-          <cylinderGeometry args={[0.015, 0.009, 0.032, 12]} />
-          <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
-        </mesh>
-      </group>
-      <group position={[-0.08, 0.004, 0.062]}>
-        <mesh position={[0, 0.002, 0]}>
-          <cylinderGeometry args={[0.011, 0.012, 0.002, 12]} />
-          <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
-        </mesh>
-        <mesh position={[0, 0.02, 0]}>
-          <cylinderGeometry args={[0.0018, 0.0018, 0.034, 8]} />
-          <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
-        </mesh>
-        <mesh position={[0, 0.046, 0]}>
-          <cylinderGeometry args={[0.013, 0.007, 0.028, 12]} />
-          <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
-        </mesh>
-      </group>
-    </group>
-  );
-}
-
 function TableMesh({
   xPct,
   yPct,
@@ -2223,6 +2119,8 @@ function TableMesh({
   chairType,
   chairStyle,
   seatMaterial,
+  chairSeatColor,
+  chairFrameColor,
   chairImageUrl,
   tableImageUrl,
   tableSurface,
@@ -2262,13 +2160,15 @@ function TableMesh({
   chairType: ChairType;
   chairStyle?: ChairStyle;
   seatMaterial?: SeatMaterial;
+  chairSeatColor?: string;
+  chairFrameColor?: string;
   chairImageUrl?: string;
   tableImageUrl?: string;
   tableSurface?: import('@/lib/roomLayoutUtils').TableSurfaceStyle;
   hasCouverts?: boolean;
   hasCenterpiece?: boolean;
-  centerpieceStyle?: 'floral' | 'greeneryRunner' | 'candleCluster';
-  couvertStyle?: 'classic' | 'gold' | 'festive';
+  centerpieceStyle?: import('@/lib/roomTableware').CenterpieceStyle;
+  couvertStyle?: import('@/lib/roomTableware').CouvertStyle;
   showcaseTableware?: boolean;
   dressAllTables?: boolean;
   attachedChairs?: boolean;
@@ -2369,6 +2269,7 @@ function TableMesh({
           return (
             <PlaceSetting
               key={`c-${i}`}
+              scale={PLACE_SETTING_SCALE}
               style={couvertStyle}
               position={[seat.x + fx * PLACE_SETTING_REACH_M, topY + 0.055, seat.z + fz * PLACE_SETTING_REACH_M]}
               rotationY={seat.rotationY}
@@ -2385,6 +2286,10 @@ function TableMesh({
                 <group scale={0.62}>
                   <TallCenterpiece selected={selected} />
                 </group>
+              ) : EXTRA_CENTERPIECES.has(centerpieceStyle) ? (
+                <group scale={0.7}>
+                  <ExtraCenterpiece style={centerpieceStyle} length={0.8} />
+                </group>
               ) : (
                 <CandleClusterMesh selected={selected} />
               )}
@@ -2397,6 +2302,8 @@ function TableMesh({
             <GreeneryRunnerMesh length={Math.max(size[0], size[1]) * 0.72} selected={selected} />
           ) : centerpieceStyle === 'candleCluster' ? (
             <CandleClusterMesh selected={selected} />
+          ) : centerpieceStyle && EXTRA_CENTERPIECES.has(centerpieceStyle) ? (
+            <ExtraCenterpiece style={centerpieceStyle} length={Math.max(size[0], size[1])} />
           ) : (
             <TallCenterpiece selected={selected} />
           )}
@@ -2437,6 +2344,8 @@ function TableMesh({
               chairType={chairType}
               chairStyle={chairStyle}
               seatMaterial={seatMaterial}
+              seatColor={chairSeatColor}
+              frameColor={chairFrameColor}
               imageUrl={chairImageUrl}
               position={[0, 0, 0]}
               rotationY={seat.rotationY}
@@ -2616,6 +2525,8 @@ function FreeChairMesh({
   chairType,
   chairStyle,
   seatMaterial,
+  chairSeatColor,
+  chairFrameColor,
   chairImageUrl,
   rotation,
   elevationM = 0,
@@ -2633,6 +2544,8 @@ function FreeChairMesh({
   chairType: ChairType;
   chairStyle?: ChairStyle;
   seatMaterial?: SeatMaterial;
+  chairSeatColor?: string;
+  chairFrameColor?: string;
   chairImageUrl?: string;
   rotation?: number;
   elevationM?: number;
@@ -2673,6 +2586,8 @@ function FreeChairMesh({
         chairType={chairType}
         chairStyle={chairStyle}
         seatMaterial={seatMaterial}
+        seatColor={chairSeatColor}
+        frameColor={chairFrameColor}
         imageUrl={chairImageUrl}
         position={[0, 0, 0]}
         rotationY={((rotation ?? 0) * Math.PI) / 180}
@@ -4655,6 +4570,8 @@ function SceneContent({
               chairType={item.chairType}
               chairStyle={item.chairStyle}
               seatMaterial={item.seatMaterial}
+              chairSeatColor={item.chairSeatColor}
+              chairFrameColor={item.chairFrameColor}
               chairImageUrl={item.chairImageUrl}
               rotation={item.rotation}
               elevationM={surface?.elevationM ?? 0}
@@ -4748,6 +4665,8 @@ function SceneContent({
                     chairType={item.chairType}
                     chairStyle={item.chairStyle}
                     seatMaterial={item.seatMaterial}
+                    chairSeatColor={item.chairSeatColor}
+                    chairFrameColor={item.chairFrameColor}
                     chairImageUrl={item.chairImageUrl}
                     selected={selected.some((s) => s.kind === 'row' && s.id === item.id)}
                     selectedSeatIndices={selected
@@ -4795,6 +4714,8 @@ function SceneContent({
             chairType={item.chairType}
             chairStyle={item.chairStyle}
             seatMaterial={item.seatMaterial}
+            chairSeatColor={item.chairSeatColor}
+            chairFrameColor={item.chairFrameColor}
             chairImageUrl={item.chairImageUrl}
             tableImageUrl={item.tableImageUrl}
             tableSurface={item.tableSurface ?? blueprint.metadata.defaultTableSurface}

@@ -19,11 +19,14 @@ export type BarFront =
   | 'backlit'
   | 'cane'
   | 'terrazzo'
-  | 'tiles';
+  | 'tiles'
+  | 'bamboo'
+  | 'neon'
+  | 'stripes';
 
-export type BarTop = 'marble' | 'blackMarble' | 'oak' | 'walnut' | 'zinc' | 'terrazzo' | 'concrete';
+export type BarTop = 'marble' | 'blackMarble' | 'oak' | 'walnut' | 'zinc' | 'terrazzo' | 'concrete' | 'quartz';
 
-export type BarBack = 'mirror' | 'wineWall' | 'kegs' | 'cafe' | 'amber' | 'neon';
+export type BarBack = 'mirror' | 'wineWall' | 'kegs' | 'cafe' | 'amber' | 'neon' | 'tiki' | 'candy';
 
 export type BarStool = 'leather' | 'velvet' | 'wood' | 'industrial' | 'rattan' | 'none';
 
@@ -50,6 +53,9 @@ export const BAR_FRONT_LABELS: Record<BarFront, string> = {
   cane: 'Cannage',
   terrazzo: 'Terrazzo',
   tiles: 'Tomettes',
+  bamboo: 'Bambou (paillote)',
+  neon: 'Lignes LED (club)',
+  stripes: 'Rayures bonbon',
 };
 
 export const BAR_TOP_LABELS: Record<BarTop, string> = {
@@ -60,6 +66,7 @@ export const BAR_TOP_LABELS: Record<BarTop, string> = {
   zinc: 'Zinc',
   terrazzo: 'Terrazzo',
   concrete: 'Béton ciré',
+  quartz: 'Quartz blanc',
 };
 
 export const BAR_BACK_LABELS: Record<BarBack, string> = {
@@ -69,6 +76,8 @@ export const BAR_BACK_LABELS: Record<BarBack, string> = {
   cafe: 'Étagères ouvertes',
   amber: 'Rétroéclairage ambré',
   neon: 'Néon',
+  tiki: 'Paillote bambou',
+  candy: 'Bocaux de bonbons',
 };
 
 export const BAR_STOOL_LABELS: Record<BarStool, string> = {
@@ -100,6 +109,13 @@ export const BAR_STYLE_DESIGN: Record<BarStyle, BarDesign> = {
   mocktail: { front: 'backlit', top: 'marble', back: 'neon', stool: 'velvet', metal: 'chrome' },
   tapas: { front: 'tiles', top: 'zinc', back: 'wineWall', stool: 'wood', metal: 'black' },
   tea: { front: 'cane', top: 'oak', back: 'cafe', stool: 'rattan', metal: 'brass' },
+  tiki: { front: 'bamboo', top: 'walnut', back: 'tiki', stool: 'rattan', metal: 'black' },
+  gin: { front: 'fluted', top: 'marble', back: 'mirror', stool: 'velvet', metal: 'brass' },
+  dessert: { front: 'stripes', top: 'quartz', back: 'candy', stool: 'velvet', metal: 'brass' },
+  iceCream: { front: 'stripes', top: 'quartz', back: 'cafe', stool: 'velvet', metal: 'chrome' },
+  neonClub: { front: 'neon', top: 'blackMarble', back: 'neon', stool: 'industrial', metal: 'chrome' },
+  oyster: { front: 'metro', top: 'zinc', back: 'wineWall', stool: 'wood', metal: 'chrome' },
+  cart: { front: 'stripes', top: 'oak', back: 'mirror', stool: 'none', metal: 'brass' },
 };
 
 function pick<T extends string>(value: unknown, labels: Record<T, string>, fallback: T): T {

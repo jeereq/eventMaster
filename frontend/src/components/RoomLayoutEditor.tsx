@@ -2,6 +2,8 @@
 
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { resolveChairVisual } from '@/lib/roomChairVisual';
+import { centerpieceStyleHints, couvertStyleHints, couvertStyleLabels, type CouvertStyle } from '@/lib/roomTableware';
 import { useHideAiFabWhileVisible } from '@/components/landing/useHideAiFabWhileVisible';
 import { ROOM_INTRO_VIEWS, introViewLabel, resolveIntroView, type RoomIntroView } from '@/lib/roomIntroView';
 import {
@@ -418,6 +420,75 @@ function DecorColorField({ label, value, fallback, onChange }: { label: string; 
           Par défaut
         </button>
       ) : null}
+    </div>
+  );
+}
+
+/** Teintes rapides pour l’assise (tissus de location courants) et la structure. */
+const CHAIR_SEAT_SWATCHES: Array<[string, string]> = [
+  ['#faf7f2', 'Ivoire'], ['#ffffff', 'Blanc'], ['#d6d3d1', 'Gris perle'], ['#1c1917', 'Noir'],
+  ['#e8c4c4', 'Rose poudré'], ['#9f1239', 'Bordeaux'], ['#b91c1c', 'Rouge'], ['#c2410c', 'Terracotta'],
+  ['#ca8a04', 'Moutarde'], ['#d9c08f', 'Champagne'], ['#8fa98a', 'Vert sauge'], ['#065f46', 'Émeraude'],
+  ['#1e3a5f', 'Bleu nuit'], ['#1d4ed8', 'Bleu roi'], ['#7dd3fc', 'Bleu ciel'], ['#5b21b6', 'Violet'],
+];
+const CHAIR_FRAME_SWATCHES: Array<[string, string]> = [
+  ['#c9a227', 'Or'], ['#b76e79', 'Or rose'], ['#d4d4d8', 'Argent'], ['#1c1917', 'Noir'],
+  ['#f8fafc', 'Blanc'], ['#c9a273', 'Bois clair'], ['#7a5536', 'Noyer'], ['#3b2416', 'Wengé'],
+];
+
+/** Couleurs libres d’une chaise (assise et structure) : nuancier + sélecteur, « Par défaut » revient au matériau. */
+function ChairColorFields({
+  chairType,
+  chairStyle,
+  seatMaterial,
+  seatColor,
+  frameColor,
+  onChange,
+}: {
+  chairType: ChairType;
+  chairStyle?: ChairStyle;
+  seatMaterial?: SeatMaterial;
+  seatColor?: string;
+  frameColor?: string;
+  onChange: (patch: { chairSeatColor?: string; chairFrameColor?: string }, message: string) => void;
+}) {
+  const base = resolveChairVisual(chairType, chairStyle, seatMaterial);
+  const row = (swatches: Array<[string, string]>, current: string | undefined, key: 'chairSeatColor' | 'chairFrameColor', what: string) => (
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Teintes ${what}`}>
+      {swatches.map(([hex, name]) => (
+        <button
+          key={hex}
+          type="button"
+          title={name}
+          aria-label={`${what} : ${name}`}
+          aria-pressed={current?.toLowerCase() === hex}
+          onClick={() => onChange({ [key]: hex }, `${what} : ${name}`)}
+          className={cn(
+            'size-7 rounded-full border shadow-sm transition-transform hover:scale-110',
+            current?.toLowerCase() === hex ? 'ring-2 ring-primary ring-offset-1 border-transparent' : 'border-border',
+          )}
+          style={{ background: hex }}
+        />
+      ))}
+    </div>
+  );
+  return (
+    <div className="space-y-2 text-xs">
+      <span className="font-semibold text-muted">Couleurs de la chaise</span>
+      <DecorColorField
+        label="Assise / tissu"
+        value={seatColor}
+        fallback={base.seatColor}
+        onChange={(next) => onChange({ chairSeatColor: next }, next ? 'Couleur d’assise' : 'Couleur d’assise par défaut')}
+      />
+      {row(CHAIR_SEAT_SWATCHES, seatColor, 'chairSeatColor', 'Assise')}
+      <DecorColorField
+        label="Structure / pieds"
+        value={frameColor}
+        fallback={base.frameColor}
+        onChange={(next) => onChange({ chairFrameColor: next }, next ? 'Couleur de structure' : 'Couleur de structure par défaut')}
+      />
+      {row(CHAIR_FRAME_SWATCHES, frameColor, 'chairFrameColor', 'Structure')}
     </div>
   );
 }
@@ -8191,7 +8262,7 @@ export default function RoomLayoutEditor({
                   onChange={(e) => updateFurniture(selectedFurniture.id, { hasCenterpiece: e.target.checked }, e.target.checked ? 'Centre de table affiché' : 'Centre de table masqué')}
                   className="rounded border-border size-4"
                 />
-                Centre de table (vase & bouquet)
+                Centre de table (bouquet, bougies, décor…)
               </label>
             ) : null}
             {selectedFurniture.hasCenterpiece && selectedFurniture.shape !== 'cocktail' && selectedFurniture.shape !== 'highTop' ? (
@@ -8206,6 +8277,7 @@ export default function RoomLayoutEditor({
                     <option key={style} value={style}>{centerpieceStyleLabels[style]}</option>
                   ))}
                 </select>
+                <span className="block text-muted">{centerpieceStyleHints[selectedFurniture.centerpieceStyle ?? 'floral']}</span>
               </label>
             ) : null}
             {selectedFurniture.hasCouverts === true && (
@@ -8213,13 +8285,14 @@ export default function RoomLayoutEditor({
                 <span className="font-semibold text-muted">Style de service</span>
                 <select
                   value={selectedFurniture.couvertStyle ?? 'classic'}
-                  onChange={(e) => updateFurniture(selectedFurniture.id, { couvertStyle: e.target.value as 'classic' | 'gold' | 'festive' }, 'Style couverts')}
+                  onChange={(e) => updateFurniture(selectedFurniture.id, { couvertStyle: e.target.value as CouvertStyle }, `Service : ${couvertStyleLabels[e.target.value as CouvertStyle]}`)}
                   className={EDITOR_FIELD}
                 >
-                  <option value="classic">Porcelaine classique</option>
-                  <option value="gold">Or & liseré</option>
-                  <option value="festive">Festif (verre teinté)</option>
+                  {(Object.keys(couvertStyleLabels) as CouvertStyle[]).map((style) => (
+                    <option key={style} value={style}>{couvertStyleLabels[style]}</option>
+                  ))}
                 </select>
+                <span className="block text-muted">{couvertStyleHints[selectedFurniture.couvertStyle ?? 'classic']}</span>
               </label>
             )}
             {(() => {
@@ -8268,6 +8341,14 @@ export default function RoomLayoutEditor({
                 />
               </div>
             </div>
+            <ChairColorFields
+              chairType={selectedFurniture.chairType}
+              chairStyle={selectedFurniture.chairStyle}
+              seatMaterial={selectedFurniture.seatMaterial}
+              seatColor={selectedFurniture.chairSeatColor}
+              frameColor={selectedFurniture.chairFrameColor}
+              onChange={(patch, message) => updateFurniture(selectedFurniture.id, patch, message)}
+            />
             <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}</Gate>
             <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderTableImageUpload(selectedFurniture.id, selectedFurniture.tableImageUrl)}</Gate>
             <ItemPlacementFields
@@ -8636,6 +8717,14 @@ export default function RoomLayoutEditor({
                 />
               </div>
             </div>
+            <ChairColorFields
+              chairType={selectedFurniture.chairType}
+              chairStyle={selectedFurniture.chairStyle}
+              seatMaterial={selectedFurniture.seatMaterial}
+              seatColor={selectedFurniture.chairSeatColor}
+              frameColor={selectedFurniture.chairFrameColor}
+              onChange={(patch, message) => updateFurniture(selectedFurniture.id, patch, message)}
+            />
             <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}</Gate>
             <ItemPlacementFields
               canvas={blueprint.canvas}
@@ -8973,6 +9062,14 @@ export default function RoomLayoutEditor({
                 />
               </div>
             </div>
+            <ChairColorFields
+              chairType={selectedFurniture.chairType}
+              chairStyle={selectedFurniture.chairStyle}
+              seatMaterial={selectedFurniture.seatMaterial}
+              seatColor={selectedFurniture.chairSeatColor}
+              frameColor={selectedFurniture.chairFrameColor}
+              onChange={(patch, message) => updateFurniture(selectedFurniture.id, patch, message)}
+            />
             <ItemPlacementFields
               canvas={blueprint.canvas}
               x={selectedFurniture.x}
