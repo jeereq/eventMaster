@@ -3327,6 +3327,37 @@ const TEMPLATE_DRESSINGS: Record<string, (bp: RoomLayoutBlueprint) => TemplateDr
     metadata: { floorType: 'betonCire', lightingPreset: 'dusk', showChandeliers: true, chandelierType: 'industrial' },
     landscape: cornerSpots('planter', 3),
   }),
+  'banquet-oval': () => ({
+    walls: { texture: 'fluted', color: '#f3ede3' },
+    metadata: { floorType: 'marbre', lightingPreset: 'banquet', showChandeliers: true, chandelierType: 'crystal', wallPaintColor: '#f3ede3' },
+  }),
+  'banquet-circle': () => ({
+    walls: { texture: 'limewash', color: '#f4ecea' },
+    metadata: { floorType: 'parquetVersailles', lightingPreset: 'banquet', showChandeliers: true, chandelierType: 'crystal', wallPaintColor: '#f4ecea' },
+    landscape: cornerSpots('planter', 3),
+  }),
+  'conference-ushape': () => ({
+    walls: { texture: 'woodPanel' },
+    metadata: { floorType: 'moquette', lightingPreset: 'conference', showChandeliers: true, chandelierType: 'recessed' },
+    landscape: cornerSpots('planter', 3),
+  }),
+  'amphitheater-small': () => ({
+    walls: { texture: 'woodPanel' },
+    metadata: { floorType: 'moquette', lightingPreset: 'conference' },
+  }),
+  'amphitheater-slope': () => ({
+    walls: { texture: 'fluted', color: '#2b3440' },
+    metadata: { floorType: 'moquette', lightingPreset: 'conference', wallPaintColor: '#2b3440' },
+  }),
+  'chairs-cinema': () => ({
+    walls: { texture: 'fluted', color: '#2a2230' },
+    metadata: { floorType: 'moquette', lightingPreset: 'banquet', wallPaintColor: '#2a2230' },
+  }),
+  'chairs-grid': () => ({
+    walls: { texture: 'limewash', color: '#f1ece4' },
+    metadata: { floorType: 'chevronGreige', lightingPreset: 'day', wallPaintColor: '#f1ece4' },
+    landscape: cornerSpots('planter', 3),
+  }),
   'conference-standard': () => ({
     walls: { texture: 'woodPanel' },
     metadata: { floorType: 'moquette', lightingPreset: 'conference' },
@@ -3368,6 +3399,7 @@ const TEMPLATE_DRESSINGS: Record<string, (bp: RoomLayoutBlueprint) => TemplateDr
       roofStyle: 'tentSwag',
       roofColor: '#f7f5f0',
       roofOpacity: 0.78,
+      lightingPreset: 'tent',
     },
     landscape: [
       { style: 'olive', x: 5, y: 5 },
@@ -3430,9 +3462,221 @@ const TEMPLATE_DRESSINGS: Record<string, (bp: RoomLayoutBlueprint) => TemplateDr
   }),
 };
 
+// ───────────────── mise en place des modèles (tables, chaises, bars, piscines) ─────────────────
+
+type TemplateTable = Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'table' }>;
+type TemplateSeatStyle = {
+  chairType?: ChairType;
+  chairStyle?: ChairStyle;
+  seatMaterial?: SeatMaterial;
+  chairSeatColor?: string;
+  chairFrameColor?: string;
+};
+
+type TemplateBarSpot = {
+  style: BarStyle;
+  /** Centre du bar, en % du plan (ramené à l’intérieur des murs). */
+  x: number;
+  y: number;
+  /** 0 : tabourets vers le bas du plan ; 180 : vers le haut (par défaut sous la mi-hauteur). */
+  rotation?: 0 | 180;
+  /** Longueur du comptoir en mètres (4,8 m par défaut). */
+  lengthM?: number;
+};
+
+/**
+ * Mise en place d’un modèle : le linge, les services d’assiettes, les centres
+ * de table et les chaises du nouveau catalogue, appliqués aux tables d’invités
+ * (une table verrouillée, comme la table d’honneur, garde son propre style).
+ */
+type TemplateTableSetting = {
+  table?: Partial<Pick<TemplateTable, 'tableSurface' | 'tableColor' | 'hasCouverts' | 'couvertStyle' | 'seatingSide'>> & TemplateSeatStyle;
+  /** Centres de table posés en alternance d’une table à l’autre ; [] les retire. */
+  centerpieces?: CenterpieceStyle[];
+  /** Rangées de sièges (conférence, théâtre, cinéma). */
+  rows?: TemplateSeatStyle;
+  /** Chaises isolées. */
+  chairs?: TemplateSeatStyle;
+  /**
+   * Répartit les tables d’invités sur toute la surface utile (en % du plan),
+   * en quinconce si `stagger`, au lieu d’un bloc serré au milieu de la salle.
+   */
+  spread?: { cols: number; x: [number, number]; y: [number, number]; stagger?: boolean };
+  /** Bars à cocktails, à gin, tiki… ajoutés au modèle. */
+  bars?: TemplateBarSpot[];
+  /** Style appliqué aux bars déjà présents dans le modèle. */
+  barStyle?: BarStyle;
+  /** Réglages des piscines du modèle (type, eau, margelles, décor flottant). */
+  pool?: Partial<import('./roomPoolDesign.ts').PoolOptions>;
+};
+
+function templateBarFixture(canvas: RoomLayoutBlueprint['canvas'], spot: TemplateBarSpot): BlueprintFixture {
+  const w = ((spot.lengthM ?? 4.8) / (canvas?.widthM ?? 20)) * 100;
+  const h = (2.2 / (canvas?.heightM ?? 16)) * 100;
+  // Le comptoir et son arrière-bar restent à l’intérieur des murs.
+  const o = defaultRoomOutline();
+  const clamp = (v: number, size: number, from: number, span: number) =>
+    Math.max(from + 0.6, Math.min(from + span - size - 0.6, v - size / 2));
+  return {
+    ...createBlueprintFixture('bar'),
+    id: makeLayoutId('bar'),
+    x: clamp(spot.x, w, o.x, o.w),
+    y: clamp(spot.y, h, o.y, o.h),
+    w,
+    h,
+    // Contre le mur du bas, le bar se retourne : arrière-bar au mur, tabourets côté salle.
+    rotation: spot.rotation ?? (spot.y > 50 ? 180 : 0),
+    label: barStyleLabels[spot.style],
+    barStyle: spot.style,
+  };
+}
+
+/** Grille régulière (ou en quinconce) qui occupe toute la zone donnée. */
+function spreadTablePositions(
+  count: number,
+  spread: NonNullable<TemplateTableSetting['spread']>,
+): Array<{ x: number; y: number }> {
+  const cols = Math.max(1, Math.min(count, spread.cols));
+  const rows = Math.ceil(count / cols);
+  const [x0, x1] = spread.x;
+  const [y0, y1] = spread.y;
+  const pitchX = cols > 1 ? (x1 - x0) / (cols - 1 + (spread.stagger ? 0.5 : 0)) : 0;
+  return Array.from({ length: count }, (_, i) => {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    const inRow = row === rows - 1 ? count - row * cols : cols;
+    // Dernière rangée incomplète : centrée plutôt que collée à gauche.
+    const offset = inRow < cols ? ((cols - inRow) * pitchX) / 2 : 0;
+    const shift = spread.stagger && row % 2 === 1 ? pitchX / 2 : 0;
+    return {
+      x: cols === 1 ? (x0 + x1) / 2 : x0 + col * pitchX + offset + shift,
+      y: rows === 1 ? (y0 + y1) / 2 : y0 + ((y1 - y0) * row) / (rows - 1),
+    };
+  });
+}
+
+export function applyTemplateTableSetting(
+  blueprint: RoomLayoutBlueprint,
+  setting: TemplateTableSetting,
+): RoomLayoutBlueprint {
+  const guests = blueprint.furniture.filter((item): item is TemplateTable => item.kind === 'table' && !item.locked);
+  const spots = setting.spread ? spreadTablePositions(guests.length, setting.spread) : [];
+  let guestIndex = 0;
+  const furniture = blueprint.furniture.map((item) => {
+    if (item.kind === 'row' && setting.rows) return { ...item, ...setting.rows };
+    if (item.kind === 'chair' && setting.chairs) return { ...item, ...setting.chairs };
+    if (item.kind !== 'table' || item.locked) return item;
+    const i = guestIndex++;
+    const next: TemplateTable = { ...item, ...setting.table };
+    if (setting.centerpieces) {
+      next.hasCenterpiece = setting.centerpieces.length > 0;
+      next.centerpieceStyle = setting.centerpieces.length > 0
+        ? setting.centerpieces[i % setting.centerpieces.length]
+        : undefined;
+    }
+    if (spots[i]) {
+      next.x = Math.round(spots[i].x * 10) / 10;
+      next.y = Math.round(spots[i].y * 10) / 10;
+    }
+    return next;
+  });
+  const fixtures = [
+    ...blueprint.fixtures.map((fixture) => {
+      if (fixture.kind === 'bar' && setting.barStyle) {
+        return { ...fixture, barStyle: setting.barStyle, label: barStyleLabels[setting.barStyle] };
+      }
+      if (fixture.kind === 'landscape' && fixture.landscapeStyle === 'pool' && setting.pool) {
+        return { ...fixture, pool: { ...fixture.pool, ...setting.pool } };
+      }
+      return fixture;
+    }),
+    ...(setting.bars ?? []).map((spot) => templateBarFixture(blueprint.canvas, spot)),
+  ];
+  return refreshBlueprintMetadata({ ...blueprint, furniture, fixtures });
+}
+
+const CHIAVARI_GOLD: TemplateSeatStyle = { chairType: 'BANQUET', chairStyle: 'chiavari', seatMaterial: 'velvet', chairSeatColor: '#f5efe3', chairFrameColor: '#c9a227' };
+const IVORY_LINEN = { tableSurface: 'linen' as const, tableColor: '#faf7f2', hasCouverts: true };
+
+/**
+ * Mise en place de chaque modèle. Les modèles déjà soignés ne reçoivent que ce qui
+ * leur manquait (service d’assiettes, centres de table variés).
+ */
+const TEMPLATE_TABLE_SETTINGS: Record<string, TemplateTableSetting> = {
+  'banquet-classic': {
+    table: { ...IVORY_LINEN, couvertStyle: 'silver', chairType: 'BANQUET', chairStyle: 'chiavari', seatMaterial: 'velvet', chairSeatColor: '#f5f5f4', chairFrameColor: '#c0c6cf' },
+    centerpieces: ['floral', 'candelabra'],
+    spread: { cols: 4, x: [20, 80], y: [38, 66] },
+    bars: [{ style: 'champagne', x: 78, y: 95 }],
+  },
+  'banquet-oval': {
+    table: { ...IVORY_LINEN, couvertStyle: 'gold', ...CHIAVARI_GOLD },
+    centerpieces: ['candelabra', 'floral'],
+  },
+  'banquet-ushape': {
+    table: { tableSurface: 'wood', tableColor: '#8b5a2b', hasCouverts: true, couvertStyle: 'rustic', chairType: 'CROSSBACK', chairStyle: 'ladderBack', seatMaterial: 'rattan' },
+    centerpieces: ['lanterns', 'greeneryRunner'],
+  },
+  'banquet-circle': {
+    table: { tableSurface: 'linen', tableColor: '#f6e9e6', hasCouverts: true, couvertStyle: 'blush', chairType: 'BANQUET', chairStyle: 'ghost', seatMaterial: 'plastic' },
+    centerpieces: ['rosePomander', 'floatingCandles'],
+  },
+  'banquet-honor': {
+    table: { ...IVORY_LINEN, couvertStyle: 'gold', ...CHIAVARI_GOLD },
+    centerpieces: ['floral', 'candelabra'],
+  },
+  'wedding-aisle-banquet': { centerpieces: ['floral', 'candelabra'] },
+  'wedding-organic-gala': { table: { hasCouverts: true, couvertStyle: 'beaded' } },
+  'grand-hall-classical': { table: { couvertStyle: 'gold' } },
+  'garden-dusk-reception': { table: { couvertStyle: 'scalloped' }, centerpieces: ['lanterns', 'candleCluster'] },
+  'night-banquet-edison': { table: { couvertStyle: 'black' } },
+  'courtyard-gala': { table: { couvertStyle: 'silver' }, centerpieces: ['candleCluster', 'mirrorVotives'] },
+  'fountain-gala': { table: { tableSurface: 'linen', hasCouverts: true, couvertStyle: 'silver' } },
+  'beach-wedding': { table: { couvertStyle: 'rattan', chairStyle: 'acapulco', chairSeatColor: '#f5efe3' }, centerpieces: ['tropical', 'lanterns'] },
+  'vineyard-long-table': { table: { couvertStyle: 'rustic' } },
+  'tent-garden': {
+    table: { tableSurface: 'linen', tableColor: '#f7f5f0', hasCouverts: true, couvertStyle: 'scalloped', chairType: 'CROSSBACK', chairStyle: 'crossback', seatMaterial: 'wood', chairSeatColor: '#e8dcc6', chairFrameColor: '#8b5a2b' },
+    centerpieces: ['pampas', 'greeneryRunner'],
+    bars: [{ style: 'cart', x: 50, y: 85, lengthM: 2.4 }],
+  },
+  cocktail: {
+    table: { tableSurface: 'darkWood', hasCouverts: false, chairType: 'BANQUET', chairStyle: 'tolix', seatMaterial: 'wood', chairFrameColor: '#1c1917' },
+    centerpieces: ['candleCluster', 'succulents'],
+    spread: { cols: 4, x: [18, 82], y: [26, 70], stagger: true },
+    bars: [{ style: 'gin', x: 22, y: 95 }],
+  },
+  classroom: { table: { tableSurface: 'whiteLacquer', chairType: 'BANQUET', chairStyle: 'scandi', seatMaterial: 'plastic', chairSeatColor: '#334155', chairFrameColor: '#d6d3d1' } },
+  boardroom: { table: { tableSurface: 'walnut', chairType: 'ARMCHAIR', chairStyle: 'modern', seatMaterial: 'leather', chairSeatColor: '#1c1917' } },
+  'conference-ushape': {
+    table: { tableSurface: 'linen', tableColor: '#f1f5f9', chairType: 'BANQUET', chairStyle: 'modern', seatMaterial: 'mesh', chairSeatColor: '#1f2937' },
+  },
+  'conference-standard': { rows: { chairStyle: 'modern', seatMaterial: 'mesh', chairSeatColor: '#1f2937' } },
+  'amphitheater-small': { rows: { chairStyle: 'cinema', seatMaterial: 'fabric', chairSeatColor: '#1e3a5f' } },
+  'amphitheater-slope': { rows: { chairStyle: 'cinema', seatMaterial: 'fabric', chairSeatColor: '#334155' } },
+  'chairs-theater': { rows: { chairType: 'THEATER', chairStyle: 'cinema', seatMaterial: 'velvet', chairSeatColor: '#7f1d1d' } },
+  'chairs-cinema': { rows: { chairType: 'THEATER', chairStyle: 'cinema', seatMaterial: 'velvet', chairSeatColor: '#7f1d1d' } },
+  'chairs-grid': { chairs: CHIAVARI_GOLD },
+  'restaurant-bistrot': { table: { hasCouverts: true, couvertStyle: 'bistro', chairType: 'BANQUET', chairStyle: 'bistro', seatMaterial: 'rattan' }, barStyle: 'wine' },
+  'restaurant-terrasse': { table: { hasCouverts: true, couvertStyle: 'bistro', chairType: 'BANQUET', chairStyle: 'bistro', seatMaterial: 'rattan' } },
+  'restaurant-patio-guinguette': { table: { hasCouverts: true, couvertStyle: 'scalloped', chairType: 'BANQUET', chairStyle: 'tolix', chairFrameColor: '#2f6f5e' }, centerpieces: ['lanterns'], barStyle: 'beer' },
+  'pizzeria-artisanale-four': { table: { hasCouverts: true, couvertStyle: 'bistro' }, barStyle: 'wine' },
+  'coffee-shop-roastery': { table: { chairType: 'BANQUET', chairStyle: 'scandi', seatMaterial: 'wood' } },
+  'cafe-lounge': { table: { chairType: 'BANQUET', chairStyle: 'wishbone', seatMaterial: 'rattan' } },
+  'container-cafe-rooftop': { table: { chairType: 'BANQUET', chairStyle: 'acapulco', chairSeatColor: '#f59e0b' } },
+  'bar-lounge-circulaire': { table: { chairType: 'ARMCHAIR', chairStyle: 'barrel', seatMaterial: 'velvet', chairSeatColor: '#1e3a5f' }, barStyle: 'gin' },
+  'pool-party': {
+    table: { tableSurface: 'whiteLacquer' },
+    centerpieces: ['tropical'],
+    barStyle: 'tiki',
+    pool: { type: 'classic', liner: 'mosaicWhite', coping: 'travertine', access: 'roman', lights: true, floating: 'floats' },
+  },
+};
+
 function dressTemplate(templateId: string, blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
   const dressing = TEMPLATE_DRESSINGS[templateId];
-  return dressing ? dressBlueprint(blueprint, dressing(blueprint)) : blueprint;
+  const dressed = dressing ? dressBlueprint(blueprint, dressing(blueprint)) : blueprint;
+  const setting = TEMPLATE_TABLE_SETTINGS[templateId];
+  return setting ? applyTemplateTableSetting(dressed, setting) : dressed;
 }
 
 /**
