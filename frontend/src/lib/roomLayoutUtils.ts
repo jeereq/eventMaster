@@ -246,7 +246,8 @@ export type RoomOutlineShape =
   | 'trapezoid'
   | 'stadium'
   | 'cross';
-export type ColumnShape = 'round' | 'square' | 'fluted';
+export type { ColumnShape, ColumnMaterial, ColumnCapital, ColumnBase } from './roomColumnStyles.ts';
+import type { ColumnShape, ColumnMaterial, ColumnCapital, ColumnBase } from './roomColumnStyles.ts';
 export type FlowerType = 'rose' | 'tulipe' | 'orchidee' | 'tournesol' | 'lavande' | 'boquet' | 'personnalise';
 
 /** Type de zone au sol (piste, VIP, moquette…). */
@@ -550,6 +551,18 @@ export interface RoomLayoutBlueprint {
     rotation?: number;
     label?: string;
     columnShape?: ColumnShape;
+    /** Colonne : matière du fût (pierre, marbre, bois, métal…). Absente = pierre d’origine non teintée. */
+    columnMaterial?: ColumnMaterial;
+    /** Colonne : style du chapiteau (haut). */
+    columnCapital?: ColumnCapital;
+    /** Colonne : style de la base. */
+    columnBase?: ColumnBase;
+    /** Colonne : hauteur en mètres (2,6 m par défaut). */
+    columnHeightM?: number;
+    /** Colonne : monte jusqu’au plafond (suit la hauteur des murs). */
+    columnToCeiling?: boolean;
+    /** Colonne : teinte des moulures de base et de chapiteau (dorure…). */
+    columnTrimColor?: string;
     color?: string;
     imageUrl?: string;
     imageCrop?: ImageCropRect;
@@ -2578,8 +2591,9 @@ export function applyRoomAmbiencePreset(
     metadata.roofOpacity = preset.roofOpacity ?? blueprint.metadata.roofOpacity;
   }
 
+  // Murs générés depuis le contour (`walls` vide) : on les matérialise, sinon la matière de l’ambiance serait perdue.
   const walls = scope.walls
-    ? (blueprint.walls ?? []).map((w) => ({
+    ? resolveBlueprintWalls(blueprint).map((w) => ({
         ...w,
         texture: preset.wallTexture,
         color: preset.wallColor,
@@ -2646,7 +2660,7 @@ export function captureRoomAmbienceFromBlueprint(
   label: string,
   description?: string,
 ): RoomAmbiencePreset {
-  const wall = blueprint.walls?.[0];
+  const wall = resolveBlueprintWalls(blueprint)[0];
   const table = blueprint.furniture.find((f) => f.kind === 'table');
   return {
     id,
@@ -6472,6 +6486,12 @@ export function applyFixtureStyleToSameKind(
       return {
         ...item,
         columnShape: source.columnShape,
+        columnMaterial: source.columnMaterial,
+        columnCapital: source.columnCapital,
+        columnBase: source.columnBase,
+        columnHeightM: source.columnHeightM,
+        columnToCeiling: source.columnToCeiling,
+        columnTrimColor: source.columnTrimColor,
         color: source.color,
         material: source.material,
       };

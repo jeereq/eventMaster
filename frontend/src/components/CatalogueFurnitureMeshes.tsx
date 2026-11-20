@@ -1286,6 +1286,11 @@ function createRoundedRectShape(w: number, d: number, r: number): THREE.Shape {
   );
 }
 
+/**
+ * Colonne architecturale : base, fût et chapiteau réglables.
+ * `color` teinte la matière (ou la remplace pour une colonne peinte / métal),
+ * `trimColor` habille la base et le chapiteau (dorure, pierre contrastée…).
+ */
 export function CatalogueColumn({
   w,
   d,
@@ -1293,8 +1298,13 @@ export function CatalogueColumn({
   map,
   selected,
   pickable,
-  square = false,
-  fluted = false,
+  shape = 'round',
+  capital = 'classic',
+  base = 'classic',
+  color,
+  trimColor,
+  metalness = 0.05,
+  roughness = 0.82,
 }: {
   w: number;
   d: number;
@@ -1302,41 +1312,118 @@ export function CatalogueColumn({
   map: THREE.Texture | null;
   selected: boolean;
   pickable: boolean;
-  square?: boolean;
-  fluted?: boolean;
+  shape?: 'round' | 'square' | 'fluted' | 'octagonal' | 'tapered';
+  capital?: 'classic' | 'none' | 'tiered' | 'ornate';
+  base?: 'classic' | 'none' | 'plinth';
+  color?: string;
+  trimColor?: string;
+  metalness?: number;
+  roughness?: number;
 }) {
   const r = Math.min(w, d) / 2;
   const raycast = pickable ? undefined : () => null;
+  const square = shape === 'square';
+  const fluted = shape === 'fluted';
+  const sel = '#c7d2fe';
+  const body = selected ? sel : color ?? '#ffffff';
+  const trim = selected ? sel : trimColor ?? color ?? '#e7e5e4';
+  const trimMap = trimColor ? null : map;
+  const trimMetal = trimColor ? 0.55 : metalness;
+  const trimRough = trimColor ? 0.35 : Math.min(0.9, roughness * 0.92);
+
+  // Base et chapiteau grandissent un peu avec le diamètre, sans dépasser un tiers de la hauteur.
+  const baseH = base === 'none' ? 0 : base === 'plinth' ? Math.min(height * 0.18, Math.max(0.3, r * 1.3)) : 0.12;
+  const capH = capital === 'none' ? 0 : capital === 'classic' ? 0.14 : Math.min(height * 0.16, Math.max(0.26, r * 1.1));
+  const shaftH = Math.max(0.2, height - baseH - capH);
+  const shaftY = baseH + shaftH / 2;
+  const topR = shape === 'tapered' ? r * 0.74 : r * 0.92;
+  const segs = shape === 'octagonal' ? 8 : fluted ? 32 : 24;
+  const boxLike = square;
+
   return (
     <group>
       {/* Base */}
-      <mesh position={[0, 0.06, 0]} castShadow receiveShadow raycast={raycast}>
-        {square ? <boxGeometry args={[r * 2.2, 0.12, r * 2.2]} /> : <cylinderGeometry args={[r * 1.25, r * 1.35, 0.12, 24]} />}
-        <Mat color={selected ? '#c7d2fe' : '#d6d3d1'} map={map} roughness={0.8} />
-      </mesh>
+      {base === 'classic' ? (
+        <mesh position={[0, baseH / 2, 0]} castShadow receiveShadow raycast={raycast}>
+          {boxLike ? <boxGeometry args={[r * 2.2, baseH, r * 2.2]} /> : <cylinderGeometry args={[r * 1.25, r * 1.35, baseH, segs]} />}
+          <Mat color={trim} map={trimMap} roughness={trimRough} metalness={trimMetal} />
+        </mesh>
+      ) : base === 'plinth' ? (
+        <>
+          <mesh position={[0, baseH * 0.4, 0]} castShadow receiveShadow raycast={raycast}>
+            <boxGeometry args={[r * 2.5, baseH * 0.8, r * 2.5]} />
+            <Mat color={trim} map={trimMap} roughness={trimRough} metalness={trimMetal} />
+          </mesh>
+          <mesh position={[0, baseH * 0.9, 0]} castShadow raycast={raycast}>
+            {boxLike ? <boxGeometry args={[r * 2.15, baseH * 0.2, r * 2.15]} /> : <cylinderGeometry args={[r * 1.12, r * 1.25, baseH * 0.2, segs]} />}
+            <Mat color={trim} map={trimMap} roughness={trimRough} metalness={trimMetal} />
+          </mesh>
+        </>
+      ) : null}
       {/* Fût */}
-      <mesh position={[0, height / 2, 0]} castShadow raycast={raycast}>
-        {square
-          ? <boxGeometry args={[r * 1.7, height * 0.88, r * 1.7]} />
-          : <cylinderGeometry args={[r * 0.92, r, height * 0.88, fluted ? 32 : 24]} />}
-        <Mat color={selected ? '#c7d2fe' : '#ffffff'} map={map} roughness={0.82} />
+      <mesh position={[0, shaftY, 0]} castShadow raycast={raycast}>
+        {boxLike
+          ? <boxGeometry args={[r * 1.7, shaftH, r * 1.7]} />
+          : <cylinderGeometry args={[topR, r, shaftH, segs]} />}
+        <Mat color={body} map={map} roughness={roughness} metalness={metalness} />
       </mesh>
-      {fluted && !square
+      {fluted
         ? Array.from({ length: 12 }).map((_, i) => {
             const a = (i / 12) * Math.PI * 2;
             return (
-              <mesh key={i} position={[Math.cos(a) * r * 0.9, height / 2, Math.sin(a) * r * 0.9]} castShadow raycast={raycast}>
-                <cylinderGeometry args={[r * 0.07, r * 0.075, height * 0.82, 8]} />
-                <Mat color={selected ? '#c7d2fe' : '#f5f5f4'} map={map} roughness={0.7} />
+              <mesh key={i} position={[Math.cos(a) * r * 0.9, shaftY, Math.sin(a) * r * 0.9]} castShadow raycast={raycast}>
+                <cylinderGeometry args={[r * 0.07, r * 0.075, shaftH * 0.94, 8]} />
+                <Mat color={body} map={map} roughness={Math.max(0.2, roughness - 0.1)} metalness={metalness} />
               </mesh>
             );
           })
         : null}
       {/* Chapiteau */}
-      <mesh position={[0, height - 0.08, 0]} castShadow raycast={raycast}>
-        {square ? <boxGeometry args={[r * 2.15, 0.14, r * 2.15]} /> : <cylinderGeometry args={[r * 1.3, r * 1.15, 0.14, 24]} />}
-        <Mat color={selected ? '#c7d2fe' : '#e7e5e4'} map={map} roughness={0.75} />
-      </mesh>
+      {capital === 'classic' ? (
+        <mesh position={[0, height - capH / 2, 0]} castShadow raycast={raycast}>
+          {boxLike ? <boxGeometry args={[r * 2.15, capH, r * 2.15]} /> : <cylinderGeometry args={[r * 1.3, topR * 1.2, capH, segs]} />}
+          <Mat color={trim} map={trimMap} roughness={trimRough} metalness={trimMetal} />
+        </mesh>
+      ) : capital === 'tiered' ? (
+        <>
+          <mesh position={[0, height - capH * 0.8, 0]} castShadow raycast={raycast}>
+            {boxLike ? <boxGeometry args={[r * 1.95, capH * 0.4, r * 1.95]} /> : <cylinderGeometry args={[r * 1.15, topR * 1.08, capH * 0.4, segs]} />}
+            <Mat color={trim} map={trimMap} roughness={trimRough} metalness={trimMetal} />
+          </mesh>
+          <mesh position={[0, height - capH * 0.3, 0]} castShadow raycast={raycast}>
+            {boxLike ? <boxGeometry args={[r * 2.35, capH * 0.6, r * 2.35]} /> : <cylinderGeometry args={[r * 1.38, r * 1.2, capH * 0.6, segs]} />}
+            <Mat color={trim} map={trimMap} roughness={trimRough} metalness={trimMetal} />
+          </mesh>
+        </>
+      ) : capital === 'ornate' ? (
+        <>
+          {/* Corbeille évasée, couronne de feuilles et tailloir carré. */}
+          <mesh position={[0, height - capH * 0.55, 0]} castShadow raycast={raycast}>
+            <cylinderGeometry args={[r * 1.22, topR * 1.02, capH * 0.7, 24]} />
+            <Mat color={trim} map={trimMap} roughness={trimRough} metalness={trimMetal} />
+          </mesh>
+          {Array.from({ length: 10 }).map((_, i) => {
+            const a = (i / 10) * Math.PI * 2;
+            return (
+              <mesh
+                key={`leaf-${i}`}
+                position={[Math.cos(a) * r * 1.08, height - capH * 0.62, Math.sin(a) * r * 1.08]}
+                rotation={[0, -a, 0]}
+                scale={[0.45, 1, 1]}
+                castShadow
+                raycast={raycast}
+              >
+                <sphereGeometry args={[Math.max(0.03, capH * 0.28), 8, 6]} />
+                <Mat color={trim} map={trimMap} roughness={trimRough} metalness={trimMetal} />
+              </mesh>
+            );
+          })}
+          <mesh position={[0, height - capH * 0.1, 0]} castShadow raycast={raycast}>
+            <boxGeometry args={[r * 2.6, capH * 0.2, r * 2.6]} />
+            <Mat color={trim} map={trimMap} roughness={trimRough} metalness={trimMetal} />
+          </mesh>
+        </>
+      ) : null}
     </group>
   );
 }

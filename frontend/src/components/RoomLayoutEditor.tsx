@@ -82,7 +82,6 @@ import {
   ROOM_LAYOUT_TEMPLATES,
   applyRoomTemplate,
   applySavedRoomTemplate,
-  applyRoomAmbiencePreset,
   ROOM_AMBIENCE_PRESETS,
   saveCustomAmbienceToBlueprint,
   deleteCustomAmbienceFromBlueprint,
@@ -192,6 +191,7 @@ import {
   openingMaterialLabels,
   isTentVenue,
   wallLengthMeters,
+  resolveBlueprintWalls,
   type RoomWallSegment,
 } from '@/lib/roomLayoutUtils';
 import QuickAddPalette, { type QuickAddAction } from '@/components/room/QuickAddPalette';
@@ -206,9 +206,12 @@ import { EDITOR_TOOLBAR_MORE_GROUPS } from '@/lib/roomEditorGuide';
 import { buildEditorTour, editorTourSummary, EDITOR_TOUR_SEEN_KEY, START_EDITOR_TOUR_EVENT, type EditorTourAction } from '@/lib/roomEditorTour';
 import { BAR_BACK_LABELS, BAR_FRONT_LABELS, BAR_METAL_LABELS, BAR_STOOL_LABELS, BAR_STYLE_DESIGN, BAR_TOP_LABELS } from '@/lib/roomBarDesign';
 import {
+  applyAmbienceWithTheme,
   copyAmbienceShareLink,
   decodeAmbienceShareToken,
 } from '@/lib/roomAmbienceUtils';
+import { describeAmbienceRules } from '@/lib/roomAmbienceRules';
+import AmbienceRulesList from '@/components/room/AmbienceRulesList';
 import {
   addAmbienceToLibrary,
   captureAmbienceToLibrary,
@@ -371,6 +374,22 @@ import { TEMPLATE_CATEGORIES, templateMatchesCategory, type TemplateCategory } f
 import { supportsOneSideSeating, tablePlateSizeMeters } from '@/lib/tablePlanUtils';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { Alert, Button, IconButton, Input, Kbd, Modal, Toolbar } from '@/components/ui';
+import {
+  COLUMN_STYLE_PRESETS,
+  MAX_COLUMN_HEIGHT_M,
+  MIN_COLUMN_HEIGHT_M,
+  columnBaseLabels,
+  columnCapitalLabels,
+  columnMaterialLabels,
+  columnPresetPatch,
+  columnShapeLabels,
+  isTexturedColumnMaterial,
+  matchColumnStylePreset,
+  resolveColumnHeightM,
+  type ColumnBase,
+  type ColumnCapital,
+  type ColumnMaterial,
+} from '@/lib/roomColumnStyles';
 
 const EDITOR_FIELD =
   'w-full min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
@@ -3077,10 +3096,16 @@ export default function RoomLayoutEditor({
   };
 
   const applyAmbience = (preset: import('@/lib/roomLayoutUtils').RoomAmbiencePreset, scope?: AmbienceApplyScope) => {
-    const applied = applyRoomAmbiencePreset(blueprint, preset, scope);
+    // Un seul enregistrement : thème puis ambiance, pour que le thème n’écrase pas murs, sol et mobilier.
+    const applied = applyAmbienceWithTheme(blueprint, preset, scope);
     const next = recordAmbienceHistory(applied, preset);
-    updateBlueprint(next, { message: `Ambiance : ${preset.label}`, kind: 'settings' });
-    if (preset.roomThemeId && (scope?.theme ?? true)) applyTheme(preset.roomThemeId);
+    const blocked = describeAmbienceRules(blueprint, scope ?? undefined).filter((r) => r.level === 'blocked').length;
+    updateBlueprint(next, {
+      message: blocked
+        ? `Ambiance : ${preset.label} (${blocked} élément${blocked > 1 ? 's' : ''} sans effet visible, voir les règles)`
+        : `Ambiance : ${preset.label}`,
+      kind: 'settings',
+    });
     setAmbiencePreviewPreset(null);
   };
 
@@ -4495,6 +4520,7 @@ export default function RoomLayoutEditor({
                     <p className="text-sm text-muted leading-snug">
                       Applique murs, sol, thème et style de chaises / tables en un clic.
                     </p>
+                    <AmbienceRulesList rules={describeAmbienceRules(blueprint)} />
                     <Input
                       type="search"
                       label="Rechercher une ambiance"
@@ -7425,18 +7451,137 @@ export default function RoomLayoutEditor({
 
             {isColumn && (
               <>
-                <label className="block text-xs space-y-1">
-                  <span className="font-semibold text-muted">Forme colonne</span>
-                  <select value={selectedFixture.columnShape ?? 'round'} onChange={(e) => updateFixture(selectedFixture.id, { columnShape: e.target.value as ColumnShape }, 'Forme colonne modifiée')} className={EDITOR_FIELD}>
-                    <option value="round">Ronde</option>
-                    <option value="square">Carrée</option>
-                    <option value="fluted">Cannelée (classique)</option>
-                  </select>
-                </label>
-                <label className="block text-xs space-y-1">
-                  <span className="font-semibold text-muted">Couleur (sans image)</span>
-                  <input type="color" value={selectedFixture.color ?? '#78716c'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} aria-label="Couleur de la colonne" className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer" />
-                </label>
+                {(() => {
+                  const activePreset = matchColumnStylePreset(selectedFixture);
+                  const material = selectedFixture.columnMaterial;
+                  const textured = isTexturedColumnMaterial(material);
+                  const setColumn = (patch: Partial<typeof selectedFixture>, msg: string) => updateFixture(selectedFixture.id, patch, msg);
+                  return (
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <p className={EDITOR_HEADING}>Styles rapides</p>
+                        <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Styles de colonne">
+                          {COLUMN_STYLE_PRESETS.map((preset) => {
+                            const on = activePreset?.id === preset.id;
+                            return (
+                              <button
+                                key={preset.id}
+                                type="button"
+                                aria-pressed={on}
+                                title={preset.description}
+                                onClick={() => setColumn(columnPresetPatch(preset), `Colonne : style ${preset.label}`)}
+                                className={cn(
+                                  'flex items-center gap-2 min-h-11 px-2.5 py-1.5 rounded-[var(--radius-button)] border text-left text-sm transition-colors',
+                                  on ? EDITOR_TOOL_ON : 'border-border bg-surface text-foreground hover:bg-surface-muted',
+                                )}
+                              >
+                                <span
+                                  aria-hidden
+                                  className="h-6 w-3 shrink-0 rounded-sm border border-black/10"
+                                  style={{ background: preset.fields.columnTrimColor
+                                    ? `linear-gradient(${preset.fields.columnTrimColor} 0 18%, ${preset.fields.color} 18% 82%, ${preset.fields.columnTrimColor} 82%)`
+                                    : preset.fields.color }}
+                                />
+                                <span className="min-w-0 leading-tight">{preset.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Forme du fût</span>
+                          <select value={selectedFixture.columnShape ?? 'round'} onChange={(e) => setColumn({ columnShape: e.target.value as ColumnShape }, 'Forme colonne modifiée')} className={EDITOR_FIELD}>
+                            {(Object.keys(columnShapeLabels) as ColumnShape[]).map((k) => (
+                              <option key={k} value={k}>{columnShapeLabels[k]}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Matière</span>
+                          <select
+                            value={material ?? 'stone'}
+                            onChange={(e) => setColumn({ columnMaterial: e.target.value as ColumnMaterial }, `Colonne : ${columnMaterialLabels[e.target.value as ColumnMaterial]}`)}
+                            className={EDITOR_FIELD}
+                          >
+                            {(Object.keys(columnMaterialLabels) as ColumnMaterial[]).map((k) => (
+                              <option key={k} value={k}>{columnMaterialLabels[k]}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Base</span>
+                          <select value={selectedFixture.columnBase ?? 'classic'} onChange={(e) => setColumn({ columnBase: e.target.value as ColumnBase }, 'Base de colonne modifiée')} className={EDITOR_FIELD}>
+                            {(Object.keys(columnBaseLabels) as ColumnBase[]).map((k) => (
+                              <option key={k} value={k}>{columnBaseLabels[k]}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Chapiteau</span>
+                          <select value={selectedFixture.columnCapital ?? 'classic'} onChange={(e) => setColumn({ columnCapital: e.target.value as ColumnCapital }, 'Chapiteau modifié')} className={EDITOR_FIELD}>
+                            {(Object.keys(columnCapitalLabels) as ColumnCapital[]).map((k) => (
+                              <option key={k} value={k}>{columnCapitalLabels[k]}</option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      <div className="space-y-1.5">
+                        <DecorColorField
+                          label={textured ? 'Teinte de la matière' : 'Couleur du fût'}
+                          value={selectedFixture.color}
+                          fallback="#e7e5e4"
+                          onChange={(next) => setColumn(
+                            // Une colonne sans matière choisie garde la pierre d’origine : on la fixe pour que la teinte se voie.
+                            { color: next, ...(material ? {} : { columnMaterial: 'stone' as ColumnMaterial }) },
+                            'Couleur de colonne modifiée',
+                          )}
+                        />
+                        <DecorColorField
+                          label="Teinte des moulures (base, chapiteau)"
+                          value={selectedFixture.columnTrimColor}
+                          fallback={selectedFixture.color ?? '#e7e5e4'}
+                          onChange={(next) => setColumn({ columnTrimColor: next }, next ? 'Moulures teintées' : 'Moulures comme le fût')}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 min-h-11 text-sm text-foreground cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedFixture.columnToCeiling === true}
+                            onChange={(e) => setColumn({ columnToCeiling: e.target.checked }, e.target.checked ? 'Colonne jusqu’au plafond' : 'Hauteur de colonne libre')}
+                            className="rounded border-border size-4"
+                          />
+                          Monter jusqu’au plafond
+                        </label>
+                        {selectedFixture.columnToCeiling ? (
+                          <p className={EDITOR_HINT}>
+                            Hauteur : {fmtM(resolveColumnHeightM(selectedFixture, resolveBlueprintWalls(blueprint)[0]?.heightM))}, comme les murs. Elle suit la hauteur des murs si vous la changez.
+                          </p>
+                        ) : (
+                          <DecorRangeField
+                            label="Hauteur"
+                            value={resolveColumnHeightM(selectedFixture)}
+                            min={MIN_COLUMN_HEIGHT_M}
+                            max={MAX_COLUMN_HEIGHT_M}
+                            step={0.1}
+                            format={fmtM}
+                            onChange={(v) => setColumn({ columnHeightM: v }, `Hauteur de colonne : ${fmtM(v)}`)}
+                          />
+                        )}
+                      </div>
+                      <ul className="space-y-1 rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-xs text-muted leading-snug" aria-label="Règles de rendu des colonnes">
+                        {selectedFixture.imageUrl ? (
+                          <li className="text-amber-700 dark:text-amber-400 font-semibold">Une image est posée : elle remplace la matière et la teinte. Retirez-la pour les voir.</li>
+                        ) : null}
+                        <li>{textured
+                          ? 'Pierre, marbre, bois… : la teinte se mélange à la texture. Choisissez « Peinte » pour une couleur unie.'
+                          : 'Couleur unie, sans texture.'}</li>
+                        <li>« Appliquer aux autres colonnes » recopie forme, matière, moulures et hauteur.</li>
+                      </ul>
+                    </div>
+                  );
+                })()}
                 <div className="space-y-1.5">
                   <p className={EDITOR_HEADING}>Position</p>
                   <div className="flex justify-center">

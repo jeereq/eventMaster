@@ -185,8 +185,24 @@ type SurfaceDecor = Pick<
   | 'aisleColor' | 'aisleBorderColor' | 'petalColor' | 'petalDensity' | 'lanternSpacingM' | 'surfaceImageTileM'
   | 'corridorWalls' | 'corridorWallHeightM' | 'corridorWallColor' | 'corridorPlinths' | 'corridorSconces' | 'corridorSconceSpacingM'
   | 'hardwareFinish' | 'stringLightStyle' | 'stringLightLayout' | 'stringLightMount' | 'stageRig' | 'stageStairs'
+  | 'columnMaterial' | 'columnCapital' | 'columnBase' | 'columnHeightM' | 'columnToCeiling' | 'columnTrimColor'
 >;
 import { CustomElementMesh } from '@/components/room/CustomElementMesh';
+import { columnColorApplies, resolveColumnHeightM, type ColumnMaterial, type ColumnShape } from '@/lib/roomColumnStyles';
+
+/** Texture du fût selon la matière ; sans matière choisie, la pierre d’origine. */
+function columnMaterialMap(material: ColumnMaterial | undefined): THREE.Texture | null {
+  switch (material) {
+    case 'marble': return resolveZoneMaterialMap('marble').map;
+    case 'travertine': return getWallTexture('travertine').map;
+    case 'concrete': return resolveZoneMaterialMap('concrete').map;
+    case 'plaster': return getWallTexture('plaster').map;
+    case 'wood': return resolveZoneMaterialMap('wood').map;
+    case 'metal':
+    case 'painted': return null;
+    default: return getWallTexture('stone').map;
+  }
+}
 import { DomeRoof, RoofLantern, StyledRoof, TentSidewall } from '@/components/room/RoofMeshes';
 import { CofferedCeiling, RooftopEquipment } from '@/components/room/RoofDetails';
 import { DanceFloorDressing } from '@/components/room/DanceFloorMeshes';
@@ -3051,7 +3067,7 @@ function FixtureMesh({
   stairDirection?: 0 | 90 | 180 | 270;
   stairStyle?: StairStyle;
   balconySide?: 'north' | 'south' | 'east' | 'west';
-  columnShape?: 'round' | 'square' | 'fluted';
+  columnShape?: ColumnShape;
   doorStyle?: DoorStyle;
   doorSwing?: 'left' | 'right' | 'double' | 'sliding' | 'arch';
   hasMat?: boolean;
@@ -3116,7 +3132,7 @@ function FixtureMesh({
   const height =
     kind === 'stage' || kind === 'podium' || kind === 'stairs' ? podiumH :
     kind === 'balcony' ? 0.12 :
-    kind === 'column' || kind === 'pillar' ? 2.6 :
+    kind === 'column' || kind === 'pillar' ? resolveColumnHeightM(surfaceDecor ?? {}, ceilingM) :
     kind === 'flower' ? 0.7 :
     kind === 'arch' ? 2.2 :
     kind === 'partition' ? 0.92 :
@@ -3142,10 +3158,10 @@ function FixtureMesh({
     if (kind === 'carpet') return resolveZoneMaterialMap(material ?? 'carpet').map;
     if (kind === 'buffet' || kind === 'bar') return resolveZoneMaterialMap(material ?? 'wood').map;
     if (kind === 'stage' || kind === 'podium' || kind === 'stairs') return resolveZoneMaterialMap(material ?? 'wood').map;
-    if (kind === 'column' || kind === 'pillar') return getWallTexture('stone').map;
+    if (kind === 'column' || kind === 'pillar') return columnMaterialMap(surfaceDecor?.columnMaterial);
     if (kind === 'perimeter') return getWallTexture('concrete').map;
     return null;
-  }, [imageUrl, kind, material]);
+  }, [imageUrl, kind, material, surfaceDecor?.columnMaterial]);
 
   const baseColor =
     color ??
@@ -3200,8 +3216,18 @@ function FixtureMesh({
           map={map}
           selected={selected}
           pickable={pickable}
-          square={columnShape === 'square'}
-          fluted={columnShape === 'fluted'}
+          shape={columnShape}
+          capital={surfaceDecor?.columnCapital}
+          base={surfaceDecor?.columnBase}
+          color={columnColorApplies({ columnMaterial: surfaceDecor?.columnMaterial, color }) ? color : undefined}
+          trimColor={surfaceDecor?.columnTrimColor}
+          metalness={surfaceDecor?.columnMaterial === 'metal' ? 0.85 : surfaceDecor?.columnMaterial === 'marble' ? 0.08 : 0.05}
+          roughness={
+            surfaceDecor?.columnMaterial === 'metal' ? 0.32
+              : surfaceDecor?.columnMaterial === 'marble' ? 0.25
+                : surfaceDecor?.columnMaterial === 'painted' ? 0.6
+                  : 0.82
+          }
         />
       ) : kind === 'flower' ? (
         <CatalogueFlower
