@@ -2578,8 +2578,10 @@ export function applyRoomAmbiencePreset(
     metadata.roofOpacity = preset.roofOpacity ?? blueprint.metadata.roofOpacity;
   }
 
+  // Un plan sans murs enregistrés affiche les murs du contour en 3D : on les
+  // matérialise pour qu’ils reçoivent bien la texture de l’ambiance.
   const walls = scope.walls
-    ? (blueprint.walls ?? []).map((w) => ({
+    ? resolveBlueprintWalls(blueprint).map((w) => ({
         ...w,
         texture: preset.wallTexture,
         color: preset.wallColor,

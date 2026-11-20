@@ -6,14 +6,15 @@ import Modal from '@/components/ui/Modal';
 import { Button } from '@/components/ui';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import {
-  applyRoomAmbiencePreset,
   DEFAULT_AMBIENCE_SCOPE,
   type AmbienceApplyScope,
   type RoomAmbiencePreset,
   type RoomLayoutBlueprint,
 } from '@/lib/roomLayoutUtils';
-import { describeAmbienceChanges } from '@/lib/roomAmbienceUtils';
+import { applyAmbienceWithTheme, describeAmbienceChanges } from '@/lib/roomAmbienceUtils';
 import { cn } from '@/lib/cn';
+import { collectAmbienceSurfaceRules } from '@/lib/roomSurfaceRules';
+import SurfaceRulesNotice from '@/components/room/SurfaceRulesNotice';
 
 const SCOPE_OPTIONS: { key: keyof AmbienceApplyScope; label: string }[] = [
   { key: 'walls', label: 'Murs' },
@@ -39,12 +40,17 @@ export default function RoomAmbiencePreviewModal({
   const [scope, setScope] = useState<AmbienceApplyScope>(DEFAULT_AMBIENCE_SCOPE);
 
   const previewBlueprint = useMemo(
-    () => applyRoomAmbiencePreset(blueprint, preset, scope),
+    () => applyAmbienceWithTheme(blueprint, preset, scope),
     [blueprint, preset, scope],
   );
   const changes = useMemo(
     () => describeAmbienceChanges(blueprint, preset, scope),
     [blueprint, preset, scope],
+  );
+
+  const surfaceRules = useMemo(
+    () => collectAmbienceSurfaceRules(blueprint, scope),
+    [blueprint, scope],
   );
 
   const toggleScope = (key: keyof AmbienceApplyScope) => {
@@ -126,6 +132,8 @@ export default function RoomAmbiencePreviewModal({
             ))}
           </ul>
         </div>
+
+        <SurfaceRulesNotice rules={surfaceRules} title="À savoir avant d’appliquer" />
       </div>
     </Modal>
   );

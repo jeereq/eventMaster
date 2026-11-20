@@ -21,7 +21,7 @@ import GuestPortraitsModal, { preparePortraitPhoto } from '@/components/room/Gue
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
-  GraduationCap, MessageCircle, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, Move, Rotate3d, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence, Users, Camera,
+  GraduationCap, HelpCircle, MessageCircle, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, Move, Rotate3d, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence, Users, Camera,
 } from '@/components/icons';
 import { buildPlotGrid, buildSinglePlot, findFreePlotSpot, isOpenSpace, nextPlotLabel, normalizePlotGrid, plotGridFootprint, PLOT_COLORS, PLOT_GRID_DEFAULTS, type PlotGridOptions } from '@/lib/roomPlots';
 import {
@@ -68,6 +68,15 @@ const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
 import RoomWallEditorPanel from '@/components/RoomWallEditorPanel';
 import { ChairTypePicker, SeatMaterialPicker, RoomAmbienceCard, TableSurfacePicker, ZoneMaterialPicker } from '@/components/room/RoomMaterialPreviews';
 import RoomAmbiencePreviewModal from '@/components/room/RoomAmbiencePreviewModal';
+import SurfaceRulesNotice from '@/components/room/SurfaceRulesNotice';
+import {
+  AMBIENCE_APPLY_RULES,
+  applySurfaceRuleAction,
+  collectAmbienceSurfaceRules,
+  collectFloorRules,
+  collectWallRules,
+  type SurfaceRuleAction,
+} from '@/lib/roomSurfaceRules';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { AiRoomPlanFullscreenLoader } from '@/components/AiComposeFullscreenLoader';
 import {
@@ -82,7 +91,6 @@ import {
   ROOM_LAYOUT_TEMPLATES,
   applyRoomTemplate,
   applySavedRoomTemplate,
-  applyRoomAmbiencePreset,
   ROOM_AMBIENCE_PRESETS,
   saveCustomAmbienceToBlueprint,
   deleteCustomAmbienceFromBlueprint,
@@ -206,6 +214,7 @@ import { EDITOR_TOOLBAR_MORE_GROUPS } from '@/lib/roomEditorGuide';
 import { buildEditorTour, editorTourSummary, EDITOR_TOUR_SEEN_KEY, START_EDITOR_TOUR_EVENT, type EditorTourAction } from '@/lib/roomEditorTour';
 import { BAR_BACK_LABELS, BAR_FRONT_LABELS, BAR_METAL_LABELS, BAR_STOOL_LABELS, BAR_STYLE_DESIGN, BAR_TOP_LABELS } from '@/lib/roomBarDesign';
 import {
+  applyAmbienceWithTheme,
   copyAmbienceShareLink,
   decodeAmbienceShareToken,
 } from '@/lib/roomAmbienceUtils';
@@ -2899,6 +2908,16 @@ export default function RoomLayoutEditor({
 
   const activeTheme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
   const effectiveFloorType = blueprint.metadata.floorType ?? activeTheme.defaultFloorType;
+  /** Ce qui ne s’appliquera pas (ou pas entièrement) aux murs et au sol, et pourquoi. */
+  const ambienceSurfaceRules = collectAmbienceSurfaceRules(blueprint, {
+    walls: true, floor: true, theme: true, furniture: true, lighting: true,
+  });
+  const floorSurfaceRules = collectFloorRules(blueprint);
+  const wallSurfaceRules = collectWallRules(blueprint);
+  const handleSurfaceRuleAction = (action: SurfaceRuleAction) => {
+    const { blueprint: next, message } = applySurfaceRuleAction(blueprint, action);
+    updateBlueprint(next, { message, kind: 'settings' });
+  };
   const availableThemes = listAvailableThemes(blueprint);
   const themesByCategory = groupThemesByCategory(availableThemes);
   const depthAmount = resolveDepthAmount(blueprint.metadata);
@@ -3077,10 +3096,11 @@ export default function RoomLayoutEditor({
   };
 
   const applyAmbience = (preset: import('@/lib/roomLayoutUtils').RoomAmbiencePreset, scope?: AmbienceApplyScope) => {
-    const applied = applyRoomAmbiencePreset(blueprint, preset, scope);
+    // Thème et ambiance en une seule mise à jour : appliquer le thème après coup
+    // repartait de l’ancien plan et effaçait murs, sol et mobilier de l’ambiance.
+    const applied = applyAmbienceWithTheme(blueprint, preset, scope);
     const next = recordAmbienceHistory(applied, preset);
     updateBlueprint(next, { message: `Ambiance : ${preset.label}`, kind: 'settings' });
-    if (preset.roomThemeId && (scope?.theme ?? true)) applyTheme(preset.roomThemeId);
     setAmbiencePreviewPreset(null);
   };
 
@@ -4495,6 +4515,26 @@ export default function RoomLayoutEditor({
                     <p className="text-sm text-muted leading-snug">
                       Applique murs, sol, thème et style de chaises / tables en un clic.
                     </p>
+                    <details className="group rounded-[var(--radius-button)] border border-border bg-surface-muted/40 px-3 py-2" data-tour="ambience-rules">
+                      <summary className="cursor-pointer list-none flex items-center justify-between gap-2 text-xs font-semibold text-foreground min-h-9">
+                        <span className="flex items-center gap-1.5">
+                          <HelpCircle className="w-3.5 h-3.5 text-primary" aria-hidden /> Ce qu’une ambiance change (et ne change pas)
+                        </span>
+                        <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
+                      </summary>
+                      <ul className="mt-1.5 space-y-1 pb-1">
+                        {AMBIENCE_APPLY_RULES.map((rule) => (
+                          <li key={rule.label} className="text-xs text-muted leading-snug">
+                            <span className="font-semibold text-foreground">{rule.label} :</span> {rule.text}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                    <SurfaceRulesNotice
+                      rules={ambienceSurfaceRules}
+                      title="Si vous appliquez une ambiance ici"
+                      onAction={handleSurfaceRuleAction}
+                    />
                     <Input
                       type="search"
                       label="Rechercher une ambiance"
@@ -4854,6 +4894,11 @@ export default function RoomLayoutEditor({
                         {displayedFloors.length} sol{displayedFloors.length > 1 ? 's' : ''}
                       </span>
                     </div>
+                    <SurfaceRulesNotice
+                      rules={floorSurfaceRules}
+                      title="À savoir pour le sol"
+                      onAction={handleSurfaceRuleAction}
+                    />
 
                     {/* Filtres par catégories de sols */}
                     <div className="flex flex-wrap gap-1">
@@ -4937,6 +4982,11 @@ export default function RoomLayoutEditor({
                 </div>
                 <div className="space-y-2 pt-3 border-t border-border/50" data-tour="wall-paint">
                   <p className={EDITOR_HEADING}><BrickWall className="w-3 h-3" /> Peinture murs (globale)</p>
+                  <SurfaceRulesNotice
+                    rules={wallSurfaceRules}
+                    title="À savoir pour les murs"
+                    onAction={handleSurfaceRuleAction}
+                  />
                   <div className="flex flex-wrap gap-1.5 items-center">
                     {['#e8e4df', '#f8fafc', '#d6d3d1', '#b4533c', '#8b6914', '#78716c', '#1e3a5f', '#fef3c7'].map((c) => (
                       <button

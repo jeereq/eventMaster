@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { HOME_METAL_FINISH_LABELS, type HomeMetalFinish } from '@/lib/roomHomeFurniture';
 import { DoorOpen, Plus, Trash2, BrickWall } from '@/components/icons';
 import {
@@ -17,6 +17,7 @@ import {
   openingMaterialLabels,
   wallLengthMeters,
   wallTextureLabels,
+  resolveBlueprintWalls,
   wallsFromRoomOutline,
   windowStyleLabels,
   WALL_STYLE_PRESETS,
@@ -24,6 +25,8 @@ import {
 import { WallTextureSwatch, OpeningMaterialSwatch } from '@/components/room/RoomMaterialPreviews';
 import type { LayoutActionEntry } from '@/lib/layoutActionLog';
 import { cn } from '@/lib/cn';
+import { applySurfaceRuleAction, collectWallRules } from '@/lib/roomSurfaceRules';
+import SurfaceRulesNotice from '@/components/room/SurfaceRulesNotice';
 import { WALL_TRIM_DEFAULT_COLOR as TRIM_DEFAULT_COLOR, WALL_TRIM_HINTS, WALL_TRIM_LABELS, WALL_TRIM_STYLES, normalizeWallTrim, type WallTrimStyle } from '@/lib/roomWallTrim';
 
 interface RoomWallEditorPanelProps {
@@ -39,11 +42,20 @@ export default function RoomWallEditorPanel({
   onSelectWall,
   onChange,
 }: RoomWallEditorPanelProps) {
-  const walls = blueprint.walls ?? [];
+  // Sans murs enregistrés, la 3D dessine ceux du contour : on les liste et on les
+  // modifie ici (ils sont enregistrés au premier changement) au lieu d’agir sur une liste vide.
+  const walls = useMemo(
+    () => resolveBlueprintWalls(blueprint),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [blueprint.walls, blueprint.roomOutline],
+  );
+  const wallRules = collectWallRules({ ...blueprint, walls });
   const selected = walls.find((w) => w.id === selectedWallId) ?? null;
 
   const setWalls = (nextWalls: RoomWallSegment[], message: string) => {
-    onChange({ ...blueprint, walls: nextWalls }, { message, kind: 'settings' });
+    // Une liste vide redessine les murs du contour en 3D : retirer le dernier mur les masque.
+    const metadata = nextWalls.length === 0 ? { ...blueprint.metadata, showWalls: false } : blueprint.metadata;
+    onChange({ ...blueprint, walls: nextWalls, metadata }, { message, kind: 'settings' });
   };
 
   const updateWall = (id: string, patch: Partial<RoomWallSegment>) => {
@@ -127,6 +139,14 @@ export default function RoomWallEditorPanel({
 
   return (
     <div className="space-y-4">
+      <SurfaceRulesNotice
+        rules={wallRules}
+        title="À savoir pour les murs"
+        onAction={(action) => {
+          const { blueprint: next, message } = applySurfaceRuleAction(blueprint, action);
+          onChange(next, { message, kind: 'settings' });
+        }}
+      />
       <div className="flex flex-wrap gap-1.5">
         <button
           type="button"
