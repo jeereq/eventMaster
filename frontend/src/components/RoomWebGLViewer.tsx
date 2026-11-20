@@ -24,6 +24,9 @@ import {
   Flower2,
   Square,
   ChevronRight,
+  ChevronLeft,
+  Dices,
+  Eye,
   Clapperboard,
   Play,
   Square as StopIcon,
@@ -88,9 +91,14 @@ import {
 } from '@/components/CatalogueFurnitureMeshes';
 import { CatalogueInterstoryStairs } from '@/components/CatalogueStairs';
 import { CatalogueBalcony } from '@/components/CatalogueBalcony';
+import { CinemaScreenMesh } from '@/components/room/CinemaScreenMesh';
 import {
   AmphitheaterRiser,
+  AmphitheaterBankRails,
+  type AmphitheaterBankRail,
   RISER_FRONT_OVERHANG_M,
+  RISER_TREAD_M,
+  riserExtentX,
   EventStage,
   StageFlowerCluster,
   EventZoneSurface,
@@ -124,12 +132,26 @@ import {
 } from '@/components/roomCelebrationMeshes';
 import { ConcertInstrumentMesh, EventBarMesh } from '@/components/CataloguePodiumBarMeshes';
 import type { BarBack, BarFront, BarMetal, BarStool, BarTop } from '@/lib/roomBarDesign';
-import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
+import { clampRowSeatCount, rowArcZ, rowCurveFactor } from '@/lib/roomAmphitheaterGeom';
 import { detectLayoutClearanceConflicts } from '@/lib/roomLayoutClearance';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import { entranceViewPose } from '@/lib/roomWalkthrough';
-import { buildGuestSimulation, type GuestSimulationSettings } from '@/lib/roomGuestSimulation';
+import { buildGuestSimulation, type GuestSimulationSettings, type SimulatedGuest } from '@/lib/roomGuestSimulation';
 import { GuestAvatars } from '@/components/room/GuestAvatarMeshes';
+import GestureFeedback from '@/components/room/GestureFeedback';
+import AvatarEyeCamera, { AVATAR_START_PITCH, type AvatarLook } from '@/components/room/AvatarEyeCamera';
+import {
+  AVATAR_VIEW_FILTER_LABELS,
+  availableAvatarFilters,
+  describeAvatarViewer,
+  filterAvatarViewers,
+  pickDefaultAvatarViewer,
+  randomAvatarViewer,
+  stepAvatarViewer,
+  wrapAngle,
+  yawToward,
+  type AvatarViewFilter,
+} from '@/lib/roomAvatarView';
 import {
   DOLLHOUSE_WALL_CUT_M,
   dollhouseOverviewPose,
@@ -154,7 +176,8 @@ import { LandscapeMesh, OutdoorSurroundingsScene, seedFromId } from '@/component
 import { CorridorMesh } from '@/components/room/CorridorMesh';
 import { AtelierGlazing, CassettePanels, DoorHandles, Hinges, handleY } from '@/components/room/DoorHardware';
 import { MetalMat } from '@/components/room/BathroomMeshes';
-import { Architrave, Cornice, Plinth, ARCHITRAVE_W, TRIM_DEFAULT_COLOR } from '@/components/room/WallTrimMeshes';
+import { Architrave, Cornice, Plinth, WallDecorTrim, ARCHITRAVE_W, TRIM_DEFAULT_COLOR } from '@/components/room/WallTrimMeshes';
+import { wallTrimHasBaseAndCornice, wallTrimLayout } from '@/lib/roomWallTrim';
 import { WindowUnit } from '@/components/room/WindowMeshes';
 
 type SurfaceDecor = Pick<
@@ -1816,6 +1839,22 @@ function WallMesh({
   }, [openings, length]);
   /** Corniche seulement si aucune ouverture ne monte jusqu’au plafond. */
   const corniceFree = !openings.some((op) => (op.sillM ?? (op.kind === 'door' ? 0 : 0.9)) + op.heightM > wallH - 0.12);
+  const trimStyle = wall.trim;
+  const baseAndCornice = wallTrimHasBaseAndCornice(trimStyle);
+  /** Boiserie, cimaise, cadres ou pilastres : calculés hors des ouvertures, sur la hauteur réelle du mur. */
+  const decor = useMemo(
+    () => wallTrimLayout(trimStyle, length, cutaway ? wall.heightM : wallH, openings),
+    [trimStyle, length, cutaway, wall.heightM, wallH, openings],
+  );
+  const visibleDecor = useMemo(() => {
+    if (!cutaway) return decor;
+    // Vue maquette : on ne garde que les pièces sous la tranche de coupe.
+    return {
+      boxes: decor.boxes.filter((b) => b.y + b.h / 2 <= wallH),
+      rails: decor.rails.filter((r) => r.y + 0.03 <= wallH),
+    };
+  }, [decor, cutaway, wallH]);
+  const trimColor = wall.trimColor ?? TRIM_DEFAULT_COLOR;
 
   if (length < 0.05) return null;
 
@@ -1887,9 +1926,14 @@ function WallMesh({
         );
       })}
       {/* Plinthes moulurées côté pièce, coupées aux portes */}
-      {plinthRuns.map(([a, b]) => (
-        <Plinth key={`plinth-${a.toFixed(3)}`} x0={a} x1={b} y={-wallH / 2} z={inSide * (thick / 2)} side={inSide} />
-      ))}
+      {baseAndCornice
+        ? plinthRuns.map(([a, b]) => (
+            <Plinth key={`plinth-${a.toFixed(3)}`} x0={a} x1={b} y={-wallH / 2} z={inSide * (thick / 2)} side={inSide} color={trimColor} />
+          ))
+        : null}
+      {visibleDecor.boxes.length || visibleDecor.rails.length ? (
+        <WallDecorTrim layout={visibleDecor} y={-wallH / 2} z={inSide * (thick / 2)} side={inSide} color={trimColor} />
+      ) : null}
       {cutaway ? (
         /* Tranche de coupe : bande claire sur le dessus du mur, comme une maquette d’architecte. */
         bricks
@@ -1908,7 +1952,7 @@ function WallMesh({
           ))
       ) : (
         /* Corniche à gorge sous le plafond */
-        corniceFree ? <Cornice length={length * 0.998} y={wallH / 2} z={inSide * (thick / 2)} side={inSide} /> : null
+        corniceFree && baseAndCornice ? <Cornice length={length * 0.998} y={wallH / 2} z={inSide * (thick / 2)} side={inSide} color={trimColor} /> : null
       )}
       {openings.filter((op) => !cutaway || op.kind !== 'door').map((op) => (
         <OpeningMesh
@@ -3230,7 +3274,15 @@ function FixtureMesh({
       ) : kind === 'djBooth' ? (
         <DjBoothMesh w={w} d={d} color={color ?? '#1c1917'} selected={selected} />
       ) : kind === 'screen' ? (
-        screenKind === 'wallTv' ? (
+        screenKind === 'cinemaScreen' ? (
+          <CinemaScreenMesh
+            w={w}
+            ratio={screenRatio ?? '21:9'}
+            elevationM={screenElevationM ?? 1.2}
+            powered={screenPowered ?? true}
+            selected={selected}
+          />
+        ) : screenKind === 'wallTv' ? (
           <WallTvMesh
             w={Math.max(0.8, w)}
             ratio={screenRatio ?? '16:9'}
@@ -3810,7 +3862,10 @@ function SceneContent({
   introGlide = false,
   filmActive = false,
   frameTrackRef,
-  guestSimulation = null,
+  simulatedGuests = [],
+  avatarViewGuest = null,
+  avatarLookRef,
+  onPickGuest,
 }: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode' | 'introFlyIn' | 'introView' | 'introReplayKey'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
@@ -3839,6 +3894,13 @@ function SceneContent({
   filmActive?: boolean;
   /** Piste vidéo de l’enregistrement : une image est poussée après chaque rendu. */
   frameTrackRef?: React.MutableRefObject<CanvasCaptureMediaStreamTrack | null>;
+  /** Invités simulés à dessiner (calculés par le parent, qui choisit aussi le point de vue). */
+  simulatedGuests?: SimulatedGuest[];
+  /** Vue à la place d’un invité : la caméra est posée dans ses yeux. */
+  avatarViewGuest?: SimulatedGuest | null;
+  avatarLookRef?: React.MutableRefObject<AvatarLook>;
+  /** Clic sur un avatar : prendre son point de vue. */
+  onPickGuest?: (guest: SimulatedGuest) => void;
 }) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
   const pendingIntroRef = useRef<IntroPath | null>(null);
@@ -4066,27 +4128,120 @@ function SceneContent({
     [heightM, orbitControlsRef, widthM],
   );
 
-  // Marche de chaque gradin prolongée jusqu’à la rangée qui la surplombe (même bloc de gradins).
-  const riserTreadById = useMemo(() => {
+  // Marche de chaque gradin prolongée jusqu’à la rangée qui la surplombe (même bloc de gradins),
+  // et hauteur de contremarche de chaque rang par rapport à celui du dessous (demi-marches d’allée).
+  const { riserTreadById, riserRiseById } = useMemo(() => {
     const rows = blueprint.furniture.filter(
       (f): f is Extract<typeof f, { kind: 'row' }> => f.kind === 'row',
     );
-    const map = new Map<string, number>();
+    const tread = new Map<string, number>();
+    const rise = new Map<string, number>();
     for (const row of rows) {
       const elev = row.elevationM ?? (row.tier > 0 ? row.tier * 0.38 : 0);
       let best = Infinity;
+      let above: { id: string; elev: number } | null = null;
       for (const other of rows) {
         if (other.id === row.id || other.storyId !== row.storyId) continue;
         const otherElev = other.elevationM ?? (other.tier > 0 ? other.tier * 0.38 : 0);
         if (otherElev <= elev + 0.02 || Math.abs(other.x - row.x) > 8 || (other.rotation ?? 0) !== (row.rotation ?? 0)) continue;
         const dy = ((other.y - row.y) / 100) * heightM;
-        if (dy > 0.3 && dy < best) best = dy;
+        if (dy > 0.3 && dy < best) {
+          best = dy;
+          above = { id: other.id, elev: otherElev };
+        }
       }
-      if (Number.isFinite(best) && best < 3) map.set(row.id, Math.max(0.5, best - RISER_FRONT_OVERHANG_M + 0.02));
+      if (Number.isFinite(best) && best < 3 && above) {
+        tread.set(row.id, Math.max(0.5, best - RISER_FRONT_OVERHANG_M + 0.02));
+        rise.set(above.id, Math.min(rise.get(above.id) ?? Infinity, above.elev - elev));
+      }
     }
-    return map;
+    return { riserTreadById: tread, riserRiseById: rise };
   }, [blueprint.furniture, heightM]);
   const riserFinish = blueprint.metadata.showWalls === false ? 'stone' : 'wood';
+  const finishForRow = (row: { chairStyle?: string }) =>
+    riserFinish === 'wood' && row.chairStyle === 'cinema' ? 'carpet' as const : riserFinish;
+
+  // Blocs de gradins (même groupe, même orientation) : garde-corps continus qui suivent la pente
+  // sur les deux flancs, et lisse de sécurité derrière le dernier rang.
+  const amphitheaterBanks = useMemo(() => {
+    const rows = blueprint.furniture.filter(
+      (f): f is Extract<typeof f, { kind: 'row' }> =>
+        f.kind === 'row' && Boolean(f.groupId) && ((f.elevationM ?? 0) > 0.05 || f.tier > 0),
+    );
+    const groups = new Map<string, typeof rows>();
+    for (const row of rows) {
+      const key = `${row.groupId}|${row.storyId ?? ''}|${row.rotation ?? 0}`;
+      groups.set(key, [...(groups.get(key) ?? []), row]);
+    }
+    const banks: Array<{ key: string; storyId?: string; finish: 'wood' | 'stone' | 'carpet'; rails: AmphitheaterBankRail[] }> = [];
+    for (const [key, list] of groups) {
+      if (list.length < 2) continue;
+      const sorted = [...list].sort(
+        (a, b) => (a.elevationM ?? a.tier * 0.38) - (b.elevationM ?? b.tier * 0.38),
+      );
+      const top = sorted[sorted.length - 1];
+      const topElev = top.elevationM ?? top.tier * 0.38;
+      if (topElev < 0.6) continue;
+      const RAIL_H = 0.9;
+      const toWorld = (row: (typeof sorted)[number], lx: number, y: number, lz: number): [number, number, number] => {
+        const [wx, wz] = pctToWorld(row.x, row.y, widthM, heightM);
+        const r = ((row.rotation ?? 0) * Math.PI) / 180;
+        return [wx + lx * Math.cos(r) + lz * Math.sin(r), y, wz - lx * Math.sin(r) + lz * Math.cos(r)];
+      };
+      const geom = (row: (typeof sorted)[number]) => {
+        const count = clampRowSeatCount(row.seatCount);
+        const ext = riserExtentX(count, 0.55, row.aisleSplit === true, row.aisleWidthPct ?? 14, row.sideAisleM ?? 0);
+        const curveF = rowCurveFactor(row.curve ?? 0);
+        const elev = Math.max(row.elevationM ?? row.tier * 0.38, 0.14);
+        const tread = riserTreadById.get(row.id) ?? RISER_TREAD_M;
+        return {
+          ...ext,
+          elev,
+          zFront: (x: number) => rowArcZ(x, 0.55, curveF) - RISER_FRONT_OVERHANG_M,
+          zBack: (x: number) => rowArcZ(x, 0.55, curveF) + tread,
+        };
+      };
+      const rails: AmphitheaterBankRail[] = [];
+      for (const side of [-1, 1] as const) {
+        const points: AmphitheaterBankRail['points'] = [];
+        const posts: AmphitheaterBankRail['posts'] = [];
+        sorted.forEach((row, i) => {
+          const g = geom(row);
+          const x = side < 0 ? g.x0 + 0.07 : g.x1 - 0.07;
+          const front = toWorld(row, x, g.elev, g.zFront(x) + 0.1);
+          // La main courante démarre au sol devant le premier gradin, comme une rampe d’escalier.
+          if (i === 0) {
+            const start = toWorld(row, x, 0, g.zFront(x) - 0.25);
+            points.push([start[0], RAIL_H, start[2]]);
+            posts.push([start[0], 0, start[2], RAIL_H]);
+          }
+          points.push([front[0], g.elev + RAIL_H, front[2]]);
+          if (i % 2 === 1 || i === sorted.length - 1) posts.push([front[0], g.elev, front[2], RAIL_H]);
+          if (i === sorted.length - 1) {
+            const back = toWorld(row, x, g.elev, g.zBack(x) - 0.06);
+            points.push([back[0], g.elev + RAIL_H, back[2]]);
+            posts.push([back[0], g.elev, back[2], RAIL_H]);
+          }
+        });
+        rails.push({ points, posts });
+      }
+      // Lisse arrière du dernier rang (chute vers l’arrière du bloc).
+      const g = geom(top);
+      const back: AmphitheaterBankRail = { points: [], posts: [] };
+      const n = 12;
+      for (let i = 0; i <= n; i += 1) {
+        const x = g.x0 + 0.07 + ((g.x1 - g.x0 - 0.14) * i) / n;
+        const p = toWorld(top, x, g.elev + RAIL_H + 0.1, g.zBack(x) - 0.06);
+        back.points.push(p);
+        // Pas de poteau au milieu d’une allée centrale.
+        if (i % 3 === 0 && !(top.aisleSplit && i === n / 2)) back.posts.push([p[0], g.elev, p[2], RAIL_H + 0.1]);
+      }
+      rails.push(back);
+      banks.push({ key, storyId: top.storyId, finish: finishForRow(top), rails });
+    }
+    return banks;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blueprint.furniture, widthM, heightM, riserTreadById, riserFinish]);
 
   const blockedByTable = useMemo(() => {
     const map = new Map<string, number[]>();
@@ -4098,15 +4253,6 @@ function SceneContent({
     return map;
   }, [blockedSeats]);
   const surfacePickable = !lockOrbit && !dragSession;
-  const simulatedGuests = useMemo(() => {
-    if (!guestSimulation) return [];
-    return buildGuestSimulation(blueprint, {
-      ...guestSimulation,
-      surfaceElevationAt: (x, y, id) => resolveFurnitureSurfaceAt(blueprint, x, y, { allowTable: false, ignoreId: id })?.elevationM ?? 0,
-      storyElevation: (storyId) => worldElevationForStory(blueprint, storyId),
-      storyVisible: (storyId) => isStoryVisible(blueprint, storyId),
-    }).guests;
-  }, [blueprint, guestSimulation]);
   const outdoorSurroundings = resolveOutdoorSurroundings(blueprint.metadata.outdoorSurroundings);
 
   return (
@@ -4432,6 +4578,13 @@ function SceneContent({
         );
       })}
 
+      {amphitheaterBanks
+        .filter((bank) => isStoryVisible(blueprint, bank.storyId))
+        .map((bank) => (
+          <group key={`bank-${bank.key}`} position={[0, worldElevationForStory(blueprint, bank.storyId), 0]}>
+            <AmphitheaterBankRails rails={bank.rails} finish={bank.finish} />
+          </group>
+        ))}
       {blueprint.furniture.filter((item) => isStoryVisible(blueprint, item.storyId)).map((item) => {
         const storyElev = worldElevationForStory(blueprint, item.storyId);
         if (item.kind === 'zone') {
@@ -4546,7 +4699,9 @@ function SceneContent({
                   aisleWidthPct={item.aisleWidthPct}
                   selected={selected.some((s) => s.kind === 'row' && s.id === item.id)}
                   treadBackM={riserTreadById.get(item.id)}
-                  finish={riserFinish}
+                  riseM={riserRiseById.get(item.id)}
+                  sideAisleM={item.sideAisleM}
+                  finish={finishForRow(item)}
                 />
               ) : null}
               {(() => {
@@ -4704,7 +4859,12 @@ function SceneContent({
           guests={simulatedGuests}
           animate={!reduceMotion}
           castShadow={qualitySettings.quality !== 'draft'}
+          hiddenGuestId={avatarViewGuest?.id ?? null}
+          onPickGuest={walkthroughActive || filmActive ? undefined : onPickGuest}
         />
+      ) : null}
+      {avatarViewGuest && avatarLookRef ? (
+        <AvatarEyeCamera guest={avatarViewGuest} lookRef={avatarLookRef} reduceMotion={reduceMotion} />
       ) : null}
       <IntroFlyIn
         pendingRef={pendingIntroRef}
@@ -4721,11 +4881,11 @@ function SceneContent({
       <OrbitControls
         ref={orbitControlsRef as never}
         key={stackView ? `stack-${stories.length}-${focusY.toFixed(1)}` : 'floor'}
-        enabled={!dragSession && !walkthroughActive}
+        enabled={!dragSession && !walkthroughActive && !avatarViewGuest}
         enablePan={!wallEditMode && !lockOrbit && !dragSession && !presentationMode && !walkthroughActive}
         enableRotate={(!wallEditMode && !lockOrbit && !dragSession && !walkthroughActive) || (presentationMode && !walkthroughActive)}
         enableZoom={!walkthroughActive}
-        autoRotate={presentationMode && !walkthroughActive && !reduceMotion && !filmActive && !introRunning && !introGlide}
+        autoRotate={presentationMode && !walkthroughActive && !avatarViewGuest && !reduceMotion && !filmActive && !introRunning && !introGlide}
         autoRotateSpeed={0.55}
         maxPolarAngle={Math.PI / 2.05}
         minDistance={3}
@@ -5061,6 +5221,123 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     }
   }, [handleSelectPreset]);
 
+  // ───────────── Vue à la place d’un invité : la salle vue par les yeux d’un avatar ─────────────
+  const simulatedGuests = useMemo(() => {
+    if (!guestSimulation) return [] as SimulatedGuest[];
+    return buildGuestSimulation(blueprint, {
+      ...guestSimulation,
+      surfaceElevationAt: (x, y, id) => resolveFurnitureSurfaceAt(blueprint, x, y, { allowTable: false, ignoreId: id })?.elevationM ?? 0,
+      storyElevation: (storyId) => worldElevationForStory(blueprint, storyId),
+      storyVisible: (storyId) => isStoryVisible(blueprint, storyId),
+    }).guests;
+  }, [blueprint, guestSimulation]);
+  const [avatarActive, setAvatarActive] = useState(false);
+  const [avatarViewId, setAvatarViewId] = useState<string | null>(null);
+  const [avatarFilter, setAvatarFilter] = useState<AvatarViewFilter>('all');
+  const avatarLookRef = useRef<AvatarLook>({ yaw: 0, pitch: AVATAR_START_PITCH });
+  const cameraBeforeAvatarRef = useRef<{ pos: THREE.Vector3; target: THREE.Vector3 } | null>(null);
+  const hasSeating = useMemo(
+    () => (blueprint.furniture ?? []).some((f) => f.kind === 'table' || f.kind === 'row' || f.kind === 'chair'),
+    [blueprint.furniture],
+  );
+  // Sans invités simulés, on peut quand même s’asseoir à n’importe quelle place (avatar invisible).
+  const avatarViewers = useMemo(() => {
+    if (simulatedGuests.length > 0) return simulatedGuests;
+    if (!avatarActive) return [] as SimulatedGuest[];
+    return buildGuestSimulation(blueprint, {
+      fill: 1,
+      dancing: false,
+      surfaceElevationAt: (x, y, id) => resolveFurnitureSurfaceAt(blueprint, x, y, { allowTable: false, ignoreId: id })?.elevationM ?? 0,
+      storyElevation: (storyId) => worldElevationForStory(blueprint, storyId),
+      storyVisible: (storyId) => isStoryVisible(blueprint, storyId),
+    }).guests;
+  }, [simulatedGuests, avatarActive, blueprint]);
+  const avatarAvailable = simulatedGuests.length > 0 || hasSeating;
+  const stageSpace = useMemo(() => findRoomSpace(spaces, ['stage', 'dj']) ?? null, [spaces]);
+  const avatarFilters = useMemo(() => availableAvatarFilters(avatarViewers), [avatarViewers]);
+  const effectiveAvatarFilter: AvatarViewFilter = avatarFilters.includes(avatarFilter) ? avatarFilter : 'all';
+  const avatarViewer = useMemo(() => {
+    if (!avatarActive) return null;
+    return avatarViewers.find((g) => g.id === avatarViewId)
+      ?? pickDefaultAvatarViewer(filterAvatarViewers(avatarViewers, effectiveAvatarFilter), stageSpace?.center)
+      ?? pickDefaultAvatarViewer(avatarViewers, stageSpace?.center);
+  }, [avatarActive, avatarViewers, avatarViewId, effectiveAvatarFilter, stageSpace]);
+  const avatarList = useMemo(() => filterAvatarViewers(avatarViewers, effectiveAvatarFilter), [avatarViewers, effectiveAvatarFilter]);
+  const avatarIndex = avatarViewer ? avatarList.findIndex((g) => g.id === avatarViewer.id) : -1;
+  const avatarLabel = avatarViewer ? describeAvatarViewer(blueprint, avatarViewer) : '';
+
+  const lookAtStage = useCallback((viewer: SimulatedGuest | null) => {
+    if (!viewer || !stageSpace) return false;
+    avatarLookRef.current = {
+      yaw: wrapAngle(yawToward(viewer, stageSpace.center) - viewer.rotY),
+      pitch: AVATAR_START_PITCH * 0.5,
+    };
+    return true;
+  }, [stageSpace]);
+
+  const showAvatar = useCallback((viewer: SimulatedGuest | null) => {
+    if (!viewer) return;
+    avatarLookRef.current = { yaw: 0, pitch: AVATAR_START_PITCH };
+    setAvatarViewId(viewer.id);
+  }, []);
+
+  const enterAvatarView = useCallback((guest?: SimulatedGuest) => {
+    // Déjà dans les yeux d'un invité : un clic sur un autre avatar fait passer dans sa tête.
+    if (avatarActive) {
+      if (guest) showAvatar(guest);
+      return;
+    }
+    const controls = orbitControlsRef.current;
+    cameraBeforeAvatarRef.current = controls
+      ? { pos: controls.object.position.clone(), target: controls.target.clone() }
+      : null;
+    if (film) stopFilm();
+    setFilmMenuOpen(false);
+    setSpacesOpen(false);
+    setFocusedSpaceId(null);
+    setActivePreset(null);
+    setCameraTargetPose(null);
+    setAvatarViewId(guest?.id ?? null);
+    // Un avatar cliqué hors du filtre courant : on repasse sur « Tous » pour le garder.
+    if (guest) setAvatarFilter('all');
+    avatarLookRef.current = { yaw: 0, pitch: AVATAR_START_PITCH };
+    setAvatarActive(true);
+  }, [avatarActive, showAvatar, film, stopFilm]);
+
+  const exitAvatarView = useCallback(() => {
+    setAvatarActive(false);
+    const before = cameraBeforeAvatarRef.current;
+    cameraBeforeAvatarRef.current = null;
+    // On ressort par un travelling jusqu’au point de vue d’avant.
+    if (before) setCameraTargetPose({ pos: before.pos, target: before.target });
+    else handleSelectPreset('overview');
+  }, [handleSelectPreset]);
+
+  useEffect(() => {
+    if (!avatarActive) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (e.key === 'Escape') {
+        exitAvatarView();
+        return;
+      }
+      const step = Math.PI / 18;
+      if (e.key === 'ArrowLeft') avatarLookRef.current.yaw += step;
+      else if (e.key === 'ArrowRight') avatarLookRef.current.yaw -= step;
+      else if (e.key === 'ArrowUp') avatarLookRef.current.pitch = Math.min(1.2, avatarLookRef.current.pitch + step);
+      else if (e.key === 'ArrowDown') avatarLookRef.current.pitch = Math.max(-1.2, avatarLookRef.current.pitch - step);
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [avatarActive, exitAvatarView]);
+
+  // Une visite guidée qui démarre reprend la main sur la caméra.
+  if (walkthroughActive && avatarActive) setAvatarActive(false);
+
   useEffect(() => {
     const node = viewerRootRef.current;
     if (!node) return;
@@ -5139,6 +5416,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       className={cn(
         'relative w-full overflow-hidden rounded-[var(--radius-card)] border border-border bg-foreground touch-none overscroll-none',
         reserveTopRight && '@container',
+        avatarActive && '[&_canvas]:cursor-grab [&_canvas:active]:cursor-grabbing',
         className,
       )}
       onPointerDown={() => {
@@ -5150,7 +5428,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       }}
     >
       {/* Préréglages de caméra cinématiques */}
-      {!walkthroughActive && !wallEditMode && (
+      {!walkthroughActive && !wallEditMode && !avatarActive && (
         <div
           className={cn(
             'absolute top-2.5 left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 border border-border/70 shadow-sm max-w-[calc(100%-4.5rem)] overflow-x-auto no-scrollbar pointer-events-auto',
@@ -5220,6 +5498,18 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             <DoorOpen className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Entrée</span>
           </button>
+          {avatarAvailable ? (
+            <button
+              type="button"
+              onClick={() => enterAvatarView()}
+              aria-pressed={false}
+              title="Vue invité : voir la salle avec les yeux d’un invité, depuis sa place"
+              className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11 text-foreground/80 hover:text-foreground hover:bg-surface-muted"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Vue invité</span>
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={handleResetCamera}
@@ -5472,14 +5762,14 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             onMoveEnd={onMoveEnd}
             onResizeItem={onResizeItem}
             onResizeEnd={onResizeEnd}
-            readOnly={readOnly || previewMode}
+            readOnly={readOnly || previewMode || avatarActive}
             wallEditMode={wallEditMode}
             lockOrbit={orbitLocked}
             qualitySettings={qualitySettings}
             lighting={lighting}
             captureApiRef={captureApiRef}
             presentationMode={presentationMode}
-            hideLabels={hideLabels || !qualitySettings.showHints}
+            hideLabels={hideLabels || avatarActive || !qualitySettings.showHints}
             walkthroughActive={walkthroughActive}
             reduceMotion={reduceMotion}
             onWalkthroughProgress={(label, progress) => {
@@ -5494,20 +5784,138 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
               setCameraTargetPose(null);
               setIntroGlide(false);
             }}
-            dollhouse={dollhouse}
-            highlightSpace={walkthroughActive ? null : highlightSpace}
+            dollhouse={dollhouse && !avatarActive}
+            highlightSpace={walkthroughActive || avatarActive ? null : highlightSpace}
             introFlyIn={introFlyIn && !walkthroughActive && (!presentationMode || introChosen)}
             introView={introView}
             introReplayKey={introReplayKey}
             onIntroPreset={handleIntroPreset}
             introGlide={introGlide}
-            guestSimulation={guestSimulation}
+            simulatedGuests={simulatedGuests}
+            avatarViewGuest={avatarViewer}
+            avatarLookRef={avatarLookRef}
+            onPickGuest={enterAvatarView}
             filmActive={film !== null}
             frameTrackRef={frameTrackRef}
           />
         </Suspense>
       </Canvas>
-      {walkthroughActive ? (
+      {/* Gestes visibles : cercles sous les doigts, trait du glissé, badge de zoom. */}
+      <GestureFeedback targetRef={viewerRootRef} reduceMotion={reduceMotion} />
+      {avatarActive ? (
+        <>
+          <div className="pointer-events-none absolute top-2.5 left-2.5 right-2.5 z-10 flex justify-start">
+            <div className="rounded-md bg-foreground/85 px-2.5 py-1.5 text-xs font-medium text-background">
+              {touchScreen
+                ? 'Glissez pour tourner la tête · pincez pour zoomer'
+                : 'Glissez pour tourner la tête · molette pour zoomer · Échap pour sortir'}
+            </div>
+          </div>
+          <div className="absolute bottom-2 left-2 right-2 z-10 flex justify-center pointer-events-none">
+            <div
+              className="pointer-events-auto w-full max-w-[34rem] rounded-2xl border border-border/70 bg-background/92 p-2 text-foreground shadow-lg dark:bg-surface-elevated/92"
+              role="group"
+              aria-label="Vue à la place d’un invité"
+            >
+              <div className="flex items-center gap-2 px-1">
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-solid text-primary-foreground">
+                  <Eye className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted leading-4">
+                    {simulatedGuests.length > 0 ? 'Vous voyez la salle comme cet invité' : 'Vous voyez la salle depuis cette place'}
+                  </p>
+                  <p className="truncate text-sm font-semibold leading-5" aria-live="polite">
+                    {avatarViewer ? avatarLabel : 'Aucune place dans cette salle'}
+                  </p>
+                </div>
+                {avatarList.length > 0 && avatarIndex >= 0 ? (
+                  <span className="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted">
+                    {avatarIndex + 1} / {avatarList.length}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={exitAvatarView}
+                  title="Quitter la vue invité (Échap)"
+                  aria-label="Quitter la vue invité"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                {avatarFilters.length > 1
+                  ? avatarFilters.map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        aria-pressed={effectiveAvatarFilter === f}
+                        onClick={() => {
+                          setAvatarFilter(f);
+                          if (f !== 'all' && avatarViewer?.pose !== f) {
+                            showAvatar(pickDefaultAvatarViewer(filterAvatarViewers(avatarViewers, f), stageSpace?.center));
+                          }
+                        }}
+                        className={cn(
+                          'min-h-9 rounded-full px-2.5 text-xs font-semibold transition-all',
+                          effectiveAvatarFilter === f
+                            ? 'bg-primary-solid text-primary-foreground'
+                            : 'bg-surface-muted text-foreground/80 hover:text-foreground',
+                        )}
+                      >
+                        {AVATAR_VIEW_FILTER_LABELS[f]}
+                      </button>
+                    ))
+                  : null}
+                <span className="ml-auto inline-flex items-center gap-1">
+                  {stageSpace ? (
+                    <button
+                      type="button"
+                      onClick={() => lookAtStage(avatarViewer)}
+                      title="Tourner la tête vers la scène"
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold text-foreground/80 hover:bg-surface-muted hover:text-foreground"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Regarder la scène</span>
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => showAvatar(stepAvatarViewer(avatarViewers, avatarViewer?.id ?? null, -1, effectiveAvatarFilter))}
+                    title="Invité précédent"
+                    aria-label="Invité précédent"
+                    disabled={avatarList.length < 2}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground/80 hover:bg-surface-muted hover:text-foreground disabled:opacity-40"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => showAvatar(randomAvatarViewer(avatarViewers, avatarViewer?.id ?? null, effectiveAvatarFilter))}
+                    title="Une autre place au hasard"
+                    aria-label="Une autre place au hasard"
+                    disabled={avatarList.length < 2}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground/80 hover:bg-surface-muted hover:text-foreground disabled:opacity-40"
+                  >
+                    <Dices className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => showAvatar(stepAvatarViewer(avatarViewers, avatarViewer?.id ?? null, 1, effectiveAvatarFilter))}
+                    title="Invité suivant"
+                    aria-label="Invité suivant"
+                    disabled={avatarList.length < 2}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground/80 hover:bg-surface-muted hover:text-foreground disabled:opacity-40"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : walkthroughActive ? (
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
           <div className="rounded-md bg-foreground/85 px-2.5 py-1.5 text-xs font-bold text-background">
             Visite guidée · {tourCaption || 'entrée par la porte'}

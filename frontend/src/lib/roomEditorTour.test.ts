@@ -44,7 +44,7 @@ describe('editorTourSummary', () => {
 describe('nouveautés du guide', () => {
   it('présente tailles, murs, décor mural, salle remplie et plein air à tous les forfaits', () => {
     const basic = buildEditorTour(roomEditorCapabilities('basic'));
-    for (const id of ['resize', 'walls', 'wallArt', 'crowd', 'openSpace']) {
+    for (const id of ['resize', 'walls', 'wallArt', 'wallTrim', 'crowd', 'openSpace', 'assistant']) {
       const step = basic.find((s) => s.id === id);
       assert.ok(step, id);
       assert.equal(step?.locked, false, id);

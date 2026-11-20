@@ -13,12 +13,15 @@ export function StudioMobileDock<T extends string>({
   className,
   /** Safe-area bas : désactiver si le parent offset déjà via --em-dash-bottom-nav. */
   safeArea = true,
+  /** Préfixe des repères `data-tour` des onglets (guides pas à pas). */
+  tourPrefix,
 }: {
   panes: Array<{ id: T; label: string; icon: LucideIcon; hint?: string }>;
   value: T;
   onChange: (id: T) => void;
   className?: string;
   safeArea?: boolean;
+  tourPrefix?: string;
 }) {
   return (
     <nav
@@ -38,6 +41,7 @@ export function StudioMobileDock<T extends string>({
               key={pane.id}
               type="button"
               aria-current={selected ? 'page' : undefined}
+              data-tour={tourPrefix ? `${tourPrefix}${pane.id}` : undefined}
               aria-label={pane.hint || pane.label}
               onClick={() => onChange(pane.id)}
               className={cn(

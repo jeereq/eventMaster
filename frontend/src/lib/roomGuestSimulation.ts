@@ -77,6 +77,17 @@ export interface GuestSimulationSettings {
   fill: number;
   /** Danseurs sur les pistes de danse. */
   dancing: boolean;
+  /**
+   * Invités réels d'un événement, par place (« idTable:indexPlace ») : seules ces places sont occupées,
+   * chacune par un avatar qui porte le nom de la personne. Jamais enregistré sur le plan.
+   */
+  seatOccupants?: Record<string, SeatOccupant> | null;
+}
+
+/** Personne assise à une place précise (plan de table d'un événement). */
+export interface SeatOccupant {
+  name: string;
+  photoUrl?: string;
 }
 
 export const GUEST_FILL_CHOICES = [0.25, 0.5, 0.75, 1] as const;
@@ -394,13 +405,23 @@ export function buildGuestSimulation(blueprint: RoomLayoutBlueprint, options: Gu
   }
   let portraits = 0;
   const palette = dressCodePalette(options.dressCode ?? blueprint.metadata?.guestDressCode);
-  const occupied = (key: string) => portraitsBySeat.has(key) || rng(`seat:${key}`)() < fill;
+  const occupants = options.seatOccupants ?? null;
+  // Plan de table d'un événement : les places assignées, et elles seules, sont occupées.
+  const occupied = (key: string) => (occupants
+    ? Boolean(occupants[key]) || portraitsBySeat.has(key)
+    : portraitsBySeat.has(key) || rng(`seat:${key}`)() < fill);
   // Les invités personnalisés passent même quand le plafond d'avatars est atteint.
   const full = (key?: string) => guests.length >= maxGuests && !(key && portraitsBySeat.has(key));
   const dress = (key: string, pose: GuestPose, x: number, y: number, z: number, rotY: number) => {
     const portrait = portraitsBySeat.get(key);
     if (portrait) portraits += 1;
-    return dressGuest(key, pose, x, y, z, rotY, portrait, palette);
+    const guest = dressGuest(key, pose, x, y, z, rotY, portrait, palette);
+    const occupant = occupants?.[key];
+    if (occupant && !portrait) {
+      guest.name = occupant.name;
+      if (occupant.photoUrl) guest.photoUrl = occupant.photoUrl;
+    }
+    return guest;
   };
 
   for (const item of blueprint.furniture ?? []) {

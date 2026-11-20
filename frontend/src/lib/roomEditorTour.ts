@@ -88,6 +88,12 @@ const STEPS: EditorTourStepDef[] = [
     body: 'Chaque image ou graffiti se pose côté salle ou côté extérieur (façade). Les graffitis se stylisent : chrome, rétro, tag, throw-up, BD, néon… avec police, dégradé, inclinaison, texte en arc, fond peint et effets (relief, coulures, étincelles).',
   },
   {
+    id: 'wallTrim',
+    target: 'walls',
+    title: 'Moulures, boiseries et pilastres',
+    body: 'Dans « Murs, portes & fenêtres », « Moulures et boiseries » habille les murs : cimaise, boiserie basse à panneaux, moulures à la française ou pilastres, pour tous les murs ou un seul, dans la teinte de votre choix. Les pièces contournent portes et fenêtres.',
+  },
+  {
     id: 'crowd',
     target: 'tool-display',
     title: 'Voir la salle remplie',
@@ -150,6 +156,12 @@ const STEPS: EditorTourStepDef[] = [
     needLabel: 'Rendu vitrine',
   },
   {
+    id: 'assistant',
+    target: 'assistant',
+    title: 'L’assistant vous guide geste par geste',
+    body: 'Le bouton « Assistant » : dites ce que vous voulez faire (« ajouter une porte »), il éclaire chaque bouton à toucher, dans l’ordre, et avance dès que c’est fait. « Toutes les actions » liste plus de 200 guides, rangés par thème.',
+  },
+  {
     id: 'check',
     target: 'verify',
     title: 'Vérifier avant le jour J',
@@ -197,5 +209,5 @@ function nextLevelLabel(level: RoomEditorLevel): string | null {
 }
 
 /** Clé de stockage local : le guide n’est proposé d’office qu’une fois par navigateur. */
-// v2 : le guide a de nouvelles étapes (tailles, murs, décor, salle remplie) ; il est reproposé une fois.
-export const EDITOR_TOUR_SEEN_KEY = 'em-editor-tour-seen-v2';
+// v3 : nouvelles étapes (moulures des murs, assistant) ; le guide est reproposé une fois.
+export const EDITOR_TOUR_SEEN_KEY = 'em-editor-tour-seen-v3';

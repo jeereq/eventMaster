@@ -20,7 +20,7 @@ import GuestPortraitsModal, { preparePortraitPhoto } from '@/components/room/Gue
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
-  GraduationCap, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, Move, Rotate3d, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence, Users, Camera,
+  GraduationCap, MessageCircle, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, Move, Rotate3d, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence, Users, Camera,
 } from '@/components/icons';
 import { buildPlotGrid, buildSinglePlot, findFreePlotSpot, isOpenSpace, nextPlotLabel, normalizePlotGrid, plotGridFootprint, PLOT_COLORS, PLOT_GRID_DEFAULTS, type PlotGridOptions } from '@/lib/roomPlots';
 import {
@@ -195,6 +195,7 @@ import {
 } from '@/lib/roomLayoutUtils';
 import QuickAddPalette, { type QuickAddAction } from '@/components/room/QuickAddPalette';
 import EditorTour from '@/components/room/EditorTour';
+import EditorAssistant from '@/components/room/EditorAssistant';
 import WallArtPanel from '@/components/room/WallArtPanel';
 import WallElevationEditor from '@/components/room/WallElevationEditor';
 import { ItemPlacementFields } from '@/components/room/ItemPlacementFields';
@@ -1127,6 +1128,49 @@ export default function RoomLayoutEditor({
   const clipboardRef = useRef<LayoutClipboard | null>(null);
   /** Guide interactif : ouvert, ou proposé d’office à la première visite. */
   const [tourOpen, setTourOpen] = useState(() => !readOnly && readGuideParam());
+  /** Assistant (chat d’aide sur les actions de l’éditeur). */
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const closeAssistant = useCallback(() => setAssistantOpen(false), []);
+  /** Sélection lue par les guides pas à pas : « table », « row », « fixture:door »… */
+  const guideSelection = useMemo(
+    () => selection.map((s) => (s.kind === 'fixture' ? `fixture:${blueprint.fixtures.find((f) => f.id === s.id)?.kind ?? ''}` : s.kind)),
+    [selection, blueprint.fixtures],
+  );
+  // Outil de vérification des guides (développement) : sélectionne le premier élément d'un type.
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    const w = window as unknown as { __emEditorTest?: unknown };
+    w.__emEditorTest = {
+      select: (want: string) => {
+        if (want === 'none') {
+          setSelection([]);
+          return true;
+        }
+        if (want === 'wall') {
+          const wall = blueprint.walls?.[0];
+          if (!wall) return false;
+          setWallEditMode(true);
+          setSelection([{ kind: 'wall', id: wall.id }]);
+          return true;
+        }
+        if (want.startsWith('fixture')) {
+          const fk = want.split(':')[1];
+          const f = blueprint.fixtures.find((x) => !fk || x.kind === fk);
+          if (!f) return false;
+          setSelection([{ kind: 'fixture', id: f.id }]);
+          return true;
+        }
+        const pool = want === 'any' || want === 'many' ? blueprint.furniture : blueprint.furniture.filter((x) => x.kind === want);
+        const picked = pool.slice(0, want === 'many' ? 3 : 1);
+        if (!picked.length || (want === 'many' && picked.length < 2)) return false;
+        setSelection(picked.map((x) => ({ kind: x.kind, id: x.id })));
+        return true;
+      },
+    };
+    return () => {
+      delete w.__emEditorTest;
+    };
+  }, [blueprint.walls, blueprint.fixtures, blueprint.furniture]);
   const [tourOffer, setTourOffer] = useState(() => !readOnly && !readGuideParam() && !tourAlreadySeen());
   const startTour = useCallback(() => {
     markTourSeen();
@@ -1942,20 +1986,43 @@ export default function RoomLayoutEditor({
   const addAmphitheaterQuick = () => {
     const activeStoryId = resolveActiveStoryId(blueprint);
     const groupId = `amphi_${Date.now().toString(36)}`;
+    const cinema = amphiStyle === 'cinemaStadium';
     const rows = generateAmphitheaterRows({
       style: amphiStyle,
       tierCount: amphiTiers,
       seatsPerRow: amphiSeatsPerRow,
       chairType: amphiChairType,
-      chairStyle: amphiChairStyle,
+      // Salle de cinéma : fauteuils haut dossier à porte-gobelet par défaut.
+      chairStyle: cinema && amphiChairType === 'THEATER' ? 'cinema' : amphiChairStyle,
       seatMaterial: amphiSeatMaterial,
       aisleSplit: amphiAisleSplit,
       groupId,
       depthM: blueprint.canvas.heightM,
+      ...(cinema ? { focusY: 8 } : {}),
     }).map((r) => ({ ...r, storyId: activeStoryId }));
 
     const hasStage = blueprint.fixtures.some((f) => f.kind === 'stage' || f.kind === 'podium');
-    const extras = hasStage
+    const hasCinemaScreen = blueprint.fixtures.some((f) => f.kind === 'screen' && f.screenKind === 'cinemaScreen');
+    // Cinéma : grand écran scope presque mur à mur au lieu d’une scène.
+    const screenWidthM = Math.min(16, blueprint.canvas.widthM * 0.82);
+    const screenWPct = (screenWidthM / blueprint.canvas.widthM) * 100;
+    const extras = cinema
+      ? hasCinemaScreen
+        ? []
+        : [{
+            ...createBlueprintFixture('screen', blueprint.canvas),
+            x: 50 - screenWPct / 2,
+            y: 4,
+            w: screenWPct,
+            h: (0.6 / blueprint.canvas.heightM) * 100,
+            screenKind: 'cinemaScreen' as const,
+            screenRatio: '21:9' as const,
+            screenElevationM: 1.2,
+            label: 'Grand écran',
+            storyId: activeStoryId,
+            groupId,
+          }]
+      : hasStage
       ? []
       : [{
           ...createBlueprintFixture('stage'),
@@ -1974,7 +2041,12 @@ export default function RoomLayoutEditor({
         furniture: [...blueprint.furniture, ...rows],
         fixtures: extras.length ? [...blueprint.fixtures, ...extras] : blueprint.fixtures,
       },
-      { message: `Amphithéâtre ${amphitheaterStyleLabels[amphiStyle]} créé (${rows.length} gradins)`, kind: 'add' },
+      {
+        message: cinema
+          ? `Salle de cinéma créée (${rows.length} rangs, grand écran)`
+          : `Amphithéâtre ${amphitheaterStyleLabels[amphiStyle]} créé (${rows.length} gradins)`,
+        kind: 'add',
+      },
     );
     setQuickCreate(null);
     setSelection(rows.map((r) => ({ kind: 'row' as const, id: r.id })));
@@ -2264,6 +2336,7 @@ export default function RoomLayoutEditor({
       tableMonitor: { w: 6, h: 4, elev: 0.76, tilt: 6 },
       laptop: { w: 4, h: 3, elev: 0.76, tilt: 0 },
       desktopPc: { w: 5, h: 4, elev: 0.76, tilt: 4 },
+      cinemaScreen: { w: 60, h: 3, elev: 1.2, tilt: 0 },
     };
     const def = sizeDefaults[screenKind];
     const realSize = realFixtureFootprintPct('screen', blueprint.canvas, { screenKind }) ?? def;
@@ -3060,6 +3133,8 @@ export default function RoomLayoutEditor({
             elementsOpen ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50',
           )}
           onClick={() => setElementsOpen((v) => !v)}
+          data-tour="inventory"
+          aria-expanded={elementsOpen}
         >
           <span className="flex items-center gap-2">
             <ListTree className="w-4 h-4" />
@@ -3269,6 +3344,7 @@ export default function RoomLayoutEditor({
       {selection.length > 0 && !readOnly && (
         <Toolbar
           label="Actions sur la sélection"
+          tourId="selection-bar"
           className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 p-1 rounded-full bg-surface/95 dark:bg-surface-elevated/95 border border-border shadow-xl text-foreground animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="px-3 min-h-11 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center gap-1.5 select-none">
@@ -4179,6 +4255,7 @@ export default function RoomLayoutEditor({
                 type="button"
                 aria-expanded={accordion === 'murs-sols'}
                 aria-controls="editor-panel-murs-sols"
+                data-tour="acc-ambience"
                 className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'murs-sols' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
                 onClick={() => setAccordion(accordion === 'murs-sols' ? '' : 'murs-sols')}
               >
@@ -4662,7 +4739,7 @@ export default function RoomLayoutEditor({
                         </button>
                       ))}
                     </div>
-                <div className="space-y-2 pt-2">
+                <div className="space-y-2 pt-2" data-tour="floor-tint">
                   <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Teinte / couleur du sol</p>
                   <div className="flex flex-wrap gap-1.5 items-center">
                     {['#ffffff', '#f5f0e8', '#e8d5a3', '#d4a574', '#a16207', '#78716c', '#1e3a5f', '#166534', '#7f1d1d', '#312e81'].map((c) => (
@@ -4685,11 +4762,12 @@ export default function RoomLayoutEditor({
                         ...blueprint,
                         metadata: { ...blueprint.metadata, floorColor: e.target.value },
                       }, { message: 'Couleur de sol personnalisée', kind: 'settings' })}
+                      aria-label="Couleur de sol personnalisée"
                       className="min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
                     />
                   </div>
                 </div>
-                <div className="space-y-2 pt-3 border-t border-border/50">
+                <div className="space-y-2 pt-3 border-t border-border/50" data-tour="wall-paint">
                   <p className={EDITOR_HEADING}><BrickWall className="w-3 h-3" /> Peinture murs (globale)</p>
                   <div className="flex flex-wrap gap-1.5 items-center">
                     {['#e8e4df', '#f8fafc', '#d6d3d1', '#b4533c', '#8b6914', '#78716c', '#1e3a5f', '#fef3c7'].map((c) => (
@@ -4713,6 +4791,7 @@ export default function RoomLayoutEditor({
                         metadata: { ...blueprint.metadata, wallPaintColor: e.target.value },
                         walls: (blueprint.walls ?? []).map((w) => ({ ...w, color: e.target.value })),
                       }, { message: 'Couleur mur personnalisée', kind: 'settings' })}
+                      aria-label="Couleur des murs personnalisée"
                       className="min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
                     />
                   </div>
@@ -5045,6 +5124,7 @@ export default function RoomLayoutEditor({
               type="button"
               aria-expanded={accordion === 'batiment'}
               aria-controls="editor-panel-batiment"
+                data-tour="acc-building"
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'batiment' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => setAccordion(accordion === 'batiment' ? '' : 'batiment')}
             >
@@ -5337,6 +5417,7 @@ export default function RoomLayoutEditor({
               type="button"
               aria-expanded={accordion === 'outils'}
               aria-controls="editor-panel-outils"
+                data-tour="acc-arrange"
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'outils' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => setAccordion(accordion === 'outils' ? '' : 'outils')}
             >
@@ -5477,6 +5558,7 @@ export default function RoomLayoutEditor({
               type="button"
               aria-expanded={accordion === 'config'}
               aria-controls="editor-panel-config"
+                data-tour="acc-config"
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'config' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => setAccordion(accordion === 'config' ? '' : 'config')}
             >
@@ -5522,6 +5604,7 @@ export default function RoomLayoutEditor({
                 type="color"
                 value={blueprint.metadata.defaultTableColor ?? '#ffffff'}
                 onChange={(e) => setDefaultTableColor(e.target.value)}
+                aria-label="Couleur des tables"
                 className="min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border cursor-pointer shrink-0"
               />
               <button
@@ -6943,6 +7026,7 @@ export default function RoomLayoutEditor({
                         tableMonitor: { w: 6, h: 4, elev: surfElev, tilt: 6 },
                         laptop: { w: 4, h: 3, elev: surfElev, tilt: 0 },
                         desktopPc: { w: 5, h: 4, elev: surfElev, tilt: 4 },
+                        cinemaScreen: { w: 60, h: 3, elev: 1.2, tilt: 0 },
                       };
                       const def = sizeDefaults[nextKind];
                       updateFixture(
@@ -8156,7 +8240,7 @@ export default function RoomLayoutEditor({
                     onChange={(e) => updateFurniture(selectedFurniture.id, { aisleSplit: e.target.checked }, 'Allée de passage')}
                     className="rounded border-border size-4"
                   />
-                  <span>Allée centrale de passage</span>
+                  <span>{amphiStyle === 'cinemaStadium' ? 'Escaliers latéraux larges' : 'Allée centrale de passage'}</span>
                 </label>
                 {selectedFurniture.aisleSplit && (
                   <span className="text-xs text-muted">Largeur 14%</span>
@@ -8934,11 +9018,14 @@ export default function RoomLayoutEditor({
   const toolbar = !readOnly && (
     <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-4 lg:gap-y-2" role="toolbar" aria-label="Outils du plan">
       <ToolbarCluster label="Ajouter">
-      <button type="button" onClick={openQuickAdd} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Rechercher un élément à ajouter">
+      <button type="button" onClick={openQuickAdd} data-tour="quick-add" className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Rechercher un élément à ajouter">
         <Search className="w-3.5 h-3.5" aria-hidden /> Rechercher
       </button>
-      <button type="button" onClick={startTour} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Visite guidée de l’éditeur">
+      <button type="button" onClick={startTour} data-tour="tour" className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Visite guidée de l’éditeur">
         <GraduationCap className="w-3.5 h-3.5" aria-hidden /> Guide
+      </button>
+      <button type="button" onClick={() => setAssistantOpen(true)} data-tour="assistant" className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Poser une question sur l’éditeur">
+        <MessageCircle className="w-3.5 h-3.5" aria-hidden /> Assistant
       </button>
       <EditorToolGroup
         id="furniture"
@@ -9762,7 +9849,7 @@ export default function RoomLayoutEditor({
   );
 
   const quickCreatePanel = quickCreate ? (
-    <div className="flex flex-wrap items-end gap-3 p-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/60">
+    <div data-tour="quick-create" className="flex flex-wrap items-end gap-3 p-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/60">
       {/* ───────── GÉNÉRATEUR D’AMPHITHÉÂTRE & GRADINS (PINTEREST) ───────── */}
       {quickCreate === 'amphitheater' && (
         <div className="w-full space-y-3">
@@ -9773,7 +9860,9 @@ export default function RoomLayoutEditor({
                 Générateur d’Amphithéâtre & Gradins Étagés
               </h4>
               <p className="text-xs text-muted">
-                Disposition fluide en arcs concentriques avec élévation et allée centrale de passage
+                {amphiStyle === 'cinemaStadium'
+                  ? 'Gradins stadium de 45 cm, escaliers latéraux balisés et grand écran mural'
+                  : 'Disposition fluide en arcs concentriques avec élévation et allée centrale de passage'}
               </p>
             </div>
             <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
@@ -9846,7 +9935,7 @@ export default function RoomLayoutEditor({
                   onChange={(e) => setAmphiAisleSplit(e.target.checked)}
                   className="rounded border-border text-primary"
                 />
-                <span>Allée centrale de passage</span>
+                <span>{amphiStyle === 'cinemaStadium' ? 'Escaliers latéraux larges' : 'Allée centrale de passage'}</span>
               </label>
 
               <span className="text-xs text-muted">
@@ -9860,7 +9949,7 @@ export default function RoomLayoutEditor({
               className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}
             >
               <Sparkles className="w-4 h-4" aria-hidden />
-              Générer l’amphithéâtre
+              {amphiStyle === 'cinemaStadium' ? 'Créer la salle de cinéma' : 'Générer l’amphithéâtre'}
             </button>
           </div>
         </div>
@@ -10644,10 +10733,21 @@ export default function RoomLayoutEditor({
             <button
               type="button"
               onClick={startTour}
+              data-tour="tour"
               className={cn(EDITOR_TOOL, tourOpen ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
               title="Visite guidée de l’éditeur, adaptée à votre forfait"
             >
               <GraduationCap className="w-3.5 h-3.5" aria-hidden /> Guide
+            </button>
+            <button
+              type="button"
+              onClick={() => setAssistantOpen((v) => !v)}
+              aria-pressed={assistantOpen}
+              data-tour="assistant"
+              className={cn(EDITOR_TOOL, assistantOpen ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+              title="Poser une question sur l’éditeur : que faire, où cliquer"
+            >
+              <MessageCircle className="w-3.5 h-3.5" aria-hidden /> Assistant
             </button>
             <button
               type="button"
@@ -10739,16 +10839,33 @@ export default function RoomLayoutEditor({
         className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5"
         role="toolbar"
         aria-label="Caméra et actions du plan"
+        data-tour="view-toggle"
       >
-        <button
-          type="button"
-          onClick={() => setLockOrbit((v) => !v)}
-          className={cn(EDITOR_TOOL, 'shrink-0', lockOrbit ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-          title="Déplacer le mobilier ou tourner la vue"
-        >
-          {lockOrbit ? <MoveHorizontal className="w-3.5 h-3.5" aria-hidden /> : <Video className="w-3.5 h-3.5" aria-hidden />}
-          {lockOrbit ? 'Déplacer' : 'Regarder'}
-        </button>
+        <div role="group" aria-label="Effet du glisser sur le plan" className="flex items-center gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted shrink-0">
+          {([
+            { move: true, label: 'Déplacer', title: 'Déplacer les objets', icon: MoveHorizontal },
+            { move: false, label: 'Regarder', title: 'Tourner la vue', icon: Video },
+          ] as const).map((mode) => {
+            const active = lockOrbit === mode.move;
+            const Icon = mode.icon;
+            return (
+              <button
+                key={mode.label}
+                type="button"
+                title={mode.title}
+                aria-pressed={active}
+                onClick={() => setLockOrbit(mode.move)}
+                className={cn(
+                  'inline-flex items-center gap-1 min-h-10 px-2.5 rounded-[var(--radius-button)] text-xs font-bold transition-colors',
+                  active ? 'bg-primary-solid text-primary-foreground' : 'text-muted',
+                )}
+              >
+                <Icon className="w-3.5 h-3.5" aria-hidden />
+                {mode.label}
+              </button>
+            );
+          })}
+        </div>
         <button
           type="button"
           onClick={() => {
@@ -10765,8 +10882,8 @@ export default function RoomLayoutEditor({
         </button>
         <div role="group" aria-label="Mode d’affichage" className="flex items-center gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted shrink-0">
           {([
-            { amount: 0, label: '2D', icon: LayoutGrid },
-            { amount: 60, label: '3D', icon: Box },
+            { amount: 0, label: '2D', title: 'Afficher le plan 2D', icon: LayoutGrid },
+            { amount: 60, label: '3D', title: 'Afficher la perspective 3D', icon: Box },
           ] as const).map((mode) => {
             const active = mode.amount === 0 ? depthAmount === 0 : depthAmount > 0;
             const Icon = mode.icon;
@@ -10774,6 +10891,7 @@ export default function RoomLayoutEditor({
               <button
                 key={mode.label}
                 type="button"
+                title={mode.title}
                 aria-pressed={active}
                 onClick={() => {
                   if (!active) setDepthAmount(mode.amount);
@@ -10848,6 +10966,9 @@ export default function RoomLayoutEditor({
         }}
         onAction={runTourAction}
       />
+    ) : null}
+    {!readOnly ? (
+      <EditorAssistant open={assistantOpen} onClose={closeAssistant} caps={caps} upgradeHref={user ? '/dashboard/billing' : '/tarifs'} selection={guideSelection} />
     ) : null}
     {!readOnly && tourOffer && !tourOpen ? (
       <div
@@ -11387,7 +11508,7 @@ export default function RoomLayoutEditor({
                 'md:flex-1 md:min-w-[240px] md:max-w-[320px] overflow-y-auto shrink-0 space-y-3 contain-layout contain-paint',
                 mobilePane === 'edit' ? 'flex-1 min-h-0 max-lg:max-h-none' : 'max-h-[34dvh] md:max-h-none',
                 mobilePane !== 'edit' && 'max-lg:hidden',
-              )}>
+              )} data-tour="sidebar">
                 {renderCanvasInventory()}
                 {renderEditPanel()}
               </div>
@@ -11397,6 +11518,7 @@ export default function RoomLayoutEditor({
               safeArea
               value={mobilePane}
               onChange={setMobilePane}
+              tourPrefix="pane-"
               panes={[
                 { id: 'plan', label: 'Plan', icon: LayoutGrid, hint: 'Voir et déplacer le plan' },
                 { id: 'tools', label: 'Ajouter', icon: Plus, hint: 'Modèles et outils' },
@@ -11495,7 +11617,7 @@ export default function RoomLayoutEditor({
           <div className={cn(
             'max-lg:max-h-[min(70dvh,32rem)] lg:max-h-[min(72vh,42rem)] overflow-y-auto space-y-3 contain-layout contain-paint pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]',
             mobilePane !== 'edit' && 'max-lg:hidden',
-          )}>
+          )} data-tour="sidebar">
             {renderCanvasInventory()}
             {renderEditPanel()}
           </div>
@@ -11505,6 +11627,7 @@ export default function RoomLayoutEditor({
           safeArea={mobileDockOffset !== 'dashboard'}
           value={mobilePane}
           onChange={setMobilePane}
+          tourPrefix="pane-"
           panes={[
             { id: 'plan', label: 'Plan', icon: LayoutGrid, hint: 'Voir et déplacer le plan' },
             { id: 'tools', label: 'Ajouter', icon: Plus, hint: 'Modèles et outils' },

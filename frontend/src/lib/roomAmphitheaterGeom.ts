@@ -1,4 +1,4 @@
-type AmphitheaterStyle = 'modernFan' | 'romanSemiCircle' | 'tieredSteps' | 'horseshoeU';
+type AmphitheaterStyle = 'modernFan' | 'romanSemiCircle' | 'tieredSteps' | 'horseshoeU' | 'cinemaStadium';
 
 /** Coefficient historique utilisé par le poseur 3D (localZ = factor × t² × k). */
 export const ROW_ARC_Z_K = 0.08;
@@ -109,7 +109,7 @@ export function computeRowSeatPose(
 }
 
 export function seatsGrownForTier(style: AmphitheaterStyle, baseSeats: number, tierIndex: number): number {
-  const grow = style === 'romanSemiCircle' ? 3 : style === 'tieredSteps' ? 0 : 2;
+  const grow = style === 'romanSemiCircle' ? 3 : style === 'tieredSteps' || style === 'cinemaStadium' ? 0 : 2;
   return baseSeats + tierIndex * grow;
 }
 

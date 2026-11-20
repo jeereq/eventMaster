@@ -24,6 +24,7 @@ import {
 import { WallTextureSwatch, OpeningMaterialSwatch } from '@/components/room/RoomMaterialPreviews';
 import type { LayoutActionEntry } from '@/lib/layoutActionLog';
 import { cn } from '@/lib/cn';
+import { WALL_TRIM_DEFAULT_COLOR as TRIM_DEFAULT_COLOR, WALL_TRIM_HINTS, WALL_TRIM_LABELS, WALL_TRIM_STYLES, normalizeWallTrim, type WallTrimStyle } from '@/lib/roomWallTrim';
 
 interface RoomWallEditorPanelProps {
   blueprint: RoomLayoutBlueprint;
@@ -109,6 +110,14 @@ export default function RoomWallEditorPanel({
     setWalls(walls.map((w) => ({ ...w, thicknessM })), `Épaisseur : ${thicknessM.toFixed(2)} m`);
   };
 
+  const applyTrimToAll = (trim: WallTrimStyle) => {
+    setWalls(walls.map((w) => ({ ...w, trim })), `Moulures : ${WALL_TRIM_LABELS[trim]}`);
+  };
+
+  const applyTrimColorToAll = (trimColor: string) => {
+    setWalls(walls.map((w) => ({ ...w, trimColor })), 'Teinte des moulures');
+  };
+
   const applyWallPreset = (texture: WallTextureStyle, color?: string) => {
     setWalls(
       walls.map((w) => ({ ...w, texture, color: color ?? undefined })),
@@ -182,6 +191,32 @@ export default function RoomWallEditorPanel({
             ))}
           </select>
         </label>
+      </div>
+
+      <div className="grid grid-cols-[1fr_auto] gap-2">
+        <label className="text-xs space-y-1">
+          <span className="font-semibold text-muted">Moulures et boiseries (tous les murs)</span>
+          <select
+            value={normalizeWallTrim(walls[0]?.trim)}
+            onChange={(e) => applyTrimToAll(e.target.value as WallTrimStyle)}
+            className="w-full min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-xs"
+          >
+            {WALL_TRIM_STYLES.map((k) => (
+              <option key={k} value={k}>{WALL_TRIM_LABELS[k]}</option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs space-y-1">
+          <span className="font-semibold text-muted">Teinte</span>
+          <input
+            type="color"
+            value={walls[0]?.trimColor ?? TRIM_DEFAULT_COLOR}
+            onChange={(e) => applyTrimColorToAll(e.target.value)}
+            className="block h-11 w-14 cursor-pointer rounded-[var(--radius-button)] border border-border bg-surface p-1"
+            aria-label="Teinte des moulures de tous les murs"
+          />
+        </label>
+        <p className="col-span-2 text-xs text-muted">{WALL_TRIM_HINTS[normalizeWallTrim(walls[0]?.trim)]}</p>
       </div>
 
       <div className="space-y-1.5">
@@ -330,6 +365,31 @@ export default function RoomWallEditorPanel({
             </label>
           </div>
 
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <label className="text-xs space-y-1">
+              <span className="font-semibold text-muted">Moulures de ce mur</span>
+              <select
+                value={normalizeWallTrim(selected.trim)}
+                onChange={(e) => updateWall(selected.id, { trim: e.target.value as WallTrimStyle })}
+                className="w-full min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-xs"
+              >
+                {WALL_TRIM_STYLES.map((k) => (
+                  <option key={k} value={k}>{WALL_TRIM_LABELS[k]}</option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs space-y-1">
+              <span className="font-semibold text-muted">Teinte</span>
+              <input
+                type="color"
+                value={selected.trimColor ?? TRIM_DEFAULT_COLOR}
+                onChange={(e) => updateWall(selected.id, { trimColor: e.target.value })}
+                className="block h-11 w-14 cursor-pointer rounded-[var(--radius-button)] border border-border bg-surface p-1"
+                aria-label="Teinte des moulures de ce mur"
+              />
+            </label>
+          </div>
+
           <label className="text-xs space-y-1 block">
             <span className="font-semibold text-muted">Texture</span>
             <select
@@ -376,8 +436,8 @@ export default function RoomWallEditorPanel({
               <p className="text-xs text-muted">Aucune ouverture sur ce mur.</p>
             )}
 
-            {(selected.openings ?? []).map((op) => (
-              <div key={op.id} className="p-3 rounded-[var(--radius-card)] border border-border bg-surface space-y-3">
+            {(selected.openings ?? []).map((op, opIndex, list) => (
+              <div key={op.id} data-tour={opIndex === list.length - 1 ? 'opening-last' : undefined} className="p-3 rounded-[var(--radius-card)] border border-border bg-surface space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-bold">{op.kind === 'door' ? 'Porte' : 'Fenêtre'}</span>
                   <button
