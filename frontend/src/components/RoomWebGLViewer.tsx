@@ -140,6 +140,10 @@ import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import { entranceViewPose } from '@/lib/roomWalkthrough';
 import { buildGuestSimulation, type GuestSimulationSettings, type SimulatedGuest } from '@/lib/roomGuestSimulation';
 import { GuestAvatars } from '@/components/room/GuestAvatarMeshes';
+import RoomMusicPanel, { type RoomMusicPlayback } from '@/components/room/RoomMusicPanel';
+import { MusicDanceClock, MusicEmitterPulses, MusicListenerProbe, createMusicListener, type MusicListener } from '@/components/room/RoomMusicScene';
+import { SPEAKER_STYLE_SPECS, activeMusicEmitters, availableMusicSourceModes, danceRateForBpm, musicDanceFill, resolveSpeakerStyle, type MusicSourceMode, type SpeakerStyle } from '@/lib/roomMusic';
+import { SpeakerMesh } from '@/components/room/SpeakerMeshes';
 import GestureFeedback from '@/components/room/GestureFeedback';
 import AvatarEyeCamera, { AVATAR_START_PITCH, type AvatarLook } from '@/components/room/AvatarEyeCamera';
 import {
@@ -299,6 +303,10 @@ interface RoomWebGLViewerProps {
   introReplayKey?: number;
   /** Invités simulés (avatars assis, debout et danseurs) ; null ou absent = salle vide. */
   guestSimulation?: GuestSimulationSettings | null;
+  /** Quand la musique joue sans invités simulés, des danseurs viennent quand même sur la piste (forfait avec invités 3D). */
+  allowMusicDancers?: boolean;
+  /** Masque le bouton « Musique » (captures, vignettes). */
+  hideMusic?: boolean;
 }
 
 const SPACE_ICONS: Record<RoomSpaceIcon, React.ComponentType<{ className?: string }>> = {
@@ -2945,6 +2953,7 @@ function FixtureMesh({
   instrumentStyle,
   instrumentFinish,
   barStyle,
+  speakerStyle,
   barFront,
   barTop,
   barBack,
@@ -3020,6 +3029,7 @@ function FixtureMesh({
   instrumentStyle?: InstrumentStyle;
   instrumentFinish?: string;
   barStyle?: BarStyle;
+  speakerStyle?: SpeakerStyle;
   barFront?: BarFront;
   barTop?: BarTop;
   barBack?: BarBack;
@@ -3069,6 +3079,7 @@ function FixtureMesh({
     kind === 'fountain' ? 1.2 :
     kind === 'gazebo' ? Math.max(2.4, podiumHeightM ?? 3.2) :
     kind === 'djBooth' ? 1.1 :
+    kind === 'speaker' ? SPEAKER_STYLE_SPECS[resolveSpeakerStyle(speakerStyle)].heightM :
     kind === 'screen' ? Math.max(1.4, podiumHeightM ?? 2.4) :
     kind === 'instrument' ? Math.max(0.7, podiumHeightM ?? 0.95) :
     kind === 'bar' ? Math.max(0.95, podiumHeightM ?? 1.15) :
@@ -3229,6 +3240,8 @@ function FixtureMesh({
         />
       ) : kind === 'djBooth' ? (
         <DjBoothMesh w={w} d={d} color={color ?? '#1c1917'} selected={selected} />
+      ) : kind === 'speaker' ? (
+        <SpeakerMesh style={resolveSpeakerStyle(speakerStyle)} w={w} d={d} color={color} selected={selected} />
       ) : kind === 'screen' ? (
         screenKind === 'cinemaScreen' ? (
           <CinemaScreenMesh
@@ -3822,6 +3835,7 @@ function SceneContent({
   avatarViewGuest = null,
   avatarLookRef,
   onPickGuest,
+  danceTimeRef,
 }: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode' | 'introFlyIn' | 'introView' | 'introReplayKey'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
@@ -3857,6 +3871,8 @@ function SceneContent({
   avatarLookRef?: React.MutableRefObject<AvatarLook>;
   /** Clic sur un avatar : prendre son point de vue. */
   onPickGuest?: (guest: SimulatedGuest) => void;
+  /** Horloge musicale des danseurs (tempo du morceau). */
+  danceTimeRef?: React.RefObject<number>;
 }) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
   const pendingIntroRef = useRef<IntroPath | null>(null);
@@ -4531,6 +4547,7 @@ function SceneContent({
             instrumentStyle={f.instrumentStyle}
             instrumentFinish={f.instrumentFinish}
             barStyle={f.barStyle}
+            speakerStyle={f.speakerStyle}
             barFront={f.barFront}
             barTop={f.barTop}
             barBack={f.barBack}
@@ -4857,10 +4874,11 @@ function SceneContent({
           castShadow={qualitySettings.quality !== 'draft'}
           hiddenGuestId={avatarViewGuest?.id ?? null}
           onPickGuest={walkthroughActive || filmActive ? undefined : onPickGuest}
+          danceTimeRef={danceTimeRef}
         />
       ) : null}
       {avatarViewGuest && avatarLookRef ? (
-        <AvatarEyeCamera guest={avatarViewGuest} lookRef={avatarLookRef} reduceMotion={reduceMotion} />
+        <AvatarEyeCamera guest={avatarViewGuest} lookRef={avatarLookRef} reduceMotion={reduceMotion} danceTimeRef={danceTimeRef} />
       ) : null}
       <IntroFlyIn
         pendingRef={pendingIntroRef}
@@ -4923,7 +4941,9 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   introFlyIn = false,
   introView: introViewProp,
   introReplayKey = 0,
-  guestSimulation = null,
+  guestSimulation: guestSimulationProp = null,
+  allowMusicDancers = false,
+  hideMusic = false,
 }, ref) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
   const touchScreen = useCoarsePointer();
@@ -5217,16 +5237,49 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     }
   }, [handleSelectPreset]);
 
+  // ───────────── Musique : sono de la scène, régie DJ ou enceintes, et la piste qui danse ─────────────
+  const [musicOpen, setMusicOpen] = useState(false);
+  const [musicMode, setMusicMode] = useState<MusicSourceMode>('auto');
+  const [musicPlayback, setMusicPlayback] = useState<RoomMusicPlayback>({ playing: false, bpm: 114 });
+  const musicListenerRef = useRef<MusicListener>(createMusicListener());
+  const danceTimeRef = useRef(0);
+  const musicPlaying = musicPlayback.playing;
+  const musicModes = useMemo(() => availableMusicSourceModes(blueprint), [blueprint]);
+  const effectiveMusicMode: MusicSourceMode = musicModes.includes(musicMode) ? musicMode : 'auto';
+  const musicEmitters = useMemo(
+    () => activeMusicEmitters(blueprint, effectiveMusicMode, { storyElevation: (storyId) => worldElevationForStory(blueprint, storyId) }),
+    [blueprint, effectiveMusicMode],
+  );
+  const hasDanceFloor = useMemo(
+    () => (blueprint.furniture ?? []).some((f) => f.kind === 'zone' && f.zoneKind === 'dance'),
+    [blueprint.furniture],
+  );
+  // La musique fait danser : piste remplie, et des danseurs même sans invités simulés si le forfait le permet.
+  const guestSimulation = useMemo<GuestSimulationSettings | null>(() => {
+    if (!musicPlaying || !hasDanceFloor) return guestSimulationProp;
+    if (guestSimulationProp) return { ...guestSimulationProp, dancing: true };
+    return allowMusicDancers ? { fill: 0, dancing: true } : null;
+  }, [musicPlaying, hasDanceFloor, guestSimulationProp, allowMusicDancers]);
+  const musicDanceNote = !hasDanceFloor
+    ? 'Ajoutez une piste de danse au plan pour voir les invités danser.'
+    : !guestSimulation
+      ? 'Les invités 3D ne sont pas inclus dans votre forfait : la piste reste vide.'
+      : null;
+  const handleMusicPlayback = useCallback((state: RoomMusicPlayback) => {
+    setMusicPlayback((cur) => (cur.playing === state.playing && cur.bpm === state.bpm ? cur : state));
+  }, []);
+
   // ───────────── Vue à la place d’un invité : la salle vue par les yeux d’un avatar ─────────────
   const simulatedGuests = useMemo(() => {
     if (!guestSimulation) return [] as SimulatedGuest[];
     return buildGuestSimulation(blueprint, {
       ...guestSimulation,
+      danceFill: musicPlaying ? musicDanceFill(guestSimulationProp?.fill) : undefined,
       surfaceElevationAt: (x, y, id) => resolveFurnitureSurfaceAt(blueprint, x, y, { allowTable: false, ignoreId: id })?.elevationM ?? 0,
       storyElevation: (storyId) => worldElevationForStory(blueprint, storyId),
       storyVisible: (storyId) => isStoryVisible(blueprint, storyId),
     }).guests;
-  }, [blueprint, guestSimulation]);
+  }, [blueprint, guestSimulation, musicPlaying, guestSimulationProp?.fill]);
   const [avatarActive, setAvatarActive] = useState(false);
   const [avatarViewId, setAvatarViewId] = useState<string | null>(null);
   const [avatarFilter, setAvatarFilter] = useState<AvatarViewFilter>('all');
@@ -5557,7 +5610,14 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
           ) : null}
           <button
             type="button"
-            onClick={() => (film ? stopFilm() : setFilmMenuOpen((open) => !open))}
+            onClick={() => {
+              if (film) {
+                stopFilm();
+                return;
+              }
+              setMusicOpen(false);
+              setFilmMenuOpen((open) => !open);
+            }}
             aria-pressed={film !== null}
             aria-expanded={filmMenuOpen}
             title="Film de la salle : visite automatique, à regarder ou à enregistrer en vidéo"
@@ -5571,6 +5631,27 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             <Clapperboard className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Film</span>
           </button>
+          {!hideMusic ? (
+            <button
+              type="button"
+              onClick={() => {
+                setFilmMenuOpen(false);
+                setMusicOpen((open) => !open);
+              }}
+              aria-pressed={musicOpen || musicPlaying}
+              aria-expanded={musicOpen}
+              title="Musique : faire jouer la scène, la régie DJ ou les enceintes et faire danser la piste"
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
+                musicOpen || musicPlaying
+                  ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                  : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
+              )}
+            >
+              <Music className={cn('w-3.5 h-3.5', musicPlaying && 'motion-safe:animate-pulse')} />
+              <span className="hidden sm:inline">Musique</span>
+            </button>
+          ) : null}
         </div>
       )}
 
@@ -5719,6 +5800,25 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
         </div>
       ) : null}
 
+      {!hideMusic && !wallEditMode ? (
+        <RoomMusicPanel
+          open={musicOpen && !walkthroughActive && !film}
+          onClose={() => setMusicOpen(false)}
+          emitters={musicEmitters}
+          modes={musicModes}
+          mode={effectiveMusicMode}
+          onModeChange={setMusicMode}
+          listenerRef={musicListenerRef}
+          onPlaybackChange={handleMusicPlayback}
+          danceNote={musicDanceNote}
+          className={cn(
+            // Téléphone : en bas, sur la moitié de l'écran pour garder la piste visible ; ordinateur : à gauche.
+            'absolute inset-x-2.5 bottom-12 z-20 max-h-[55%] sm:inset-x-auto sm:bottom-auto sm:left-2.5 sm:w-[23rem]',
+            avatarActive ? 'sm:top-12 sm:max-h-[calc(100%-12rem)] max-sm:bottom-40' : 'sm:top-16 sm:max-h-[calc(100%-5.5rem)]',
+          )}
+        />
+      ) : null}
+
       <Canvas
         shadows
         style={{ touchAction: 'none' }}
@@ -5793,7 +5893,15 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             onPickGuest={enterAvatarView}
             filmActive={film !== null}
             frameTrackRef={frameTrackRef}
+            danceTimeRef={danceTimeRef}
           />
+          {!hideMusic ? (
+            <>
+              <MusicListenerProbe listenerRef={musicListenerRef} />
+              <MusicDanceClock danceTimeRef={danceTimeRef} rate={musicPlaying ? danceRateForBpm(musicPlayback.bpm) : 1} />
+              {musicPlaying && !reduceMotion ? <MusicEmitterPulses emitters={musicEmitters} bpm={musicPlayback.bpm} /> : null}
+            </>
+          ) : null}
         </Suspense>
       </Canvas>
       {/* Retours de déplacement sobres : disque sous le doigt, pastille de zoom. */}

@@ -208,6 +208,7 @@ const SOLID_FIXTURE_KINDS = new Set([
   'stairs',
   'balcony',
   'djBooth',
+  'speaker',
   'screen',
   'orderCounter',
   'pickupCounter',

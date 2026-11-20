@@ -134,7 +134,7 @@ export function roomEditorCapabilities(
       canShowcaseRender: true,
       tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop', 'arc'] as TableShape[],
       fixtureKinds: themesFixtures
-        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'perimeter', 'buffet', 'carpet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal', 'stringLight', 'fountain', 'gazebo', 'djBooth', 'screen', 'instrument', 'bar', 'orderCounter', 'pickupCounter', 'pizzaOven', 'kitchenLine', 'displayCase', 'stylingStation', 'washBasin', 'condimentStation', 'loungeSofa', 'car', 'parasol', 'landscape', 'homeFurniture', 'customElement']
+        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'perimeter', 'buffet', 'carpet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal', 'stringLight', 'fountain', 'gazebo', 'djBooth', 'speaker', 'screen', 'instrument', 'bar', 'orderCounter', 'pickupCounter', 'pizzaOven', 'kitchenLine', 'displayCase', 'stylingStation', 'washBasin', 'condimentStation', 'loungeSofa', 'car', 'parasol', 'landscape', 'homeFurniture', 'customElement']
         : [],
     } satisfies Partial<RoomEditorCapabilities>);
   }

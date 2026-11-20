@@ -369,6 +369,8 @@ export interface GuestSimulationOptions extends Partial<GuestSimulationSettings>
   portraits?: GuestPortrait[] | null;
   /** Thème de la soirée (par défaut celui du plan). */
   dressCode?: GuestDressCodeSetting | null;
+  /** Remplissage des pistes de danse (par défaut `fill`) : la musique attire du monde sur la piste. */
+  danceFill?: number;
 }
 
 export interface GuestSimulationResult {
@@ -389,6 +391,7 @@ export interface GuestSimulationResult {
 export function buildGuestSimulation(blueprint: RoomLayoutBlueprint, options: GuestSimulationOptions = {}): GuestSimulationResult {
   const fill = Math.max(0, Math.min(1, options.fill ?? DEFAULT_GUEST_SIMULATION.fill));
   const dancing = options.dancing ?? DEFAULT_GUEST_SIMULATION.dancing;
+  const danceFill = Math.max(0, Math.min(1, options.danceFill ?? fill));
   const maxGuests = options.maxGuests ?? MAX_SIMULATED_GUESTS;
   const widthM = blueprint.canvas?.widthM > 0 ? blueprint.canvas.widthM : 20;
   const depthM = blueprint.canvas?.heightM > 0 ? blueprint.canvas.heightM : 16;
@@ -510,7 +513,7 @@ export function buildGuestSimulation(blueprint: RoomLayoutBlueprint, options: Gu
       const wM = (item.w / 100) * widthM;
       const dM = (item.h / 100) * depthM;
       const area = wM * dM;
-      const n = Math.min(60, Math.round((area / 2) * fill));
+      const n = Math.min(60, Math.round((area / 2) * danceFill));
       const [cx, cz] = pctToWorld(item.x + item.w / 2, item.y + item.h / 2, widthM, depthM);
       const rot = ((item.rotation ?? 0) * Math.PI) / 180;
       const r = rng(`dance:${item.id}`);

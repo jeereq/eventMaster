@@ -88,6 +88,7 @@ export default function LayoutThumbnailCapture({ blueprint, onCaptured, onFailed
         onSelect={() => undefined}
         readOnly
         previewMode
+        hideMusic
         className="h-[600px] w-[960px]"
       />
     </div>

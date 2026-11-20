@@ -498,6 +498,22 @@ export default function FixtureRenderer({
     );
   }
 
+  if (fixture.kind === 'speaker') {
+    // Enceinte vue de dessus : caisson noir, membrane ronde vers l'avant.
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="flex h-full w-full items-center justify-center rounded-[3px] border border-zinc-600 bg-zinc-900">
+          <div className="h-3/5 w-3/5 rounded-full border border-zinc-500 bg-zinc-800 shadow-[inset_0_0_0_2px_rgba(0,0,0,0.5)]" />
+        </div>
+        {showLabel && fixture.label ? (
+          <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap bg-surface/80 px-1 rounded shadow-xs">
+            {fixture.label}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
   if (isFountain || isGazebo || isDjBooth) {
     return (
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
