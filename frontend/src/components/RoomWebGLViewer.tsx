@@ -5795,7 +5795,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
           />
         </Suspense>
       </Canvas>
-      {/* Gestes visibles : cercles sous les doigts, trait du glissé, badge de zoom. */}
+      {/* Retours de déplacement sobres : disque sous le doigt, pastille de zoom. */}
       <GestureFeedback targetRef={viewerRootRef} reduceMotion={reduceMotion} />
       {avatarActive ? (
         <>
