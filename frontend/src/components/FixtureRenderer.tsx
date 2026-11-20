@@ -16,7 +16,17 @@ import {
 } from '@/lib/roomLayoutUtils';
 import { ZONE_MATERIAL_COLORS } from '@/lib/roomZoneSurface';
 import { planRotationScreenDeg } from '@/lib/tablePlanUtils';
-import { LANDSCAPE_STYLE_META, poolOutlineSvgPath, type LandscapeStyle, type PoolShape } from '@/lib/roomOutdoorUtils';
+import { LANDSCAPE_STYLE_META, type LandscapeStyle, type PoolShape } from '@/lib/roomOutdoorUtils';
+import {
+  POOL_COPING_META,
+  poolGroundHole,
+  poolLaneLines,
+  poolPlanColors,
+  poolWaterOutline,
+  resolvePoolOptions,
+  resolvePoolShape,
+  type PoolOptions,
+} from '@/lib/roomPoolDesign';
 import { resolveGardenOptions, type GardenOptions } from '@/lib/roomGardenLayout';
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
 import { HOME_FURNITURE_META, type HomeFurnitureStyle } from '@/lib/roomHomeFurniture';
@@ -45,7 +55,64 @@ function GardenPlanGlyph({ garden }: { garden?: Partial<GardenOptions> }) {
   );
 }
 
-function LandscapePlanGlyph({ style, poolShape = 'rectangle' }: { style: LandscapeStyle; poolShape?: PoolShape }) {
+const svgPath = (pts: Array<[number, number]>) =>
+  pts.map(([x, z], i) => `${i === 0 ? 'M' : 'L'}${(x + 50).toFixed(1)} ${(z + 50).toFixed(1)}`).join(' ') + ' Z';
+
+/** Piscine vue du dessus : margelles, eau à la couleur choisie, lignes d’eau, plantes, décor flottant. */
+function PoolPlanGlyph({ shape, pool }: { shape?: PoolShape; pool?: Partial<PoolOptions> }) {
+  const gid = React.useId().replace(/:/g, '');
+  const o = resolvePoolOptions(pool);
+  const s = resolvePoolShape(o.type, shape);
+  // Emprise normalisée 100 × 100 : la margelle garde une épaisseur lisible quelle que soit la taille.
+  const scaled = { ...o, copingM: Math.max(3, Math.min(14, (o.copingM / 0.35) * 6)) };
+  const water = poolWaterOutline(scaled, s, 100, 100);
+  const hole = poolGroundHole(scaled, s, 100, 100);
+  const outer = o.type === 'infinity' ? null : resolvePoolOptions({ ...o, copingM: 0.15 });
+  const c = poolPlanColors(o);
+  const lanes = poolLaneLines({ ...scaled, type: o.type }, 100, 100);
+  const xs = water.map((p) => p[0]);
+  const zs = water.map((p) => p[1]);
+  const box = { x0: Math.min(...xs) + 50, x1: Math.max(...xs) + 50, z0: Math.min(...zs) + 50, z1: Math.max(...zs) + 50 };
+  const dots = (n: number, k: number) => Array.from({ length: n }, (_, i) => [
+    box.x0 + ((i * 37 + k) % 89) / 89 * (box.x1 - box.x0) * 0.7 + (box.x1 - box.x0) * 0.15,
+    box.z0 + ((i * 53 + k * 3) % 83) / 83 * (box.z1 - box.z0) * 0.7 + (box.z1 - box.z0) * 0.15,
+  ]);
+  return (
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full drop-shadow-sm" aria-hidden>
+      <defs>
+        <radialGradient id={`pw${gid}`} cx="0.45" cy="0.4" r="0.75">
+          <stop offset="0" stopColor={c.light} />
+          <stop offset="1" stopColor={c.deep} />
+        </radialGradient>
+      </defs>
+      {o.type === 'infinity'
+        ? <rect x="0" y="0" width="100" height="100" fill={c.coping} />
+        : <path d={svgPath(outer ? poolWaterOutline(outer, s, 100, 100) : water)} fill={o.type === 'raised' ? POOL_COPING_META.ipe.color : c.coping} stroke={o.type === 'raised' ? '#8a6440' : 'none'} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />}
+      {o.type === 'infinity' && hole ? <path d={svgPath(hole)} fill="#374151" /> : null}
+      <path d={svgPath(water)} fill={`url(#pw${gid})`} stroke={c.edge} strokeWidth="1" vectorEffect="non-scaling-stroke" />
+      {lanes.map((v, i) => (
+        <line key={i} x1={box.x0 + 2} x2={box.x1 - 2} y1={v + 50} y2={v + 50} stroke="#fef2f2" strokeWidth="1.2" strokeDasharray="3 2" vectorEffect="non-scaling-stroke" />
+      ))}
+      {o.access === 'roman' && (s === 'rectangle' || s === 'rounded' || o.type === 'infinity')
+        ? [0, 1, 2].map((k) => <rect key={k} x={box.x0} y={box.z0 + (box.z1 - box.z0) * (s === 'rounded' ? 0.25 : 0.02)} width={(3 - k) * 2.6} height={(box.z1 - box.z0) * (s === 'rounded' ? 0.5 : 0.96)} fill="#ffffff" opacity={0.18} />)
+        : null}
+      {o.type === 'natural' ? dots(7, 3).map(([x, y], i) => <circle key={i} cx={x * 0.4 + box.x0 * 0.6} cy={y} r="3.5" fill="#4f7a2e" opacity="0.85" />) : null}
+      {o.type === 'spa' ? dots(14, 5).map(([x, y], i) => <circle key={i} cx={x} cy={y} r="2.2" fill="#ffffff" opacity="0.75" />) : null}
+      {o.floating !== 'none' ? dots(o.floating === 'petals' ? 16 : 5, 9).map(([x, y], i) => (
+        <circle
+          key={`f${i}`}
+          cx={x}
+          cy={y}
+          r={o.floating === 'floats' ? 4 : o.floating === 'petals' ? 1.4 : 2.2}
+          fill={o.floating === 'candles' ? '#fde68a' : o.floating === 'lanterns' ? '#fbcfe8' : o.floating === 'petals' ? '#fb7185' : ['#f472b6', '#facc15', '#fb923c'][i % 3]}
+          opacity="0.95"
+        />
+      )) : null}
+    </svg>
+  );
+}
+
+function LandscapePlanGlyph({ style, poolShape = 'rectangle', pool }: { style: LandscapeStyle; poolShape?: PoolShape; pool?: Partial<PoolOptions> }) {
   switch (style) {
     case 'oak':
     case 'olive':
@@ -83,18 +150,7 @@ function LandscapePlanGlyph({ style, poolShape = 'rectangle' }: { style: Landsca
     case 'planter':
       return <div className="w-full h-full rounded-sm bg-[#7a5334] border-2 border-[#5a3a22] p-[8%]"><div className="w-full h-full rounded-sm bg-[#7f9a4c]" /></div>;
     case 'pool':
-      return (
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full drop-shadow-sm" aria-hidden>
-          <defs>
-            <linearGradient id="pool-water" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#5fd0e6" />
-              <stop offset="1" stopColor="#1f8fb3" />
-            </linearGradient>
-          </defs>
-          <path d={poolOutlineSvgPath(poolShape, 0)} fill="#e9e3d6" />
-          <path d={poolOutlineSvgPath(poolShape, 6)} fill="url(#pool-water)" stroke="#1f6f8c" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-        </svg>
-      );
+      return <PoolPlanGlyph shape={poolShape} pool={pool} />;
     case 'pond':
       return <div className="w-full h-full rounded-[48%_52%_45%_55%] bg-gradient-to-br from-[#5b9c86] to-[#2f6b5e] border-4 border-[#a8a196]" />;
     case 'firePit':
@@ -1154,7 +1210,7 @@ export default function FixtureRenderer({
     return (
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
         <div className="relative w-full h-full flex items-center justify-center">
-          {style === 'garden' ? <GardenPlanGlyph garden={fixture.garden} /> : <LandscapePlanGlyph style={style} poolShape={fixture.poolShape} />}
+          {style === 'garden' ? <GardenPlanGlyph garden={fixture.garden} /> : <LandscapePlanGlyph style={style} poolShape={fixture.poolShape} pool={fixture.pool} />}
           {showLabel && style !== 'fence' && style !== 'hedge' ? (
             <span className="absolute bottom-0 translate-y-1/2 z-10 text-[7px] font-black uppercase text-emerald-950 bg-white/85 px-1 rounded shadow-xs whitespace-nowrap">
               {fixture.label || LANDSCAPE_STYLE_META[style].label}
