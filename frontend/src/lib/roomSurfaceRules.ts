@@ -10,7 +10,7 @@
  * Module pur (imports de types uniquement) : testable avec `node --test`.
  */
 
-import type { AmbienceApplyScope, RoomLayoutBlueprint } from './roomLayoutUtils.ts';
+import type { RoomLayoutBlueprint } from './roomLayoutUtils.ts';
 
 export type SurfaceTarget = 'walls' | 'floor';
 
@@ -165,39 +165,6 @@ export function collectSurfaceRules(bp: RuleInput): SurfaceRule[] {
   return [...collectWallRules(bp), ...collectFloorRules(bp)];
 }
 
-/**
- * Règles à connaître avant d’appliquer une ambiance, selon les parties cochées.
- * Les formulations décrivent ce qui va se passer, pas l’état actuel.
- */
-export function collectAmbienceSurfaceRules(bp: RuleInput, scope: AmbienceApplyScope): SurfaceRule[] {
-  const rules: SurfaceRule[] = [];
-  if (scope.walls) {
-    for (const rule of collectWallRules(bp)) {
-      if (rule.id === 'walls-hidden') {
-        rules.push({ ...rule, detail: 'La texture et la peinture de l’ambiance seront enregistrées, mais invisibles tant que les murs sont masqués.' });
-      } else if (rule.id === 'walls-per-segment') {
-        rules.push({ ...rule, detail: 'Tous les murs prendront la texture et la couleur de l’ambiance : les réglages mur par mur seront remplacés.' });
-      } else {
-        rules.push(rule);
-      }
-    }
-  }
-  if (scope.floor) {
-    for (const rule of collectFloorRules(bp)) {
-      if (rule.id === 'floor-plan-image') {
-        rules.push({ ...rule, tone: 'partial', title: 'Le plan importé sera retiré', detail: 'L’image posée sur le sol sera retirée pour afficher le sol de l’ambiance (Ctrl+Z pour revenir).', action: undefined });
-      } else if (rule.id === 'floor-image-texture') {
-        rules.push({ ...rule, title: 'La texture importée sera remplacée', detail: 'Votre texture de sol sera remplacée par celle de l’ambiance.', action: undefined });
-      } else if (rule.id === 'floor-tint') {
-        // L’ambiance pose sa propre teinte : rien à signaler.
-      } else {
-        rules.push(rule);
-      }
-    }
-  }
-  return rules;
-}
-
 /** Applique l’action proposée par une règle (bouton dans la notice). */
 export function applySurfaceRuleAction<T extends RuleInput>(
   bp: T,
@@ -221,11 +188,3 @@ export function applySurfaceRuleAction<T extends RuleInput>(
   return { blueprint: { ...bp, metadata }, message };
 }
 
-/** Ce que fait une ambiance complète, toujours vrai (aide affichée dans l’éditeur). */
-export const AMBIENCE_APPLY_RULES: { label: string; text: string }[] = [
-  { label: 'Murs', text: 'texture et couleur posées sur tous les murs, y compris ceux réglés un par un.' },
-  { label: 'Sol', text: 'remplace le type de sol, sa teinte et toute image importée (plan ou texture).' },
-  { label: 'Thème', text: 'change les couleurs du plan 2D, sans toucher au sol de l’ambiance.' },
-  { label: 'Ne change pas', text: 'portes, fenêtres, décors muraux, zones au sol (pistes, tapis) et terrain des abords.' },
-  { label: 'Invisible si', text: 'les murs sont masqués (espace ouvert) ; sous tente, seule la couleur teinte la toile.' },
-];

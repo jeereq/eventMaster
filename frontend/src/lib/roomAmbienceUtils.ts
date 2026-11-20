@@ -1,7 +1,7 @@
 import {
   applyRoomAmbiencePreset,
-  captureRoomAmbienceFromBlueprint,
   DEFAULT_AMBIENCE_SCOPE,
+  captureRoomAmbienceFromBlueprint,
   chairStyleLabels,
   chairTypeLabels,
   parseAmbienceImport,
@@ -18,6 +18,22 @@ import { floorTypeLabels } from '@/lib/roomFloorUtils';
 import { lightingPresetLabels } from '@/lib/roomRenderQuality';
 import { applyRoomTheme, getRoomTheme } from '@/lib/roomThemeUtils';
 
+/**
+ * Applique une ambiance complète en une seule étape : d’abord le thème (contour, couleur
+ * de table par défaut), puis murs, sol, mobilier et éclairage de l’ambiance par-dessus.
+ * Appliquer le thème après coup écrasait l’ambiance (sol du thème, anciens murs et chaises).
+ */
+export function applyAmbienceWithTheme(
+  blueprint: RoomLayoutBlueprint,
+  preset: RoomAmbiencePreset,
+  scope: AmbienceApplyScope = DEFAULT_AMBIENCE_SCOPE,
+): RoomLayoutBlueprint {
+  const themed = preset.roomThemeId && scope.theme
+    ? applyRoomTheme(blueprint, preset.roomThemeId, { keepFloor: true })
+    : blueprint;
+  return applyRoomAmbiencePreset(themed, preset, scope);
+}
+
 const SCOPE_LABELS: Record<keyof AmbienceApplyScope, string> = {
   walls: 'Murs',
   floor: 'Sol',
@@ -25,23 +41,6 @@ const SCOPE_LABELS: Record<keyof AmbienceApplyScope, string> = {
   furniture: 'Mobilier',
   lighting: 'Éclairage',
 };
-
-/**
- * Applique une ambiance complète, thème compris, en une seule passe.
- * Le thème passe d’abord (couleurs du plan 2D) en gardant le sol, puis
- * l’ambiance pose murs, sol, mobilier et éclairage : le sol du thème
- * n’écrase donc plus celui de l’ambiance.
- */
-export function applyAmbienceWithTheme(
-  blueprint: RoomLayoutBlueprint,
-  preset: RoomAmbiencePreset,
-  scope: AmbienceApplyScope = DEFAULT_AMBIENCE_SCOPE,
-): RoomLayoutBlueprint {
-  const themed = scope.theme && preset.roomThemeId
-    ? applyRoomTheme(blueprint, preset.roomThemeId, { keepFloor: true })
-    : blueprint;
-  return applyRoomAmbiencePreset(themed, preset, scope);
-}
 
 export function describeAmbienceChanges(
   blueprint: RoomLayoutBlueprint,

@@ -12,9 +12,9 @@ import {
   type RoomLayoutBlueprint,
 } from '@/lib/roomLayoutUtils';
 import { applyAmbienceWithTheme, describeAmbienceChanges } from '@/lib/roomAmbienceUtils';
+import { describeAmbienceRules } from '@/lib/roomAmbienceRules';
+import AmbienceRulesList from '@/components/room/AmbienceRulesList';
 import { cn } from '@/lib/cn';
-import { collectAmbienceSurfaceRules } from '@/lib/roomSurfaceRules';
-import SurfaceRulesNotice from '@/components/room/SurfaceRulesNotice';
 
 const SCOPE_OPTIONS: { key: keyof AmbienceApplyScope; label: string }[] = [
   { key: 'walls', label: 'Murs' },
@@ -48,10 +48,7 @@ export default function RoomAmbiencePreviewModal({
     [blueprint, preset, scope],
   );
 
-  const surfaceRules = useMemo(
-    () => collectAmbienceSurfaceRules(blueprint, scope),
-    [blueprint, scope],
-  );
+  const rules = useMemo(() => describeAmbienceRules(blueprint, scope), [blueprint, scope]);
 
   const toggleScope = (key: keyof AmbienceApplyScope) => {
     setScope((prev) => {
@@ -133,7 +130,7 @@ export default function RoomAmbiencePreviewModal({
           </ul>
         </div>
 
-        <SurfaceRulesNotice rules={surfaceRules} title="À savoir avant d’appliquer" />
+        <AmbienceRulesList rules={rules} title="Règles pour cette salle" />
       </div>
     </Modal>
   );

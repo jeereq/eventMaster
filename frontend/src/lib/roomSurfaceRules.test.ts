@@ -2,12 +2,9 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   applySurfaceRuleAction,
-  collectAmbienceSurfaceRules,
   collectFloorRules,
   collectWallRules,
 } from './roomSurfaceRules.ts';
-
-const ALL = { walls: true, floor: true, theme: true, furniture: true, lighting: true };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function bp(patch: Record<string, any> = {}): any {
@@ -61,17 +58,6 @@ describe('règles sol', () => {
   });
   it('teinte blanche = pas de teinte', () => {
     assert.deepEqual(collectFloorRules(bp({ metadata: { floorColor: '#FFFFFF' } })), []);
-  });
-});
-
-describe('avant une ambiance', () => {
-  it('ne parle que des parties cochées', () => {
-    const plan = bp({ metadata: { showWalls: false, floorImageUrl: 'x', floorImageFit: 'cover' } });
-    assert.deepEqual(collectAmbienceSurfaceRules(plan, { ...ALL, walls: false }).map((r) => r.id), ['floor-plan-image']);
-    assert.deepEqual(collectAmbienceSurfaceRules(plan, { ...ALL, floor: false }).map((r) => r.id), ['walls-hidden']);
-  });
-  it('la teinte actuelle n’est pas signalée (l’ambiance pose la sienne)', () => {
-    assert.deepEqual(collectAmbienceSurfaceRules(bp({ metadata: { floorColor: '#123456' } }), ALL), []);
   });
 });
 
