@@ -13,18 +13,15 @@ import {
   Lightbulb,
   ExternalLink,
   Search,
-  Play,
 } from '@/components/icons';
 import { getUserGuide, type UserGuideId } from '@/config/userGuides';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { interpolateRates } from '@/lib/platformRates';
 
 interface UserGuideViewProps {
   guideId: UserGuideId;
   showHeader?: boolean;
-  onStartTour?: () => void;
 }
 
 function parseSteps(content: string): string[] {
@@ -35,7 +32,7 @@ function parseSteps(content: string): string[] {
     .map((l) => l.replace(/^\d+\.\s*/, ''));
 }
 
-export default function UserGuideView({ guideId, showHeader = true, onStartTour }: UserGuideViewProps) {
+export default function UserGuideView({ guideId, showHeader = true }: UserGuideViewProps) {
   const messaging = useMessagingChannels();
   const guide = getUserGuide(guideId);
   const { site } = usePlatformSite();
@@ -84,11 +81,6 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
               </h2>
               <p className="text-sm text-muted leading-relaxed max-w-2xl">{messaging.adapt(interpolateRates(guide.summary, site))}</p>
             </div>
-            {onStartTour && (
-              <Button size="sm" onClick={onStartTour} leftIcon={<Play className="w-3.5 h-3.5" />}>
-                Lancer la visite
-              </Button>
-            )}
           </div>
         </div>
       )}

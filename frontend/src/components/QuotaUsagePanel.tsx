@@ -1,25 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Calendar, Users, Mail, LayoutGrid, UserCog, Store } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import {
   formatQuotaMax,
-  formatQuotaRemaining,
   getQuotaPercentage,
   type QuotaSnapshot,
 } from '@/lib/quotaDisplay';
 
-const ICONS = {
-  events: Calendar,
-  guests: Users,
-  templates: Mail,
-  rooms: LayoutGrid,
-  services: Store,
-  orgManagers: UserCog,
-} as const;
-
-type QuotaKey = keyof typeof ICONS;
+type QuotaKey = 'events' | 'guests' | 'templates' | 'rooms' | 'services' | 'orgManagers';
 
 function quotaBarClass(pct: number) {
   if (pct >= 90) return 'bg-danger';
@@ -51,45 +40,35 @@ export default function QuotaUsagePanel({ quota, className = '' }: QuotaUsagePan
   const visible = items.filter(({ max }) => max > 0);
 
   return (
-    <ul className={cn('divide-y divide-border', className)}>
+    <ul className={cn('grid gap-x-6 gap-y-3 grid-cols-[repeat(auto-fill,minmax(11rem,1fr))]', className)}>
       {visible.map(({ key, label, used, max, guests }) => {
-        const Icon = ICONS[key];
         const cap = guests ? 99999 : 9999;
         const pct = getQuotaPercentage(used, max, cap);
-        const showBar = max < cap;
+        const limited = max < cap;
 
         return (
-          <li key={key} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-            <span className="inline-flex w-9 h-9 items-center justify-center rounded-[var(--radius-button)] bg-primary/10 text-primary shrink-0">
-              <Icon className="w-4 h-4" aria-hidden />
-            </span>
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="text-xs font-semibold text-foreground">{label}</span>
-                <span className="text-xs tabular-nums text-muted shrink-0">
-                  {formatQuotaRemaining(used, max, guests)}
-                </span>
-              </div>
-              {showBar ? (
-                <div
-                  className="w-full bg-surface-muted rounded-full h-1.5 overflow-hidden"
-                  role="meter"
-                  aria-label={label}
-                  aria-valuenow={Math.round(pct)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                >
-                  <div
-                    className={cn('h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none', quotaBarClass(pct))}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              ) : (
-                <p className="text-xs text-muted">
-                  {used.toLocaleString('fr-FR')} utilisé{used > 1 ? 's' : ''} sur {formatQuotaMax(max, guests)}
-                </p>
-              )}
+          <li key={key} className="min-w-0 space-y-1.5">
+            <div className="flex items-baseline justify-between gap-2 text-xs">
+              <span className="font-medium text-foreground truncate">{label}</span>
+              <span className={cn('tabular-nums shrink-0', limited && pct >= 100 ? 'font-semibold text-danger' : 'text-muted')}>
+                {used.toLocaleString('fr-FR')} / {formatQuotaMax(max, guests)}
+              </span>
             </div>
+            {limited ? (
+              <div
+                className="w-full bg-surface-muted rounded-full h-1 overflow-hidden"
+                role="meter"
+                aria-label={label}
+                aria-valuenow={Math.round(pct)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className={cn('h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none', quotaBarClass(pct))}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            ) : null}
           </li>
         );
       })}

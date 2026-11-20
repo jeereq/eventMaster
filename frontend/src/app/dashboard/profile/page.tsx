@@ -21,7 +21,7 @@ import { Alert, SkeletonProfileView, Button, Input, PhoneInput } from '@/compone
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import UserAvatar from '@/components/UserAvatar';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
-import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
+import { ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { isProtocolUser } from '@/lib/protocolAccess';
 
 function ProfilePageContent() {
@@ -273,7 +273,6 @@ function ProfilePageContent() {
                     value={email}
                     disabled
                     readOnly
-                    hint="Identifiant du compte. Non modifiable."
                   />
                   <PhoneInput
                     id="profile-phone"
@@ -282,15 +281,8 @@ function ProfilePageContent() {
                     national={phoneNational}
                     onCountryCodeChange={setPhoneCountryCode}
                     onNationalChange={setPhoneNational}
-                    hint={messaging.phone ? `Indicatif + numéro, pour ${messaging.phoneList()}.` : 'Indicatif + numéro.'}
+                    showRecorded={false}
                   />
-                  <p className="text-xs text-muted">
-                    {messaging.adapt('Canaux e-mail / WhatsApp / push :')}{' '}
-                    <Link href="/dashboard/notifications" className="text-primary font-medium hover:underline">
-                      Notifications
-                    </Link>
-                    .
-                  </p>
                   {user?.role === 'USER' && tenant && (
                     <>
                     <Input
@@ -310,16 +302,11 @@ function ProfilePageContent() {
                       >
                         {ACCOUNT_KIND_LABELS[accountKind] || accountKind}
                       </p>
-                      {ACCOUNT_KIND_DESCRIPTIONS[accountKind] ? (
-                        <p className="text-xs text-muted">{ACCOUNT_KIND_DESCRIPTIONS[accountKind]}</p>
+                      {isClient && !isProtocol ? (
+                        <Link href="/dashboard/billing" className="inline-block text-xs text-primary font-medium hover:underline">
+                          Changer de type
+                        </Link>
                       ) : null}
-                      <p className="text-xs text-muted">
-                        {isProtocol
-                          ? 'Votre rôle protocole ne permet pas de changer le type de compte.'
-                          : isClient
-                            ? 'Pour changer de type, payez un abonnement adapté dans Facturation (ou depuis l’accueil) : le compte bascule après paiement. Un Super Admin peut aussi le faire manuellement.'
-                            : 'Seul un Super Admin peut changer le type de compte hors paiement. Contactez le support EventMaster si votre activité a changé.'}
-                      </p>
                     </label>
                     </>
                   )}
@@ -333,11 +320,8 @@ function ProfilePageContent() {
                 </h2>
                 <div className="space-y-3">
                   <Input label="Mot de passe actuel" type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Requis pour changer le mot de passe" />
-                  <Input label="Nouveau mot de passe" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Laisser vide pour ne pas modifier" minLength={8} />
-                  <Input label="Confirmer" type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Laisser vide pour ne pas modifier" minLength={8} />
-                  <p className="text-xs text-muted bg-surface-muted border border-border rounded-[var(--radius-button)] p-3">
-                    Minimum 8 caractères. Changer le mot de passe déconnecte vos autres appareils. Laissez vide si vous ne souhaitez pas le changer.
-                  </p>
+                  <Input label="Nouveau mot de passe" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8 caractères minimum" minLength={8} />
+                  <Input label="Confirmer" type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} minLength={8} />
                 </div>
               </div>
             </div>
@@ -348,10 +332,6 @@ function ProfilePageContent() {
                   <Palette className="w-4 h-4 text-primary" />
                   Couleurs de l&apos;organisation
                 </h2>
-                <p className="text-xs text-muted leading-relaxed">
-                  Marque partagée pour toute l&apos;équipe : boutons, liens actifs et accents du tableau de bord.
-                  Distinct de l&apos;accent personnel (icône palette dans l&apos;en-tête), qui ne s&apos;applique qu&apos;à cet appareil et peut masquer temporairement ces couleurs.
-                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="space-y-1.5 text-xs font-medium text-muted">
                     Couleur principale

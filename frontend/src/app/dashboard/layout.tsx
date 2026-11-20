@@ -1,7 +1,7 @@
 'use client';
 import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, useSyncExternalStore, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, type OrgAccess } from '@/context/AuthContext';
@@ -32,15 +32,13 @@ import DashboardMobileBottomBar, {
 } from '@/components/dashboard/DashboardMobileBottomBar';
 import DashboardMobileMenuSheet from '@/components/dashboard/DashboardMobileMenuSheet';
 import UserAvatar from '@/components/UserAvatar';
-import ViewCustomizerDrawer, {
- ViewCustomizerTrigger,
-} from '@/components/ViewCustomizer';
 import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { LANDING_PLANS, isB2cPlanId } from '@/config/landingPricing';
 import { planDisplayName } from '@/lib/planCatalogDb';
 import { TourProvider } from '@/context/TourContext';
+import { useStartNavTour } from '@/hooks/useStartNavTour';
 import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
 import FirstLoginTourHost from '@/components/guide/FirstLoginTourHost';
 import { useAdminPendingCounts, type AdminPendingCounts } from '@/components/admin/useAdminPendingCounts';
@@ -160,7 +158,7 @@ const NAV_TOOLTIPS: Record<string, string> = {
  Factures: 'Historique et détail des factures',
  'Versements SaaS': 'Commissions des commerciaux plateforme',
  'Réglages plateforme': 'Intégrations e-mail, WhatsApp…',
- 'Guide utilisateur': 'Documentation et visite guidée',
+ 'Guide utilisateur': 'Visite guidée de votre espace',
  'Mon compte': 'Profil et sécurité du compte',
  Salles: 'Plans 2D, publication et disponibilités',
  Équipe: 'Managers et protocole d’accueil',
@@ -199,8 +197,21 @@ function buildNavSections(...sections: Array<NavSection | null>): NavSection[] {
  return sections.filter((section): section is NavSection => Boolean(section?.items.length));
 }
 
-function compteNavItems(): NavItem[] {
+/** Forfait et factures : réservés aux profils qui y ont accès, rangés avec les paramètres du compte. */
+function billingNavItems(access?: OrgAccess | null): NavItem[] {
  return [
+  ...(access?.canViewBilling
+   ? [{ name: 'Forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
+   : []),
+  ...(access?.canViewInvoices
+   ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
+   : []),
+ ];
+}
+
+function compteNavItems(extra: NavItem[] = []): NavItem[] {
+ return [
+  ...extra,
   { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
   { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
   { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
@@ -259,14 +270,8 @@ function buildB2bOrganizerNav(opts: {
    ...(workspace.showTeam
     ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users, description: 'Managers, protocole et droits d’accès' }]
     : []),
-   ...(access?.canViewBilling
-    ? [{ name: 'Forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
-    : []),
-   ...(access?.canViewInvoices
-    ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText, description: 'Historique et téléchargement' }]
-    : []),
   ]),
-  navSection('Compte', compteNavItems()),
+  navSection('Paramètres', compteNavItems(billingNavItems(access))),
  );
 }
 
@@ -526,15 +531,6 @@ function buildDashboardNav(opts: {
 			}] : []),
 		];
 
-		const billingItems: NavItem[] = [
-			...(access?.canViewBilling
-				? [{ name: 'Forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
-				: []),
-			...(access?.canViewInvoices
-				? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
-				: []),
-		];
-
 		return buildNavSections(
 			navSection('Accueil', [
 				{ name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard, description: 'Ce qui attend une réponse aujourd’hui' },
@@ -545,9 +541,8 @@ function buildDashboardNav(opts: {
 			navSection('Réseau', networkItems),
 			navSection('Organisation', [
 				...(workspace.showTeam ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }] : []),
-				...billingItems,
 			]),
-			navSection('Compte', compteNavItems()),
+			navSection('Paramètres', compteNavItems(billingNavItems(access))),
 		);
 	}
 
@@ -589,15 +584,7 @@ function buildDashboardNav(opts: {
 					? [{ name: 'Co-organisateurs', href: '/dashboard/team', tourId: 'nav-team', icon: Users, description: 'Famille ou amis qui vous aident' }]
 					: []),
 			]),
-			navSection('Mon forfait', [
-				...(access?.canViewBilling
-					? [{ name: 'Forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
-					: []),
-				...(access?.canViewInvoices
-					? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
-					: []),
-			]),
-			navSection('Compte', compteNavItems()),
+			navSection('Paramètres', compteNavItems(billingNavItems(access))),
 		);
 	}
 
@@ -662,26 +649,16 @@ function buildDashboardNav(opts: {
 			: []),
 	];
 
-	const billingItems: NavItem[] = [
-		...(access?.canViewBilling
-			? [{ name: 'Forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
-			: []),
-		...(access?.canViewInvoices
-			? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
-			: []),
-	];
-
 	return buildNavSections(
 		navSection('Accueil', [
 			{ name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
 		]),
-		navSection('Abonnement & quotas', billingItems),
 		navSection(primarySectionLabel, primaryItems),
 		navSection(vendorOnly ? 'Offres & Marketplace' : 'Marketplace', marketItems),
 		navSection('Organisation', workspace.showTeam
 			? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
 			: []),
-		navSection('Compte', compteNavItems()),
+		navSection('Paramètres', compteNavItems(billingNavItems(access))),
 	);
 }
 
@@ -704,6 +681,7 @@ function SidebarNav({
  const searchParams = useSearchParams();
  const currentTab = searchParams.get('tab') || fallbackTab;
  const { unreadCount } = useNotificationInbox();
+ const { startNavTour } = useStartNavTour();
 
  const isSheet = variant === 'sheet';
 
@@ -754,9 +732,15 @@ function SidebarNav({
  <Link
  href={item.href}
  data-tour={item.tourId}
- onClick={() => {
+ onClick={(e) => {
   if (document.body.dataset.emTour === '1') return;
   setMobileMenuOpen(false);
+  if (item.tourId === 'nav-guide') {
+    e.preventDefault();
+    // Laisse le menu mobile se refermer avant que la visite cible les onglets.
+    window.setTimeout(startNavTour, isSheet ? 250 : 0);
+    return;
+  }
   if (typeof window !== 'undefined' && pathname === '/dashboard/catalogue') {
     if (item.href === '/dashboard/catalogue') {
       window.dispatchEvent(new CustomEvent('em-switch-tab', { detail: 'explore' }));
@@ -836,7 +820,7 @@ function SidebarNav({
  );
 }
 
-/** Forfait de l’organisation : lien vers la page Forfait quand l’utilisateur peut la voir, sinon simple étiquette. */
+/** Forfait de l’organisation : badge, plus un lien « Changer » vers la page Forfait quand l’utilisateur peut la voir. */
 function TenantPlanLink({
   isClient,
   planLabel,
@@ -848,34 +832,24 @@ function TenantPlanLink({
   canOpen: boolean;
   onNavigate: () => void;
 }) {
-  const base = 'mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-xs font-bold text-primary';
-  if (isClient) {
-    return (
-      <div className={base}>
-        <ShieldCheck className="w-3.5 h-3.5" aria-hidden />
-        Compte client
-      </div>
-    );
-  }
-  if (!canOpen) {
-    return (
-      <div className={base}>
-        <Sparkles className="w-3.5 h-3.5" aria-hidden />
-        Forfait {planLabel}
-      </div>
-    );
-  }
+  const Icon = isClient ? ShieldCheck : Sparkles;
   return (
-    <Link
-      href="/dashboard/billing"
-      onClick={onNavigate}
-      title="Voir ou changer mon forfait"
-      className={`${base} hover:bg-primary/20 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40`}
-    >
-      <Sparkles className="w-3.5 h-3.5" aria-hidden />
-      Forfait {planLabel}
-      <span className="font-medium underline underline-offset-2">Changer</span>
-    </Link>
+    <div className="mt-2 flex items-center justify-between gap-2">
+      <span className="inline-flex min-w-0 items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-xs font-semibold text-primary">
+        <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden />
+        <span className="truncate">{isClient ? 'Compte client' : planLabel}</span>
+      </span>
+      {!isClient && canOpen ? (
+        <Link
+          href="/dashboard/billing"
+          onClick={onNavigate}
+          aria-label={`Changer le forfait ${planLabel}`}
+          className="shrink-0 rounded-md px-1 text-xs font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        >
+          Changer
+        </Link>
+      ) : null}
+    </div>
   );
 }
 
@@ -884,8 +858,16 @@ function DashboardMobileTitle() {
  return <h1 className="em-dash-title font-semibold text-base text-foreground truncate">{title}</h1>;
 }
 
+const noopSubscribe = () => () => {};
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
  const { user, tenant, token, loading, logout, access, planFeatures, planQuota, planName, supportSession } = useAuth();
+ /**
+  * false pendant l'hydratation, true ensuite. La session est souvent déjà chargée quand ce segment
+  * s'hydrate (effet de l'AuthProvider) : sans ce garde, le client rend le tableau de bord là où le
+  * serveur a rendu l'écran de chargement, et React reconstruit tout le segment.
+  */
+ const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
  /** Nom commercial du forfait actif (base) ; libellé marketing seulement en secours. */
  const tenantPlanLabel = planDisplayName(
   tenant?.plan,
@@ -1063,7 +1045,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   router,
  ]);
 
- if (loading || !token || !user) {
+ if (!hydrated || loading || !token || !user) {
  return (
  <div className="min-h-screen flex items-center justify-center bg-background px-4">
  <div className="flex flex-col items-center gap-4 animate-fade-in text-center max-w-sm">
@@ -1072,7 +1054,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  <p className="text-sm font-medium text-muted">
   Chargement de votre espace…
  </p>
- {!token && !loading && (
+ {hydrated && !token && !loading && (
    <button
      type="button"
      onClick={() => {
@@ -1163,7 +1145,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div className="flex items-center gap-0.5 shrink-0">
               {showNotifications && <NotificationBell />}
-              <ViewCustomizerTrigger />
               <button
                 onClick={toggleTheme}
                 className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 rounded-full border border-border bg-surface text-foreground hover:bg-surface-muted transition touch-manipulation"
@@ -1256,10 +1237,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </div>
                 ) : tenant ? (
                   <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
-                    <div className="text-xs text-muted font-medium">
-                      {isClientAccount ? 'Compte' : 'Organisation'}
-                    </div>
-                    <div className="font-semibold text-foreground text-sm truncate mt-0.5">
+                    <div className="font-bold text-foreground text-sm truncate" title={tenant.name}>
                       {tenant.name}
                     </div>
                     <TenantPlanLink isClient={isClientAccount} planLabel={tenantPlanLabel} canOpen={canOpenBilling} onNavigate={() => setMobileMenuOpen(false)} />
@@ -1373,10 +1351,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           ) : tenant ? (
             <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
-              <div className="text-xs text-muted font-medium">
-                {isClientAccount ? 'Compte' : 'Organisation'}
-              </div>
-              <div className="font-semibold text-foreground text-sm truncate mt-0.5">{tenant.name}</div>
+              <div className="font-bold text-foreground text-sm truncate" title={tenant.name}>{tenant.name}</div>
               <TenantPlanLink isClient={isClientAccount} planLabel={tenantPlanLabel} canOpen={canOpenBilling} onNavigate={() => setMobileMenuOpen(false)} />
             </div>
           ) : null}
@@ -1458,7 +1433,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <div id="em-dashboard-stage" />
 
-      <ViewCustomizerDrawer />
       <ProductTourOverlay />
     </div>
     </div>

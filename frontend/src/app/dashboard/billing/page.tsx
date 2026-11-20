@@ -4,29 +4,24 @@ import { ChannelText } from '@/components/ChannelText';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import {
-  CreditCard, Check,
-  ShieldCheck, FileText, ArrowRight, Inbox, LayoutDashboard, Minus,
-} from '@/components/icons';
+import { Check, ShieldCheck, ArrowRight } from '@/components/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Alert,
   SkeletonBillingView,
   Button,
   StatusPill,
-  EmptyState,
+  Modal,
 } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import SubscriptionFlexPayModal from '@/components/SubscriptionFlexPayModal';
 import SubscriptionDiscountRequestModal from '@/components/SubscriptionDiscountRequestModal';
-import { formatQuotaRemaining } from '@/lib/quotaDisplay';
 import { commercialPercent } from '@/lib/platformRates';
 import { cn } from '@/lib/cn';
 import {
   LANDING_PLANS,
-  FEATURE_COMPARISON,
   PLAN_IDS,
   B2C_PLAN_IDS,
   VENDOR_PLAN_IDS,
@@ -39,12 +34,10 @@ import {
   getPlanDisplayPrice,
   durationDaysForPlan,
   planPricePeriodSuffix,
-  isB2cPlanId,
   type BillingCycle,
   type PlanId,
 } from '@/config/landingPricing';
 import {
-  comparisonValueFromDb,
   editorLevelLabel,
   guestsBadgeFromDb,
   highlightsFromDb,
@@ -52,7 +45,6 @@ import {
   supportLevelLabel,
   type DbPlanCatalogEntry,
 } from '@/lib/planCatalogDb';
-import PlanPricingRow, { planRowButtonClass } from '@/components/PlanPricingRow';
 
 interface BillingStatus {
   plan: PlanId;
@@ -130,10 +122,6 @@ function highlightBeyondQuotas(text: string): string | null {
   return joined.charAt(0).toUpperCase() + joined.slice(1);
 }
 
-function formatQuotaSummary(u: number, m: number, guests = false) {
-  return formatQuotaRemaining(u, m, guests);
-}
-
 interface SubscriptionRequest {
   id: string;
   requestedPlan: PlanId;
@@ -145,32 +133,6 @@ interface SubscriptionRequest {
   approvedAmount?: number | null;
   quoteExpiresAt?: string | null;
   flexPayChannel?: string | null;
-}
-
-type BillingTab = 'overview' | 'plans' | 'invoices' | 'requests';
-
-const BILLING_TABS: Array<{
-  id: BillingTab;
-  label: string;
-  icon: typeof CreditCard;
-}> = [
-  { id: 'overview', label: 'Aperçu', icon: LayoutDashboard },
-  { id: 'plans', label: 'Forfaits', icon: CreditCard },
-  { id: 'invoices', label: 'Factures', icon: FileText },
-  { id: 'requests', label: 'Demandes', icon: Inbox },
-];
-
-function parseBillingTab(raw: string | null): BillingTab | null {
-  if (raw === 'overview' || raw === 'plans' || raw === 'invoices' || raw === 'requests') return raw;
-  return null;
-}
-
-function inferBillingTab(params: { tab: string | null; payRequest: string | null; requestId: string | null; flexpay: string | null; plan: string | null }): BillingTab {
-  const explicit = parseBillingTab(params.tab);
-  if (explicit) return explicit;
-  if (params.payRequest || params.requestId || params.flexpay) return 'requests';
-  if (params.plan) return 'plans';
-  return 'overview';
 }
 
 function requestStatusTone(req: SubscriptionRequest): 'emerald' | 'rose' | 'primary' | 'amber' {
@@ -205,37 +167,6 @@ function formatCampaignWindow(start: string | null, end: string | null) {
   return null;
 }
 
-function FeatureCell({ value }: { value: string | boolean }) {
-  if (value === true) {
-    return (
-      <span className="inline-flex items-center justify-center">
-        <Check className="w-4 h-4 text-primary" aria-hidden />
-        <span className="sr-only">Inclus</span>
-      </span>
-    );
-  }
-  if (value === false) {
-    return (
-      <span className="inline-flex items-center justify-center">
-        <Minus className="w-4 h-4 text-muted" aria-hidden />
-        <span className="sr-only">Non inclus</span>
-      </span>
-    );
-  }
-  return <span className="text-xs font-medium text-foreground">{value}</span>;
-}
-
-/** Colonnes du comparatif pour un compte client (découverte, sans 13 forfaits). */
-const CLIENT_COMPARISON_IDS: PlanId[] = [
-  'FREE',
-  'PERSONAL_50',
-  'STANDARD',
-  'PREMIUM_1',
-  'VENUE',
-  'SERVICE',
-  'CATALOG',
-];
-
 const BILLING_TIERS: Array<{ label: string; ids: PlanId[] }> = [
   { label: 'Salles & prestataires', ids: [...VENDOR_PLAN_IDS] },
   { label: 'Particuliers (B2C)', ids: [...B2C_PLAN_IDS] },
@@ -243,9 +174,6 @@ const BILLING_TIERS: Array<{ label: string; ids: PlanId[] }> = [
   { label: 'Business Premium (B2B)', ids: ['PREMIUM_1', 'PREMIUM_2'] },
   { label: 'Business Enterprise (B2B)', ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'] },
 ];
-
-const TAB_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-button)] px-3 py-2 text-xs sm:text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50';
 
 function BillingPageInner() {
   const { tenant } = useAuth();
@@ -260,18 +188,15 @@ function BillingPageInner() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
-  const [showComparison, setShowComparison] = useState(false);
   const [invoices, setInvoices] = useState<PlatformInvoiceItem[]>([]);
-  const [tab, setTab] = useState<BillingTab>(() =>
-    inferBillingTab({
-      tab: searchParams.get('tab'),
-      payRequest: searchParams.get('payRequest'),
-      requestId: searchParams.get('requestId'),
-      flexpay: searchParams.get('flexpay'),
-      plan: searchParams.get('plan'),
-    }),
+  /** Grille des forfaits : panneau latéral ouvert depuis « Changer de forfait » (ou ?tab=plans / ?plan=). */
+  const [plansOpen, setPlansOpen] = useState(
+    () => searchParams.get('tab') === 'plans' || Boolean(searchParams.get('plan')),
   );
-  const didAutoTab = useRef(Boolean(parseBillingTab(searchParams.get('tab'))));
+  const didAutoOpen = useRef(searchParams.get('tab') === 'plans');
+  const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null);
+  /** Le rabais s'ouvre seul (pas par-dessus le panneau) ; « Annuler » rouvre le panneau. */
+  const [discountFromPanel, setDiscountFromPanel] = useState(false);
 
   const [saasPaymentMode, setSaasPaymentMode] = useState<'manual' | 'flexpay'>(
     site.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual',
@@ -427,59 +352,41 @@ function BillingPageInner() {
     tenant?.plan === 'FREE' && focusPlan && focusPlan !== 'FREE' ? focusPlan : null;
 
   useEffect(() => {
-    const requested = parseBillingTab(searchParams.get('tab'));
-    if (requested) {
-      setTab(requested);
-      didAutoTab.current = true;
+    if (searchParams.get('tab') === 'plans') {
+      setPlansOpen(true);
+      didAutoOpen.current = true;
     }
   }, [searchParams]);
 
   useEffect(() => {
-    if (didAutoTab.current || loading) return;
-    if (pendingSignupPlan) {
-      setTab('plans');
-      didAutoTab.current = true;
-    }
+    if (didAutoOpen.current || loading || !pendingSignupPlan) return;
+    setPlansOpen(true);
+    didAutoOpen.current = true;
   }, [pendingSignupPlan, loading]);
 
   useEffect(() => {
-    if (!pendingSignupPlan || loading || tab !== 'plans') return;
+    if (!pendingSignupPlan || loading || !plansOpen) return;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document.getElementById(`plan-${pendingSignupPlan}`)?.scrollIntoView({
-      behavior: reduceMotion ? 'auto' : 'smooth',
-      block: 'center',
-    });
-  }, [pendingSignupPlan, loading, tab]);
+    const timer = window.setTimeout(() => {
+      document.getElementById(`plan-${pendingSignupPlan}`)?.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'center',
+      });
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [pendingSignupPlan, loading, plansOpen]);
 
-  const setBillingTab = (id: BillingTab) => {
-    setTab(id);
-    didAutoTab.current = true;
+  const setPlansPanel = (open: boolean) => {
+    setPlansOpen(open);
+    didAutoOpen.current = true;
     const params = new URLSearchParams(searchParams.toString());
-    if (id === 'overview') params.delete('tab');
-    else params.set('tab', id);
+    if (open) params.set('tab', 'plans');
+    else {
+      params.delete('tab');
+      params.delete('plan');
+    }
     const qs = params.toString();
     router.replace(qs ? `/dashboard/billing?${qs}` : '/dashboard/billing', { scroll: false });
-  };
-
-  const onTabListKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const ids = BILLING_TABS.map((item) => item.id);
-    const index = ids.indexOf(tab);
-    let next: BillingTab | null = null;
-    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-      next = ids[(index + 1) % ids.length];
-    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-      next = ids[(index - 1 + ids.length) % ids.length];
-    } else if (event.key === 'Home') {
-      next = ids[0];
-    } else if (event.key === 'End') {
-      next = ids[ids.length - 1];
-    }
-    if (!next) return;
-    event.preventDefault();
-    setBillingTab(next);
-    requestAnimationFrame(() => {
-      document.getElementById(`billing-tab-${next}`)?.focus();
-    });
   };
 
   const visibleTiers = useMemo(() => {
@@ -488,12 +395,6 @@ function BillingPageInner() {
       ...tier,
       ids: tier.ids.filter((id) => isClientAccount || id === current || visiblePlanIds.includes(id)),
     })).filter((tier) => tier.ids.length > 0);
-  }, [visiblePlanIds, billing?.plan, isClientAccount]);
-
-  const comparisonIds = useMemo(() => {
-    if (isClientAccount) return CLIENT_COMPARISON_IDS;
-    const current = billing?.plan;
-    return PLAN_IDS.filter((id) => id === current || visiblePlanIds.includes(id));
   }, [visiblePlanIds, billing?.plan, isClientAccount]);
 
   const plans = useMemo(() => {
@@ -568,7 +469,7 @@ function BillingPageInner() {
           : `Demande envoyée : ${plans.find((p) => p.id === plan)?.displayName || plan}.`,
       );
       await loadBillingStatus();
-      setBillingTab('requests');
+      setPlansPanel(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la demande.');
     } finally {
@@ -591,19 +492,71 @@ function BillingPageInner() {
     return <SkeletonBillingView />;
   }
 
-  const pendingRequestCount = requests.filter((r) => r.status === 'PENDING' || r.status === 'QUOTED').length;
   const currentPlanName = plans.find((p) => p.id === billing?.plan)?.displayName || billing?.plan || '—';
   const planLabel = (id?: string | null) => plans.find((p) => p.id === id)?.displayName || id || '—';
   const expiresAt = tenant?.licenseExpiresAt ? new Date(tenant.licenseExpiresAt) : null;
 
 
-  const tabCounts: Partial<Record<BillingTab, number>> = {
-    invoices: invoices.length,
-    requests: pendingRequestCount,
+  const activeRequests = requests.filter((r) => r.status === 'PENDING' || r.status === 'QUOTED');
+  const pastRequests = requests.filter((r) => r.status !== 'PENDING' && r.status !== 'QUOTED');
+
+  const renderRequestRow = (req: SubscriptionRequest) => {
+    const canRetry = canRetryFlexPay(req, saasPaymentMode);
+    return (
+      <li key={req.id} className="flex flex-wrap items-center justify-between gap-3 py-3 border-t border-border first:border-t-0">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">{planLabel(req.requestedPlan)}</span>
+            <StatusPill tone={requestStatusTone(req)}>{requestStatusLabel(req)}</StatusPill>
+          </div>
+          <p className="text-xs text-muted mt-0.5">
+            {req.durationDays} jours · {new Date(req.createdAt).toLocaleDateString('fr-FR')}
+            {req.flexPayChannel ? ` · ${req.flexPayChannel}` : ''}
+          </p>
+        </div>
+        {canRetry && (
+          <Button type="button" size="sm" variant={req.status === 'QUOTED' ? 'primary' : 'secondary'} onClick={() => openRetryCheckout(req)}>
+            {req.status === 'QUOTED' ? 'Payer le tarif négocié' : 'Relancer le paiement'}
+          </Button>
+        )}
+      </li>
+    );
   };
 
+  const cleanHighlights = (planId: PlanId, list: string[]) =>
+    list
+      .map((h) => (dynamicPlans?.[planId] ? highlightBeyondQuotas(h) : h))
+      .filter((h): h is string => Boolean(h));
+
+  /** Par groupe : avantages communs affichés une fois, chaque forfait ne garde que ce qui le distingue. */
+  const paidPlansInPanel = visibleTiers
+    .map(({ label, ids }) => {
+      const items = plans.filter((p) => ids.includes(p.id) && p.id !== 'FREE');
+      const lists = items.map((p) => cleanHighlights(p.id, p.highlights));
+      const shared = items.length > 1 ? lists[0].filter((h) => lists.every((l) => l.includes(h))) : [];
+      return {
+        label,
+        items: items.map((p, i) => ({ ...p, own: lists[i].filter((h) => !shared.includes(h)).slice(0, 3) })),
+      };
+    })
+    .filter((tier) => tier.items.length > 0);
+
+  const panelPlans = paidPlansInPanel.flatMap((tier) => tier.items);
+  const selectedPlan =
+    panelPlans.find((p) => p.id === selectedPlanId) ??
+    panelPlans.find((p) => p.id === pendingSignupPlan) ??
+    panelPlans.find((p) => p.id === billing?.plan) ??
+    panelPlans.find((p) => p.highlighted && allowedPaidIds.includes(p.id)) ??
+    panelPlans.find((p) => allowedPaidIds.includes(p.id)) ??
+    null;
+  const selectedIsCurrent = Boolean(selectedPlan && billing?.plan === selectedPlan.id);
+  const selectedAllowed = Boolean(selectedPlan && allowedPaidIds.includes(selectedPlan.id));
+  const selectedActionLabel = selectedIsCurrent
+    ? saasPaymentMode === 'flexpay' ? 'Renouveler' : 'Demander le renouvellement'
+    : saasPaymentMode === 'flexpay' ? 'Payer' : 'Demander'
+
   return (
-    <div className="space-y-5 w-full">
+    <div className="space-y-4 w-full">
 
       {error && <Alert variant="error">{error}</Alert>}
       {successMsg && <Alert variant="success">{successMsg}</Alert>}
@@ -619,477 +572,242 @@ function BillingPageInner() {
         </Alert>
       )}
 
-      <div
-        role="tablist"
-        aria-label="Sections facturation"
-        aria-orientation="horizontal"
-        onKeyDown={onTabListKeyDown}
-        className="flex gap-1 overflow-x-auto overscroll-x-contain rounded-[var(--radius-button)] border border-border bg-surface-muted p-1"
-      >
-        {BILLING_TABS.map((item) => {
-          const selected = tab === item.id;
-          const count = tabCounts[item.id];
-          return (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              id={`billing-tab-${item.id}`}
-              aria-selected={selected}
-              aria-controls={`billing-panel-${item.id}`}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => setBillingTab(item.id)}
-              className={cn(
-                TAB_BUTTON_CLASS,
-                'shrink-0',
-                selected
-                  ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                  : 'text-muted hover:bg-surface/70 hover:text-foreground',
-              )}
-            >
-              <item.icon className="w-4 h-4 shrink-0" aria-hidden />
-              <span>{item.label}</span>
-              {typeof count === 'number' ? (
-                <span
-                  className={cn(
-                    'ml-0.5 min-w-5 px-1.5 py-0.5 rounded-md text-xs font-bold tabular-nums',
-                    selected ? 'bg-primary/10 text-primary' : 'bg-surface text-muted',
-                  )}
-                >
-                  {count}
-                </span>
+      {isClientAccount && (
+        <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 sm:p-6 flex flex-wrap items-center justify-between gap-3">
+          <StatusPill tone="primary">
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5" aria-hidden />
+              Compte client · gratuit
+            </span>
+          </StatusPill>
+          <Button type="button" size="md" onClick={() => setPlansPanel(true)} rightIcon={<ArrowRight className="w-4 h-4" />}>
+            Choisir un forfait
+          </Button>
+        </div>
+      )}
+
+      {billing && !isClientAccount && (
+        <section className="bg-surface rounded-[var(--radius-card)] border border-border p-5 md:p-6 space-y-5" aria-labelledby="billing-current-plan">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="space-y-0.5">
+              <h2 id="billing-current-plan" className="text-lg font-semibold text-foreground">{currentPlanName}</h2>
+              {billing.plan !== 'FREE' && (billing.billingCycle === 'annual' || expiresAt) ? (
+                <p className="text-sm text-muted">
+                  {[
+                    billing.billingCycle === 'annual' ? 'Annuel' : null,
+                    expiresAt
+                      ? `expire le ${expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
               ) : null}
-            </button>
-          );
-        })}
-      </div>
-
-      {tab === 'overview' && (
-        <div id="billing-panel-overview" role="tabpanel" aria-labelledby="billing-tab-overview" tabIndex={0} className="space-y-5">
-          {isClientAccount && (
-            <div className="rounded-[var(--radius-card)] border border-primary/25 bg-surface p-5 sm:p-6 space-y-4">
-              <div className="space-y-2">
-                <StatusPill tone="primary">
-                  <span className="inline-flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5" aria-hidden />
-                    Compte client · gratuit
-                  </span>
-                </StatusPill>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border">
-                <Button type="button" size="md" onClick={() => setBillingTab('plans')} rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Choisir un forfait
-                </Button>
-              </div>
             </div>
-          )}
-
-
-          {billing && (
-            <div className="bg-surface rounded-[var(--radius-card)] border border-border p-5 md:p-6 space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                <div className="space-y-1">
-                  <h2 className="text-lg font-semibold text-foreground">{currentPlanName}</h2>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusPill tone={billing.plan === 'FREE' ? 'amber' : 'emerald'}>
-                      <span className="inline-flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5" aria-hidden />
-                        {billing.plan === 'FREE' ? 'Sans abonnement payant' : 'Actif'}
-                      </span>
-                    </StatusPill>
-                    {billing.plan !== 'FREE' && billing.billingCycle === 'annual' && (
-                      <StatusPill tone="primary">Cycle annuel</StatusPill>
-                    )}
-                    {billing.plan !== 'FREE' && expiresAt ? (
-                      <span className="text-sm text-muted">
-                        Expire le {expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-                {!isClientAccount && (
-                  <Button size="md" variant="secondary" onClick={() => setBillingTab('plans')}>
-                    {billing.plan === 'FREE' ? 'Voir les forfaits' : 'Changer de forfait'}
-                  </Button>
-                )}
-              </div>
-              {!isClientAccount && (
-                <QuotaUsagePanel
-                  quota={{
-                    usage: billing.usage,
-                    limits: billing.limits,
-                  }}
-                />
-              )}
-              {tenant?.accountKind === 'VENDOR' && (
-                <p className="text-xs text-muted leading-relaxed">
-                  Un seul forfait à la fois : il n’y a pas de cumul Salle + Business.
-                  {' '}Compte marketplace : Salle, Prestataire ou Salle & presta (fiches publiées, pas un volume d’agence).
-                </p>
-              )}
-              {(tenant?.accountKind === 'ORGANIZER' || tenant?.accountKind === 'BOTH') &&
-                billing.plan !== 'FREE' &&
-                !billing.plan?.startsWith('PERSONAL') &&
-                (billing.limits?.maxServices ?? 0) > 0 && (
-                <p className="text-xs text-muted leading-relaxed">
-                  Forfait organisation : le catalogue salle + prestations est inclus (vitrine, devis, calendrier).
-                  Un seul forfait à la fois — pas besoin d’un abonnement Salle ou Prestataire séparé.
-                </p>
-              )}
-              {billing.capabilities && !isClientAccount && (
-                <div className="pt-5 border-t border-border grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {capabilityLabels(commercialPercent(site)).map(({ key, label }) => {
-                    const enabled = billing.capabilities![key];
-                    if (typeof enabled !== 'boolean') return null;
-                    return (
-                      <div key={key} className="flex items-center gap-2 text-xs">
-                        {enabled ? (
-                          <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
-                        ) : (
-                          <Minus className="w-3.5 h-3.5 text-muted shrink-0" aria-hidden />
-                        )}
-                        <span className={enabled ? 'text-foreground' : 'text-muted'}>{label}</span>
-                      </div>
-                    );
-                  })}
-                  <div className="flex items-center gap-2 text-xs text-muted sm:col-span-2 lg:col-span-3">
-                    <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
-                    Éditeur salles : <strong className="ml-1 capitalize">
-                      {editorLevelLabel(billing.capabilities.roomEditorLevel) ?? billing.capabilities.roomEditorLevel}
-                    </strong>
-                    {' · '}
-                    Support : <strong className="ml-1 capitalize">
-                      {supportLevelLabel(billing.capabilities.supportLevel) ?? billing.capabilities.supportLevel}
-                    </strong>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === 'plans' && (
-        <div id="billing-panel-plans" role="tabpanel" aria-labelledby="billing-tab-plans" tabIndex={0} className="space-y-6">
-          {isClientAccount && (
-            <Alert variant="info">
-              Paiement d’un forfait = migration automatique du compte (B2C/B2B → organisateur ; Salle / Prestataire / Salle & presta → catalogue).
-              Vous pouvez aussi démarrer depuis l’accueil du tableau de bord.
-            </Alert>
-          )}
-
-          <div className="flex flex-col items-center gap-2">
-            <div
-              role="group"
-              aria-label="Cycle de facturation"
-              className="inline-flex p-1 bg-surface-muted rounded-full border border-border"
-            >
-              {(['monthly', 'annual'] as BillingCycle[]).map((cycle) => (
-                <button
-                  key={cycle}
-                  type="button"
-                  aria-pressed={billingCycle === cycle}
-                  onClick={() => setBillingCycle(cycle)}
-                  className={cn(
-                    'min-h-11 px-5 rounded-full text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    billingCycle === cycle ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]' : 'text-muted',
-                  )}
-                >
-                  {cycle === 'monthly' ? 'Période de base' : `Annuel (−${ANNUAL_DISCOUNT_PERCENT} %)`}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {saasPaymentMode === 'flexpay' && (
-            <p className="text-xs text-muted text-center max-w-lg mx-auto">
-              Au clic sur un forfait, une fenêtre s’ouvre pour choisir Mobile Money ou Visa / Mastercard.
-            </p>
-          )}
-
-          {lockedGenre && (
-            <Alert variant="info">
-              {lockedGenre === 'B2B'
-                ? 'Votre abonnement est Business (B2B) : seuls les forfaits Business, Premium et Enterprise sont proposés.'
-                : lockedGenre === 'B2C'
-                  ? 'Votre abonnement est Particulier : seuls les forfaits Particulier sont proposés.'
-                  : lockedGenre === 'VENUE'
-                    ? 'Votre abonnement est Salle : seul le forfait Salle est proposé.'
-                    : lockedGenre === 'SERVICE'
-                      ? 'Votre abonnement est Prestataire : seul le forfait Prestataire est proposé.'
-                      : 'Votre abonnement est Salle & presta : seul ce forfait marketplace est proposé.'}
-            </Alert>
-          )}
-
-          <div className="space-y-8 rounded-[var(--radius-card)] bg-[#10291c] p-4 sm:p-8">
-            {visibleTiers.map(({ label, ids }) => (
-              <div key={label} className="space-y-4">
-                <h2 className="text-lg font-semibold text-white">{label}</h2>
-                <div className="space-y-4">
-                  {plans
-                    .filter((p) => ids.includes(p.id))
-                    .map((plan) => {
-                      const isCurrent = billing?.plan === plan.id;
-                      const isFocused = pendingSignupPlan === plan.id;
-                      const db = dynamicPlans?.[plan.id];
-                      const planDisabled =
-                        (isCurrent && plan.id === 'FREE') ||
-                        plan.id === 'FREE' ||
-                        actionLoading !== null ||
-                        !allowedPaidIds.includes(plan.id);
-                      const notes: React.ReactNode[] = [];
-                      if (billingCycle === 'annual' && plan.id !== 'FREE') {
-                        notes.push(`Facturé ${isB2cPlanId(plan.id) ? '4 trimestres' : '12 mois'} d’un coup`);
-                      }
-                      if (isCurrent && billing) {
-                        notes.push(
-                          `Utilisé : ${formatQuotaSummary(billing.usage.events, billing.limits.maxEvents)} événements · ${formatQuotaSummary(billing.usage.templates, billing.limits.maxTemplates)} modèles`,
-                        );
-                      }
-                      const mainLabel =
-                        isCurrent && plan.id === 'FREE'
-                          ? 'Forfait actuel (gratuit)'
-                          : isCurrent
-                            ? saasPaymentMode === 'flexpay' ? 'Renouveler maintenant' : 'Demander un renouvellement'
-                            : plan.id === 'FREE'
-                              ? 'Gratuit'
-                              : !allowedPaidIds.includes(plan.id)
-                                ? 'Non disponible pour ce compte'
-                                : saasPaymentMode === 'flexpay'
-                                  ? `Payer ${plan.displayName}`
-                                  : `Demander ${plan.displayName}`;
-                      return (
-                        <div key={plan.id} id={`plan-${plan.id}`} className="scroll-mt-24">
-                          <PlanPricingRow
-                            name={plan.displayName}
-                            badge={isCurrent ? 'Forfait actuel' : plan.badge}
-                            accent={plan.highlighted || isFocused || (isCurrent && plan.id !== 'FREE')}
-                            price={plan.price}
-                            periodSuffix={plan.id !== 'FREE' ? planPricePeriodSuffix(plan.id, billingCycle) : undefined}
-                            notes={notes}
-                            promo={
-                              plan.promoActive && plan.catalogPrice
-                                ? { label: plan.promoLabel, catalogPrice: plan.catalogPrice }
-                                : undefined
-                            }
-                            highlights={plan.highlights
-                              .map((h) => (db ? highlightBeyondQuotas(h) : h))
-                              .filter((h): h is string => Boolean(h))
-                              .map((h) => <ChannelText key={h} text={h} />)}
-                            cta={
-                              <div className="flex flex-wrap items-center gap-2">
-                                <button
-                                  type="button"
-                                  className={planRowButtonClass(plan.highlighted || isFocused || (isCurrent && plan.id !== 'FREE') ? 'solid' : 'outline')}
-                                  disabled={planDisabled}
-                                  onClick={() => handleUpgrade(plan.id)}
-                                >
-                                  {actionLoading === plan.id ? 'Patientez…' : mainLabel}
-                                </button>
-                                {plan.id !== 'FREE' && allowedPaidIds.includes(plan.id) && discountRequestsAllowed ? (
-                                  <button
-                                    type="button"
-                                    className="min-h-11 rounded-full px-3 text-sm font-medium underline-offset-2 hover:underline disabled:opacity-50"
-                                    disabled={actionLoading !== null}
-                                    onClick={() => {
-                                      const durationDays = durationDaysForPlan(plan.id, billingCycle);
-                                      const periodFc = Number(db?.monthlyPriceFc);
-                                      const catalogAmount = getPlanBaseAmountFc(
-                                        Number.isFinite(periodFc) && periodFc > 0 ? periodFc : plan.monthlyPriceFc,
-                                        plan.id,
-                                        durationDays,
-                                      );
-                                      setDiscountTarget({
-                                        planId: plan.id,
-                                        planName: plan.displayName,
-                                        catalogAmount,
-                                      });
-                                    }}
-                                  >
-                                    Demander un rabais
-                                  </button>
-                                ) : null}
-                              </div>
-                            }
-                          />
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">
-            <button
-              type="button"
-              aria-expanded={showComparison}
-              onClick={() => setShowComparison(!showComparison)}
-              className="w-full min-h-11 flex items-center justify-between px-5 py-3 font-semibold text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50"
-            >
-              <span className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-primary" aria-hidden /> Comparer les fonctionnalités
-              </span>
-              <span className="text-xs text-muted">{showComparison ? 'Masquer' : 'Afficher'}</span>
-            </button>
-            {showComparison && (
-              <div className="border-t border-border">
-                <div className="lg:hidden divide-y divide-border">
-                  {FEATURE_COMPARISON.map((row) => (
-                    <details key={row.label} className="group">
-                      <summary className="min-h-11 px-4 py-2.5 text-sm font-semibold text-foreground cursor-pointer list-none flex items-center justify-between gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50 [&::-webkit-details-marker]:hidden">
-                        <ChannelText text={row.label} />
-                        <span className="text-xs font-medium text-muted group-open:hidden">Voir</span>
-                        <span className="text-xs font-medium text-muted hidden group-open:inline">Masquer</span>
-                      </summary>
-                      <ul className="px-4 pb-3 space-y-2">
-                        {comparisonIds.map((id) => (
-                          <li key={id} className="flex items-center justify-between gap-3 text-xs">
-                            <span className="text-muted min-w-0 truncate">
-                              {planDisplayName(id, dynamicPlans?.[id], LANDING_PLANS.find((p) => p.id === id)?.ms365Name)}
-                            </span>
-                            <span className="shrink-0">
-                              <FeatureCell value={comparisonValueFromDb(row.label, id, row.values[id], dynamicPlans?.[id])} />
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  ))}
-                </div>
-                <div className="hidden lg:block overflow-x-auto overscroll-x-contain">
-                  <table className="w-full text-sm min-w-[720px]">
-                    <thead>
-                      <tr className="bg-surface-muted">
-                        <th className="sticky left-0 z-10 bg-surface-muted text-left px-4 py-2 text-xs text-muted min-w-[11rem] shadow-[2px_0_8px_rgba(0,0,0,0.06)]">
-                          Fonctionnalité
-                        </th>
-                        {comparisonIds.map((id) => (
-                          <th key={id} className="px-2 py-2 text-xs text-center text-muted whitespace-nowrap">
-                            {planDisplayName(id, dynamicPlans?.[id], LANDING_PLANS.find((p) => p.id === id)?.ms365Name)}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {FEATURE_COMPARISON.map((row) => (
-                        <tr key={row.label} className="border-t border-border">
-                          <td className="sticky left-0 z-10 bg-surface px-4 py-2 text-xs text-foreground min-w-[11rem] shadow-[2px_0_8px_rgba(0,0,0,0.06)]">
-                            <ChannelText text={row.label} />
-                          </td>
-                          {comparisonIds.map((id) => (
-                            <td key={id} className="py-2 text-center">
-                              <FeatureCell value={comparisonValueFromDb(row.label, id, row.values[id], dynamicPlans?.[id])} />
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {tab === 'invoices' && (
-        <div id="billing-panel-invoices" role="tabpanel" aria-labelledby="billing-tab-invoices" tabIndex={0} className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-muted">Les 5 plus récentes. L’historique complet reste dans Factures.</p>
-            <Button href="/dashboard/invoices" size="md" variant="ghost">
-              Voir tout
+            <Button size="md" onClick={() => setPlansPanel(true)}>
+              Changer de forfait
             </Button>
           </div>
-          {invoices.length === 0 ? (
-            <EmptyState illustration="invoices"
-              icon={<FileText className="w-5 h-5" />}
-              title="Aucune facture pour l’instant"
-              description="Après approbation ou paiement."
-            />
-          ) : (
-            <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 sm:p-6">
-              <InvoiceListPanel
-                invoices={invoices.slice(0, 5)}
-                showFilters={false}
-              />
-            </div>
+          <QuotaUsagePanel
+            quota={{
+              usage: billing.usage,
+              limits: billing.limits,
+            }}
+          />
+          {billing.capabilities && (
+            <p className="pt-4 border-t border-border text-xs text-muted leading-relaxed">
+              {[
+                ...capabilityLabels(commercialPercent(site))
+                  .filter(({ key }) => billing.capabilities![key] === true)
+                  .map(({ label }) => label),
+                `Éditeur salles ${(editorLevelLabel(billing.capabilities.roomEditorLevel) ?? billing.capabilities.roomEditorLevel)?.toLowerCase()}`,
+                `Support ${(supportLevelLabel(billing.capabilities.supportLevel) ?? billing.capabilities.supportLevel)?.toLowerCase()}`,
+              ].join(' · ')}
+            </p>
           )}
-        </div>
+        </section>
       )}
 
-      {tab === 'requests' && (
-        <div id="billing-panel-requests" role="tabpanel" aria-labelledby="billing-tab-requests" tabIndex={0}>
-          {requests.length === 0 ? (
-            <EmptyState illustration="inbox"
-              icon={<Inbox className="w-5 h-5" />}
-              title="Aucune demande"
-            />
-          ) : (
-            <>
-              <div className="md:hidden space-y-3">
-                {requests.map((req) => {
-                  const canRetry = canRetryFlexPay(req, saasPaymentMode);
-                  return (
-                    <div key={req.id} className="rounded-[var(--radius-card)] border border-border p-4 space-y-2 bg-surface">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-sm">{planLabel(req.requestedPlan)}</span>
-                        <StatusPill tone={requestStatusTone(req)}>{requestStatusLabel(req)}</StatusPill>
-                      </div>
-                      <p className="text-xs text-muted">
-                        {req.durationDays} jours · {new Date(req.createdAt).toLocaleDateString('fr-FR')}
-                        {req.flexPayChannel ? ` · ${req.flexPayChannel}` : ''}
-                      </p>
-                      {canRetry && (
-                        <Button type="button" size="md" variant="secondary" onClick={() => openRetryCheckout(req)}>
-                          {req.status === 'QUOTED' ? 'Payer le tarif négocié' : 'Reprendre / relancer le paiement'}
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="hidden md:block overflow-x-auto bg-surface border border-border rounded-[var(--radius-card)]">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-muted text-left">
-                      <th className="px-5 py-3 font-semibold">Forfait</th>
-                      <th className="py-3 font-semibold">Durée</th>
-                      <th className="py-3 font-semibold">Date</th>
-                      <th className="py-3 font-semibold">Statut</th>
-                      <th className="px-5 py-3 font-semibold">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {requests.map((req) => {
-                      const canRetry = canRetryFlexPay(req, saasPaymentMode);
-                      return (
-                        <tr key={req.id} className="border-t border-border">
-                          <td className="px-5 py-3 font-semibold">{planLabel(req.requestedPlan)}</td>
-                          <td className="py-3 tabular-nums">{req.durationDays} j</td>
-                          <td className="py-3">{new Date(req.createdAt).toLocaleDateString('fr-FR')}</td>
-                          <td className="py-3">
-                            <StatusPill tone={requestStatusTone(req)}>{requestStatusLabel(req)}</StatusPill>
-                          </td>
-                          <td className="px-5 py-3">
-                            {canRetry ? (
-                              <Button type="button" size="md" variant="secondary" onClick={() => openRetryCheckout(req)}>
-                                {req.status === 'QUOTED' ? 'Payer le tarif négocié' : 'Relancer'}
-                              </Button>
-                            ) : (
-                              <span className="text-muted">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </div>
+      {activeRequests.length > 0 && (
+        <section className="bg-surface rounded-[var(--radius-card)] border border-border px-5 md:px-6 py-3" aria-label="Demandes en cours">
+          <ul>{activeRequests.map(renderRequestRow)}</ul>
+        </section>
       )}
+
+      {invoices.length > 0 && (
+        <section className="bg-surface rounded-[var(--radius-card)] border border-border p-5 md:p-6 space-y-3" aria-labelledby="billing-invoices">
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="billing-invoices" className="text-sm font-semibold text-foreground">Factures</h2>
+            <Button href="/dashboard/invoices" size="sm" variant="ghost">
+              Tout voir
+            </Button>
+          </div>
+          <InvoiceListPanel invoices={invoices.slice(0, 3)} showFilters={false} />
+        </section>
+      )}
+
+      {pastRequests.length > 0 && (
+        <details className="group rounded-[var(--radius-card)] border border-border bg-surface px-5 md:px-6">
+          <summary className="min-h-12 flex items-center justify-between gap-2 cursor-pointer list-none text-sm font-medium text-muted hover:text-foreground focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+            Demandes précédentes ({pastRequests.length})
+            <span className="text-xs group-open:hidden">Afficher</span>
+            <span className="text-xs hidden group-open:inline">Masquer</span>
+          </summary>
+          <ul className="pb-3">{pastRequests.map(renderRequestRow)}</ul>
+        </details>
+      )}
+
+      <Modal
+        open={plansOpen}
+        onClose={() => setPlansPanel(false)}
+        placement="right"
+        title={isClientAccount ? 'Choisir un forfait' : 'Changer de forfait'}
+        contentClassName="space-y-6"
+        footer={
+          selectedPlan ? (
+            <div className="w-full space-y-2">
+              <Button
+                type="button"
+                size="lg"
+                className="w-full justify-center"
+                disabled={!selectedAllowed || actionLoading !== null}
+                onClick={() => handleUpgrade(selectedPlan.id)}
+              >
+                {actionLoading === selectedPlan.id
+                  ? 'Patientez…'
+                  : `${selectedActionLabel} ${selectedPlan.displayName} · ${selectedPlan.price}`}
+              </Button>
+              {selectedAllowed && discountRequestsAllowed && (
+                <button
+                  type="button"
+                  className="w-full min-h-10 text-xs font-medium text-muted hover:text-foreground underline-offset-2 hover:underline disabled:opacity-50"
+                  disabled={actionLoading !== null}
+                  onClick={() => {
+                    const db = dynamicPlans?.[selectedPlan.id];
+                    const durationDays = durationDaysForPlan(selectedPlan.id, billingCycle);
+                    const periodFc = Number(db?.monthlyPriceFc);
+                    const catalogAmount = getPlanBaseAmountFc(
+                      Number.isFinite(periodFc) && periodFc > 0 ? periodFc : selectedPlan.monthlyPriceFc,
+                      selectedPlan.id,
+                      durationDays,
+                    );
+                    setPlansPanel(false);
+                    setDiscountFromPanel(true);
+                    setDiscountTarget({ planId: selectedPlan.id, planName: selectedPlan.displayName, catalogAmount });
+                  }}
+                >
+                  Demander un rabais sur ce forfait
+                </button>
+              )}
+            </div>
+          ) : undefined
+        }
+      >
+        {isClientAccount && (
+          <Alert variant="info">
+            Payer un forfait transforme votre compte : organisateur pour les forfaits Particulier et Business, catalogue pour Salle et Prestataire.
+          </Alert>
+        )}
+
+        <div role="group" aria-label="Cycle de facturation" className="flex p-1 bg-surface-muted rounded-full border border-border">
+          {(['monthly', 'annual'] as BillingCycle[]).map((cycle) => (
+            <button
+              key={cycle}
+              type="button"
+              aria-pressed={billingCycle === cycle}
+              onClick={() => setBillingCycle(cycle)}
+              className={cn(
+                'flex-1 min-h-10 px-3 rounded-full text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                billingCycle === cycle ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]' : 'text-muted',
+              )}
+            >
+              {cycle === 'monthly' ? 'Période de base' : `Annuel −${ANNUAL_DISCOUNT_PERCENT} %`}
+            </button>
+          ))}
+        </div>
+
+        {paidPlansInPanel.map(({ label, items }) => (
+          <section key={label} className="space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">{label}</h3>
+            <div role="radiogroup" aria-label={label} className="rounded-2xl border border-border overflow-hidden divide-y divide-border">
+              {items.map((plan) => {
+                const isCurrent = billing?.plan === plan.id;
+                const isSelected = selectedPlan?.id === plan.id;
+                const allowed = allowedPaidIds.includes(plan.id);
+                return (
+                  <button
+                    key={plan.id}
+                    id={`plan-${plan.id}`}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    disabled={!allowed}
+                    onClick={() => setSelectedPlanId(plan.id)}
+                    className={cn(
+                      'relative w-full text-left px-4 py-3.5 flex items-start gap-3 transition scroll-mt-4',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50',
+                      isSelected ? 'bg-primary/[0.07]' : 'bg-surface hover:bg-surface-muted/60',
+                      !allowed && 'opacity-50 cursor-not-allowed',
+                    )}
+                  >
+                    {isSelected && <span className="absolute inset-y-0 left-0 w-1 bg-primary" aria-hidden />}
+                    <span
+                      className={cn(
+                        'mt-0.5 w-[18px] h-[18px] shrink-0 rounded-full border-2 flex items-center justify-center',
+                        isSelected ? 'border-primary' : 'border-border',
+                      )}
+                      aria-hidden
+                    >
+                      {isSelected && <span className="w-2 h-2 rounded-full bg-primary" />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-sm font-semibold text-foreground">{plan.displayName}</span>
+                        {isCurrent && (
+                          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold">Actuel</span>
+                        )}
+                        {!isCurrent && plan.highlighted && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 text-[11px] font-semibold">Le plus choisi</span>
+                        )}
+                      </span>
+                      {plan.badge && <span className="block text-xs text-muted mt-0.5">{plan.badge}</span>}
+                      {isSelected && plan.own.length > 0 && (
+                        <span className="mt-2 block space-y-1">
+                          {plan.own.map((h) => (
+                            <span key={h} className="flex items-start gap-1.5 text-xs text-foreground">
+                              <Check className="w-3.5 h-3.5 text-primary shrink-0 mt-px" aria-hidden />
+                              <ChannelText text={h} />
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-right shrink-0">
+                      <span className={cn('block font-bold tabular-nums tracking-tight', isSelected ? 'text-lg text-foreground' : 'text-base text-foreground')}>
+                        {plan.price}
+                      </span>
+                      <span className="block text-[11px] text-muted">{planPricePeriodSuffix(plan.id, billingCycle)}</span>
+                      {plan.promoActive && plan.catalogPrice && (
+                        <span className="block text-[11px] text-muted line-through tabular-nums">{plan.catalogPrice}</span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+
+        <a
+          href="/tarifs"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 min-h-11 text-sm font-semibold text-primary hover:underline underline-offset-2"
+        >
+          Comparer toutes les fonctionnalités
+          <ArrowRight className="w-4 h-4" aria-hidden />
+        </a>
+      </Modal>
 
       {flexPayCheckout && (saasPaymentMode === 'flexpay' || Boolean(flexPayCheckout.retryRequestId)) ? (
         <SubscriptionFlexPayModal
@@ -1106,14 +824,20 @@ function BillingPageInner() {
           onPaid={async () => {
             setSuccessMsg('Paiement confirmé. Forfait activé.');
             await loadBillingStatus();
-            setBillingTab('overview');
+            setPlansPanel(false);
           }}
         />
       ) : null}
 
       <SubscriptionDiscountRequestModal
         open={Boolean(discountTarget)}
-        onClose={() => setDiscountTarget(null)}
+        onClose={() => {
+          setDiscountTarget(null);
+          if (discountFromPanel) {
+            setDiscountFromPanel(false);
+            setPlansPanel(true);
+          }
+        }}
         planName={discountTarget?.planName || ''}
         catalogAmount={discountTarget?.catalogAmount || 0}
         submitting={discountSubmitting}
@@ -1127,9 +851,10 @@ function BillingPageInner() {
               ...payload,
             });
             setDiscountTarget(null);
+            setDiscountFromPanel(false);
             setSuccessMsg('Demande de rabais envoyée. Vous recevrez une notification avec un lien de paiement dès validation.');
             await loadBillingStatus();
-            setBillingTab('requests');
+            setPlansPanel(false);
           } finally {
             setDiscountSubmitting(false);
           }

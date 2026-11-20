@@ -378,7 +378,7 @@ function ParamNumber({
   );
 }
 
-export default function RoomsManagement() {
+export default function RoomsManagement({ headerAction }: { headerAction?: React.ReactNode } = {}) {
   const aiDraftConsumed = useRef(false);
   const { planFeatures, planQuota, tenant, planName, refreshProfile, refreshPlanFeatures } = useAuth();
   /** Nom commercial du forfait (base) ; l'identifiant brut seulement si le nom n'est pas chargé. */
@@ -1504,51 +1504,17 @@ export default function RoomsManagement() {
   };
 
   return (
-    <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 sm:p-6 space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
-        <div>
-          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-primary" />
-            Salles de l&apos;organisation
-          </h2>
-          {!canCatalogPublish ? (
-            <p className="text-xs text-muted mt-1">Plan de table uniquement, sans publication au catalogue.</p>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          {planQuota && planQuota.limits.maxRooms < 9999 && !roomsAtLimit ? (
+            <span className="text-sm tabular-nums text-muted">
+              {planQuota.usage.rooms} / {planQuota.limits.maxRooms} salle{planQuota.limits.maxRooms > 1 ? 's' : ''}
+            </span>
           ) : null}
-          {planQuota && (() => {
-            const max = planQuota.limits.maxRooms;
-            const unlimited = max >= 9999;
-            const used = planQuota.usage.rooms;
-            const pct = unlimited || max <= 0 ? 0 : Math.min(100, Math.round((used / max) * 100));
-            return (
-              <div className="mt-3 max-w-xs space-y-1">
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="font-semibold text-foreground tabular-nums">
-                    {used} / {unlimited ? '∞' : max} salle{used > 1 ? 's' : ''}
-                  </span>
-                  {planFeatures?.roomEditorLevel && (
-                    <span className="text-muted">Éditeur {planFeatures.roomEditorLevel}</span>
-                  )}
-                </div>
-                {!unlimited && (
-                  <div
-                    className="h-1.5 rounded-full bg-surface-muted overflow-hidden"
-                    role="progressbar"
-                    aria-label="Salles utilisées sur votre forfait"
-                    aria-valuemin={0}
-                    aria-valuemax={max}
-                    aria-valuenow={used}
-                  >
-                    <div
-                      className={cn('h-full rounded-full transition-all', pct >= 100 ? 'bg-danger' : pct >= 80 ? 'bg-festive-accent' : 'bg-primary')}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })()}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {headerAction}
           {rooms.length > 0 && (
             <ViewModeToggle
               storageKey="em-view-rooms"

@@ -1,5 +1,8 @@
-const CACHE_NAME = 'eventmaster-cache-v3';
-const ASSETS_TO_CACHE: string[] = [];
+// v4 : purge les réponses RSC mises en cache par la v3 (cause de « Connection closed »).
+const CACHE_NAME = 'eventmaster-cache-v4';
+/** En local (next dev), aucun cache : les fichiers changent à chaque compilation. */
+const IS_LOCAL_DEV = ['localhost', '127.0.0.1', '[::1]'].includes(self.location.hostname);
+const ASSETS_TO_CACHE = [];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -33,6 +36,12 @@ self.addEventListener('fetch', (event) => {
   ) {
     return;
   }
+
+  if (IS_LOCAL_DEV) return;
+
+  // Flux RSC des navigations Next.js : toujours le réseau, jamais le cache (réponse liée au build et à l'état).
+  const url = new URL(event.request.url);
+  if (url.searchParams.has('_rsc') || event.request.headers.get('RSC') === '1') return;
 
   // Pages HTML : réseau d'abord pour éviter un ancien bundle JS en cache
   if (event.request.mode === 'navigate') {

@@ -190,8 +190,8 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-guide': {
     title: 'Guide utilisateur',
     description:
-      'Documentation détaillée et visite guidée interactive de votre espace. Relancez le tour des onglets à tout moment depuis l\'onglet « Visite guidée ».',
-    route: '/dashboard/guide?view=tour',
+      'Visite guidée interactive de votre espace : relancez le tour des onglets à tout moment.',
+    route: '/dashboard',
   },
   'nav-profile': {
     title: 'Mon compte',
@@ -272,14 +272,14 @@ export const WELCOME_STEP = {
   title: 'Bienvenue sur EventMaster',
   description:
     'Cette visite interactive parcourt chaque onglet de votre menu et explique son rôle. Cliquez sur Suivant pour avancer — vous pourrez relancer la visite quand vous voulez.',
-  route: '/dashboard/guide?view=tour',
+  route: '/dashboard',
 } as const;
 
 export const FINISH_STEP = {
   id: 'finish',
   title: 'Visite terminée',
   description:
-    'Vous avez parcouru tous les onglets disponibles pour votre profil. Consultez la documentation pour plus de détails ou relancez cette visite à tout moment.',
-  route: '/dashboard/guide?view=tour',
+    'Vous avez parcouru tous les onglets disponibles pour votre profil. Relancez cette visite à tout moment depuis Guide utilisateur.',
+  route: '/dashboard',
   target: 'nav-guide',
 } as const;

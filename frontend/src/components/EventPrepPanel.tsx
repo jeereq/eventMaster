@@ -750,22 +750,14 @@ export default function EventPrepPanel({
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-foreground tracking-tight">Préparation</h2>
-          <p className="text-sm text-muted">
-            Choisissez comment composer le pack budget (par critères ou avec l’IA), puis retenez-le pour les devis. Le plan de salle se crée à part.
-            {dateKey ? ` Date : ${new Date(`${dateKey}T12:00:00`).toLocaleDateString('fr-FR')}.` : ''}
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold text-foreground tracking-tight">Préparation</h2>
         <div className="flex items-center gap-2 shrink-0">
           {saving ? (
             <span className="inline-flex items-center gap-1.5 text-xs text-muted">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               Enregistrement…
             </span>
-          ) : (
-            <span className="text-xs text-muted">Enregistré automatiquement</span>
-          )}
+          ) : null}
           <Link
             href={`/dashboard/bookings?event=${encodeURIComponent(eventId)}`}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-[var(--radius-button)] border border-border hover:border-primary/40 hover:bg-primary/5 transition"

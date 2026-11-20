@@ -30,7 +30,7 @@ function spaceCopy(planName?: string | null): { title: string; welcome: string; 
   return {
     title: `Visite de votre espace ${space}`,
     welcome: `Cette visite parcourt les onglets de votre espace ${space} et explique leur rôle. Cliquez sur Suivant pour avancer — vous pourrez relancer la visite quand vous voulez.`,
-    finish: `Vous avez parcouru les onglets de votre espace ${space}. Consultez la documentation pour plus de détails ou relancez cette visite à tout moment.`,
+    finish: `Vous avez parcouru les onglets de votre espace ${space}. Relancez cette visite à tout moment depuis Guide utilisateur.`,
   };
 }
 
@@ -68,8 +68,6 @@ export function buildOrgNavTourIds(
   access?: OrgAccess | null,
 ): Array<{ tourId: string; route?: string }> {
   const tabs: Array<{ tourId: string; route?: string }> = [{ tourId: 'nav-dashboard' }];
-  if (access?.canViewBilling) tabs.push({ tourId: 'nav-billing' });
-  if (access?.canViewInvoices) tabs.push({ tourId: 'nav-invoices', route: '/dashboard/invoices' });
   if (!workspace || workspace.showEvents) tabs.push({ tourId: 'nav-events' });
   if (workspace?.showRooms) tabs.push({ tourId: 'nav-rooms' });
   if (workspace?.showBrowseCatalogue) tabs.push({ tourId: 'nav-catalogue' });
@@ -84,6 +82,9 @@ export function buildOrgNavTourIds(
   }
   if (workspace?.showTemplates) tabs.push({ tourId: 'nav-templates', route: '/dashboard/templates' });
   if (workspace?.showAnalytics) tabs.push({ tourId: 'nav-analytics-org' });
+  // Paramètres, en bas du menu : forfait, factures, puis guide et compte.
+  if (access?.canViewBilling) tabs.push({ tourId: 'nav-billing' });
+  if (access?.canViewInvoices) tabs.push({ tourId: 'nav-invoices', route: '/dashboard/invoices' });
   tabs.push({ tourId: 'nav-guide' }, { tourId: 'nav-profile' });
   return tabs;
 }
@@ -239,7 +240,6 @@ export function buildFirstLoginTour(
 
     default: {
       push('nav-dashboard', home);
-      if (access?.canViewBilling) push('nav-billing');
       if (!workspace || workspace.showEvents) {
         push('nav-events');
         if (workspace?.showBrowseCatalogue) push('nav-catalogue');
@@ -250,6 +250,7 @@ export function buildFirstLoginTour(
         if (workspace.showRooms) push('nav-rooms');
         if (workspace.showMarketplace) push('nav-marketplace');
       }
+      if (access?.canViewBilling) push('nav-billing');
       const nextHint = workspace && !workspace.showEvents
         ? 'Ensuite : publiez une fiche salle ou prestation, puis choisissez un forfait marketplace.'
         : workspace?.showMarketplace

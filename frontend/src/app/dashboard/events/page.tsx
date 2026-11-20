@@ -11,11 +11,12 @@ import {
   Sparkles, CheckCircle2, XCircle, AlertCircle, Loader2,
   Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
   ClipboardList, Eye, Utensils, FileSpreadsheet, Download, LayoutGrid,
-  Building2, ScanLine, Shirt, Globe, GlobeLock,
+  Building2, ScanLine, Shirt, MoreHorizontal,
 } from '@/components/icons';
 import dynamic from 'next/dynamic';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
 import EventWorkflowPanel from '@/components/EventWorkflowPanel';
+import EventOverview from '@/components/EventOverview';
 import {
   computeEventWorkflowState,
   countAssignedGuests,
@@ -30,7 +31,7 @@ import {
   applyInvitationGuidelineVariables,
   formatGuestGuidelinesBlock,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, IconButton, Modal, Input, Pagination, usePaginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, CardHeader, EmptyState, Alert, ConfirmDialog } from '@/components/ui';
+import { Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, OverflowMenu, Modal, Input, Pagination, usePaginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, EmptyState, Alert, ConfirmDialog } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import { EVENT_ENTRY_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { cn } from '@/lib/cn';
@@ -129,7 +130,7 @@ function EventsFixedOverlay({ children }: { children: React.ReactNode }) {
 const GUEST_FILTER_CONTROL =
   'w-full min-h-[44px] px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary';
 
-const GUEST_DATA_TABS = new Set(['guests', 'invitations', 'tablePlan', 'protocol']);
+const GUEST_DATA_TABS = new Set(['overview', 'guests', 'invitations', 'tablePlan', 'protocol']);
 
 type PendingDestructive =
   | { type: 'event'; id: string }
@@ -758,7 +759,7 @@ function EventsPageInner() {
 
   // Tabs
   const [activeTab, setActiveTab] = useState<EventWorkspaceTab>(
-    isProtocolOnly ? 'protocol' : 'prep',
+    isProtocolOnly ? 'protocol' : 'overview',
   );
 
   // Event form
@@ -1082,15 +1083,14 @@ function EventsPageInner() {
     return hidden;
   }, [ticketingRelevant, selectedEvent?.donations?.enabled]);
 
-  /** Sans onglet demandé dans l’URL, l’événement s’ouvre sur l’étape à faire (pas sur la préparation optionnelle). */
+  /** Sans onglet demandé dans l’URL, l’événement s’ouvre sur la vue d’ensemble. */
   const autoTabEventIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (protocolDesk || isProtocolOnly || tabParam || !selectedEvent || loadingEventDetail) return;
+    if (protocolDesk || isProtocolOnly || tabParam || !selectedEvent) return;
     if (autoTabEventIdRef.current === selectedEvent.id) return;
     autoTabEventIdRef.current = selectedEvent.id;
-    const step = eventWorkflow.steps.find((s) => s.id === eventWorkflow.currentStepId);
-    if (step?.tab && isEventWorkspaceTab(step.tab)) setActiveTab(step.tab);
-  }, [protocolDesk, isProtocolOnly, tabParam, selectedEvent, loadingEventDetail, eventWorkflow]);
+    setActiveTab('overview');
+  }, [protocolDesk, isProtocolOnly, tabParam, selectedEvent]);
 
   const handleWorkflowAction = useCallback((stepId: string) => {
     switch (stepId) {
@@ -2222,9 +2222,36 @@ Merci de confirmer votre présence :
       {/* Header */}
       {!selectedEvent ? (
         <>
-          <PageHeader
-            action={
-              <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1 w-fit">
+            <button
+              type="button"
+              onClick={() => setListView('events')}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3.5 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
+                listView === 'events'
+                  ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
+                  : 'text-muted hover:text-foreground',
+              )}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              Événements
+            </button>
+            <button
+              type="button"
+              onClick={() => setListView('tasks')}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3.5 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
+                listView === 'tasks'
+                  ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
+                  : 'text-muted hover:text-foreground',
+              )}
+            >
+              <ClipboardList className="w-3.5 h-3.5" />
+              Tâches
+            </button>
+          </div>
+            <div className="flex flex-wrap items-center gap-2">
                 {protocolDesk && !isProtocolOnly ? (
                   <Button
                     type="button"
@@ -2254,41 +2281,11 @@ Merci de confirmer votre présence :
                     Créer un événement
                   </Button>
                 ) : null}
-              </div>
-            }
-          />
+            </div>
+          </div>
           {eventsAtLimit && listView === 'events' && (
             <PlanLimitCallout kind="events" planQuota={planQuota} planName={planLabel} />
           )}
-
-          <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1 w-fit">
-            <button
-              type="button"
-              onClick={() => setListView('events')}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-3.5 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
-                listView === 'events'
-                  ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              Événements
-            </button>
-            <button
-              type="button"
-              onClick={() => setListView('tasks')}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-3.5 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
-                listView === 'tasks'
-                  ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
-              <ClipboardList className="w-3.5 h-3.5" />
-              Tâches
-            </button>
-          </div>
 
           {listView === 'tasks' ? (
             <div id="protocol-tasks-inbox">
@@ -2392,10 +2389,6 @@ Merci de confirmer votre présence :
                 </span>
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <StatusPill tone={selectedEvent.isPublic ? 'primary' : 'slate'} className="gap-1.5">
-                  {selectedEvent.isPublic ? <Globe className="w-3.5 h-3.5" aria-hidden /> : <GlobeLock className="w-3.5 h-3.5" aria-hidden />}
-                  {selectedEvent.isPublic ? 'Public' : 'Privé'}
-                </StatusPill>
                 {selectedEvent.room && (
                   <StatusPill tone="slate" className="gap-1.5 max-w-[16rem] truncate">
                     <Building2 className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
@@ -2446,16 +2439,11 @@ Merci de confirmer votre présence :
                   Vue complète
                 </Button>
               ) : null}
-              <IconButton
-                label="Actualiser"
-                icon={RefreshCw}
-                onClick={() => handleManageEvent(selectedEvent)}
-                disabled={loadingEventDetail}
-              />
               {!protocolDesk && (
                 <Button
                   type="button"
                   size="sm"
+                  variant="secondary"
                   onClick={() => handleEditEventClick(selectedEvent)}
                   leftIcon={<Edit3 className="w-4 h-4" />}
                   className="flex-1 sm:flex-initial"
@@ -2463,19 +2451,30 @@ Merci de confirmer votre présence :
                   Modifier
                 </Button>
               )}
-              {!protocolDesk && canManageEvents && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => requestDeleteEvent(selectedEvent.id)}
-                  leftIcon={<Trash2 className="w-4 h-4" />}
-                  className="text-danger hover:bg-danger/10"
-                  aria-label={`Supprimer l'événement ${selectedEvent.title}`}
-                >
-                  <span className="sr-only sm:not-sr-only">Supprimer</span>
-                </Button>
-              )}
+              <OverflowMenu
+                align="right"
+                triggerLabel="Autres actions"
+                triggerClassName="inline-flex items-center justify-center min-h-11 min-w-11 rounded-full border border-border bg-surface text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+                items={[
+                  {
+                    id: 'refresh',
+                    label: 'Actualiser',
+                    icon: RefreshCw,
+                    disabled: loadingEventDetail,
+                    onSelect: () => handleManageEvent(selectedEvent),
+                  },
+                  ...(!protocolDesk && canManageEvents
+                    ? [{
+                        id: 'delete',
+                        label: 'Supprimer l’événement',
+                        icon: Trash2,
+                        danger: true,
+                        onSelect: () => requestDeleteEvent(selectedEvent.id),
+                      }]
+                    : []),
+                ]}
+              />
             </div>
           </div>
         </div>
@@ -2556,17 +2555,8 @@ Merci de confirmer votre présence :
                 year: 'numeric',
               });
               const timing = eventTimingLabel(event.date);
-              const isPast = timing === 'Terminé';
               const meta = (
                 <div className="flex flex-col gap-0.5">
-                  <span className="flex items-center gap-1.5">
-                    <span className="font-medium text-primary">{dateLabel}</span>
-                    {timing ? (
-                      <span className={cn('rounded-full px-1.5 py-px text-xs font-semibold', isPast ? 'bg-surface-muted text-muted' : 'bg-primary/10 text-primary')}>
-                        {timing}
-                      </span>
-                    ) : null}
-                  </span>
                   <span className="flex items-center gap-1 truncate">
                     <MapPin className="w-3 h-3 shrink-0 opacity-70" />
                     {event.placeLabel || formatEventPlace(event) || event.location}
@@ -2593,26 +2583,16 @@ Merci de confirmer votre présence :
                     </button>
                   )}
                   {!protocolDesk && canManageEvents && (
-                    <button
-                      type="button"
-                      onClick={() => handleEditEventClick(event)}
-                      className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition touch-manipulation"
-                      title="Modifier l'événement"
-                      aria-label={`Modifier l'événement ${event.title}`}
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                  )}
-                  {!protocolDesk && canManageEvents && (
-                    <button
-                      type="button"
-                      onClick={() => requestDeleteEvent(event.id)}
-                      className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-danger hover:bg-danger/10 rounded-lg transition touch-manipulation"
-                      title="Supprimer l'événement"
-                      aria-label={`Supprimer l'événement ${event.title}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <OverflowMenu
+                      align="right"
+                      triggerLabel={`Autres actions pour ${event.title}`}
+                      triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+                      items={[
+                        { id: 'edit', label: 'Modifier', icon: Edit3, onSelect: () => handleEditEventClick(event) },
+                        { id: 'delete', label: 'Supprimer', icon: Trash2, danger: true, onSelect: () => requestDeleteEvent(event.id) },
+                      ]}
+                    />
                   )}
                 </>
               );
@@ -2626,13 +2606,7 @@ Merci de confirmer votre présence :
                   icon={<Calendar className="w-4 h-4" />}
                   coverUrl={coverFromPhotos(event.photos)}
                   overlayMeta={timing ? `${dateLabel} · ${timing}` : dateLabel}
-                  badge={
-                    event.isPublic ? (
-                      <StatusPill tone="emerald">Public</StatusPill>
-                    ) : (
-                      <StatusPill tone="slate">Privé</StatusPill>
-                    )
-                  }
+                  badge={event.isPublic ? <StatusPill tone="emerald">Public</StatusPill> : undefined}
                   ctaLabel={protocolDesk ? 'Accueillir' : 'Gérer'}
                   meta={
                     eventsViewMode === 'list'
@@ -2641,11 +2615,6 @@ Merci de confirmer votre présence :
                   }
                   value={eventsViewMode === 'list' ? dateLabel : undefined}
                   valueMeta={eventsViewMode === 'list' ? timing || undefined : undefined}
-                  description={
-                    eventsViewMode === 'grid' && event.description
-                      ? event.description
-                      : undefined
-                  }
                   onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? 'protocol' : undefined, protocol: protocolDesk }))}
                   actions={actions}
                 />
@@ -2673,8 +2642,6 @@ Merci de confirmer votre présence :
             workflow={eventWorkflow}
             activeTab={deskTab}
             onNavigateTab={handleWorkflowNavigate}
-            onAction={handleWorkflowAction}
-            compact={false}
             protocolDesk={protocolDesk}
             personal={isPersonalOrganizer}
             badges={eventTabBadges}
@@ -2707,6 +2674,16 @@ Merci de confirmer votre présence :
                 <EventDonationsReportView
                   eventId={selectedEvent.id}
                   eventTitle={selectedEvent.title}
+                />
+              )}
+
+              {deskTab === 'overview' && !protocolDesk && (
+                <EventOverview
+                  workflow={eventWorkflow}
+                  guests={guests}
+                  tablePlan={selectedEvent.tablePlan}
+                  onNavigateTab={handleWorkflowNavigate}
+                  onAction={handleWorkflowAction}
                 />
               )}
 
@@ -3242,33 +3219,6 @@ Merci de confirmer votre présence :
               {/* Tab Content: Invitations */}
               {deskTab === 'invitations' && !protocolDesk && (
                 <div className="space-y-4 animate-fade-in">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                    <p className="text-sm text-muted sm:pt-2">
-                      {messaging.any
-                        ? `Envoi ${messaging.via()} avec un lien de réponse personnel.`
-                        : 'Chaque invité reçoit un lien de réponse personnel.'}
-                    </p>
-                    <div className="flex flex-col items-stretch sm:items-end gap-1.5 shrink-0">
-                      <Button
-                        onClick={() => {
-                          if (invitations[0]) {
-                            handleEditInvitationClick(invitations[0]);
-                          } else {
-                            openNewInvitationModal();
-                          }
-                        }}
-                        leftIcon={invitations[0] ? <Edit3 className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}
-                      >
-                        {invitations[0] ? 'Modifier le message' : 'Configurer une invitation'}
-                      </Button>
-                      {invitations.length > 0 ? (
-                        <Button variant="ghost" size="sm" onClick={openNewInvitationModal}>
-                          Ajouter une autre invitation
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-
                   {/* Entonnoir de Conversion (Insights) */}
                   {invitations.length > 0 && guests.length > 0 && (
                     <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
@@ -3290,32 +3240,12 @@ Merci de confirmer votre présence :
                         <dd className="text-lg font-semibold text-foreground tabular-nums">
                           {guests.filter(g => g.rsvp !== 'PENDING').length}
                           <span className="text-xs font-medium text-muted ml-1.5">
-                            {guests.filter(g => g.preferences?.invitationSentAt).length > 0
-                              ? `${Math.round((guests.filter(g => g.rsvp !== 'PENDING').length / guests.filter(g => g.preferences?.invitationSentAt).length) * 100) || 0} % de conversion`
-                              : '0 % de conversion'}
+                            {Math.round((guests.filter(g => g.rsvp !== 'PENDING').length / guests.length) * 100) || 0} % de la liste
                           </span>
                         </dd>
                       </div>
                     </dl>
                   )}
-
-                  <Card>
-                    <CardHeader
-                      title={
-                        <span className="inline-flex items-center gap-2">
-                          <ClipboardList className="w-4 h-4 text-primary" />
-                          Formulaire de réponse
-                        </span>
-                      }
-                      description="Genre, allergies, boissons, menu."
-                      action={
-                        <Button size="sm" onClick={handleSaveEventRsvpForm} loading={savingRsvpForm} disabled={savingRsvpForm}>
-                          Enregistrer le formulaire
-                        </Button>
-                      }
-                    />
-                    <RsvpFieldTypeEditor fields={eventRsvpFields} onChange={setEventRsvpFields} />
-                  </Card>
 
                   {invitations.length === 0 ? (
                     <EmptyState illustration="inbox"
@@ -3394,6 +3324,35 @@ Merci de confirmer votre présence :
                       ))}
                     </div>
                   )}
+
+                  {invitations.length > 0 ? (
+                    <div>
+                      <Button variant="ghost" size="sm" onClick={openNewInvitationModal} leftIcon={<PlusCircle className="w-4 h-4" />}>
+                        Ajouter une autre invitation
+                      </Button>
+                    </div>
+                  ) : null}
+
+                  <details className="group rounded-[var(--radius-card)] border border-border bg-surface">
+                    <summary className="min-h-14 px-4 sm:px-5 flex items-center justify-between gap-3 cursor-pointer list-none rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 [&::-webkit-details-marker]:hidden">
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <ClipboardList className="w-4 h-4 text-primary shrink-0" aria-hidden />
+                          Formulaire de réponse
+                        </span>
+                        <span className="block text-xs text-muted mt-0.5">Genre, allergies, boissons, menu</span>
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-muted shrink-0 transition-transform group-open:rotate-90" aria-hidden />
+                    </summary>
+                    <div className="px-4 sm:px-5 pb-4 sm:pb-5 space-y-4">
+                      <RsvpFieldTypeEditor fields={eventRsvpFields} onChange={setEventRsvpFields} />
+                      <div className="flex justify-end">
+                        <Button size="sm" variant="secondary" onClick={handleSaveEventRsvpForm} loading={savingRsvpForm} disabled={savingRsvpForm}>
+                          Enregistrer le formulaire
+                        </Button>
+                      </div>
+                    </div>
+                  </details>
                 </div>
               )}
 

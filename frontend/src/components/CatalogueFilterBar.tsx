@@ -228,7 +228,8 @@ export default function CatalogueFilterBar({
     setOpen(false);
   };
 
-  const chipsRow = (count > 0 || resultLabel) ? (
+  const showResult = Boolean(resultLabel) && (count > 0 || search.trim().length > 0);
+  const chipsRow = (count > 0 || showResult) ? (
     <div className={cn(
       'flex flex-wrap items-center gap-1.5 min-w-0 max-w-full',
       'overflow-x-auto flex-nowrap md:flex-wrap pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none]',
@@ -279,7 +280,7 @@ export default function CatalogueFilterBar({
           Tout effacer
         </button>
       ) : null}
-      {resultLabel && variant !== 'float' ? (
+      {showResult && variant !== 'float' ? (
         <span className="ml-auto text-xs text-muted font-medium w-full sm:w-auto shrink-0">{resultLabel}</span>
       ) : null}
     </div>
@@ -427,12 +428,12 @@ export default function CatalogueFilterBar({
           )}
           {!hideShare ? (
           <ShareButton
-            variant="button"
+            variant="icon"
             title={shareTitle || 'Recherche EventMaster'}
             text="Salles, prestataires, matériel & équipements et événements filtrés sur EventMaster."
-            label="Partager"
+            label="Partager la recherche"
             url={shareUrl}
-            className="hidden sm:inline-flex shrink-0 px-2.5 sm:px-3"
+            className="hidden sm:inline-flex shrink-0"
           />
           ) : null}
           {actions}

@@ -1,4 +1,5 @@
 export type EventWorkspaceTab =
+  | 'overview'
   | 'guests'
   | 'guestInfo'
   | 'feed'
@@ -12,6 +13,7 @@ export type EventWorkspaceTab =
   | 'donations';
 
 export const EVENT_WORKSPACE_TABS: EventWorkspaceTab[] = [
+  'overview',
   'prep',
   'ticketing',
   'donations',

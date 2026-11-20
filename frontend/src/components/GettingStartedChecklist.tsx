@@ -3,7 +3,7 @@ import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Circle, ChevronRight, Sparkles, X } from '@/components/icons';
+import { ArrowRight, X } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 import { GETTING_STARTED_CHANGED_EVENT, GETTING_STARTED_STORAGE_KEY } from '@/lib/firstLoginTour';
@@ -66,7 +66,7 @@ type ChecklistStep = {
 };
 
 /**
- * Parcours guidé type Asana : étapes claires, progression visible, dismissible.
+ * Parcours de démarrage : progression en segments et un seul bouton vers l'étape suivante.
  */
 export default function GettingStartedChecklist({
   hasEvents,
@@ -197,109 +197,91 @@ export default function GettingStartedChecklist({
     writeFlow(next);
   };
 
+  const laterSteps = steps.filter((s) => !s.done && s.id !== nextStep?.id);
+  const openCreateHere = nextStep?.id === 'event' && Boolean(onCreateEvent);
+  const nextClass =
+    'inline-flex min-h-11 max-w-full items-center gap-2 rounded-full bg-primary-solid px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary-solid-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+
   return (
     <section
-      className={cn(
-        'rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5',
-        className,
-      )}
+      className={cn('rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5', className)}
       aria-labelledby="getting-started-title"
     >
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-start gap-3 min-w-0">
-          <div className="shrink-0 w-8 h-8 rounded-[var(--radius-button)] bg-surface-muted text-primary flex items-center justify-center border border-border">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <div className="min-w-0">
-            <h2 id="getting-started-title" className="text-sm font-semibold text-foreground tracking-tight">
-              Bien démarrer
-            </h2>
-            <p className="text-xs text-muted mt-0.5">
-              {doneCount}/{steps.length} étapes
-            </p>
-          </div>
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="getting-started-title" className="text-sm font-semibold text-foreground">
+          Bien démarrer
+        </h2>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted tabular-nums">
+            {doneCount} sur {steps.length}
+          </span>
+          <button
+            type="button"
+            onClick={dismiss}
+            className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition"
+            aria-label="Masquer le parcours"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={dismiss}
-          className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition shrink-0"
-          aria-label="Masquer le parcours"
-          title="Masquer"
-        >
-          <X className="w-4 h-4" />
-        </button>
       </div>
 
-      <ol className="space-y-1">
-        {steps.map((step) => {
-          const content = (
-            <span className="flex items-start gap-3 min-w-0 flex-1">
-              <span className="mt-0.5 shrink-0">
-                {step.done ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                ) : (
-                  <Circle className="w-5 h-5 text-muted" />
-                )}
-              </span>
-              <span
-                className={cn(
-                  'min-w-0 text-sm font-medium tracking-tight',
-                  step.done ? 'text-muted line-through' : 'text-foreground',
-                )}
-              >
-                {step.title}
-              </span>
-            </span>
-          );
+      <div className="mt-2 flex gap-1" aria-hidden>
+        {steps.map((step) => (
+          <span
+            key={step.id}
+            title={step.title}
+            className={cn('h-1 flex-1 rounded-full', step.done ? 'bg-primary' : 'bg-surface-muted')}
+          />
+        ))}
+      </div>
 
-          if (step.disabled) {
-            return (
-              <li
-                key={step.id}
-                className="flex items-center gap-2 rounded-lg px-2.5 py-2.5 opacity-50 cursor-not-allowed"
-              >
-                {content}
-              </li>
-            );
-          }
+      {nextStep && (
+        <div className="mt-4">
+          {nextStep.disabled ? (
+            <p className="text-sm text-muted">{nextStep.title}</p>
+          ) : openCreateHere ? (
+            <button
+              type="button"
+              onClick={() => {
+                onStepClick(nextStep.markOnClick);
+                onCreateEvent?.();
+              }}
+              className={nextClass}
+            >
+              <span className="truncate">{nextStep.title}</span>
+              <ArrowRight className="w-4 h-4 shrink-0" aria-hidden />
+            </button>
+          ) : (
+            <Link href={nextStep.href} onClick={() => onStepClick(nextStep.markOnClick)} className={nextClass}>
+              <span className="truncate">{nextStep.title}</span>
+              <ArrowRight className="w-4 h-4 shrink-0" aria-hidden />
+            </Link>
+          )}
+        </div>
+      )}
 
-          const openCreateHere = step.id === 'event' && Boolean(onCreateEvent);
-          const itemClass = cn(
-            'flex items-center gap-2 rounded-lg px-2.5 py-2.5 transition group w-full text-left',
-            !step.done && nextStep?.id === step.id
-              ? 'bg-primary/10 ring-1 ring-primary/20'
-              : 'hover:bg-surface-muted',
-          );
-
-          return (
-            <li key={step.id}>
-              {openCreateHere ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onStepClick(step.markOnClick);
-                    onCreateEvent?.();
-                  }}
-                  className={itemClass}
-                >
-                  {content}
-                  <ChevronRight className="w-4 h-4 text-muted group-hover:text-primary shrink-0" />
-                </button>
+      {laterSteps.length > 0 && (
+        <p className="mt-3 text-xs text-muted">
+          Ensuite :{' '}
+          {laterSteps.map((step, i) => (
+            <React.Fragment key={step.id}>
+              {i > 0 && ' · '}
+              {step.disabled ? (
+                <span>{step.title}</span>
               ) : (
                 <Link
                   href={step.href}
                   onClick={() => onStepClick(step.markOnClick)}
-                  className={itemClass}
+                  className="text-foreground hover:text-primary hover:underline underline-offset-2"
                 >
-                  {content}
-                  <ChevronRight className="w-4 h-4 text-muted group-hover:text-primary shrink-0" />
+                  {step.title}
                 </Link>
               )}
-            </li>
-          );
-        })}
-      </ol>
-
+            </React.Fragment>
+          ))}
+        </p>
+      )}
     </section>
   );
 }

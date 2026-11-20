@@ -2,6 +2,7 @@ import type { TablePlanTable } from '@/lib/tablePlanUtils';
 import { type GuestGuidelines } from '@/lib/guestGuidelines';
 
 export type EventWorkflowTab =
+  | 'overview'
   | 'guests'
   | 'invitations'
   | 'tablePlan'

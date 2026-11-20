@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  PageHeader,
   Alert,
   Button,
   EmptyState,
@@ -204,57 +203,54 @@ export default function TicketsPage() {
 
   return (
     <div className="space-y-6 w-full">
-      <PageHeader
-        action={
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {isOrgRole ? (
+          <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1 w-fit" role="group" aria-label="Billetterie ou achats personnels">
+            <button
+              type="button"
+              onClick={() => selectTab('org')}
+              aria-pressed={activeTab === 'org'}
+              className={cn(
+                'inline-flex min-h-11 items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                activeTab === 'org'
+                  ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
+                  : 'text-muted hover:text-foreground',
+              )}
+            >
+              <Ticket className="w-3.5 h-3.5" aria-hidden />
+              Organisation
+            </button>
+            <button
+              type="button"
+              onClick={() => selectTab('my')}
+              aria-pressed={activeTab === 'my'}
+              className={cn(
+                'inline-flex min-h-11 items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                activeTab === 'my'
+                  ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
+                  : 'text-muted hover:text-foreground',
+              )}
+            >
+              <QrCode className="w-3.5 h-3.5" aria-hidden />
+              Mes billets
+              {tickets.length > 0 && (
+                <span className="rounded-full bg-surface-muted px-1.5 text-xs font-bold tabular-nums text-foreground">
+                  {tickets.length}
+                </span>
+              )}
+            </button>
+          </div>
+        ) : <span />}
+        {!isOrgRole || activeTab === 'my' ? (
           <Link href={agendaHref} className="inline-flex">
             <Button size="sm" variant="secondary" leftIcon={<Calendar className="w-4 h-4" />}>
               Trouver un événement
             </Button>
           </Link>
-        }
-      />
-
-      {/* Barre d'onglets pour les organisateurs, managers et protocole */}
-      {isOrgRole && (
-        <div className="flex gap-1.5 p-1 rounded-2xl bg-surface border border-border shadow-2xs w-fit" role="group" aria-label="Billetterie ou achats personnels">
-          <button
-            type="button"
-            onClick={() => selectTab('org')}
-            aria-pressed={activeTab === 'org'}
-            className={cn(
-              'inline-flex min-h-11 items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition touch-manipulation',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-              activeTab === 'org'
-                ? 'bg-foreground text-background shadow-xs'
-                : 'text-muted hover:text-foreground hover:bg-surface-muted'
-            )}
-          >
-            <Ticket className="w-4 h-4 text-primary" />
-            <span>Billetterie de l’organisation</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => selectTab('my')}
-            aria-pressed={activeTab === 'my'}
-            className={cn(
-              'inline-flex min-h-11 items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition touch-manipulation',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-              activeTab === 'my'
-                ? 'bg-foreground text-background shadow-xs'
-                : 'text-muted hover:text-foreground hover:bg-surface-muted'
-            )}
-          >
-            <QrCode className="w-4 h-4 text-primary" />
-            <span>Mes achats personnels</span>
-            {tickets.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-xs font-bold bg-primary text-primary-foreground">
-                {tickets.length}
-              </span>
-            )}
-          </button>
-        </div>
-      )}
+        ) : null}
+      </div>
 
       {/* Vue billetterie organisation (propriétaire, manager, protocole) */}
       {isOrgRole && activeTab === 'org' ? (

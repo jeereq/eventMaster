@@ -168,7 +168,9 @@ export default function PWAInstallCta({
     closeHelp();
   };
 
-  if (!show) return null;
+  // `visible` peut déjà valoir true quand cette page s'hydrate (effet du provider dans le layout) :
+  // on attend le montage pour rendre la même chose que le serveur.
+  if (!show || !mounted) return null;
 
   if (variant === 'bar') {
     if (chipDismissed) return null;
@@ -198,7 +200,6 @@ export default function PWAInstallCta({
         ) : null}
       </div>
     );
-    if (!mounted) return chip;
     return createPortal(chip, document.body);
   }
 

@@ -15,6 +15,7 @@ import {
   AlignCenterVertical as PhAlignCenterVertical,
   AlignTop as PhAlignTop,
   CalendarX as PhCalendarX,
+  DotsThree as PhDotsThree,
   Code as PhCode,
   ArrowElbowDownLeft as PhArrowElbowDownLeft,
   Disc as PhDisc,
@@ -323,6 +324,7 @@ export const Check = make(PhCheck, 'bold', 'Check');
 export const CheckCircle = make(PhCheckCircle, 'duotone', 'CheckCircle');
 export const CheckCircle2 = make(PhCheckCircle, 'duotone', 'CheckCircle2');
 export const ChevronDown = make(PhCaretDown, 'bold', 'ChevronDown');
+export const MoreHorizontal = make(PhDotsThree, 'bold', 'MoreHorizontal');
 export const ChevronLeft = make(PhCaretLeft, 'bold', 'ChevronLeft');
 export const ChevronRight = make(PhCaretRight, 'bold', 'ChevronRight');
 export const ChevronUp = make(PhCaretUp, 'bold', 'ChevronUp');

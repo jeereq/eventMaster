@@ -154,6 +154,9 @@ export default function Pagination({
     ? pageSizeOptions
     : [...pageSizeOptions, pageSize].sort((a, b) => a - b);
 
+  // Tout tient sur une page, même au plus petit format : rien à paginer.
+  if (singlePage && total <= Math.min(...sizeOptions)) return null;
+
   if (infinite) {
     return (
       <nav
