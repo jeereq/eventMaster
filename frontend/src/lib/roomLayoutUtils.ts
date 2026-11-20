@@ -620,6 +620,8 @@ export interface RoomLayoutBlueprint {
     homeMetalFinish?: import('@/lib/roomHomeFurniture').HomeMetalFinish;
     /** Piscine : forme du bassin (rectangulaire, haricot, ovale, en L…). */
     poolShape?: import('@/lib/roomOutdoorUtils').PoolShape;
+    /** Piscine : type de bassin, eau, revêtement, margelles, accès, projecteurs, décor flottant. */
+    pool?: Partial<import('@/lib/roomPoolDesign').PoolOptions>;
     /** Élément créé à partir d’une image ou d’une vidéo (découpe 3D, panneau, bloc, écran…). */
     customElement?: import('@/lib/roomCustomElements').CustomElementDefinition;
     /** Podium / escalier : nombre de marches. */

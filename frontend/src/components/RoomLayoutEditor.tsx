@@ -25,6 +25,28 @@ import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
   GraduationCap, MessageCircle, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, Move, Rotate3d, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence, Users, Camera,
 } from '@/components/icons';
+import {
+  POOL_ACCESS_LABELS,
+  POOL_COPING_META,
+  POOL_EDGE_LABELS,
+  POOL_FLOATING_LABELS,
+  POOL_LIGHT_PRESETS,
+  POOL_LINER_META,
+  POOL_TYPE_META,
+  POOL_TYPE_ORDER,
+  POOL_WATER_PRESETS,
+  poolDepthRange,
+  resolvePoolDepth,
+  resolvePoolOptions,
+  resolvePoolShape,
+  type PoolAccess,
+  type PoolCoping,
+  type PoolEdge,
+  type PoolFloating,
+  type PoolLiner,
+  type PoolOptions,
+  type PoolType,
+} from '@/lib/roomPoolDesign';
 import { buildPlotGrid, buildSinglePlot, findFreePlotSpot, isOpenSpace, nextPlotLabel, normalizePlotGrid, plotGridFootprint, PLOT_COLORS, PLOT_GRID_DEFAULTS, type PlotGridOptions } from '@/lib/roomPlots';
 import {
   LANDSCAPE_GROUP_LABELS,
@@ -2406,27 +2428,34 @@ export default function RoomLayoutEditor({
     setQuickCreate(null);
   };
 
-  const addLandscapeFixture = (style: LandscapeStyle) => {
+  const addLandscapeFixture = (style: LandscapeStyle, poolType?: PoolType) => {
     if (!caps.canFixtures || !caps.fixtureKinds.includes('landscape')) {
       log('Les aménagements extérieurs ne sont pas inclus dans votre forfait', 'info');
       return;
     }
     const meta = LANDSCAPE_STYLE_META[style];
-    const size = landscapeFootprintPct(style, blueprint.canvas?.widthM ?? 20, blueprint.canvas?.heightM ?? 16);
+    const cw = blueprint.canvas?.widthM ?? 20;
+    const ch = blueprint.canvas?.heightM ?? 16;
+    const poolMeta = style === 'pool' ? POOL_TYPE_META[poolType ?? 'classic'] : null;
+    const size = poolMeta
+      ? { w: Math.max(1.5, Math.min(90, (poolMeta.widthM / cw) * 100)), h: Math.max(1.5, Math.min(90, (poolMeta.depthM / ch) * 100)) }
+      : landscapeFootprintPct(style, cw, ch);
+    const label = poolMeta?.label ?? meta.label;
     const fixture = placeFixtureWithClearance(blueprint, {
       ...createBlueprintFixture('landscape'),
       ...size,
       x: 50 - size.w / 2,
       y: 50 - size.h / 2,
-      label: meta.label,
+      label,
       color: meta.color,
-      heightM: meta.heightM,
+      heightM: poolMeta?.waterDepthM ?? meta.heightM,
       landscapeStyle: style,
+      ...(poolMeta ? { pool: { type: poolType ?? 'classic' }, poolShape: poolMeta.shape } : {}),
       storyId: resolveActiveStoryId(blueprint),
     });
     updateBlueprint(
       { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
-      { message: `${meta.label} ajouté`, kind: 'add' },
+      { message: `${label} ajouté${poolMeta && !['lap', 'spa', 'mirror'].includes(poolType ?? 'classic') ? 'e' : ''}`, kind: 'add' },
     );
     setSelection([{ kind: 'fixture', id: fixture.id }]);
   };
@@ -7172,23 +7201,165 @@ export default function RoomLayoutEditor({
                     </select>
                     <span className="text-xs text-muted">{meta.hint}</span>
                   </label>
-                  {style === 'pool' ? (
-                    <label className="block text-xs space-y-1">
-                      <span className="font-semibold text-muted">Forme du bassin</span>
-                      <select
-                        value={selectedFixture.poolShape ?? 'rectangle'}
-                        onChange={(e) => {
-                          const next = e.target.value as PoolShape;
-                          updateFixture(selectedFixture.id, { poolShape: next }, `Piscine : ${POOL_SHAPE_LABELS[next]}`);
-                        }}
-                        className={EDITOR_FIELD}
-                      >
-                        {POOL_SHAPE_ORDER.map((id) => (
-                          <option key={id} value={id}>{POOL_SHAPE_LABELS[id]}</option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : null}
+                  {style === 'pool' ? (() => {
+                    const po = resolvePoolOptions(selectedFixture.pool);
+                    const typeMeta = POOL_TYPE_META[po.type];
+                    const shapeNow = resolvePoolShape(po.type, selectedFixture.poolShape);
+                    const depthRange = poolDepthRange(po.type);
+                    const depthNow = resolvePoolDepth(po.type, selectedFixture.heightM);
+                    const setPool = (patch: Partial<PoolOptions>, message?: string) =>
+                      updateFixture(selectedFixture.id, { pool: { ...(selectedFixture.pool ?? {}), type: po.type, ...patch } }, message);
+                    const waterPreset = Object.entries(POOL_WATER_PRESETS).find(([, v]) => v.color.toLowerCase() === po.water.toLowerCase())?.[0] ?? 'custom';
+                    const lightPreset = Object.entries(POOL_LIGHT_PRESETS).find(([, v]) => v.color.toLowerCase() === po.lightColor.toLowerCase())?.[0] ?? 'custom';
+                    return (
+                      <div className="space-y-2 p-2 rounded bg-surface border border-border">
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Type de piscine</span>
+                          <select
+                            value={po.type}
+                            onChange={(e) => {
+                              const next = e.target.value as PoolType;
+                              const meta = POOL_TYPE_META[next];
+                              const cw = blueprint.canvas?.widthM ?? 20;
+                              const ch = blueprint.canvas?.heightM ?? 16;
+                              const nw = Math.min(90, (meta.widthM / cw) * 100);
+                              const nh = Math.min(90, (meta.depthM / ch) * 100);
+                              const cx = selectedFixture.x + selectedFixture.w / 2;
+                              const cy = selectedFixture.y + selectedFixture.h / 2;
+                              updateFixture(selectedFixture.id, {
+                                pool: { type: next },
+                                poolShape: meta.shape,
+                                heightM: meta.waterDepthM,
+                                w: nw,
+                                h: nh,
+                                x: Math.max(0, Math.min(100 - nw, cx - nw / 2)),
+                                y: Math.max(0, Math.min(100 - nh, cy - nh / 2)),
+                                label: nextOwnedLabel(selectedFixture.label, typeMeta.label, meta.label),
+                              }, meta.label);
+                            }}
+                            className={EDITOR_FIELD}
+                          >
+                            {POOL_TYPE_ORDER.map((id) => <option key={id} value={id}>{POOL_TYPE_META[id].label}</option>)}
+                          </select>
+                          <span className="text-xs text-muted">{typeMeta.hint}</span>
+                        </label>
+                        {typeMeta.shapes.length > 1 ? (
+                          <label className="block text-xs space-y-1">
+                            <span className="font-semibold text-muted">Forme du bassin</span>
+                            <select
+                              value={shapeNow}
+                              onChange={(e) => {
+                                const next = e.target.value as PoolShape;
+                                updateFixture(selectedFixture.id, { poolShape: next }, `Piscine : ${POOL_SHAPE_LABELS[next]}`);
+                              }}
+                              className={EDITOR_FIELD}
+                            >
+                              {POOL_SHAPE_ORDER.filter((id) => typeMeta.shapes.includes(id)).map((id) => (
+                                <option key={id} value={id}>{POOL_SHAPE_LABELS[id]}</option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
+                        <DecorRangeField
+                          label={po.type === 'mirror' ? 'Hauteur d’eau' : 'Profondeur'}
+                          value={depthNow}
+                          min={depthRange.min}
+                          max={depthRange.max}
+                          step={depthRange.max <= 0.3 ? 0.01 : 0.05}
+                          format={(v) => (v < 1 ? `${Math.round(v * 100)} cm` : fmtM(v))}
+                          onChange={(v) => updateFixture(selectedFixture.id, { heightM: v })}
+                        />
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Couleur de l’eau</span>
+                          <select
+                            value={waterPreset}
+                            onChange={(e) => {
+                              const preset = POOL_WATER_PRESETS[e.target.value];
+                              if (preset) setPool({ water: preset.color }, `Eau : ${preset.label}`);
+                            }}
+                            className={EDITOR_FIELD}
+                          >
+                            {Object.entries(POOL_WATER_PRESETS).map(([id, v]) => <option key={id} value={id}>{v.label}</option>)}
+                            {waterPreset === 'custom' ? <option value="custom">Couleur choisie</option> : null}
+                          </select>
+                          <span className="flex items-center gap-2 pt-1">
+                            <input
+                              type="color"
+                              value={po.water}
+                              onChange={(e) => setPool({ water: e.target.value })}
+                              aria-label="Couleur de l’eau sur mesure"
+                              title="Couleur de l’eau sur mesure"
+                              className={EDITOR_SWATCH}
+                            />
+                            <span className="text-sm text-foreground">Ou une teinte sur mesure</span>
+                          </span>
+                        </label>
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Revêtement du bassin</span>
+                          <select value={po.liner} onChange={(e) => setPool({ liner: e.target.value as PoolLiner }, 'Revêtement du bassin')} className={EDITOR_FIELD}>
+                            {(Object.keys(POOL_LINER_META) as PoolLiner[]).map((id) => <option key={id} value={id}>{POOL_LINER_META[id].label}</option>)}
+                          </select>
+                        </label>
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">{po.type === 'raised' ? 'Rebord' : 'Margelles'}</span>
+                          <select value={po.coping} onChange={(e) => setPool({ coping: e.target.value as PoolCoping }, 'Margelles')} className={EDITOR_FIELD}>
+                            {(Object.keys(POOL_COPING_META) as PoolCoping[]).map((id) => <option key={id} value={id}>{POOL_COPING_META[id].label}</option>)}
+                          </select>
+                        </label>
+                        <DecorRangeField label="Largeur des margelles" value={po.copingM} min={0.15} max={1.5} step={0.05} format={(v) => `${Math.round(v * 100)} cm`} onChange={(v) => setPool({ copingM: v })} />
+                        {po.type === 'infinity' ? (
+                          <label className="block text-xs space-y-1">
+                            <span className="font-semibold text-muted">Côté qui déborde</span>
+                            <select value={po.infinityEdge} onChange={(e) => setPool({ infinityEdge: e.target.value as PoolEdge }, 'Côté du débordement')} className={EDITOR_FIELD}>
+                              {(Object.keys(POOL_EDGE_LABELS) as PoolEdge[]).map((id) => <option key={id} value={id}>{POOL_EDGE_LABELS[id]}</option>)}
+                            </select>
+                          </label>
+                        ) : null}
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Accès au bassin</span>
+                          <select value={po.access} onChange={(e) => setPool({ access: e.target.value as PoolAccess }, 'Accès au bassin')} className={EDITOR_FIELD}>
+                            {(Object.keys(POOL_ACCESS_LABELS) as PoolAccess[]).map((id) => <option key={id} value={id}>{POOL_ACCESS_LABELS[id]}</option>)}
+                          </select>
+                          {po.access === 'roman' && !['rectangle', 'rounded'].includes(shapeNow) && po.type !== 'infinity' ? (
+                            <span className="text-xs text-muted">Sur une forme courbe, les marches sont remplacées par une échelle.</span>
+                          ) : null}
+                        </label>
+                        <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                          <input type="checkbox" checked={po.lights} onChange={(e) => setPool({ lights: e.target.checked }, e.target.checked ? 'Projecteurs allumés' : 'Projecteurs éteints')} className="rounded border-border size-4" />
+                          Projecteurs immergés
+                        </label>
+                        {po.lights ? (
+                          <label className="block text-xs space-y-1">
+                            <span className="font-semibold text-muted">Couleur des projecteurs</span>
+                            <select
+                              value={lightPreset}
+                              onChange={(e) => {
+                                const preset = POOL_LIGHT_PRESETS[e.target.value];
+                                if (preset) setPool({ lightColor: preset.color }, `Projecteurs : ${preset.label}`);
+                              }}
+                              className={EDITOR_FIELD}
+                            >
+                              {Object.entries(POOL_LIGHT_PRESETS).map(([id, v]) => <option key={id} value={id}>{v.label}</option>)}
+                              {lightPreset === 'custom' ? <option value="custom">Couleur choisie</option> : null}
+                            </select>
+                          </label>
+                        ) : null}
+                        {po.type !== 'spa' && po.type !== 'mirror' ? (
+                          <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                            <input type="checkbox" checked={po.waterfall} onChange={(e) => setPool({ waterfall: e.target.checked }, e.target.checked ? 'Cascade ajoutée' : 'Cascade retirée')} className="rounded border-border size-4" />
+                            Cascade (lame d’eau)
+                          </label>
+                        ) : null}
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Sur l’eau</span>
+                          <select value={po.floating} onChange={(e) => setPool({ floating: e.target.value as PoolFloating }, POOL_FLOATING_LABELS[e.target.value as PoolFloating])} className={EDITOR_FIELD}>
+                            {(Object.keys(POOL_FLOATING_LABELS) as PoolFloating[]).map((id) => <option key={id} value={id}>{POOL_FLOATING_LABELS[id]}</option>)}
+                          </select>
+                        </label>
+                        <p className={EDITOR_HINT}>Le bassin est creusé dans le sol : la vue 3D montre les parois, le fond et la profondeur.</p>
+                      </div>
+                    );
+                  })() : null}
                   {style === 'garden' ? (() => {
                     const g = resolveGardenOptions(selectedFixture.garden);
                     const setGarden = (patch: Partial<GardenOptions>, message?: string) =>
@@ -9415,6 +9586,7 @@ export default function RoomLayoutEditor({
     }
     if (can('landscape')) {
       LANDSCAPE_STYLE_ORDER.forEach((style) => push(`landscape-${style}`, LANDSCAPE_STYLE_META[style].label, 'Extérieur', () => addLandscapeFixture(style), `jardin ${LANDSCAPE_STYLE_META[style].hint}`));
+      POOL_TYPE_ORDER.filter((type) => type !== 'classic').forEach((type) => push(`pool-${type}`, POOL_TYPE_META[type].label, 'Extérieur', () => addLandscapeFixture('pool', type), `piscine bassin ${POOL_TYPE_META[type].hint}`));
     }
     const simple: Array<[string, string, string, string?]> = [
       ['stage', 'Scène', 'Décor', 'estrade spectacle'],
@@ -9886,16 +10058,30 @@ export default function RoomLayoutEditor({
         ? (['vegetation', 'water', 'ambiance'] as LandscapeGroup[]).map((group) => (
           <React.Fragment key={group}>
             <span className="basis-full text-xs font-semibold text-muted pt-1">{LANDSCAPE_GROUP_LABELS[group]}</span>
-            {LANDSCAPE_STYLE_ORDER.filter((style) => LANDSCAPE_STYLE_META[style].group === group).map((style) => (
-              <button
-                key={style}
-                type="button"
-                onClick={() => addLandscapeFixture(style)}
-                className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
-                title={LANDSCAPE_STYLE_META[style].hint}
-              >
-                {LANDSCAPE_STYLE_META[style].label}
-              </button>
+            {LANDSCAPE_STYLE_ORDER.filter((style) => LANDSCAPE_STYLE_META[style].group === group).flatMap((style) => (
+              style === 'pool'
+                ? POOL_TYPE_ORDER.map((type) => (
+                  <button
+                    key={`pool-${type}`}
+                    type="button"
+                    onClick={() => addLandscapeFixture('pool', type)}
+                    className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+                    title={POOL_TYPE_META[type].hint}
+                  >
+                    {POOL_TYPE_META[type].label}
+                  </button>
+                ))
+                : [(
+                  <button
+                    key={style}
+                    type="button"
+                    onClick={() => addLandscapeFixture(style)}
+                    className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+                    title={LANDSCAPE_STYLE_META[style].hint}
+                  >
+                    {LANDSCAPE_STYLE_META[style].label}
+                  </button>
+                )]
             ))}
           </React.Fragment>
         ))

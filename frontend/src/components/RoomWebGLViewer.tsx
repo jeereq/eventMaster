@@ -67,6 +67,7 @@ import { wallArtHeightM } from '@/lib/roomWallArt';
 import { WallArtLayer } from '@/components/room/WallArtMeshes';
 import { LedShowLights, type LedWallFace } from '@/components/room/LedShowMeshes';
 import { isLedShowOn, resolveLedShow } from '@/lib/roomLedShow';
+import { poolGroundHole, poolLocalToWorld, resolvePoolOptions, resolvePoolShape } from '@/lib/roomPoolDesign';
 import { isStoryVisible, resolveActiveStoryId, resolveFoundation, resolveStories, stackViewFocusY, worldElevationForStory } from '@/lib/roomBuildingUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { getTableSeatPlacement3D, tablePlateSizeMeters } from '@/lib/tablePlanUtils';
@@ -685,6 +686,8 @@ function CaptureBridge({
   return null;
 }
 
+const NO_POOL_HOLES: Array<Array<[number, number]>> = [];
+
 function FloorPlane({
   widthM,
   heightM,
@@ -696,8 +699,11 @@ function FloorPlane({
   outline,
   onPointerMissed,
   stairHoles = [],
+  poolHoles = NO_POOL_HOLES,
   reflections = false,
 }: {
+  /** Bassins de piscine (contours x, z en mètres) : le sol est percé pour laisser voir le bassin creusé. */
+  poolHoles?: Array<Array<[number, number]>>;
   /** Mode vitrine : vrais reflets de la salle sur les sols brillants (marbre, résine, béton ciré…). */
   reflections?: boolean;
   widthM: number;
@@ -718,7 +724,7 @@ function FloorPlane({
 
   const shapeGeo = useMemo(() => {
     const hasPolygon = outline && outline.shape !== 'rectangle';
-    const hasHoles = stairHoles && stairHoles.length > 0;
+    const hasHoles = (stairHoles && stairHoles.length > 0) || poolHoles.length > 0;
     if (!hasPolygon && !hasHoles) return null;
 
     const shape = new THREE.Shape();
@@ -741,6 +747,9 @@ function FloorPlane({
       shape.closePath();
     }
 
+    for (const ring of poolHoles) {
+      shape.holes.push(new THREE.Path(ring.map(([x, z]) => new THREE.Vector2(x, -z))));
+    }
     if (hasHoles) {
       for (const h of stairHoles) {
         const hole = new THREE.Path();
@@ -763,7 +772,7 @@ function FloorPlane({
     uv.needsUpdate = true;
     // Pas de rotation « cuite » : le maillage est tourné, pour que le miroir du sol trouve sa normale.
     return geo;
-  }, [outline, widthM, heightM, stairHoles]);
+  }, [outline, widthM, heightM, stairHoles, poolHoles]);
 
   // Sols brillants seulement : un parquet mat ne reflète pas la salle.
   const glossy = !mat.isPlan && (mat.roughness < 0.35 || mat.clearcoat >= 0.4);
@@ -2946,6 +2955,8 @@ function FixtureMesh({
   homeMetalFinish,
   garden,
   poolShape,
+  pool,
+  poolSunken,
   customElement,
   flowerType,
   fixtureId,
@@ -3019,6 +3030,8 @@ function FixtureMesh({
   homeMetalFinish?: HomeMetalFinish;
   garden?: RoomLayoutBlueprint['fixtures'][number]['garden'];
   poolShape?: import('@/lib/roomOutdoorUtils').PoolShape;
+  pool?: Partial<import('@/lib/roomPoolDesign').PoolOptions>;
+  poolSunken?: boolean;
   customElement?: CustomElementDefinition;
   flowerType?: string;
   fixtureId?: string;
@@ -3193,6 +3206,8 @@ function FixtureMesh({
           heightM={podiumHeightM}
           seed={seedFromId(fixtureId ?? label ?? 'landscape')}
           poolShape={poolShape}
+          pool={pool}
+          poolSunken={poolSunken}
           garden={garden}
           selected={selected}
         />
@@ -3948,6 +3963,29 @@ function SceneContent({
       });
   }, [blueprint, stories, widthM, heightM]);
 
+  /** Piscines du rez-de-chaussée : contour du bassin à percer dans le sol et le terrain. */
+  const groundPoolHoles = useMemo(() => {
+    if (stackView) return NO_POOL_HOLES;
+    const holes: Array<Array<[number, number]>> = [];
+    for (const f of blueprint.fixtures || []) {
+      if (f.kind !== 'landscape' || f.landscapeStyle !== 'pool') continue;
+      if (!isStoryVisible(blueprint, f.storyId) || worldElevationForStory(blueprint, f.storyId) > 0.01) continue;
+      const o = resolvePoolOptions(f.pool);
+      const wM = (f.w / 100) * widthM;
+      const dM = (f.h / 100) * heightM;
+      const local = poolGroundHole(o, resolvePoolShape(o.type, f.poolShape), wM, dM);
+      if (!local) continue;
+      const [cx, cz] = pctToWorld(f.x + f.w / 2, f.y + f.h / 2, widthM, heightM);
+      holes.push(local.map(([x, z]) => poolLocalToWorld(x, z, cx, cz, f.rotation ?? 0)));
+    }
+    return holes.length > 0 ? holes : NO_POOL_HOLES;
+  }, [blueprint, stackView, widthM, heightM]);
+  const sunkenPoolIds = useMemo(() => new Set(
+    stackView ? [] : (blueprint.fixtures || [])
+      .filter((f) => f.kind === 'landscape' && f.landscapeStyle === 'pool' && worldElevationForStory(blueprint, f.storyId) <= 0.01)
+      .map((f) => f.id),
+  ), [blueprint, stackView]);
+
   const { camera, size } = useThree();
   // Arrondi pour ne recadrer qu’au vrai changement de format (agrandir, rotation du mobile).
   const viewportAspect = size.width > 0 && size.height > 0
@@ -4297,6 +4335,7 @@ function SceneContent({
           outline={blueprint.roomOutline}
           onPointerMissed={() => onSelect(null)}
           stairHoles={activeStoryStairHoles}
+          poolHoles={groundPoolHoles}
           reflections={qualitySettings.quality === 'showcase' && !reduceMotion}
         />
       )}
@@ -4308,6 +4347,7 @@ function SceneContent({
           widthM={widthM}
           depthM={heightM}
           lite={qualitySettings.quality === 'draft'}
+          groundHoles={groundPoolHoles}
         />
       ) : null}
 
@@ -4335,11 +4375,17 @@ function SceneContent({
         return (
           <mesh position={[0, -h / 2 - 0.01, 0]} receiveShadow castShadow>
             <boxGeometry args={[widthM * 1.04, h, heightM * 1.04]} />
-            <meshStandardMaterial
-              color={foundation.color ?? '#78716c'}
-              roughness={0.92}
-              metalness={0.05}
-            />
+            {/* Face du dessus masquée quand une piscine est creusée : sinon elle bouche le bassin. */}
+            {[0, 1, 2, 3, 4, 5].map((face) => (
+              <meshStandardMaterial
+                key={face}
+                attach={`material-${face}`}
+                color={foundation.color ?? '#78716c'}
+                roughness={0.92}
+                metalness={0.05}
+                visible={!(face === 2 && groundPoolHoles.length > 0)}
+              />
+            ))}
           </mesh>
         );
       })()}
@@ -4495,6 +4541,8 @@ function SceneContent({
             homeMetalFinish={f.homeMetalFinish}
             garden={f.garden}
             poolShape={f.poolShape}
+            pool={f.pool}
+            poolSunken={sunkenPoolIds.has(f.id)}
             customElement={f.customElement}
             flowerType={f.flowerType}
             fixtureId={f.id}
