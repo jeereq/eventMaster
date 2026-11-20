@@ -953,10 +953,13 @@ function GuestCrowd({
   guests,
   animate,
   castShadow,
+  danceTimeRef,
 }: {
   guests: SimulatedGuest[];
   animate: boolean;
   castShadow: boolean;
+  /** Horloge musicale des danseurs (secondes « dansées ») ; absente = horloge de la scène. */
+  danceTimeRef?: React.RefObject<number>;
 }) {
   const geo = geometries();
   const materials = useMemo(() => makeMaterials(), []);
@@ -982,7 +985,7 @@ function GuestCrowd({
   }, [guests, buckets, scratch]);
 
   useFrame(({ clock }) => {
-    if (animate) writeCrowd(guests, meshes.current, scratch, clock.elapsedTime, false);
+    if (animate) writeCrowd(guests, meshes.current, scratch, danceTimeRef ? danceTimeRef.current : clock.elapsedTime, false);
   });
 
   return (
@@ -1290,9 +1293,12 @@ export const GuestAvatars = React.memo(function GuestAvatars({
   castShadow = true,
   hiddenGuestId = null,
   onPickGuest,
+  danceTimeRef,
 }: {
   guests: SimulatedGuest[];
   animate?: boolean;
+  /** Horloge musicale : quand la musique joue, les danseurs suivent son tempo. */
+  danceTimeRef?: React.RefObject<number>;
   castShadow?: boolean;
   /** Invité dont on prend le point de vue : on ne dessine pas son corps devant la caméra. */
   hiddenGuestId?: string | null;
@@ -1306,7 +1312,7 @@ export const GuestAvatars = React.memo(function GuestAvatars({
   return (
     <group name="simulated-guests">
       {still.length > 0 ? <GuestCrowd guests={still} animate={false} castShadow={castShadow} /> : null}
-      {dancers.length > 0 ? <GuestCrowd guests={dancers} animate={animate} castShadow={castShadow} /> : null}
+      {dancers.length > 0 ? <GuestCrowd guests={dancers} animate={animate} castShadow={castShadow} danceTimeRef={danceTimeRef} /> : null}
       {portraits.map((g) => <PortraitFace key={g.id} guest={g} />)}
       {onPickGuest ? <GuestPickTargets guests={shown} onPick={onPickGuest} /> : null}
     </group>

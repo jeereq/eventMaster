@@ -28,10 +28,13 @@ export default function AvatarEyeCamera({
   guest,
   lookRef,
   reduceMotion = false,
+  danceTimeRef,
 }: {
   guest: SimulatedGuest;
   lookRef: React.MutableRefObject<AvatarLook>;
   reduceMotion?: boolean;
+  /** Horloge musicale des danseurs (même tempo que la foule). */
+  danceTimeRef?: React.RefObject<number>;
 }) {
   const { camera, gl } = useThree();
   const target = useMemo(() => new THREE.Vector3(), []);
@@ -125,7 +128,7 @@ export default function AvatarEyeCamera({
 
   // Après les contrôles d'orbite (désactivés) et le travelling : la caméra suit les yeux à chaque image.
   useFrame(({ clock }, delta) => {
-    const pose = guestEyePose(guest, clock.elapsedTime);
+    const pose = guestEyePose(guest, danceTimeRef ? danceTimeRef.current : clock.elapsedTime);
     eye.set(pose.x, pose.y, pose.z);
     const yaw = pose.yaw + lookRef.current.yaw;
     const pitch = lookRef.current.pitch;

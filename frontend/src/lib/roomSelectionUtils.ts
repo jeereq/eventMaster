@@ -162,6 +162,7 @@ const FLOOR_FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kin
   'partition',
   'pedestal',
   'djBooth',
+  'speaker',
   'screen',
   'fountain',
   'gazebo',

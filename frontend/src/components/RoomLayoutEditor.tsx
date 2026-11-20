@@ -18,6 +18,7 @@ import {
   type GuestPortrait,
   type GuestSimulationSettings,
 } from '@/lib/roomGuestSimulation';
+import { SPEAKER_STYLES, SPEAKER_STYLE_SPECS, resolveSpeakerStyle, speakerStyleLabels, type SpeakerStyle } from '@/lib/roomMusic';
 import GuestDressCodePicker from '@/components/room/GuestDressCodePicker';
 import GuestPortraitsModal, { preparePortraitPhoto } from '@/components/room/GuestPortraitsModal';
 import dynamic from 'next/dynamic';
@@ -2428,6 +2429,27 @@ export default function RoomLayoutEditor({
     setQuickCreate(null);
   };
 
+  const addSpeakerFixture = (style: SpeakerStyle) => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('speaker')) {
+      log('Les enceintes ne sont pas incluses dans votre forfait', 'info');
+      return;
+    }
+    const fixture = placeFixtureWithClearance(blueprint, {
+      ...createBlueprintFixture('speaker', blueprint.canvas),
+      ...realFixtureFootprintPct('speaker', blueprint.canvas, { speakerStyle: style }),
+      speakerStyle: style,
+      label: speakerStyleLabels[style],
+      heightM: SPEAKER_STYLE_SPECS[style].heightM,
+      storyId: resolveActiveStoryId(blueprint),
+    });
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
+      { message: `${fixture.label} ajoutée — lancez la musique depuis la vue 3D`, kind: 'add' },
+    );
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+    setQuickCreate(null);
+  };
+
   const addLandscapeFixture = (style: LandscapeStyle, poolType?: PoolType) => {
     if (!caps.canFixtures || !caps.fixtureKinds.includes('landscape')) {
       log('Les aménagements extérieurs ne sont pas inclus dans votre forfait', 'info');
@@ -3562,6 +3584,7 @@ export default function RoomLayoutEditor({
         introView={introReplayKey > 0 ? undefined : 'arc'}
         introReplayKey={introReplayKey}
         guestSimulation={guestSim}
+        allowMusicDancers={allowGuestAvatars}
         onSelect={handleCanvasSelect}
         onMoveItem={handleWebGLMove}
         onMoveEnd={handleWebGLMoveEnd}
@@ -6895,6 +6918,34 @@ export default function RoomLayoutEditor({
               </>
             )}
 
+            {selectedFixture.kind === 'speaker' && (
+              <label className="block text-xs space-y-1">
+                <span className="font-semibold text-muted">Type d’enceinte</span>
+                <select
+                  value={resolveSpeakerStyle(selectedFixture.speakerStyle)}
+                  onChange={(e) => {
+                    const style = resolveSpeakerStyle(e.target.value);
+                    const prev = resolveSpeakerStyle(selectedFixture.speakerStyle);
+                    const size = realFixtureFootprintPct('speaker', blueprint.canvas, { speakerStyle: style });
+                    updateFixture(selectedFixture.id, {
+                      speakerStyle: style,
+                      heightM: SPEAKER_STYLE_SPECS[style].heightM,
+                      ...(size ? { w: size.w, h: size.h } : {}),
+                      label: nextOwnedLabel(selectedFixture.label, speakerStyleLabels[prev], speakerStyleLabels[style]),
+                    }, speakerStyleLabels[style]);
+                  }}
+                  className={EDITOR_FIELD}
+                >
+                  {SPEAKER_STYLES.map((style) => (
+                    <option key={style.id} value={style.id}>{style.label}</option>
+                  ))}
+                </select>
+                <span className="text-xs text-muted">
+                  {SPEAKER_STYLES.find((st) => st.id === resolveSpeakerStyle(selectedFixture.speakerStyle))?.hint}. Dans la vue 3D, « Musique » fait jouer le son depuis vos enceintes et danser la piste.
+                </span>
+              </label>
+            )}
+
             {isInstrument && (
               <label className="block text-xs space-y-1">
                 <span className="font-semibold text-muted">Instrument</span>
@@ -9578,6 +9629,9 @@ export default function RoomLayoutEditor({
     if (can('aisle')) {
       (Object.keys(aisleStyleLabels) as AisleStyle[]).forEach((style) => push(`aisle-${style}`, aisleStyleLabels[style], 'Allées', () => addAisleCustomStyle(style), 'allée tapis cérémonie'));
     }
+    if (can('speaker')) {
+      SPEAKER_STYLES.forEach((style) => push(`speaker-${style.id}`, style.label, 'Sono', () => addSpeakerFixture(style.id), `musique enceinte baffle son danse ${style.hint}`));
+    }
     if (can('screen')) {
       (Object.keys(screenKindLabels) as ScreenKind[]).forEach((kind) => push(`screen-${kind}`, screenKindLabels[kind], 'Écrans', () => addScreenFixture(kind), 'écran vidéo'));
     }
@@ -10004,6 +10058,14 @@ export default function RoomLayoutEditor({
       <Gate allowed={caps.fixtureKinds.includes('djBooth')} need={{ fixture: 'djBooth' }}><button type="button" onClick={() => addFixture('djBooth')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           Régie DJ
         </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('speaker')} need={{ fixture: 'speaker' }}><>
+          <button type="button" onClick={() => addSpeakerFixture('column')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Enceinte de sono sur trépied : la musique peut jouer depuis elle">
+            Enceinte
+          </button>
+          <button type="button" onClick={() => addSpeakerFixture('baffle')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Gros baffle au sol : la musique peut jouer depuis lui">
+            Baffle
+          </button>
+        </></Gate>
       <Gate allowed={caps.fixtureKinds.includes('screen')} need={{ fixture: 'screen' }}><>
           <button type="button" onClick={() => addScreenFixture('stageLedWall')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
             Mur LED

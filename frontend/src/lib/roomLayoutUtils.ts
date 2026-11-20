@@ -217,6 +217,7 @@ export type RoomFixtureKind =
   | 'fountain'
   | 'gazebo'
   | 'djBooth'
+  | 'speaker'
   | 'screen'
   | 'instrument'
   | 'bar'
@@ -237,6 +238,7 @@ export type RoomFixtureKind =
 export type FloorDecalKind = 'rose' | 'butterfly' | 'custom' | 'path';
 export type PedestalStyle = 'squareWhite' | 'columnGold';
 export type { CenterpieceStyle, CouvertStyle } from './roomTableware.ts';
+import { SPEAKER_STYLE_SPECS, type SpeakerStyle } from './roomMusic.ts';
 import type { CenterpieceStyle, CouvertStyle } from './roomTableware.ts';
 export { centerpieceStyleLabels, couvertStyleLabels } from './roomTableware.ts';
 export type StageRoofStyle = 'none' | 'gabled';
@@ -605,6 +607,8 @@ export interface RoomLayoutBlueprint {
     instrumentFinish?: string;
     /** Type de bar (cocktail, vin, champagne…). */
     barStyle?: BarStyle;
+    /** Enceinte : sur pied, baffle au sol ou colonne (voir roomMusic). */
+    speakerStyle?: import('./roomMusic.ts').SpeakerStyle;
     /** Bar : habillage choisi (sinon celui du type de bar, voir roomBarDesign). */
     barFront?: import('@/lib/roomBarDesign').BarFront;
     barTop?: import('@/lib/roomBarDesign').BarTop;
@@ -1492,6 +1496,7 @@ export const FIXTURE_REAL_SIZE_M: Partial<Record<RoomFixtureKind, { w: number; d
   fountain: { w: 3, d: 3 },
   gazebo: { w: 4.5, d: 4.5 },
   djBooth: { w: 2.2, d: 0.9 },
+  speaker: { w: 0.7, d: 0.7 },
   screen: { w: 4.8, d: 0.6 },
   instrument: { w: 1.55, d: 2 },
   bar: { w: 4.8, d: 2.2 },
@@ -1528,13 +1533,14 @@ export function metricFootprintPct(
 export function realFixtureFootprintPct(
   kind: RoomFixtureKind,
   canvas: { widthM: number; heightM: number } | undefined,
-  variant?: { podiumStyle?: PodiumStyle; instrumentStyle?: InstrumentStyle; barStyle?: BarStyle; screenKind?: ScreenKind },
+  variant?: { podiumStyle?: PodiumStyle; instrumentStyle?: InstrumentStyle; barStyle?: BarStyle; screenKind?: ScreenKind; speakerStyle?: SpeakerStyle },
 ): { w: number; h: number } | null {
   let size = FIXTURE_REAL_SIZE_M[kind];
   if (kind === 'podium' && variant?.podiumStyle) size = podiumStyleSizeM[variant.podiumStyle];
   if (kind === 'instrument' && variant?.instrumentStyle) size = instrumentStyleSizeM[variant.instrumentStyle];
   if (kind === 'bar' && variant?.barStyle) size = barStyleSizeM[variant.barStyle];
   if (kind === 'screen' && variant?.screenKind) size = screenKindSizeM[variant.screenKind];
+  if (kind === 'speaker' && variant?.speakerStyle) size = SPEAKER_STYLE_SPECS[variant.speakerStyle];
   if (!size) return null;
   return metricFootprintPct(size.w, size.d, canvas);
 }
@@ -1568,6 +1574,7 @@ export function createBlueprintFixture(
     fountain: { x: 42, y: 40, w: 16, h: 16, label: 'Fontaine' },
     gazebo: { x: 36, y: 36, w: 28, h: 28, label: 'Gloriette' },
     djBooth: { x: 36, y: 4, w: 28, h: 10, label: 'Régie DJ' },
+    speaker: { x: 30, y: 8, w: 4, h: 4, label: 'Enceinte' },
     screen: { x: 38, y: 4, w: 24, h: 6, label: 'Écran' },
     instrument: { x: 44, y: 10, w: 8, h: 6, label: 'Piano à queue' },
     bar: { x: 8, y: 68, w: 28, h: 10, label: 'Bar cocktail' },
@@ -1618,6 +1625,7 @@ export function createBlueprintFixture(
       kind === 'fountain' ? '#94a3b8' :
       kind === 'gazebo' ? '#f8fafc' :
       kind === 'djBooth' ? '#1c1917' :
+      kind === 'speaker' ? '#18181b' :
       kind === 'screen' ? '#0f172a' :
       kind === 'instrument' ? '#1c1917' :
       kind === 'bar' ? '#4a3728' :
@@ -1664,6 +1672,7 @@ export function createBlueprintFixture(
       kind === 'fountain' ? 1.6 :
       kind === 'gazebo' ? 3.2 :
       kind === 'djBooth' ? 1.1 :
+      kind === 'speaker' ? 1.9 :
       kind === 'screen' ? 2.4 :
       kind === 'instrument' ? 0.95 :
       kind === 'bar' ? 1.15 :
@@ -1704,6 +1713,7 @@ export function createBlueprintFixture(
     podiumStyle: kind === 'podium' ? 'speaker' : undefined,
     instrumentStyle: kind === 'instrument' ? 'piano' : undefined,
     barStyle: kind === 'bar' ? 'cocktail' : undefined,
+    speakerStyle: kind === 'speaker' ? 'column' : undefined,
     decalKind: kind === 'decal' ? 'rose' : undefined,
     pedestalStyle: kind === 'pedestal' ? 'squareWhite' : undefined,
     screenKind: kind === 'screen' ? 'stageLedWall' : undefined,
@@ -8363,6 +8373,8 @@ export function getFixtureClass(kind: string): string {
       return 'bg-stone-50 border-stone-300 text-stone-700';
     case 'djBooth':
       return 'bg-zinc-100 border-zinc-400 text-zinc-800';
+    case 'speaker':
+      return 'bg-zinc-900 border-zinc-600 text-zinc-100';
     case 'screen':
       return 'bg-zinc-900 border-zinc-600 text-zinc-100';
     case 'instrument':

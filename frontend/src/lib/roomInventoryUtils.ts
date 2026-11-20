@@ -58,6 +58,7 @@ const FIXTURE_LABELS: Partial<Record<RoomFixtureKind, string>> = {
   fountain: 'Fontaine décorative',
   gazebo: 'Kiosque / Tonnelle',
   djBooth: 'Régie DJ & Sonorisation',
+  speaker: 'Enceinte / baffle de sonorisation',
   screen: 'Écran géant de projection',
   instrument: 'Instrument de concert scénique',
   bar: 'Comptoir de bar événementiel',
@@ -162,7 +163,7 @@ export function computeRoomInventory(blueprint: RoomLayoutBlueprint): RoomInvent
   for (const f of blueprint.fixtures) {
     const rawKind = f.kind as RoomFixtureKind;
     const baseName = FIXTURE_LABELS[rawKind] || f.label || rawKind;
-    const isStage = rawKind === 'stage' || rawKind === 'podium' || rawKind === 'screen' || rawKind === 'djBooth' || rawKind === 'instrument';
+    const isStage = rawKind === 'stage' || rawKind === 'podium' || rawKind === 'screen' || rawKind === 'djBooth' || rawKind === 'speaker' || rawKind === 'instrument';
     const isAisleOrZone = rawKind === 'aisle' || rawKind === 'corridor' || rawKind === 'carpet';
     const category: InventoryItem['category'] = isStage
       ? 'Scène & Audiovisuel'
