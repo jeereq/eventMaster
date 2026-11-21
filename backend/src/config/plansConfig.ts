@@ -17,6 +17,7 @@ export type PlanTypeKey =
   | 'ENTERPRISE_1'
   | 'ENTERPRISE_2'
   | 'ENTERPRISE_3'
+  | 'CUSTOM'
   | 'VENUE'
   | 'SERVICE'
   | 'CATALOG';
@@ -69,6 +70,7 @@ export const PLAN_KEYS: PlanTypeKey[] = [
   'ENTERPRISE_1',
   'ENTERPRISE_2',
   'ENTERPRISE_3',
+  'CUSTOM',
   'VENUE',
   'SERVICE',
   'CATALOG',
@@ -345,6 +347,31 @@ export function getDefaultPlans(): PlansConfiguration {
       audience: 'B2B',
       maxEvents: 40,
       maxGuests: 1900,
+      maxTemplates: 9999,
+      maxRooms: 9999,
+      maxServices: 9999,
+      maxOrgManagers: 9999,
+      customTemplates: true,
+      mockupOcr: true,
+      protocolQr: true,
+      seatNotifications: true,
+      roomThemesFixtures: true,
+      guestPhotoAvatars: true,
+      guestAvatars: true,
+      adminReports: true,
+      roomEditorLevel: 'complete',
+      commercialNetwork: false,
+      supportLevel: 'sla247',
+    }),
+    CUSTOM: organizerPlan({
+      name: 'Custom',
+      price: '1.000.000 FC',
+      monthlyPriceFc: 1000000,
+      description:
+        'B2B — sur mesure, à partir de 1 000 000 FC / mois : 60 événements et 2 700 invités par mois de base, quotas et prix ajustables selon le volume, salles et prestations illimitées, SLA 24/7 et accompagnement dédié.',
+      audience: 'B2B',
+      maxEvents: 60,
+      maxGuests: 2700,
       maxTemplates: 9999,
       maxRooms: 9999,
       maxServices: 9999,

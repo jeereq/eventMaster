@@ -66,14 +66,14 @@ function planBadgeClass(plan: string): string {
   if (plan.startsWith('PERSONAL')) return 'bg-primary/10 border-primary/20 text-primary';
   if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG') return 'bg-festive-accent-soft border-festive-accent/25 text-festive-accent';
   if (plan === 'STANDARD' || plan.startsWith('PREMIUM')) return 'bg-primary/10 border-primary/20 text-primary';
-  if (plan.startsWith('ENTERPRISE')) return 'bg-festive-accent-soft border-festive-accent/25 text-festive-accent';
+  if (plan.startsWith('ENTERPRISE') || plan === 'CUSTOM') return 'bg-festive-accent-soft border-festive-accent/25 text-festive-accent';
  return 'bg-surface-muted border-border text-muted';
 }
 
 function planBarClass(plan: string): string {
  if (plan === 'FREE') return 'bg-surface-muted';
   if (plan.startsWith('PERSONAL') || plan === 'STANDARD' || plan.startsWith('PREMIUM')) return 'bg-primary';
-  if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG' || plan.startsWith('ENTERPRISE')) return 'bg-festive-accent';
+  if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG' || (plan.startsWith('ENTERPRISE') || plan === 'CUSTOM')) return 'bg-festive-accent';
  return 'bg-surface-muted';
 }
 
@@ -2131,7 +2131,7 @@ function DashboardPageContent() {
  : 'Licence désactivée';
  const licenseShort = licenseLabel.replace('Licence ', '');
  const planChip = (
- <StatusPill tone={t.plan === 'FREE' ? 'slate' : t.plan.startsWith('ENTERPRISE') ? 'amber' : 'primary'}>
+ <StatusPill tone={t.plan === 'FREE' ? 'slate' : (t.plan.startsWith('ENTERPRISE') || t.plan === 'CUSTOM') ? 'amber' : 'primary'}>
  {t.plan}
  </StatusPill>
  );

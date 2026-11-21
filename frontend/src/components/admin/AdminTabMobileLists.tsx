@@ -11,7 +11,7 @@ function planBadgeClass(plan: string): string {
  if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG') return 'bg-violet-50 border-violet-100 text-violet-800';
  if (plan === 'STANDARD') return 'bg-blue-50 border-blue-100 text-blue-700';
  if (plan.startsWith('PREMIUM')) return 'bg-primary/10 border-primary/20 text-primary';
- if (plan.startsWith('ENTERPRISE')) return 'bg-amber-50 border-amber-100 text-amber-700';
+ if (plan.startsWith('ENTERPRISE') || plan === 'CUSTOM') return 'bg-amber-50 border-amber-100 text-amber-700';
  return 'bg-surface-muted border-border text-muted';
 }
 

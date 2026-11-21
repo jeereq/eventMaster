@@ -174,7 +174,7 @@ export default function LandingPricingSection({
             },
             {
               label: 'Enterprise',
-              ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'],
+              ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3', 'CUSTOM'],
               description: 'Gros volumes, plusieurs salles et accompagnement dédié, vitrine incluse',
             },
           ];

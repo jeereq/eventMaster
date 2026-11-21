@@ -19,6 +19,7 @@ export type PlanId =
   | 'ENTERPRISE_1'
   | 'ENTERPRISE_2'
   | 'ENTERPRISE_3'
+  | 'CUSTOM'
   | 'VENUE'
   | 'SERVICE'
   | 'CATALOG';
@@ -35,6 +36,7 @@ export const PLAN_IDS: PlanId[] = [
   'ENTERPRISE_1',
   'ENTERPRISE_2',
   'ENTERPRISE_3',
+  'CUSTOM',
   'VENUE',
   'SERVICE',
   'CATALOG',
@@ -256,7 +258,7 @@ export function planAudienceLabel(audience: PlanAudience | string): string {
 }
 
 export const PREMIUM_PLAN_IDS: PlanId[] = ['PREMIUM_1', 'PREMIUM_2'];
-export const ENTERPRISE_PLAN_IDS: PlanId[] = ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'];
+export const ENTERPRISE_PLAN_IDS: PlanId[] = ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3', 'CUSTOM'];
 
 /** Devise unique de la plateforme : franc congolais. */
 export const CURRENCY_CODE = 'FC';
@@ -465,6 +467,20 @@ export const LANDING_PLANS: LandingPlan[] = [
     highlights: ['40 événements · 1 900 invités / mois', '4 essais IA · recharge de jetons', 'Salles & prestations marketplace illimitées', 'SLA 24/7 · éditeur complet (80 tables)'],
   },
   {
+    id: 'CUSTOM',
+    ms365Name: 'Custom',
+    tagline: 'B2B — sur mesure pour les très gros volumes : quotas, prix et accompagnement négociés.',
+    monthlyPriceFc: 1000000,
+    monthlyNote: 'à partir de, par organisation / mois',
+    cta: 'Parler à un conseiller',
+    ctaHref: '/contact',
+    ctaVariant: 'contact',
+    tier: 'enterprise',
+    audience: 'B2B',
+    badge: 'Sur-mesure',
+    highlights: ['Événements et invités sur mesure (base 60 · 2 700 / mois)', '4 essais IA · recharge de jetons', 'Salles & prestations marketplace illimitées', 'SLA 24/7 · accompagnement dédié'],
+  },
+  {
     id: 'VENUE',
     ms365Name: 'Salle',
     tagline: 'Salles illimitées, éditeur 2D/3D complet — sans événements ni prestations.',
@@ -531,9 +547,14 @@ function fillVendorPlans(
     SERVICE: false,
     CATALOG: false,
   };
+  // « Custom » reprend Enterprise Max sauf mention contraire (quotas négociés).
   return rows.map((row) => ({
     ...row,
-    values: { ...vendorFallback, ...row.values } as Record<PlanId, string | boolean>,
+    values: {
+      ...vendorFallback,
+      CUSTOM: row.values.ENTERPRISE_3 ?? false,
+      ...row.values,
+    } as Record<PlanId, string | boolean>,
   }));
 }
 
@@ -562,6 +583,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
       ENTERPRISE_1: '15',
       ENTERPRISE_2: '25',
       ENTERPRISE_3: '40',
+      CUSTOM: 'Sur mesure',
       VENUE: '—',
       SERVICE: '—',
       CATALOG: '—',
@@ -582,6 +604,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
       ENTERPRISE_1: '950 / mois',
       ENTERPRISE_2: '1 400 / mois',
       ENTERPRISE_3: '1 900 / mois',
+      CUSTOM: 'Sur mesure',
       VENUE: '—',
       SERVICE: '—',
       CATALOG: '—',
@@ -1265,6 +1288,7 @@ export function getPlanCapabilityBadges(
       'ENTERPRISE_1',
       'ENTERPRISE_2',
       'ENTERPRISE_3',
+      'CUSTOM',
       'VENUE',
       'CATALOG',
     ].includes(planId)
