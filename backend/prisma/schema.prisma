@@ -354,6 +354,8 @@ model Guest {
   seatVerifiedAt DateTime?
   seatVerifiedByUserId String?
   seatVerifiedBy User?     @relation("GuestSeatVerifications", fields: [seatVerifiedByUserId], references: [id], onDelete: SetNull)
+  /** SMS réellement envoyés à cet invité (plafond MAX_SMS_PER_GUEST = 3). */
+  smsSentCount Int          @default(0)
   seatingInvitationPdfUrl       String?
   seatingInvitationPdfPublicId  String?
   createdAt   DateTime     @default(now())

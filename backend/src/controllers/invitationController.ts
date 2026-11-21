@@ -1,7 +1,8 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { sendRealEmail, sendRealWhatsApp, sendRealSms } from '../services/notificationService';
+import { sendRealEmail, sendRealWhatsApp } from '../services/notificationService';
+import { sendGuestSms } from '../services/guestSmsCap';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { applyInvitationGuidelineVariables, guestGuidelinesInvitationText } from '../utils/guestGuidelines';
 import { canManageEvent, canAccessEvent } from '../services/permissionsService';
@@ -309,7 +310,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
           const phone = getGuestPhone(guest);
           if (phone) {
             const smsText = `Bonjour ${guest.firstName || ''}, vous êtes invité(e) à ${event.title}. Confirmez votre présence ici : ${rsvpLink}`;
-            sendResult = await sendRealSms(phone, smsText);
+            sendResult = await sendGuestSms(guest.id, phone, smsText);
           } else {
             console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for SMS sending.`);
             sendResult = {

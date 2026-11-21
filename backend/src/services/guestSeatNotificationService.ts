@@ -3,13 +3,13 @@ import {
   sendRealWhatsApp,
   sendRealWhatsAppDocument,
   sendRealWhatsAppLocation,
-  sendRealSms,
 } from './notificationService';
 import { generateAndStoreSeatingInvitationPdf } from './seatingInvitationStorageService';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { applyInvitationGuidelineVariables, guestGuidelinesInvitationText } from '../utils/guestGuidelines';
 import { prisma } from '../db';
+import { sendGuestSms } from './guestSmsCap';
 import {
   brandedEventDetailsHtml,
   loadOrgBrand,
@@ -369,7 +369,7 @@ export async function notifyGuestTableAssignment(params: {
   if (channelsToSend.includes('SMS') && phone) {
     const smsText = `Bonjour ${guest.firstName || ''}, votre placement pour ${event.title}${event.location ? ' (' + event.location + ')' : ''} : Table ${assignedSeat.tableName}, Siège n°${seatNumber}. Détails : ${rsvpUrl}`;
     tasks.push(
-      sendRealSms(phone, smsText).then((r) => {
+      sendGuestSms(guest.id, phone, smsText).then((r) => {
         if (r.success) channels.push(r.simulated ? 'SMS (simulation)' : 'SMS');
         else if (r.error) errors.push(`SMS: ${r.error}`);
       }),

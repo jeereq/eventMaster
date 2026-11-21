@@ -338,7 +338,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'personal',
     audience: 'B2C',
     badge: '50 invités / trim.',
-    highlights: ['3 événements · 50 invités / trim.', '4 essais IA · recharge de jetons', 'QR, modèles, éditeur 2D/3D complet (80 tables)', '2 salles · hors marketplace'],
+    highlights: ['2 événements · 50 invités / trim.', '4 essais IA · recharge de jetons', 'QR, modèles, éditeur 2D/3D complet (80 tables)', '2 salles · hors marketplace'],
   },
   {
     id: 'PERSONAL_100',
@@ -352,7 +352,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'personal',
     audience: 'B2C',
     badge: '100 invités / trim.',
-    highlights: ['3 événements · 100 invités / trim.', '4 essais IA · recharge de jetons', 'QR, modèles, éditeur 2D/3D complet (80 tables)', '2 salles · hors marketplace'],
+    highlights: ['2 événements · 100 invités / trim.', '4 essais IA · recharge de jetons', 'QR, modèles, éditeur 2D/3D complet (80 tables)', '2 salles · hors marketplace'],
   },
   {
     id: 'PERSONAL_200',
@@ -367,12 +367,12 @@ export const LANDING_PLANS: LandingPlan[] = [
     audience: 'B2C',
     highlighted: true,
     badge: '200 invités / trim.',
-    highlights: ['3 événements · 200 invités / trim.', '4 essais IA · recharge de jetons', 'QR, modèles, éditeur 2D/3D complet (80 tables)', '2 salles · hors marketplace'],
+    highlights: ['2 événements · 200 invités / trim.', '4 essais IA · recharge de jetons', 'QR, modèles, éditeur 2D/3D complet (80 tables)', '2 salles · hors marketplace'],
   },
   {
     id: 'PERSONAL_PLUS',
     ms365Name: 'Particulier +200',
-    tagline: 'Grande fête privée : plus de 200 invités, quota invités illimité, sans marketplace.',
+    tagline: 'Grande fête privée : plus de 200 invités (jusqu’à 450 / trim.), sans marketplace.',
     monthlyPriceFc: 180000,
     monthlyNote: 'par particulier / trimestre',
     cta: 'Organiser plus de 200 invités',
@@ -381,7 +381,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'personal',
     audience: 'B2C',
     badge: '+200 invités',
-    highlights: ['3 événements · invités illimités', '4 essais IA · recharge de jetons', 'QR, modèles, éditeur 2D/3D complet (80 tables)', '2 salles · hors marketplace'],
+    highlights: ['2 événements · 450 invités / trim.', '4 essais IA · recharge de jetons', 'QR, modèles, éditeur 2D/3D complet (80 tables)', '2 salles · hors marketplace'],
   },
   {
     id: 'STANDARD',
@@ -394,7 +394,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'primary',
     tier: 'business',
     audience: 'B2B',
-    highlights: ['8 événements · 150 invités / mois', '4 essais IA · recharge de jetons', '3 salles publiables · éditeur Business (16 tables)', 'Prestations marketplace illimitées'],
+    highlights: ['4 événements · 70 invités / mois', '4 essais IA · recharge de jetons', '3 salles publiables · éditeur Business (16 tables)', 'Prestations marketplace illimitées'],
   },
   {
     id: 'PREMIUM_1',
@@ -407,7 +407,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'primary',
     tier: 'premium',
     audience: 'B2B',
-    highlights: ['12 événements · 500 invités / mois', '4 essais IA · recharge de jetons', '5 salles publiables · éditeur Premium (36 tables)', 'Prestations marketplace illimitées'],
+    highlights: ['6 événements · 140 invités / mois', '4 essais IA · recharge de jetons', '5 salles publiables · éditeur Premium (36 tables)', 'Prestations marketplace illimitées'],
   },
   {
     id: 'PREMIUM_2',
@@ -422,7 +422,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     audience: 'B2B',
     highlighted: true,
     badge: 'Le plus populaire',
-    highlights: ['20 événements · 1 000 invités / mois', '4 essais IA · recharge de jetons', '10 salles publiables · éditeur Premium (36 tables)', 'Prestations marketplace illimitées'],
+    highlights: ['8 événements · 220 invités / mois', '4 essais IA · recharge de jetons', '10 salles publiables · éditeur Premium (36 tables)', 'Prestations marketplace illimitées'],
   },
   {
     id: 'ENTERPRISE_1',
@@ -435,7 +435,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'primary',
     tier: 'enterprise',
     audience: 'B2B',
-    highlights: ['40 événements · 3 500 invités / mois', '4 essais IA · recharge de jetons', '25 salles publiables · éditeur complet (80 tables)', 'Prestations marketplace illimitées'],
+    highlights: ['15 événements · 950 invités / mois', '4 essais IA · recharge de jetons', '25 salles publiables · éditeur complet (80 tables)', 'Prestations marketplace illimitées'],
   },
   {
     id: 'ENTERPRISE_2',
@@ -448,12 +448,12 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'primary',
     tier: 'enterprise',
     audience: 'B2B',
-    highlights: ['70 événements · 5 000 invités / mois', '4 essais IA · recharge de jetons', '50 salles publiables · éditeur complet (80 tables)', 'Prestations marketplace illimitées'],
+    highlights: ['25 événements · 1 400 invités / mois', '4 essais IA · recharge de jetons', '50 salles publiables · éditeur complet (80 tables)', 'Prestations marketplace illimitées'],
   },
   {
     id: 'ENTERPRISE_3',
-    ms365Name: 'Enterprise Unlimited',
-    tagline: 'B2B — illimité (événements, salles publiables, prestations), SLA 24/7 et onboarding dédié.',
+    ms365Name: 'Enterprise Max',
+    tagline: 'B2B — 40 événements, 1 900 invités / mois, salles et prestations illimitées, SLA 24/7 et onboarding dédié.',
     monthlyPriceFc: 700000,
     monthlyNote: 'par organisation / mois',
     cta: 'Parler à un conseiller',
@@ -462,7 +462,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'enterprise',
     audience: 'B2B',
     badge: 'Sur-mesure',
-    highlights: ['Quotas illimités', '4 essais IA · recharge de jetons', 'Salles & prestations marketplace illimitées', 'SLA 24/7 · éditeur complet (80 tables)'],
+    highlights: ['40 événements · 1 900 invités / mois', '4 essais IA · recharge de jetons', 'Salles & prestations marketplace illimitées', 'SLA 24/7 · éditeur complet (80 tables)'],
   },
   {
     id: 'VENUE',
@@ -555,13 +555,13 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Événements actifs',
     values: {
       FREE: '3',
-      ...b2cSame('3'),
-      STANDARD: '8',
-      PREMIUM_1: '12',
-      PREMIUM_2: '20',
-      ENTERPRISE_1: '40',
-      ENTERPRISE_2: '70',
-      ENTERPRISE_3: 'Illimité',
+      ...b2cSame('2'),
+      STANDARD: '4',
+      PREMIUM_1: '6',
+      PREMIUM_2: '8',
+      ENTERPRISE_1: '15',
+      ENTERPRISE_2: '25',
+      ENTERPRISE_3: '40',
       VENUE: '—',
       SERVICE: '—',
       CATALOG: '—',
@@ -575,13 +575,13 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
       PERSONAL_50: '50 / trim.',
       PERSONAL_100: '100 / trim.',
       PERSONAL_200: '200 / trim.',
-      PERSONAL_PLUS: 'Illimité',
-      STANDARD: '150 / mois',
-      PREMIUM_1: '500 / mois',
-      PREMIUM_2: '1 000 / mois',
-      ENTERPRISE_1: '3 500 / mois',
-      ENTERPRISE_2: '5 000 / mois',
-      ENTERPRISE_3: 'Illimité',
+      PERSONAL_PLUS: '450 / trim.',
+      STANDARD: '70 / mois',
+      PREMIUM_1: '140 / mois',
+      PREMIUM_2: '220 / mois',
+      ENTERPRISE_1: '950 / mois',
+      ENTERPRISE_2: '1 400 / mois',
+      ENTERPRISE_3: '1 900 / mois',
       VENUE: '—',
       SERVICE: '—',
       CATALOG: '—',
@@ -1291,7 +1291,7 @@ export function getPlanCapabilityBadges(
   if (mockup && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'mockup', label: 'Import maquette', tone: 'violet' });
   if (ocr && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'ocr', label: 'OCR maquette', tone: 'violet' });
   if (rsvpAnalytics && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'rsvp', label: 'Réponses analytiques', tone: 'emerald' });
-  if (db ? unlimited(db.maxEvents) : planId.startsWith('ENTERPRISE_3')) {
+  if (db && unlimited(db.maxEvents)) {
     badges.push({ id: 'unlimited', label: 'Volume illimité', tone: 'rose' });
   }
 
