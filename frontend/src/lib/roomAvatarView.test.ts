@@ -4,6 +4,9 @@ import type { RoomLayoutBlueprint } from './roomLayoutUtils.ts';
 import { buildGuestSimulation, type SimulatedGuest } from './roomGuestSimulation.ts';
 import {
   availableAvatarFilters,
+  nearestAvatarViewer,
+  planSeatFlight,
+  seatViewQuality,
   clampAvatarPitch,
   describeAvatarViewer,
   pickDefaultAvatarViewer,
@@ -124,5 +127,44 @@ describe('invités réels d’un événement', () => {
   });
   it('sans invité placé, la salle reste vide', () => {
     assert.equal(buildGuestSimulation(bp, { fill: 1, dancing: false, seatOccupants: {} }).guests.length, 0);
+  });
+});
+
+describe('qualité de vue et carte des places', () => {
+  const stage = { x: 0, z: 0 };
+  it('note une place proche et face à la scène comme excellente', () => {
+    const q = seatViewQuality(guest('a', 0, 5, Math.PI), stage);
+    assert.equal(q.grade, 'excellent');
+    assert.ok(Math.abs(q.distanceM - 5) < 1e-9);
+    assert.ok(q.turnDeg < 1e-6);
+  });
+  it('déclasse une place lointaine ou qui tourne le dos à la scène', () => {
+    assert.equal(seatViewQuality(guest('b', 0, 25, Math.PI), stage).grade, 'far');
+    assert.notEqual(seatViewQuality(guest('c', 0, 5, 0), stage).grade, 'excellent');
+  });
+  it('trouve la place la plus proche d’un clic, en respectant le filtre', () => {
+    const list = [guest('s', 1, 1, 0), guest('d', 0.2, 0.2, 0, 'dancing')];
+    assert.equal(nearestAvatarViewer(list, { x: 0, z: 0 })?.id, 'd');
+    assert.equal(nearestAvatarViewer(list, { x: 0, z: 0 }, 'seated')?.id, 's');
+    assert.equal(nearestAvatarViewer(list, { x: 9, z: 9 }, 'all', 2), null);
+  });
+});
+
+describe('vol jusqu’à une place', () => {
+  it('reste bas et court entre deux voisins', () => {
+    const f = planSeatFlight({ x: 0, y: 1.2, z: 0 }, { x: 0.6, y: 1.2, z: 0 });
+    assert.equal(f.peakY, 1.2);
+    assert.equal(f.durationS, 0.9);
+  });
+  it('prend de la hauteur pour traverser la salle, sous le plafond', () => {
+    const free = planSeatFlight({ x: -10, y: 1.2, z: 0 }, { x: 10, y: 1.2, z: 0 });
+    assert.ok(free.peakY > 6);
+    assert.ok(free.durationS > 2);
+    const covered = planSeatFlight({ x: -10, y: 1.2, z: 0 }, { x: 10, y: 1.2, z: 0 }, 3.5);
+    assert.equal(covered.peakY, 3.5);
+  });
+  it('ne redescend pas sous une caméra de départ déjà haute', () => {
+    const f = planSeatFlight({ x: 0, y: 18, z: 0 }, { x: 4, y: 1.2, z: 3 }, 4);
+    assert.equal(f.peakY, 18);
   });
 });
