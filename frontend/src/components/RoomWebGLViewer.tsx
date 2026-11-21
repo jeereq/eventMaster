@@ -31,6 +31,7 @@ import {
   Play,
   Square as StopIcon,
   Video,
+  Map as MapIcon,
 } from '@/components/icons';
 import * as THREE from 'three';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
@@ -146,8 +147,12 @@ import { SPEAKER_STYLE_SPECS, activeMusicEmitters, availableMusicSourceModes, da
 import { SpeakerMesh } from '@/components/room/SpeakerMeshes';
 import GestureFeedback from '@/components/room/GestureFeedback';
 import AvatarEyeCamera, { AVATAR_START_PITCH, type AvatarLook } from '@/components/room/AvatarEyeCamera';
+import AvatarSeatMap from '@/components/room/AvatarSeatMap';
 import {
   AVATAR_VIEW_FILTER_LABELS,
+  SEAT_VIEW_GRADE_COLORS,
+  SEAT_VIEW_GRADE_LABELS,
+  seatViewQuality,
   availableAvatarFilters,
   describeAvatarViewer,
   filterAvatarViewers,
@@ -4878,7 +4883,7 @@ function SceneContent({
         />
       ) : null}
       {avatarViewGuest && avatarLookRef ? (
-        <AvatarEyeCamera guest={avatarViewGuest} lookRef={avatarLookRef} reduceMotion={reduceMotion} danceTimeRef={danceTimeRef} />
+        <AvatarEyeCamera guest={avatarViewGuest} lookRef={avatarLookRef} reduceMotion={reduceMotion} danceTimeRef={danceTimeRef} ceilingM={walls.length > 0 ? wallHeightM : null} />
       ) : null}
       <IntroFlyIn
         pendingRef={pendingIntroRef}
@@ -5314,6 +5319,10 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   const avatarList = useMemo(() => filterAvatarViewers(avatarViewers, effectiveAvatarFilter), [avatarViewers, effectiveAvatarFilter]);
   const avatarIndex = avatarViewer ? avatarList.findIndex((g) => g.id === avatarViewer.id) : -1;
   const avatarLabel = avatarViewer ? describeAvatarViewer(blueprint, avatarViewer) : '';
+  const avatarSeatView = avatarViewer && stageSpace ? seatViewQuality(avatarViewer, stageSpace.center) : null;
+  // Plan miniature des places : ouvert d'office sur ordinateur, à la demande sur téléphone.
+  const [seatMapPref, setSeatMapPref] = useState<boolean | null>(null);
+  const seatMapOpen = seatMapPref ?? !touchScreen;
 
   const lookAtStage = useCallback((viewer: SimulatedGuest | null) => {
     if (!viewer || !stageSpace) return false;
@@ -5908,6 +5917,18 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       <GestureFeedback targetRef={viewerRootRef} reduceMotion={reduceMotion} />
       {avatarActive ? (
         <>
+          {seatMapOpen && avatarViewers.length > 1 ? (
+            <AvatarSeatMap
+              widthM={blueprint.canvas?.widthM ?? 20}
+              heightM={blueprint.canvas?.heightM ?? 16}
+              guests={avatarViewers}
+              filter={effectiveAvatarFilter}
+              current={avatarViewer}
+              stage={stageSpace}
+              onPick={showAvatar}
+              className="absolute right-2.5 top-12 z-20 w-40 sm:top-2.5 sm:w-64"
+            />
+          ) : null}
           <div className="pointer-events-none absolute top-2.5 left-2.5 right-2.5 z-10 flex justify-start">
             <div className="rounded-md bg-foreground/85 px-2.5 py-1.5 text-xs font-medium text-background">
               {touchScreen
@@ -5932,6 +5953,18 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
                   <p className="truncate text-sm font-semibold leading-5" aria-live="polite">
                     {avatarViewer ? avatarLabel : 'Aucune place dans cette salle'}
                   </p>
+                  {avatarSeatView ? (
+                    <p className="flex items-center gap-1.5 text-xs leading-4 text-muted">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: SEAT_VIEW_GRADE_COLORS[avatarSeatView.grade] }}
+                        aria-hidden
+                      />
+                      <span className="truncate">
+                        {SEAT_VIEW_GRADE_LABELS[avatarSeatView.grade]} · {avatarSeatView.distanceM.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} m de la scène
+                      </span>
+                    </p>
+                  ) : null}
                 </div>
                 {avatarList.length > 0 && avatarIndex >= 0 ? (
                   <span className="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted">
@@ -5973,6 +6006,21 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
                     ))
                   : null}
                 <span className="ml-auto inline-flex items-center gap-1">
+                  {avatarViewers.length > 1 ? (
+                    <button
+                      type="button"
+                      aria-pressed={seatMapOpen}
+                      onClick={() => setSeatMapPref(!seatMapOpen)}
+                      title={seatMapOpen ? 'Masquer le plan des places' : 'Choisir une place sur le plan'}
+                      className={cn(
+                        'inline-flex min-h-11 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors',
+                        seatMapOpen ? 'bg-surface-muted text-foreground' : 'text-foreground/80 hover:bg-surface-muted hover:text-foreground',
+                      )}
+                    >
+                      <MapIcon className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Plan</span>
+                    </button>
+                  ) : null}
                   {stageSpace ? (
                     <button
                       type="button"

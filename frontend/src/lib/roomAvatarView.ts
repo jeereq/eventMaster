@@ -128,3 +128,99 @@ export function describeAvatarViewer(blueprint: RoomLayoutBlueprint, guest: Simu
   if (item.kind === 'chair') return item.label?.trim() || 'Chaise';
   return guest.pose === 'standing' ? 'Invité debout' : 'Invité assis';
 }
+
+/* ------------------------------------------------------------------ */
+/* Qualité de vue d'une place (carte des places)                       */
+/* ------------------------------------------------------------------ */
+
+export type SeatViewGrade = 'excellent' | 'good' | 'fair' | 'far';
+
+export const SEAT_VIEW_GRADE_LABELS: Record<SeatViewGrade, string> = {
+  excellent: 'Vue excellente',
+  good: 'Bonne vue',
+  fair: 'Vue correcte',
+  far: 'Vue difficile',
+};
+
+/** Teintes de la carte : du vert (meilleures places) au rouge brique (trop loin ou dos à la scène). */
+export const SEAT_VIEW_GRADE_COLORS: Record<SeatViewGrade, string> = {
+  excellent: '#16a34a',
+  good: '#65a30d',
+  fair: '#d97706',
+  far: '#dc2626',
+};
+
+export interface SeatViewQuality {
+  /** Distance au centre de la scène (m). */
+  distanceM: number;
+  /** Rotation de tête nécessaire pour voir la scène (degrés, 0 = droit devant). */
+  turnDeg: number;
+  grade: SeatViewGrade;
+}
+
+/**
+ * Note la vue d'une place vers la scène, comme une billetterie de stade :
+ * on regarde la distance (idéal entre 3 et 12 m) et l'angle dont il faut tourner la tête.
+ */
+export function seatViewQuality(
+  guest: Pick<SimulatedGuest, 'x' | 'z' | 'rotY'>,
+  focus: { x: number; z: number },
+): SeatViewQuality {
+  const distanceM = Math.hypot(focus.x - guest.x, focus.z - guest.z);
+  const turnDeg = Math.abs(wrapAngle(yawToward(guest, focus) - guest.rotY)) * (180 / Math.PI);
+  // Score sur 100 : chaque mètre au-delà de 12 m et chaque degré au-delà de 30° coûtent des points.
+  let score = 100;
+  if (distanceM < 2) score -= (2 - distanceM) * 18;
+  if (distanceM > 12) score -= (distanceM - 12) * 4.5;
+  if (turnDeg > 30) score -= (turnDeg - 30) * 0.55;
+  const grade: SeatViewGrade = score >= 85 ? 'excellent' : score >= 68 ? 'good' : score >= 48 ? 'fair' : 'far';
+  return { distanceM, turnDeg, grade };
+}
+
+/** Place la plus proche d'un point du plan (clic sur la carte), dans la liste filtrée. */
+export function nearestAvatarViewer(
+  guests: SimulatedGuest[],
+  point: { x: number; z: number },
+  filter: AvatarViewFilter = 'all',
+  maxDistanceM = Infinity,
+): SimulatedGuest | null {
+  let best: SimulatedGuest | null = null;
+  let bestD = maxDistanceM;
+  for (const g of filterAvatarViewers(guests, filter)) {
+    const d = Math.hypot(g.x - point.x, g.z - point.z);
+    if (d < bestD) {
+      bestD = d;
+      best = g;
+    }
+  }
+  return best;
+}
+
+/* ------------------------------------------------------------------ */
+/* Vol de caméra jusqu'à une place                                     */
+/* ------------------------------------------------------------------ */
+
+export interface SeatFlight {
+  /** Durée du vol (s). */
+  durationS: number;
+  /** Altitude de croisière (m), au-dessus des deux extrémités. */
+  peakY: number;
+}
+
+/**
+ * Trajectoire de « vol jusqu'au siège » : un saut de puce entre voisins reste court et bas,
+ * une traversée de salle prend de la hauteur pour survoler les tables avant de redescendre.
+ * `ceilingY` borne l'altitude sous le plafond quand la salle est couverte.
+ */
+export function planSeatFlight(
+  from: { x: number; y: number; z: number },
+  to: { x: number; y: number; z: number },
+  ceilingY?: number | null,
+): SeatFlight {
+  const dist = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z);
+  const base = Math.max(from.y, to.y);
+  let peakY = Math.max(base, to.y + Math.min(7, Math.max(0, (dist - 1.5) * 0.4)));
+  if (ceilingY != null && Number.isFinite(ceilingY)) peakY = Math.min(peakY, Math.max(base, ceilingY));
+  const durationS = Math.min(2.4, Math.max(0.9, 0.75 + dist * 0.07));
+  return { durationS, peakY };
+}

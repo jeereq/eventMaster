@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { SimulatedGuest } from '@/lib/roomGuestSimulation';
-import { clampAvatarPitch } from '@/lib/roomAvatarView';
+import { clampAvatarPitch, planSeatFlight } from '@/lib/roomAvatarView';
 import { guestEyePose } from '@/components/room/GuestAvatarMeshes';
 
 /** Regard libre de l'avatar : cap relatif au corps et inclinaison de la tête (rad). */
@@ -22,19 +22,23 @@ const MAX_FOV = 80;
 /**
  * Caméra posée dans les yeux d'un invité simulé.
  * Glisser tourne la tête, la molette (ou le pincement) zoome comme un regard qui se concentre.
- * Au changement d'invité, la caméra glisse jusqu'à ses yeux au lieu de sauter.
+ * Au changement d'invité, la caméra vole jusqu'à ses yeux : elle prend de la hauteur
+ * au-dessus des tables, survole la salle puis redescend s'asseoir, comme dans une billetterie 3D.
  */
 export default function AvatarEyeCamera({
   guest,
   lookRef,
   reduceMotion = false,
   danceTimeRef,
+  ceilingM = null,
 }: {
   guest: SimulatedGuest;
   lookRef: React.MutableRefObject<AvatarLook>;
   reduceMotion?: boolean;
   /** Horloge musicale des danseurs (même tempo que la foule). */
   danceTimeRef?: React.RefObject<number>;
+  /** Hauteur sous plafond (m, depuis le sol de l'invité) : le vol reste dans la salle. Absent en plein air. */
+  ceilingM?: number | null;
 }) {
   const { camera, gl } = useThree();
   const target = useMemo(() => new THREE.Vector3(), []);
@@ -42,7 +46,12 @@ export default function AvatarEyeCamera({
   const fromPos = useMemo(() => new THREE.Vector3(), []);
   const fromDir = useMemo(() => new THREE.Vector3(), []);
   const dir = useMemo(() => new THREE.Vector3(), []);
+  const midDir = useMemo(() => new THREE.Vector3(), []);
+  const finalDir = useMemo(() => new THREE.Vector3(), []);
+  const p1 = useMemo(() => new THREE.Vector3(), []);
+  const p2 = useMemo(() => new THREE.Vector3(), []);
   const transitionRef = useRef(1);
+  const flightRef = useRef<{ durationS: number; peakY: number } | null>(null);
   const fovRef = useRef<number | null>(null);
 
   // Nouvel invité : on part de là où se trouve la caméra et on rejoint ses yeux.
@@ -50,6 +59,7 @@ export default function AvatarEyeCamera({
     fromPos.copy(camera.position);
     camera.getWorldDirection(fromDir);
     transitionRef.current = reduceMotion ? 1 : 0;
+    flightRef.current = null;
   }, [guest.id, camera, fromPos, fromDir, reduceMotion]);
 
   // Champ de vision rendu tel quel en sortant.
@@ -135,11 +145,35 @@ export default function AvatarEyeCamera({
     dir.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
 
     if (transitionRef.current < 1) {
-      transitionRef.current = Math.min(1, transitionRef.current + delta / 0.9);
+      // Plan de vol calculé à la première image, quand on connaît les yeux d'arrivée.
+      const flight = flightRef.current
+        ?? (flightRef.current = planSeatFlight(fromPos, eye, ceilingM != null ? guest.y + ceilingM - 0.35 : null));
+      // Pas de saut sur un appareil lent : chaque image avance d’au plus 0,1 s de vol.
+      transitionRef.current = Math.min(1, transitionRef.current + Math.min(delta, 0.1) / flight.durationS);
       const t = transitionRef.current;
       const k = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-      camera.position.lerpVectors(fromPos, eye, k);
-      dir.lerpVectors(fromDir, dir, k).normalize();
+      // Courbe de Bézier cubique : deux points d'appui à l'altitude de croisière.
+      p1.set(fromPos.x + (eye.x - fromPos.x) * 0.25, flight.peakY, fromPos.z + (eye.z - fromPos.z) * 0.25);
+      p2.set(fromPos.x + (eye.x - fromPos.x) * 0.75, flight.peakY, fromPos.z + (eye.z - fromPos.z) * 0.75);
+      const u = 1 - k;
+      camera.position
+        .copy(fromPos).multiplyScalar(u * u * u)
+        .addScaledVector(p1, 3 * u * u * k)
+        .addScaledVector(p2, 3 * u * k * k)
+        .addScaledVector(eye, k * k * k);
+      // Regard : on part de l'ancien cadrage, on fixe la place visée pendant le survol, puis on s'assoit face à la salle.
+      finalDir.copy(dir);
+      midDir.set(
+        eye.x - (fromPos.x + eye.x) / 2,
+        eye.y - flight.peakY,
+        eye.z - (fromPos.z + eye.z) / 2,
+      );
+      if (midDir.lengthSq() < 1e-6) midDir.copy(finalDir);
+      midDir.normalize();
+      if (k < 0.5) dir.lerpVectors(fromDir, midDir, k * 2);
+      else dir.lerpVectors(midDir, finalDir, (k - 0.5) * 2);
+      if (dir.lengthSq() < 1e-6) dir.copy(finalDir);
+      dir.normalize();
     } else {
       camera.position.copy(eye);
     }
