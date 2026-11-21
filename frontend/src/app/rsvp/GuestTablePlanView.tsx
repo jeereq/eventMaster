@@ -349,7 +349,13 @@ export default function GuestTablePlanView({
             )}
           </div>
         </div>
-        <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
+        <div
+          className={cn(
+            'rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]',
+            opts.fill && 'flex-1 min-h-0 flex flex-col',
+            effectivePlanView === '2d' && 'p-2 sm:p-3',
+          )}
+        >
         {effectivePlanView === '3d' && previewBlueprint ? (
           <div className="p-2 sm:p-3 space-y-2">
             <div className="relative overflow-hidden rounded-xl border border-border bg-foreground/5 shadow-[var(--shadow-soft)]">
@@ -477,7 +483,8 @@ export default function GuestTablePlanView({
             neighborNames={neighborNames}
             height={opts.height}
             fill={opts.fill}
-            className={opts.fill ? 'flex-1 min-h-0' : 'rounded-none border-0'}
+            allowFullscreen={!isFullscreen}
+            className={opts.fill ? 'flex-1 min-h-0' : undefined}
           />
         )}
         </div>

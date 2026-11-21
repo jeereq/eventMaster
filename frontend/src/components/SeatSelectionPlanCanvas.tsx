@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import FixtureRenderer from '@/components/FixtureRenderer';
-import { PlanSceneControls, PlanZoomControls, usePlanFullscreen } from '@/components/PlanViewChrome';
+import { PlanSceneControls, PlanZoomOverlay, usePlanFullscreen } from '@/components/PlanViewChrome';
+import { usePlanViewport } from '@/components/usePlanViewport';
+import { planFrameHeight, planLogicalSize } from '@/lib/planViewport';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
@@ -122,8 +124,20 @@ export default function SeatSelectionPlanCanvas({
   height = 360,
   className = '',
 }: SeatSelectionPlanCanvasProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(1);
+  // Le plan est dessiné à taille fixe (proportions réelles de la salle) puis ajusté au cadre :
+  // sur un téléphone, la salle entière est visible au lieu de déborder de l’écran.
+  const logical = useMemo(() => planLogicalSize(canvasWidthM, canvasHeightM, 900), [canvasWidthM, canvasHeightM]);
+  const {
+    bindFrame,
+    box: frameBox,
+    zoom,
+    spacerStyle,
+    stageStyle,
+    zoomIn,
+    zoomOut,
+    focusOn,
+    fit,
+  } = usePlanViewport({ logicalW: logical.w, logicalH: logical.h, maxZoom: 2 });
   const [showWalls, setShowWalls] = useState(true);
   const { expanded, setExpanded, panelRef } = usePlanFullscreen();
 
@@ -173,30 +187,31 @@ export default function SeatSelectionPlanCanvas({
     return [...map.values()];
   }, [seats]);
 
-  const adjustZoom = (delta: number) => {
-    setZoom((z) => Math.max(0.65, Math.min(1.8, z + delta)));
+  // De loin, les sièges sont trop petits pour le doigt : le premier toucher rapproche la table.
+  const zoomFirst = zoom < 0.62;
+  const focusTable = (table: PlanTable) => {
+    focusOn((table.x / 100) * logical.w, (table.y / 100) * logical.h, 1.05);
   };
+  const frameHeight = expanded
+    ? undefined
+    : planFrameHeight(frameBox.w, logical.w, logical.h, { min: 260, max: Math.max(height, 480), padding: 12 });
+  const pxPerMeter = (logical.w * zoom) / Math.max(1, canvasWidthM);
 
   const viewer = (
     <div className={cn('space-y-2', expanded && 'flex h-full min-h-0 flex-col p-3', className)}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-muted">Touchez un siège libre sur le plan</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <PlanSceneControls
-            showWalls={showWalls}
-            onToggleWalls={() => setShowWalls((current) => !current)}
-            showRoofControl={false}
-            showWallsControl={Boolean(walls && walls.length > 0)}
-            onToggleFullscreen={() => setExpanded((current) => !current)}
-            isFullscreen={expanded}
-          />
-          <PlanZoomControls
-            zoom={zoom}
-            onZoomOut={() => adjustZoom(-0.1)}
-            onZoomIn={() => adjustZoom(0.1)}
-            onReset={() => setZoom(1)}
-          />
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="min-w-0 flex-1 text-xs text-muted" aria-live="polite">
+          {zoomFirst ? 'Touchez une table pour la rapprocher, puis choisissez un siège libre' : 'Touchez un siège libre sur le plan'}
+        </p>
+        <PlanSceneControls
+          showWalls={showWalls}
+          onToggleWalls={() => setShowWalls((current) => !current)}
+          showRoofControl={false}
+          showWallsControl={Boolean(walls && walls.length > 0)}
+          onToggleFullscreen={() => setExpanded((current) => !current)}
+          isFullscreen={expanded}
+          className="justify-end"
+        />
       </div>
 
       {showZonePricing && pricingZones.length > 0 && (
@@ -210,21 +225,21 @@ export default function SeatSelectionPlanCanvas({
         </div>
       )}
 
+      <div className={cn('relative w-full', expanded && 'min-h-0 flex-1')}>
       <div
-        ref={containerRef}
+        ref={bindFrame}
+        role="region"
+        aria-label="Plan de salle. Pincez, faites glisser ou utilisez les boutons pour zoomer."
         className={cn(
-          'relative w-full overflow-auto rounded-[var(--radius-card)] border border-border bg-surface-muted touch-pan-x touch-pan-y',
-          expanded ? 'min-h-0 flex-1 h-auto' : 'h-[min(70dvh,480px)] sm:h-[400px]',
+          'relative w-full overflow-auto overscroll-contain rounded-[var(--radius-card)] border border-border bg-surface-muted touch-pan-x touch-pan-y',
+          expanded && 'h-full',
         )}
+        style={{ height: frameHeight, maxHeight: expanded ? undefined : 'min(70dvh, 560px)' }}
       >
+        <div style={spacerStyle}>
         <div
-          className="relative origin-top-left em-floor-canvas em-floor-canvas--photo min-w-full min-h-full"
-          style={{
-            ...floorStyle,
-            width: `${100 * zoom}%`,
-            height: `${100 * zoom}%`,
-            minHeight: `${Math.round((expanded ? Math.max(height, 640) : height) * zoom)}px`,
-          }}
+          className="em-floor-canvas em-floor-canvas--photo overflow-hidden rounded-xl shadow-[var(--shadow-soft)]"
+          style={{ ...floorStyle, ...stageStyle }}
         >
           {roomOutline && (
             <div
@@ -250,7 +265,8 @@ export default function SeatSelectionPlanCanvas({
           <Room2DScaleCompass
             widthM={canvasWidthM}
             heightM={canvasHeightM}
-            showGrid={true}
+            showGrid
+            showLabels={false}
           />
 
           {pricingZones.map((zone) => {
@@ -344,7 +360,10 @@ export default function SeatSelectionPlanCanvas({
                 <div
                   role="button"
                   tabIndex={0}
-                  onClick={() => onSelectTable?.(table.id)}
+                  onClick={() => {
+                    if (zoomFirst) focusTable(table);
+                    onSelectTable?.(table.id);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
@@ -398,6 +417,11 @@ export default function SeatSelectionPlanCanvas({
                         disabled={!seat.available}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (zoomFirst) {
+                            focusTable(table);
+                            onSelectTable?.(seat.tableId);
+                            return;
+                          }
                           if (seat.available) {
                             onSelectTable?.(seat.tableId);
                             onSelect(seat.tableId, seat.seatIndex);
@@ -450,6 +474,23 @@ export default function SeatSelectionPlanCanvas({
             );
           })}
         </div>
+        </div>
+      </div>
+        <Room2DScaleCompass
+          widthM={canvasWidthM}
+          heightM={canvasHeightM}
+          showGrid={false}
+          placement="grouped"
+          pxPerMeter={pxPerMeter}
+          className="rounded-[var(--radius-card)]"
+        />
+        <PlanZoomOverlay
+          zoom={zoom}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          onFit={fit}
+          className="absolute top-2 right-2 z-30"
+        />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getRoomOutlineClipPath, wallsFromRoomOutline, type RoomWallSegment } from '@/lib/roomLayoutUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import {
@@ -12,7 +13,6 @@ import {
 import FloorDepthFrame from '@/components/FloorDepthFrame';
 import { getTableVisualStyle, getTableShapeLabel, getSeatCoordinates, planRotationScreenDeg, rotateSeatCoordinates } from '@/lib/tablePlanUtils';
 import {
-  computeFitZoom,
   getGuestTableMarkerSize,
   GUEST_PLAN_LOGICAL_H,
   GUEST_PLAN_LOGICAL_W,
@@ -23,8 +23,11 @@ import {
 import FixtureRenderer from '@/components/FixtureRenderer';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
-import { PlanSceneControls, PlanZoomControls } from '@/components/PlanViewChrome';
-import { MapPin, Sparkles } from '@/components/icons';
+import { PlanSceneControls, PlanZoomOverlay, usePlanFullscreen } from '@/components/PlanViewChrome';
+import { usePlanViewport } from '@/components/usePlanViewport';
+import { planFrameHeight, planMarkerBoost } from '@/lib/planViewport';
+import { cn } from '@/lib/cn';
+import { MapPin } from '@/components/icons';
 import type { GuestPlanFixture, GuestRoomOutline, GuestTablePlanOverviewItem } from '@/app/rsvp/GuestTablePlanView';
 import type { PricingZone } from '@/lib/ticketPricing';
 
@@ -50,6 +53,8 @@ interface GuestRoomPlanCanvasProps {
   height?: number;
   /** Remplit le parent (plein écran / Répondez s’il vous plaît immersif). */
   fill?: boolean;
+  /** Bouton « Plein écran » du plan 2D (masqué quand le parent est déjà en plein écran). */
+  allowFullscreen?: boolean;
   className?: string;
 }
 
@@ -71,8 +76,8 @@ function TableDetailPopover({
   const miniVisual = getTableVisualStyle(table.shape, true, table.tableColor, table.tableImageUrl);
 
   return (
-    <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-3 w-64 max-w-[90vw] pointer-events-auto animate-fade-in">
-      <div className="bg-surface border border-border rounded-2xl p-3.5 shadow-xl text-left space-y-2">
+    <div className="absolute z-30 inset-2 sm:left-auto sm:w-72 flex flex-col justify-end pointer-events-none animate-fade-in" data-plan-table-card>
+      <div className="pointer-events-auto bg-surface border border-border rounded-2xl p-3.5 shadow-xl text-left space-y-2 max-h-full overflow-y-auto overscroll-contain">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="font-bold text-foreground text-xs truncate">{table.name}</p>
@@ -195,11 +200,22 @@ export default function GuestRoomPlanCanvas({
   neighborNames = [],
   height = 400,
   fill = false,
+  allowFullscreen = true,
   className = '',
 }: GuestRoomPlanCanvasProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
-  const [zoom, setZoom] = useState(1);
+  const {
+    bindFrame,
+    box: frameBox,
+    zoom,
+    spacerStyle,
+    stageStyle,
+    zoomIn,
+    zoomOut,
+    focusOn,
+    fit,
+  } = usePlanViewport({ logicalW: GUEST_PLAN_LOGICAL_W, logicalH: GUEST_PLAN_LOGICAL_H });
+  const { expanded, setExpanded, panelRef } = usePlanFullscreen();
+  const filling = fill || expanded;
   const [showWalls, setShowWalls] = useState(true);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
 
@@ -232,140 +248,89 @@ export default function GuestRoomPlanCanvas({
     [tables, guestTableId],
   );
 
+  const seatRadius = Math.max(markerSize * 0.72, 30);
+  // De loin (téléphone, salle entière), les tables grossissent pour rester lisibles sans se toucher.
+  const boost = useMemo(
+    () => planMarkerBoost(
+      zoom,
+      [...displayPositions.values()].map((p) => pctToLogical(p.x, p.y)),
+      seatRadius * 2 + 24,
+      { readableZoom: 1.1, max: 2.2 },
+    ),
+    [zoom, displayPositions, seatRadius],
+  );
+
   const handleCenterOnGuestTable = () => {
-    if (!guestTable || !containerRef.current) return;
+    if (!guestTable) return;
     const pos = displayPositions.get(guestTable.id) ?? { x: guestTable.x, y: guestTable.y };
     const logical = pctToLogical(pos.x, pos.y);
-    const container = containerRef.current;
-    container.scrollTo({
-      left: logical.x * zoom - container.clientWidth / 2,
-      top: logical.y * zoom - container.clientHeight / 2,
-      behavior: 'smooth',
-    });
-    setSelectedTableId(guestTable.id);
+    // Assez près pour lire les numéros de siège, même sur un téléphone.
+    // La fiche de la table n’est pas ouverte : elle masquerait la place que l’on vient de viser.
+    setSelectedTableId(null);
+    focusOn(logical.x, logical.y, Math.max(zoom, 1.35));
   };
 
-  const fitToContainer = () => {
-    const el = containerRef.current;
-    if (!el) return;
-    const h = fill ? el.clientHeight : height;
-    const fit = computeFitZoom(el.clientWidth, h);
-    setZoom(Math.max(0.22, fit));
-  };
+  const selectedTable = selectedTableId ? tables.find((t) => t.id === selectedTableId) ?? null : null;
+  const selectedIsGuest = Boolean(selectedTable && (selectedTable.isGuestTable || selectedTable.id === guestTableId));
+  const selectedSeatIdx = selectedTable
+    ? typeof guestSeatIndex === 'number' ? guestSeatIndex : selectedTable.guestSeatIndex
+    : undefined;
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    fitToContainer();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(() => fitToContainer());
-    ro.observe(el);
-    return () => ro.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [height, fill, tables.length]);
+  const frameHeight = filling
+    ? undefined
+    : planFrameHeight(frameBox.w, GUEST_PLAN_LOGICAL_W, GUEST_PLAN_LOGICAL_H, { min: 260, max: height, padding: 12 });
+  const pxPerMeter = (GUEST_PLAN_LOGICAL_W * zoom) / Math.max(1, canvasWidthM ?? 20);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const onTouchStart = (event: TouchEvent) => {
-      if (event.touches.length === 2) {
-        pinchRef.current = {
-          dist: Math.hypot(
-            event.touches[0].clientX - event.touches[1].clientX,
-            event.touches[0].clientY - event.touches[1].clientY,
-          ),
-          zoom,
-        };
-      }
-    };
-    const onTouchMove = (event: TouchEvent) => {
-      if (event.touches.length !== 2 || !pinchRef.current) return;
-      event.preventDefault();
-      const dist = Math.hypot(
-        event.touches[0].clientX - event.touches[1].clientX,
-        event.touches[0].clientY - event.touches[1].clientY,
-      );
-      const next = pinchRef.current.zoom * (dist / Math.max(1, pinchRef.current.dist));
-      setZoom(Math.max(0.22, Math.min(2.4, next)));
-    };
-    const onTouchEnd = () => {
-      pinchRef.current = null;
-    };
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
-    el.addEventListener('touchend', onTouchEnd);
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [zoom]);
-
-  const adjustZoom = (delta: number) => {
-    setZoom((z) => Math.max(0.22, Math.min(2.4, z + delta)));
-  };
-
-  return (
-    <div className={`space-y-2 ${fill ? 'h-full min-h-0 flex flex-col' : ''} ${className}`} data-guest-no-swipe>
-      <div className="flex items-center justify-between shrink-0 px-1">
+  const viewer = (
+    <div
+      className={cn('space-y-2', filling && 'h-full min-h-0 flex flex-col', expanded && 'p-3', className)}
+      data-guest-no-swipe
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 shrink-0 px-1">
         {guestTable ? (
           <button
             type="button"
             onClick={handleCenterOnGuestTable}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary/10 hover:bg-primary/15 border border-primary/25 text-xs font-bold text-primary transition active:scale-95 shadow-2xs min-h-11 touch-manipulation"
-            title="Centrer le plan sur mon emplacement"
+            title="Zoomer sur mon emplacement"
           >
             <MapPin className="w-3.5 h-3.5 text-primary" />
             <span>Mon emplacement</span>
           </button>
         ) : <div />}
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <PlanSceneControls
-            showWalls={showWalls}
-            onToggleWalls={() => setShowWalls((current) => !current)}
-            showRoofControl={false}
-            showWallsControl={effectiveWalls.length > 0}
-          />
-          <PlanZoomControls
-            zoom={zoom}
-            onZoomOut={() => adjustZoom(-0.15)}
-            onZoomIn={() => adjustZoom(0.15)}
-            onReset={fitToContainer}
-          />
-        </div>
+        <PlanSceneControls
+          showWalls={showWalls}
+          onToggleWalls={() => setShowWalls((current) => !current)}
+          showRoofControl={false}
+          showWallsControl={effectiveWalls.length > 0}
+          onToggleFullscreen={allowFullscreen && !fill ? () => setExpanded((current) => !current) : undefined}
+          isFullscreen={expanded}
+          className="justify-end"
+        />
       </div>
 
+      <div className={cn('relative w-full', filling && 'flex-1 min-h-0')}>
       <div
-        ref={containerRef}
+        ref={bindFrame}
         role="region"
-        aria-label="Plan de salle. Pincez ou utilisez les boutons pour zoomer."
-        className={`relative w-full overflow-auto rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)] ${fill ? 'flex-1 min-h-0' : ''}`}
+        aria-label="Plan de salle. Pincez, faites glisser ou utilisez les boutons pour zoomer."
+        className={cn(
+          'relative w-full overflow-auto overscroll-contain rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)]',
+          filling && 'h-full',
+        )}
         style={{
-          height: fill ? undefined : `${height}px`,
+          height: frameHeight,
           background: 'var(--surface-muted)',
-          touchAction: 'none',
+          touchAction: 'pan-x pan-y',
         }}
       >
-        <div
-          style={{
-            width: GUEST_PLAN_LOGICAL_W * zoom,
-            height: GUEST_PLAN_LOGICAL_H * zoom,
-            minWidth: '100%',
-            minHeight: '100%',
-            position: 'relative',
-          }}
-        >
+        <div style={spacerStyle}>
           <FloorDepthFrame
             amount={amount}
             floorStyle={floorStyle}
             maxTilt={36}
-            className="overflow-hidden"
-            style={{
-              width: GUEST_PLAN_LOGICAL_W,
-              height: GUEST_PLAN_LOGICAL_H,
-              transform: `scale(${zoom})`,
-              transformOrigin: 'top left',
-            }}
+            className="overflow-hidden rounded-xl shadow-[var(--shadow-soft)]"
+            style={stageStyle}
           >
             {outline && (
               <div
@@ -495,7 +460,6 @@ export default function GuestRoomPlanCanvas({
                 : typeof table.guestSeatIndex === 'number'
                   ? table.guestSeatIndex
                   : undefined;
-              const seatRadius = Math.max(markerSize * 0.72, 30);
 
               return (
                 <div
@@ -504,14 +468,15 @@ export default function GuestRoomPlanCanvas({
                   style={{
                     left: logical.x,
                     top: logical.y,
-                    transform: `translate(-50%, -50%) scale(${depthScale})`,
+                    transform: `translate(-50%, -50%) scale(${depthScale * boost})`,
                     width: markerSize + 8,
                     ...furnitureDepthStyle(pos.y, amount),
                     filter: amount > 0 ? 'drop-shadow(var(--em-item-shadow, 0 8px 12px rgba(0,0,0,0.25)))' : undefined,
                   }}
                 >
                   {/* Pin / Beacon flottant au-dessus de la table de l'invité */}
-                  {isGuest && (
+                  {/* Une seule étiquette : « Mon siège » quand la place est connue, sinon « Vous êtes ici ». */}
+                  {isGuest && typeof mySeatIdx !== 'number' && (
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center animate-pulse motion-reduce:animate-none">
                       <div className="px-2.5 py-1 rounded-full bg-primary-solid text-primary-foreground text-xs font-extrabold tracking-tight whitespace-nowrap shadow-lg flex items-center gap-1.5 border border-white/40 ring-2 ring-primary-solid/40">
                         <span className="relative flex h-2 w-2">
@@ -522,16 +487,6 @@ export default function GuestRoomPlanCanvas({
                       </div>
                       <div className="w-1.5 h-1.5 rotate-45 bg-primary-solid -mt-1 border-r border-b border-white/30" />
                     </div>
-                  )}
-
-                  {isSelected && (
-                    <TableDetailPopover
-                      table={table}
-                      pricingZones={pricingZones}
-                      guestNames={isGuest ? [guestFullName ?? '', ...neighborNames].filter(Boolean) : undefined}
-                      guestSeatIndex={isGuest ? mySeatIdx : undefined}
-                      onClose={() => setSelectedTableId(null)}
-                    />
                   )}
 
                   {/* Plateau de la table avec ses sièges disposés autour */}
@@ -668,18 +623,75 @@ export default function GuestRoomPlanCanvas({
                 </div>
               );
             })}
+            <Room2DScaleCompass
+              widthM={canvasWidthM ?? 20}
+              heightM={canvasHeightM ?? 16}
+              showGrid
+              showLabels={false}
+            />
           </FloorDepthFrame>
-          <Room2DScaleCompass
-            widthM={canvasWidthM ?? 20}
-            heightM={canvasHeightM ?? 16}
-            showGrid={true}
-          />
         </div>
       </div>
+        {/* Repères et zoom posés sur le cadre : ils restent lisibles quel que soit le zoom. */}
+        <Room2DScaleCompass
+          widthM={canvasWidthM ?? 20}
+          heightM={canvasHeightM ?? 16}
+          showGrid={false}
+          placement="grouped"
+          pxPerMeter={pxPerMeter}
+          className={cn('rounded-[var(--radius-card)]', selectedTable && 'hidden')}
+        />
+        <PlanZoomOverlay
+          zoom={zoom}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          onFit={fit}
+          className="absolute top-2 right-2 z-20"
+        />
+        {selectedTable ? (
+          <TableDetailPopover
+            table={selectedTable}
+            pricingZones={pricingZones}
+            guestNames={selectedIsGuest ? [guestFullName ?? '', ...neighborNames].filter(Boolean) : undefined}
+            guestSeatIndex={selectedIsGuest ? selectedSeatIdx : undefined}
+            onClose={() => setSelectedTableId(null)}
+          />
+        ) : null}
+      </div>
 
-      <p className="text-xs text-muted text-center shrink-0">
-        Touchez une table · Pincez pour zoomer
-      </p>
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-1 shrink-0 text-xs text-muted" aria-label="Légende du plan">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-full bg-primary-solid ring-2 ring-primary/30" aria-hidden />
+          Votre siège
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-full border-2 border-primary bg-primary/15" aria-hidden />
+          Votre table
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-full border border-border bg-surface" aria-hidden />
+          Autres tables
+        </span>
+        <span className="w-full text-center sm:w-auto">Touchez une table · pincez pour zoomer</span>
+      </div>
     </div>
   );
+
+  if (expanded && typeof document !== 'undefined') {
+    return createPortal(
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Plan de la salle en plein écran"
+        className="fixed inset-0 z-[250] flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] outline-none"
+      >
+        {viewer}
+      </div>,
+      document.body,
+    );
+  }
+
+  return viewer;
 }

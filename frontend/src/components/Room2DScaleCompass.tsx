@@ -13,6 +13,10 @@ interface Room2DScaleCompassProps {
    * `grouped` : tout en bas à droite, pour laisser le haut aux contrôles de vue (éditeur, aperçus).
    */
   placement?: 'split' | 'grouped';
+  /** Faux : seulement la grille (les repères sont alors affichés à part, hors du plan zoomé). */
+  showLabels?: boolean;
+  /** Pixels à l’écran pour un mètre : la barre d’échelle mesure alors exactement son segment. */
+  pxPerMeter?: number;
 }
 
 function formatMeters(value: number): string {
@@ -25,14 +29,22 @@ export default function Room2DScaleCompass({
   showGrid = true,
   className = '',
   placement = 'split',
+  showLabels = true,
+  pxPerMeter,
 }: Room2DScaleCompassProps) {
   const safeW = Math.max(5, widthM || 20);
   const safeH = Math.max(5, heightM || 16);
   const areaM2 = Math.round(safeW * safeH);
 
   // Déterminer un segment d'échelle adapté (ex: 2m ou 5m)
-  const scaleM = safeW >= 25 ? 5 : safeW >= 12 ? 2 : 1;
+  const scaleM = pxPerMeter && pxPerMeter > 0
+    ? ([1, 2, 5, 10, 20].find((m) => m * pxPerMeter >= 40) ?? 20)
+    : safeW >= 25 ? 5 : safeW >= 12 ? 2 : 1;
   const scalePct = (scaleM / safeW) * 100;
+  const barPx = (fallbackMin: number, fallbackMax: number) =>
+    pxPerMeter && pxPerMeter > 0
+      ? Math.round(scaleM * pxPerMeter)
+      : Math.max(fallbackMin, Math.min(fallbackMax, scalePct * 2.5));
 
   return (
     <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`} aria-hidden="true">
@@ -64,7 +76,7 @@ export default function Room2DScaleCompass({
         </svg>
       )}
 
-      {placement === 'grouped' ? (
+      {!showLabels ? null : placement === 'grouped' ? (
         <>
           {/* Repères d’architecte regroupés en bas à droite : ils ne masquent plus les contrôles de vue en haut. */}
           <div className="absolute bottom-2.5 right-2.5 z-10 flex items-center gap-2.5 px-2.5 py-1.5 rounded-md bg-black/60 text-white shadow-2xs border border-white/10">
@@ -82,7 +94,7 @@ export default function Room2DScaleCompass({
                 <span>0</span>
                 <span>{scaleM} m</span>
               </span>
-              <span className="h-1.5 bg-white/20 rounded-xs overflow-hidden flex border border-white/40" style={{ width: `${Math.max(40, Math.min(88, scalePct * 2.5))}px` }}>
+              <span className="h-1.5 bg-white/20 rounded-xs overflow-hidden flex border border-white/40" style={{ width: `${barPx(40, 88)}px` }}>
                 <span className="w-1/2 h-full bg-white" />
                 <span className="w-1/2 h-full bg-black/80" />
               </span>
@@ -108,7 +120,7 @@ export default function Room2DScaleCompass({
               <span>0</span>
               <span>{scaleM} m</span>
             </div>
-            <div className="h-1.5 bg-white/20 rounded-xs overflow-hidden flex border border-white/40" style={{ width: `${Math.max(48, Math.min(100, scalePct * 2.5))}px` }}>
+            <div className="h-1.5 bg-white/20 rounded-xs overflow-hidden flex border border-white/40" style={{ width: `${barPx(48, 100)}px` }}>
               <div className="w-1/2 h-full bg-white" />
               <div className="w-1/2 h-full bg-black/80" />
             </div>
