@@ -149,6 +149,7 @@ import { SpeakerMesh } from '@/components/room/SpeakerMeshes';
 import GestureFeedback from '@/components/room/GestureFeedback';
 import AvatarEyeCamera, { AVATAR_START_PITCH, type AvatarLook } from '@/components/room/AvatarEyeCamera';
 import AvatarSeatMap from '@/components/room/AvatarSeatMap';
+import { audienceViewPose, isTieredRoom } from '@/lib/roomAudienceView';
 import {
   AVATAR_VIEW_FILTER_LABELS,
   SEAT_VIEW_GRADE_COLORS,
@@ -2997,6 +2998,7 @@ function FixtureMesh({
   screenPowered,
   screenFrameColor,
   screenContent,
+  imageCrop,
   surfaceElevationM = 0,
   widthM,
   roomDepthM,
@@ -3073,6 +3075,8 @@ function FixtureMesh({
   screenPowered?: boolean;
   screenFrameColor?: string;
   screenContent?: import('@/lib/roomLayoutUtils').ScreenContent;
+  /** Recadrage de l'image personnalisée (écrans : zone affichée sur la dalle). */
+  imageCrop?: import('@/lib/roomLayoutUtils').ImageCropRect;
   surfaceElevationM?: number;
   widthM: number;
   roomDepthM: number;
@@ -3271,6 +3275,8 @@ function FixtureMesh({
             elevationM={screenElevationM ?? 1.2}
             powered={screenPowered ?? true}
             selected={selected}
+            imageUrl={imageUrl}
+            imageCrop={imageCrop}
           />
         ) : screenKind === 'wallTv' ? (
           <WallTvMesh
@@ -3281,6 +3287,8 @@ function FixtureMesh({
             selected={selected}
             powered={screenPowered ?? true}
             frameColor={screenFrameColor ?? color ?? '#0f172a'}
+            imageUrl={imageUrl}
+            imageCrop={imageCrop}
           />
         ) : screenKind === 'tableMonitor' ? (
           <TableMonitorMesh
@@ -3305,7 +3313,7 @@ function FixtureMesh({
             powered={screenPowered ?? true}
           />
         ) : (
-          <ScreenMesh w={w} heightM={height} selected={selected} />
+          <ScreenMesh w={w} heightM={height} selected={selected} imageUrl={imageUrl} imageCrop={imageCrop} />
         )
       ) : kind === 'podium' || kind === 'stage' ? (
         <group>
@@ -3468,7 +3476,7 @@ function FixtureMesh({
 }
 
 
-type CameraPresetKey = 'overview' | 'stage' | 'vip' | 'entrance';
+type CameraPresetKey = 'overview' | 'stage' | 'vip' | 'entrance' | 'audience';
 
 interface TargetCameraPose {
   pos: THREE.Vector3;
@@ -4591,6 +4599,7 @@ function SceneContent({
             screenPowered={f.screenPowered}
             screenFrameColor={f.screenFrameColor}
             screenContent={f.screenContent}
+            imageCrop={f.imageCrop}
             surfaceElevationM={raisedSurface?.elevationM ?? 0}
             widthM={widthM}
             roomDepthM={heightM}
@@ -4973,7 +4982,10 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   const [tourCaption, setTourCaption] = useState('entrée par la porte');
   const presentationMode = presentationModeProp ?? blueprint.metadata.presentationMode === true;
   // Perspective de découverte : choisie par l’éditeur, sinon celle enregistrée sur le plan.
-  const introView = introViewProp ?? resolveIntroView(blueprint.metadata.introView);
+  // Salle en gradins (amphithéâtre, cinéma) : sans choix, on arrive à la place du public.
+  const tieredRoom = useMemo(() => isTieredRoom(blueprint), [blueprint]);
+  const blueprintWalls = useMemo(() => resolveBlueprintWalls(blueprint), [blueprint]);
+  const introView = introViewProp ?? resolveIntroView(blueprint.metadata.introView, tieredRoom ? 'audience' : 'arc');
   // En mode présentation, l’arrivée n’était pas jouée : on la joue seulement si une perspective a été choisie.
   const introChosen = introViewProp !== undefined || blueprint.metadata.introView !== undefined;
   const orbitLocked = previewMode || presentationMode || walkthroughActive ? false : lockOrbit;
@@ -5056,8 +5068,20 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   const handleSelectPreset = useCallback((key: CameraPresetKey) => {
     setActivePreset(key);
     setFocusedSpaceId(null);
+    // Gradins : en haut des rangs (« Gradins ») ou assis au milieu (« Scène ») ; le sol de la salle
+    // est sous les rangs surélevés, une caméra posée à 2 m y serait enterrée.
+    if (key === 'audience' || (key === 'stage' && tieredRoom)) {
+      const roofed = blueprint.metadata.showRoof === true && blueprintWalls.length > 0;
+      const pose = audienceViewPose(blueprint, key === 'audience' ? 'top' : 'middle', {
+        ceilingM: roofed ? blueprintWalls[0]?.heightM ?? null : null,
+      });
+      if (pose) {
+        setCameraTargetPose({ pos: new THREE.Vector3(...pose.pos), target: new THREE.Vector3(...pose.target) });
+        return;
+      }
+    }
     // Scène / Table VIP : on vise l’élément réel du plan quand il existe.
-    const realSpace = key === 'stage'
+    const realSpace = key === 'stage' || key === 'audience'
       ? findRoomSpace(spaces, ['stage', 'dj'])
       : key === 'vip'
         ? findRoomSpace(spaces, ['honor', 'vip'])
@@ -5076,6 +5100,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
         target = [0, 0, 0];
         break;
       case 'stage':
+      case 'audience':
         pos = [0, 2.2, Math.max(heightM * 0.32, 4.2)];
         target = [0, 1.4, -Math.max(heightM * 0.38, 4.2)];
         break;
@@ -5095,7 +5120,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       pos: new THREE.Vector3(...pos),
       target: new THREE.Vector3(...target),
     });
-  }, [blueprint, spaces, flyToSpace]);
+  }, [blueprint, spaces, flyToSpace, tieredRoom, blueprintWalls]);
 
   // Découverte « depuis l’entrée / face à la scène / table d’honneur » : travelling lent depuis le ciel.
   const [introGlide, setIntroGlide] = useState(false);
@@ -5565,21 +5590,39 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             <Sparkles className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Scène</span>
           </button>
-          <button
-            type="button"
-            onClick={() => handleSelectPreset('vip')}
-            aria-pressed={activePreset === 'vip'}
-            title="Point de vue Table d'honneur"
-            className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
-              activePreset === 'vip'
-                ? 'bg-primary-solid text-primary-foreground shadow-xs'
-                : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
-            )}
-          >
-            <Crown className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Table VIP</span>
-          </button>
+          {tieredRoom ? (
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('audience')}
+              aria-pressed={activePreset === 'audience'}
+              title="En haut des gradins, face à l’écran ou à la scène"
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
+                activePreset === 'audience'
+                  ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                  : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
+              )}
+            >
+              <Armchair className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Gradins</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('vip')}
+              aria-pressed={activePreset === 'vip'}
+              title="Point de vue Table d'honneur"
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
+                activePreset === 'vip'
+                  ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                  : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
+              )}
+            >
+              <Crown className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Table VIP</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => handleSelectPreset('entrance')}

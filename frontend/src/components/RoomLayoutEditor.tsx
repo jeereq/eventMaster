@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom';
 import { resolveChairVisual } from '@/lib/roomChairVisual';
 import { centerpieceStyleHints, couvertStyleHints, couvertStyleLabels, type CouvertStyle } from '@/lib/roomTableware';
 import { useHideAiFabWhileVisible } from '@/components/landing/useHideAiFabWhileVisible';
-import { ROOM_INTRO_VIEWS, introViewLabel, resolveIntroView, type RoomIntroView } from '@/lib/roomIntroView';
+import { introViewLabel, introViewsFor, resolveIntroView, type RoomIntroView } from '@/lib/roomIntroView';
+import { isTieredRoom } from '@/lib/roomAudienceView';
 import {
   DEFAULT_GUEST_SIMULATION,
   GUEST_DRESS_CODES,
@@ -3204,6 +3205,10 @@ export default function RoomLayoutEditor({
     />
   );
 
+  // Amphithéâtre, cinéma : sans choix enregistré, les visiteurs arrivent en haut des gradins.
+  const tieredRoom = isTieredRoom(blueprint);
+  const introViewValue = resolveIntroView(blueprint.metadata.introView, tieredRoom ? 'audience' : 'arc');
+
   const setIntroView = (view: RoomIntroView) => {
     updateBlueprint(
       { ...blueprint, metadata: { ...blueprint.metadata, introView: view } },
@@ -6067,7 +6072,7 @@ export default function RoomLayoutEditor({
       const isAisle = selectedFixture.kind === 'aisle' || selectedFixture.kind === 'carpet';
       const isChandelier = selectedFixture.kind === 'chandelier';
       const isCorridor = selectedFixture.kind === 'corridor';
-      const canHaveImage = isColumn || isStage || isFlower || isBuffet || isStairs || isAisle || isDecal || isCorridor;
+      const canHaveImage = isColumn || isStage || isFlower || isBuffet || isStairs || isAisle || isDecal || isCorridor || isScreen;
 
       return (
         <div className="space-y-3">
@@ -7996,13 +8001,37 @@ export default function RoomLayoutEditor({
 
             {canHaveImage && (
               <div className="space-y-2 pt-2 border-t border-border">
-                <p className="text-xs font-semibold text-muted flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image personnalisée</p>
+                <p className="text-xs font-semibold text-muted flex items-center gap-1">
+                  <ImagePlus className="w-3.5 h-3.5" /> {isScreen ? 'Image affichée sur l’écran' : 'Image personnalisée'}
+                </p>
+                {isScreen ? (
+                  <p className="text-xs text-muted leading-relaxed">
+                    {selectedFixture.imageUrl
+                      ? 'L’image remplit l’écran sans être déformée. Rognez-la pour choisir la partie visible.'
+                      : 'Affiche, logo, bande-annonce ou photo des mariés : elle s’affiche sur l’écran en 3D.'}
+                  </p>
+                ) : null}
+                {isScreen && selectedFixture.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- aperçu d'une image déjà importée (URL externe ou intégrée)
+                  <img
+                    src={selectedFixture.imageUrl}
+                    alt="Image affichée sur l’écran"
+                    className="w-full aspect-video rounded-[var(--radius-button)] border border-border object-cover bg-black"
+                  />
+                ) : null}
+                {isScreen && selectedFixture.imageUrl && selectedFixture.screenPowered === false ? (
+                  <p className="text-xs text-amber-700 dark:text-amber-400">L’écran est éteint : allumez-le pour voir l’image en 3D.</p>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setCropTarget({ kind: 'fixture', id: selectedFixture.id })}
                   className="w-full py-2 rounded-[var(--radius-button)] border border-primary/30 bg-primary/10 text-primary text-xs font-bold hover:bg-primary/15"
                 >
-                  {selectedFixture.imageUrl ? 'Modifier / rogner l\'image' : 'Importer et rogner une image'}
+                  {selectedFixture.imageUrl
+                    ? 'Modifier / rogner l\'image'
+                    : isScreen
+                      ? 'Choisir l’image de l’écran'
+                      : 'Importer et rogner une image'}
                 </button>
                 {selectedFixture.imageUrl && (
                   <button
@@ -10412,12 +10441,12 @@ export default function RoomLayoutEditor({
         <Video className="w-3.5 h-3.5" aria-hidden />
         <span className="sr-only sm:not-sr-only">Découverte :</span>
         <select
-          value={resolveIntroView(blueprint.metadata.introView)}
+          value={introViewValue}
           onChange={(e) => setIntroView(e.target.value as RoomIntroView)}
           className="bg-transparent text-xs font-bold text-foreground outline-none"
           aria-label="Découverte du plan : perspective d’arrivée"
         >
-          {ROOM_INTRO_VIEWS.map((v) => (
+          {introViewsFor(tieredRoom, introViewValue).map((v) => (
             <option key={v.id} value={v.id}>{v.label}</option>
           ))}
         </select>
@@ -10425,7 +10454,7 @@ export default function RoomLayoutEditor({
       <button
         type="button"
         onClick={replayIntro}
-        disabled={walkthroughActive || resolveIntroView(blueprint.metadata.introView) === 'none'}
+        disabled={walkthroughActive || introViewValue === 'none'}
         className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
         title="Rejouer l’arrivée telle que la verront vos visiteurs"
       >
@@ -12234,7 +12263,7 @@ export default function RoomLayoutEditor({
         open={Boolean(cropTarget)}
         onClose={() => setCropTarget(null)}
         onApply={handleCropApply}
-        title={cropFixture?.kind === 'stage' ? 'Image de la scène' : cropFixture?.kind === 'flower' ? 'Image florale' : 'Image de la colonne'}
+        title={cropFixture?.kind === 'stage' ? 'Image de la scène' : cropFixture?.kind === 'flower' ? 'Image florale' : cropFixture?.kind === 'screen' ? 'Image de l’écran' : 'Image de la colonne'}
         initialImageUrl={cropFixture?.imageUrl}
         initialCrop={cropFixture?.imageCrop}
       />

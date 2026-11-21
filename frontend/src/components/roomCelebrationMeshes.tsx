@@ -6,6 +6,8 @@ import * as THREE from 'three';
 import { loadTiledTexture } from '@/lib/roomWebGLMaterials';
 import { withRepeat } from '@/lib/roomSurfaceFinish';
 import { bulbColor, bulbsAlongSpan, stringLightPlan, type StringLightLayout, type StringLightMount, type StringLightStyle } from '@/lib/roomStringLights';
+import { useScreenImageTexture } from '@/components/room/useScreenImage';
+import type { ImageCropRect } from '@/lib/roomLayoutUtils';
 
 const GOLD = '#c9a227';
 const CREAM = '#f5f0e8';
@@ -989,12 +991,18 @@ export function ScreenMesh({
   w,
   heightM = 2.4,
   selected = false,
+  imageUrl,
+  imageCrop,
 }: {
   w: number;
   heightM?: number;
   selected?: boolean;
+  /** Image choisie dans l'éditeur, affichée sur la dalle LED. */
+  imageUrl?: string;
+  imageCrop?: ImageCropRect;
 }) {
   const h = Math.max(1.4, heightM);
+  const image = useScreenImageTexture(imageUrl, imageCrop, (w * 0.96) / (h * 0.94));
   const trussR = 0.024;
   const trussColor = selected ? '#c7d2fe' : '#94a3b8';
   const speakerH = Math.min(0.65, h * 0.45);
@@ -1068,6 +1076,22 @@ export function ScreenMesh({
         />
       </mesh>
 
+      {image ? (
+        <mesh position={[0, h * 0.55, 0.036]}>
+          <planeGeometry args={[w * 0.96, h * 0.94]} />
+          <meshStandardMaterial
+            key={image.uuid}
+            color="#ffffff"
+            map={image}
+            emissive="#ffffff"
+            emissiveMap={image}
+            emissiveIntensity={0.85}
+            roughness={0.35}
+            toneMapped={false}
+          />
+        </mesh>
+      ) : null}
+
       {/* Cadre biseauté ultra-fin autour de l'écran */}
       <mesh position={[0, h * 0.55, 0.02]}>
         <boxGeometry args={[w * 0.98, h * 0.96, 0.015]} />
@@ -1100,6 +1124,8 @@ export function WallTvMesh({
   selected = false,
   powered = true,
   frameColor = '#0f172a',
+  imageUrl,
+  imageCrop,
 }: {
   w?: number;
   ratio?: '16:9' | '21:9' | '9:16' | '32:9';
@@ -1108,9 +1134,13 @@ export function WallTvMesh({
   selected?: boolean;
   powered?: boolean;
   frameColor?: string;
+  /** Image choisie dans l'éditeur, affichée quand la télévision est allumée. */
+  imageUrl?: string;
+  imageCrop?: ImageCropRect;
 }) {
   const aspect = ratio === '9:16' ? 9 / 16 : ratio === '21:9' ? 21 / 9 : ratio === '32:9' ? 32 / 9 : 16 / 9;
   const h = w / aspect;
+  const image = useScreenImageTexture(imageUrl, imageCrop, aspect);
   const tiltRad = (tiltDeg * Math.PI) / 180;
   const emissiveColor = powered ? '#1e3a8a' : '#020617';
   const emissiveInt = powered ? 0.65 : 0;
@@ -1138,13 +1168,26 @@ export function WallTvMesh({
         {/* Dalle écran OLED antireflet active */}
         <mesh position={[0, 0, 0.002]}>
           <planeGeometry args={[w * 0.985, h * 0.98]} />
-          <meshStandardMaterial
-            color="#090d16"
-            emissive={emissiveColor}
-            emissiveIntensity={emissiveInt}
-            roughness={0.12}
-            metalness={0.3}
-          />
+          {powered && image ? (
+            <meshStandardMaterial
+              key={image.uuid}
+              color="#ffffff"
+              map={image}
+              emissive="#ffffff"
+              emissiveMap={image}
+              emissiveIntensity={0.8}
+              roughness={0.12}
+              toneMapped={false}
+            />
+          ) : (
+            <meshStandardMaterial
+              color="#090d16"
+              emissive={emissiveColor}
+              emissiveIntensity={emissiveInt}
+              roughness={0.12}
+              metalness={0.3}
+            />
+          )}
         </mesh>
         {/* Cadre biseauté ultra-fin */}
         <mesh position={[0, 0, 0.001]}>

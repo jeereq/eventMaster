@@ -3,10 +3,10 @@
  * (à l'ouverture de l'éditeur, de l'aperçu public, du choix des places…).
  */
 
-export type RoomIntroView = 'arc' | 'top' | 'dollhouse' | 'entrance' | 'stage' | 'vip' | 'none';
+export type RoomIntroView = 'arc' | 'top' | 'dollhouse' | 'entrance' | 'stage' | 'vip' | 'audience' | 'none';
 
 /** Perspectives qui se terminent sur un point de vue précis (travelling vers un préréglage caméra). */
-export type RoomIntroPresetView = Extract<RoomIntroView, 'entrance' | 'stage' | 'vip'>;
+export type RoomIntroPresetView = Extract<RoomIntroView, 'entrance' | 'stage' | 'vip' | 'audience'>;
 
 export const ROOM_INTRO_VIEWS: { id: RoomIntroView; label: string; hint: string }[] = [
   { id: 'arc', label: 'Survol de la salle', hint: 'La caméra tourne autour de la salle puis se pose sur la vue d’ensemble.' },
@@ -15,14 +15,27 @@ export const ROOM_INTRO_VIEWS: { id: RoomIntroView; label: string; hint: string 
   { id: 'entrance', label: 'Depuis l’entrée', hint: 'À hauteur d’yeux, comme un invité qui passe la porte.' },
   { id: 'stage', label: 'Face à la scène', hint: 'Travelling vers la scène (ou l’estrade, le DJ) s’il y en a une.' },
   { id: 'vip', label: 'Table d’honneur', hint: 'Travelling vers la table d’honneur ou l’espace VIP.' },
+  {
+    id: 'audience',
+    label: 'Depuis les gradins',
+    hint: 'Amphithéâtre, cinéma : la caméra descend se poser en haut des gradins, face à l’écran ou à la scène.',
+  },
   { id: 'none', label: 'Sans animation', hint: 'La salle s’affiche directement, sans mouvement de caméra.' },
 ];
 
 const VALID = new Set<RoomIntroView>(ROOM_INTRO_VIEWS.map((v) => v.id));
 
-/** Valeur enregistrée sur le plan → perspective sûre (« survol » par défaut). */
-export function resolveIntroView(value: unknown): RoomIntroView {
-  return typeof value === 'string' && VALID.has(value as RoomIntroView) ? (value as RoomIntroView) : 'arc';
+/**
+ * Valeur enregistrée sur le plan → perspective sûre. Sans choix, « survol » ; une salle en gradins
+ * passe `'audience'` en repli pour arriver directement à la place du public.
+ */
+export function resolveIntroView(value: unknown, fallback: RoomIntroView = 'arc'): RoomIntroView {
+  return typeof value === 'string' && VALID.has(value as RoomIntroView) ? (value as RoomIntroView) : fallback;
+}
+
+/** Perspectives proposées dans l'éditeur : « Depuis les gradins » seulement pour une salle en gradins. */
+export function introViewsFor(tiered: boolean, current?: RoomIntroView): typeof ROOM_INTRO_VIEWS {
+  return ROOM_INTRO_VIEWS.filter((v) => v.id !== 'audience' || tiered || current === 'audience');
 }
 
 export function introViewLabel(view: RoomIntroView): string {
@@ -30,7 +43,7 @@ export function introViewLabel(view: RoomIntroView): string {
 }
 
 export function isPresetIntroView(view: RoomIntroView): view is RoomIntroPresetView {
-  return view === 'entrance' || view === 'stage' || view === 'vip';
+  return view === 'entrance' || view === 'stage' || view === 'vip' || view === 'audience';
 }
 
 /**
