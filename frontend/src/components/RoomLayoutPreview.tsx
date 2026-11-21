@@ -113,6 +113,11 @@ interface RoomLayoutPreviewProps {
   seatView?: SeatViewRequest | null;
   /** Bouton d'action sur la place regardée (ex. « Choisir cette place »). */
   seatActionFor?: AvatarSeatAction;
+  /**
+   * Plein écran : panneau affiché à côté de la 3D (à droite sur ordinateur, en bas sur téléphone)
+   * pour garder les commandes de la page (choix des places, total…). `close` quitte le plein écran.
+   */
+  fullscreenPanel?: (close: () => void) => React.ReactNode;
 }
 
 type WebGLPreviewProps = {
@@ -277,6 +282,7 @@ export default function RoomLayoutPreview({
   guestSimulation = null,
   seatView = null,
   seatActionFor,
+  fullscreenPanel,
 }: RoomLayoutPreviewProps) {
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
@@ -502,6 +508,7 @@ export default function RoomLayoutPreview({
               />
             </div>
           </div>
+          <div className="flex flex-1 min-h-0 flex-col sm:flex-row">
           <div className="relative flex-1 min-h-0">
             {useWebGL ? (
               <Room3DErrorBoundary
@@ -535,6 +542,19 @@ export default function RoomLayoutPreview({
                 guestSimulation={guestSimulation}
               />
             )}
+          </div>
+          {fullscreenPanel ? (
+            <aside
+              className="max-h-[45dvh] shrink-0 overflow-y-auto overscroll-contain border-t border-stage-foreground/15 bg-background p-3 sm:max-h-none sm:w-[24rem] sm:border-l sm:border-t-0"
+              aria-label="Choix des places"
+            >
+              {fullscreenPanel(() => {
+                setWalkthroughActive(false);
+                setWalkthroughLabel('');
+                setExpanded(false);
+              })}
+            </aside>
+          ) : null}
           </div>
           <p className="text-xs text-stage-foreground/80 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {useWebGL
