@@ -77,7 +77,11 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
     const { periodGuests } = await countTenantGuestsForQuota(event.tenantId);
     const limits = getPlanLimitsForTenant(event.tenant.plan, event.tenant.accountKind);
     if (periodGuests + order.quantity > limits.maxGuests) {
-      throw new Error('Quota d’invités de l’organisation atteint pour la période en cours. Contactez l’organisateur.');
+      // La place a été bloquée à la création de la commande : un billet payé est toujours honoré,
+      // même si le quota est dépassé de justesse (ex. paiement arrivé après expiration du blocage).
+      console.warn(
+        `[ticketOrder] commande ${order.id} honorée au-delà du quota (${periodGuests + order.quantity}/${limits.maxGuests}).`,
+      );
     }
   }
 

@@ -17,6 +17,7 @@ import {
 } from '../services/ticketPricingService';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { countTenantGuestsForQuota } from '../services/tenantPeriodService';
+import { TicketHoldError, createTicketOrderWithHold } from '../services/ticketQuotaHold';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
 import { formatEventPlace } from '../utils/eventPlace';
@@ -722,8 +723,15 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       }
     }
 
-    const order = await prisma.ticketOrder.create({
-      data: {
+    // Quota et stock re-vérifiés sous verrou en comptant les commandes en cours de paiement.
+    let order;
+    try {
+      order = await createTicketOrderWithHold({
+        tenantId: event.tenantId,
+        event,
+        quantity,
+        maxGuests: limits.maxGuests,
+        data: {
         eventId: event.id,
         buyerName,
         buyerEmail,
@@ -739,8 +747,12 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
         tableId: requestedSeats[0]?.tableId || null,
         seatIndex: requestedSeats[0]?.seatIndex ?? null,
         selectedSeats: seatsWithPricing.length > 0 ? toPrismaJson(seatsWithPricing) : undefined,
-      },
-    });
+        },
+      });
+    } catch (err) {
+      if (err instanceof TicketHoldError) return res.status(err.status).json({ error: err.message });
+      throw err;
+    }
 
     if (!paid) {
       const fulfilled = await fulfillTicketOrder(order.id);
