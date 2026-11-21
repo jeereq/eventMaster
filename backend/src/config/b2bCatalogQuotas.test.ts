@@ -49,14 +49,14 @@ describe('B2B catalogue salle + prestations', () => {
   it('laisse un ORGANIZER Business avec événements et marketplace', () => {
     const limits = getPlanLimitsForTenant('STANDARD', 'ORGANIZER');
     assert.equal(limits.maxServices, 9999);
-    assert.equal(limits.maxEvents, 8);
+    assert.equal(limits.maxEvents, 4);
     assert.equal(limits.maxRooms, 3);
   });
 
   it('ne zéroifie pas les prestations pour BOTH sur un forfait B2B', () => {
     const limits = getPlanLimitsForTenant('PREMIUM_1', 'BOTH');
     assert.equal(limits.maxServices, 9999);
-    assert.equal(limits.maxEvents, 12);
+    assert.equal(limits.maxEvents, 6);
   });
 
   it('retire la salle d’essai au prestataire inscrit sur la voie prestations', () => {

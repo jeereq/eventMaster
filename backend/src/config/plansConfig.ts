@@ -132,7 +132,7 @@ function personalPlan(
   return organizerPlan({
     ...rest,
     audience: 'B2C',
-    maxEvents: 3,
+    maxEvents: 2,
     maxTemplates: 9999,
     maxRooms: 2,
     maxServices: 0,
@@ -184,7 +184,7 @@ export function getDefaultPlans(): PlansConfiguration {
       price: '60.000 FC',
       monthlyPriceFc: 60000,
       description:
-        'Fête privée jusqu’à 50 invités : organisation complète (QR, modèles, éditeur 2D/3D complet), 3 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
+        'Fête privée jusqu’à 50 invités : organisation complète (QR, modèles, éditeur 2D/3D complet), 2 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
       maxGuests: 50,
     }),
     PERSONAL_100: personalPlan({
@@ -192,7 +192,7 @@ export function getDefaultPlans(): PlansConfiguration {
       price: '90.000 FC',
       monthlyPriceFc: 90000,
       description:
-        'Fête privée jusqu’à 100 invités : organisation complète (QR, modèles, éditeur 2D/3D complet), 3 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
+        'Fête privée jusqu’à 100 invités : organisation complète (QR, modèles, éditeur 2D/3D complet), 2 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
       maxGuests: 100,
     }),
     PERSONAL_200: personalPlan({
@@ -200,7 +200,7 @@ export function getDefaultPlans(): PlansConfiguration {
       price: '120.000 FC',
       monthlyPriceFc: 120000,
       description:
-        'Fête privée jusqu’à 200 invités : organisation complète (QR, modèles, éditeur 2D/3D complet), 3 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
+        'Fête privée jusqu’à 200 invités : organisation complète (QR, modèles, éditeur 2D/3D complet), 2 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
       maxGuests: 200,
     }),
     PERSONAL_PLUS: personalPlan({
@@ -208,8 +208,8 @@ export function getDefaultPlans(): PlansConfiguration {
       price: '180.000 FC',
       monthlyPriceFc: 180000,
       description:
-        'Grande fête privée (plus de 200 invités) : organisation complète avec éditeur 2D/3D complet, invités illimités, 3 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
-      maxGuests: 99999,
+        'Grande fête privée (plus de 200 invités) : organisation complète avec éditeur 2D/3D complet, jusqu’à 450 invités par trimestre, 2 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
+      maxGuests: 450,
     }),
     STANDARD: organizerPlan({
       name: 'Business',
@@ -218,8 +218,8 @@ export function getDefaultPlans(): PlansConfiguration {
       description:
         'B2B — réceptions, protocole QR, PDF/GPS : 3 salles publiables au catalogue et prestations marketplace illimitées.',
       audience: 'B2B',
-      maxEvents: 8,
-      maxGuests: 150,
+      maxEvents: 4,
+      maxGuests: 70,
       maxTemplates: 5,
       maxRooms: 3,
       maxServices: 9999,
@@ -243,8 +243,8 @@ export function getDefaultPlans(): PlansConfiguration {
       description:
         'B2B — salles 2D avancées, modèles personnalisés : 5 salles publiables et prestations marketplace illimitées.',
       audience: 'B2B',
-      maxEvents: 12,
-      maxGuests: 500,
+      maxEvents: 6,
+      maxGuests: 140,
       maxTemplates: 8,
       maxRooms: 5,
       maxServices: 9999,
@@ -268,8 +268,8 @@ export function getDefaultPlans(): PlansConfiguration {
       description:
         'B2B — protocole complet, OCR, multi-salles : 10 salles publiables et prestations marketplace illimitées.',
       audience: 'B2B',
-      maxEvents: 20,
-      maxGuests: 1000,
+      maxEvents: 8,
+      maxGuests: 220,
       maxTemplates: 10,
       maxRooms: 10,
       maxServices: 9999,
@@ -293,8 +293,8 @@ export function getDefaultPlans(): PlansConfiguration {
       description:
         'B2B — volume élevé, éditeur complet : 25 salles publiables, prestations marketplace illimitées, rapports et support prioritaire.',
       audience: 'B2B',
-      maxEvents: 40,
-      maxGuests: 3500,
+      maxEvents: 15,
+      maxGuests: 950,
       maxTemplates: 18,
       maxRooms: 25,
       maxServices: 9999,
@@ -318,8 +318,8 @@ export function getDefaultPlans(): PlansConfiguration {
       description:
         'B2B — agences : 50 salles publiables, prestations marketplace illimitées, éditeur complet et support dédié.',
       audience: 'B2B',
-      maxEvents: 70,
-      maxGuests: 5000,
+      maxEvents: 25,
+      maxGuests: 1400,
       maxTemplates: 30,
       maxRooms: 50,
       maxServices: 9999,
@@ -337,14 +337,14 @@ export function getDefaultPlans(): PlansConfiguration {
       supportLevel: 'dedicated',
     }),
     ENTERPRISE_3: organizerPlan({
-      name: 'Enterprise Unlimited',
+      name: 'Enterprise Max',
       price: '700.000 FC',
       monthlyPriceFc: 700000,
       description:
-        'B2B — illimité (événements, salles publiables, prestations marketplace), multi-agences, SLA 24/7 et onboarding dédié.',
+        'B2B — 40 événements et 1 900 invités par mois, salles publiables et prestations marketplace illimitées, multi-agences, SLA 24/7 et onboarding dédié.',
       audience: 'B2B',
-      maxEvents: 9999,
-      maxGuests: 99999,
+      maxEvents: 40,
+      maxGuests: 1900,
       maxTemplates: 9999,
       maxRooms: 9999,
       maxServices: 9999,

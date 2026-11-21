@@ -160,7 +160,7 @@ const UPGRADE_B2B_PLANS: Array<Omit<UpgradePlanConfig, 'periodLabel'>> = [
     name: 'Business Standard',
     badge: 'Lancement Pro',
     description: 'Organisateurs réguliers, associations et PME.',
-    highlights: ['8 événements · 150 invités/évt', 'Billetterie & encaissements', 'Invitations & scan QR', 'Tableau de bord financier'],
+    highlights: ['4 événements · 70 invités / mois', 'Billetterie & encaissements', 'Invitations & scan QR', 'Tableau de bord financier'],
   },
   {
     id: 'PREMIUM_1',
@@ -168,21 +168,21 @@ const UPGRADE_B2B_PLANS: Array<Omit<UpgradePlanConfig, 'periodLabel'>> = [
     badge: 'Recommandé Pro',
     popular: true,
     description: 'Agences événementielles, galas et séminaires.',
-    highlights: ['Multi-événements · 500 invités/évt', 'Billetterie & dons solidaires', 'Gestion d’équipe (Managers)', 'Scan QR anti-doublon illimité'],
+    highlights: ['6 événements · 140 invités / mois', 'Billetterie & dons solidaires', 'Gestion d’équipe (Managers)', 'Scan QR anti-doublon illimité'],
   },
   {
     id: 'PREMIUM_2',
     name: 'Business Premium Plus',
     badge: 'Grand Public',
     description: 'Grands rassemblements, galas et concerts.',
-    highlights: ['Multi-événements · 1 000 invités/évt', 'Multi-salles & plans avancés', 'Support : {support}', 'Rapports d’émargement complets'],
+    highlights: ['8 événements · 220 invités / mois', 'Multi-salles & plans avancés', 'Support : {support}', 'Rapports d’émargement complets'],
   },
   {
     id: 'ENTERPRISE_1',
     name: 'Enterprise Galas',
     badge: 'Grand Volume',
     description: 'Concerts, festivals, salons et foires d’envergure.',
-    highlights: ['Multi-événements · 3 500 invités', 'Multi-opérateurs de scan Jour J', 'Support : {support}', 'Export comptable & analytics'],
+    highlights: ['15 événements · 950 invités / mois', 'Multi-opérateurs de scan Jour J', 'Support : {support}', 'Export comptable & analytics'],
   },
 ];
 
