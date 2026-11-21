@@ -303,6 +303,196 @@ export default function SeatSelection3DViewer({
     }
   };
 
+  // Récapitulatif (page et plein écran) : nombre de places et total.
+  const selectedTotalFc = selectedSeats.reduce(
+    (sum, sel) => sum + (seatByKey.get(`${sel.tableId}:${sel.seatIndex}`)?.priceFc ?? 0),
+    0,
+  );
+
+  const seatPanel = activeTable ? (
+    <div className="@container rounded-2xl border border-primary/25 bg-surface p-3.5 sm:p-4 shadow-sm space-y-3 animate-in fade-in zoom-in-98">
+      <div className="flex items-center justify-between gap-2 border-b border-border pb-2.5">
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs">
+            <Users className="w-4 h-4" />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="font-bold text-sm text-foreground">{activeTable.name}</h4>
+              {activeTable.pricingZoneName && (
+                <span
+                  className="px-2 py-0.5 rounded-full text-xs font-bold text-white shadow-2xs"
+                  style={{
+                    backgroundColor:
+                      (activeTable.pricingZoneId && zoneColorById?.get(activeTable.pricingZoneId)) ||
+                      '#c4a35a',
+                  }}
+                >
+                  {activeTable.pricingZoneName}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted">
+              {activeTable.seats.filter((s) => s.available).length} place{activeTable.seats.filter((s) => s.available).length > 1 ? 's' : ''} libre{activeTable.seats.filter((s) => s.available).length > 1 ? 's' : ''} sur {activeTable.capacity}
+              {activeTable.seats[0]?.priceFc > 0 && (
+                <span className="ml-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                  · {formatFc(activeTable.seats[0].priceFc)} / place
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Navigation entre tables */}
+        {tablesList.length > 1 && (
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={goToPrevTable}
+              className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground transition min-w-11 min-h-11 flex items-center justify-center"
+              title={isTheaterRowPlan(activeTable.shape, activeTable.rowMeta) ? 'Rangée précédente' : 'Emplacement précédent'}
+              aria-label={isTheaterRowPlan(activeTable.shape, activeTable.rowMeta) ? 'Rangée précédente' : 'Emplacement précédent'}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-semibold text-muted px-1 tabular-nums">
+              {currentTableIndex + 1}/{tablesList.length}
+            </span>
+            <button
+              type="button"
+              onClick={goToNextTable}
+              className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground transition min-w-11 min-h-11 flex items-center justify-center"
+              title={isTheaterRowPlan(activeTable.shape, activeTable.rowMeta) ? 'Rangée suivante' : 'Emplacement suivant'}
+              aria-label={isTheaterRowPlan(activeTable.shape, activeTable.rowMeta) ? 'Rangée suivante' : 'Emplacement suivant'}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Grille de sièges de la table */}
+      <div className="grid grid-cols-3 @md:grid-cols-4 @3xl:grid-cols-6 gap-2">
+        {activeTable.seats.map((seat) => {
+          const isSelected = selectedSeats.some(
+            (s) => s.tableId === seat.tableId && s.seatIndex === seat.seatIndex
+          );
+          const selectionOrder = selectedSeats.findIndex(
+            (s) => s.tableId === seat.tableId && s.seatIndex === seat.seatIndex
+          );
+          const zoneColor = seat.pricingZoneId ? zoneColorById?.get(seat.pricingZoneId) : undefined;
+
+          return (
+            <button
+              key={seat.seatIndex}
+              type="button"
+              disabled={!seat.available}
+              onClick={() => onToggleSeat(seat.tableId, seat.seatIndex)}
+              className={cn(
+                'relative p-2.5 rounded-xl border text-center transition flex flex-col items-center justify-center gap-1 min-h-[58px] touch-manipulation active:scale-95',
+                !seat.available && 'opacity-40 cursor-not-allowed bg-muted/40 border-border text-muted',
+                seat.available && !isSelected && 'bg-surface hover:bg-primary/10 hover:border-primary border-border text-foreground shadow-2xs min-h-11',
+                isSelected && 'bg-primary-solid text-primary-foreground border-primary shadow-sm ring-2 ring-primary/40 font-bold min-h-11',
+              )}
+            >
+              {/* Badge de numérotation de sélection */}
+              {isSelected && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-primary-solid text-primary-foreground text-[9px] font-black flex items-center justify-center shadow-xs">
+                  {selectionOrder + 1}
+                </span>
+              )}
+
+              <span className="text-xs font-bold leading-none">
+                {isStandaloneChairPlan(seat.chairMeta)
+                  ? seat.tableName
+                  : (seat.seatCode || `Siège ${seat.seatIndex + 1}`)}
+                {seat.isPmr ? ' · PMR' : ''}
+              </span>
+
+              <span
+                className={cn(
+                  'text-xs leading-tight',
+                  isSelected ? 'text-primary-foreground/90' : 'text-muted'
+                )}
+              >
+                {!seat.available
+                  ? 'Occupé'
+                  : isSelected
+                  ? 'Choisi'
+                  : seat.priceFc > 0
+                  ? formatFc(seat.priceFc)
+                  : 'Libre'}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Raccourci de sélection rapide */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border text-xs">
+        <span className="text-xs text-muted">
+          Touchez un siège libre pour l&apos;ajouter ou le retirer
+        </span>
+        <div className="flex items-center gap-2">
+          {seatToPreview ? (
+            <button
+              type="button"
+              onClick={() => viewFromSeat(seatToPreview.tableId, seatToPreview.seatIndex)}
+              className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline min-h-11 px-2 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              Voir depuis la place
+            </button>
+          ) : null}
+          {activeTable.seats.some((s) => s.available && !selectedSeats.some((sel) => sel.tableId === s.tableId && sel.seatIndex === s.seatIndex)) && (
+            <button
+              type="button"
+              onClick={() => {
+                const firstFree = activeTable.seats.find(
+                  (s) => s.available && !selectedSeats.some((sel) => sel.tableId === s.tableId && sel.seatIndex === s.seatIndex)
+                );
+                if (firstFree) onToggleSeat(firstFree.tableId, firstFree.seatIndex);
+              }}
+              className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline min-h-11 px-2 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Prendre 1 place libre
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  /** Plein écran : le même panneau à côté de la 3D, avec le récapitulatif et un retour au formulaire. */
+  const fullscreenPanel = (close: () => void) => (
+    <div className="space-y-3 text-foreground">
+      <div className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-surface p-3 shadow-sm">
+        <div className="min-w-0">
+          <p className="text-sm font-bold">
+            {selectedSeats.length === 0
+              ? 'Aucune place choisie'
+              : `${selectedSeats.length} place${selectedSeats.length > 1 ? 's' : ''} choisie${selectedSeats.length > 1 ? 's' : ''}`}
+          </p>
+          {selectedTotalFc > 0 ? (
+            <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatFc(selectedTotalFc)}</p>
+          ) : (
+            <p className="text-xs text-muted">Touchez une chaise ou un siège de la liste</p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={close}
+          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-[var(--radius-button)] bg-primary-solid px-3.5 text-sm font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        >
+          <Check className="h-4 w-4" />
+          {selectedSeats.length > 0 ? 'Continuer' : 'Fermer'}
+        </button>
+      </div>
+      {seatPanel}
+    </div>
+  );
+
   return (
     <div className={cn('space-y-3', className)}>
       {/* Légende des zones */}
@@ -346,6 +536,7 @@ export default function SeatSelection3DViewer({
           onSelectSeat={onToggleSeat}
           seatView={seatView}
           seatActionFor={seatActionFor}
+          fullscreenPanel={fullscreenPanel}
           showMeta={false}
           className="[&_.em-floor-canvas]:min-h-[min(58dvh,440px)] sm:[&_.em-floor-canvas]:min-h-[360px]"
         />
@@ -368,160 +559,7 @@ export default function SeatSelection3DViewer({
       </div>
 
       {/* Panneau de sélection de sièges sur la table active */}
-      {activeTable && (
-        <div className="rounded-2xl border border-primary/25 bg-surface p-3.5 sm:p-4 shadow-sm space-y-3 animate-in fade-in zoom-in-98">
-          <div className="flex items-center justify-between gap-2 border-b border-border pb-2.5">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs">
-                <Users className="w-4 h-4" />
-              </span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-sm text-foreground">{activeTable.name}</h4>
-                  {activeTable.pricingZoneName && (
-                    <span
-                      className="px-2 py-0.5 rounded-full text-xs font-bold text-white shadow-2xs"
-                      style={{
-                        backgroundColor:
-                          (activeTable.pricingZoneId && zoneColorById?.get(activeTable.pricingZoneId)) ||
-                          '#c4a35a',
-                      }}
-                    >
-                      {activeTable.pricingZoneName}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted">
-                  {activeTable.seats.filter((s) => s.available).length} place{activeTable.seats.filter((s) => s.available).length > 1 ? 's' : ''} libre{activeTable.seats.filter((s) => s.available).length > 1 ? 's' : ''} sur {activeTable.capacity}
-                  {activeTable.seats[0]?.priceFc > 0 && (
-                    <span className="ml-1 text-emerald-600 dark:text-emerald-400 font-semibold">
-                      · {formatFc(activeTable.seats[0].priceFc)} / place
-                    </span>
-                  )}
-                </p>
-              </div>
-            </div>
-
-            {/* Navigation entre tables */}
-            {tablesList.length > 1 && (
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={goToPrevTable}
-                  className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground transition min-w-11 min-h-11 flex items-center justify-center"
-                  title={isTheaterRowPlan(activeTable.shape, activeTable.rowMeta) ? 'Rangée précédente' : 'Emplacement précédent'}
-                  aria-label={isTheaterRowPlan(activeTable.shape, activeTable.rowMeta) ? 'Rangée précédente' : 'Emplacement précédent'}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-xs font-semibold text-muted px-1 tabular-nums">
-                  {currentTableIndex + 1}/{tablesList.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={goToNextTable}
-                  className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground transition min-w-11 min-h-11 flex items-center justify-center"
-                  title={isTheaterRowPlan(activeTable.shape, activeTable.rowMeta) ? 'Rangée suivante' : 'Emplacement suivant'}
-                  aria-label={isTheaterRowPlan(activeTable.shape, activeTable.rowMeta) ? 'Rangée suivante' : 'Emplacement suivant'}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Grille de sièges de la table */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
-            {activeTable.seats.map((seat) => {
-              const isSelected = selectedSeats.some(
-                (s) => s.tableId === seat.tableId && s.seatIndex === seat.seatIndex
-              );
-              const selectionOrder = selectedSeats.findIndex(
-                (s) => s.tableId === seat.tableId && s.seatIndex === seat.seatIndex
-              );
-              const zoneColor = seat.pricingZoneId ? zoneColorById?.get(seat.pricingZoneId) : undefined;
-
-              return (
-                <button
-                  key={seat.seatIndex}
-                  type="button"
-                  disabled={!seat.available}
-                  onClick={() => onToggleSeat(seat.tableId, seat.seatIndex)}
-                  className={cn(
-                    'relative p-2.5 rounded-xl border text-center transition flex flex-col items-center justify-center gap-1 min-h-[58px] touch-manipulation active:scale-95',
-                    !seat.available && 'opacity-40 cursor-not-allowed bg-muted/40 border-border text-muted',
-                    seat.available && !isSelected && 'bg-surface hover:bg-primary/10 hover:border-primary border-border text-foreground shadow-2xs min-h-11',
-                    isSelected && 'bg-primary-solid text-primary-foreground border-primary shadow-sm ring-2 ring-primary/40 font-bold min-h-11',
-                  )}
-                >
-                  {/* Badge de numérotation de sélection */}
-                  {isSelected && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-primary-solid text-primary-foreground text-[9px] font-black flex items-center justify-center shadow-xs">
-                      {selectionOrder + 1}
-                    </span>
-                  )}
-
-                  <span className="text-xs font-bold leading-none">
-                    {isStandaloneChairPlan(seat.chairMeta)
-                      ? seat.tableName
-                      : (seat.seatCode || `Siège ${seat.seatIndex + 1}`)}
-                    {seat.isPmr ? ' · PMR' : ''}
-                  </span>
-
-                  <span
-                    className={cn(
-                      'text-xs leading-tight',
-                      isSelected ? 'text-primary-foreground/90' : 'text-muted'
-                    )}
-                  >
-                    {!seat.available
-                      ? 'Occupé'
-                      : isSelected
-                      ? 'Choisi'
-                      : seat.priceFc > 0
-                      ? formatFc(seat.priceFc)
-                      : 'Libre'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Raccourci de sélection rapide */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border text-xs">
-            <span className="text-xs text-muted">
-              Touchez un siège libre pour l&apos;ajouter ou le retirer
-            </span>
-            <div className="flex items-center gap-2">
-              {seatToPreview ? (
-                <button
-                  type="button"
-                  onClick={() => viewFromSeat(seatToPreview.tableId, seatToPreview.seatIndex)}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline min-h-11 px-2 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  Voir depuis la place
-                </button>
-              ) : null}
-              {activeTable.seats.some((s) => s.available && !selectedSeats.some((sel) => sel.tableId === s.tableId && sel.seatIndex === s.seatIndex)) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const firstFree = activeTable.seats.find(
-                      (s) => s.available && !selectedSeats.some((sel) => sel.tableId === s.tableId && sel.seatIndex === s.seatIndex)
-                    );
-                    if (firstFree) onToggleSeat(firstFree.tableId, firstFree.seatIndex);
-                  }}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline min-h-11 px-2 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Prendre 1 place libre
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {seatPanel}
     </div>
   );
 }
