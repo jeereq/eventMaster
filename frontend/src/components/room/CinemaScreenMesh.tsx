@@ -3,6 +3,8 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { PleatedDrape } from '@/components/room/StageDressing';
+import { useScreenImageTexture } from '@/components/room/useScreenImage';
+import type { ImageCropRect } from '@/lib/roomLayoutUtils';
 
 /**
  * Image projetée simulée : plan large d’un paysage au crépuscule (ciel dégradé, soleil bas,
@@ -72,12 +74,17 @@ export function CinemaScreenMesh({
   elevationM = 1.2,
   powered = true,
   selected = false,
+  imageUrl,
+  imageCrop,
 }: {
   w: number;
   ratio?: string;
   elevationM?: number;
   powered?: boolean;
   selected?: boolean;
+  /** Image choisie dans l'éditeur, projetée à la place du paysage par défaut. */
+  imageUrl?: string;
+  imageCrop?: ImageCropRect;
 }) {
   const sw = Math.max(3, w);
   const sh = sw / (RATIO[ratio] ?? 2.39);
@@ -104,6 +111,8 @@ export function CinemaScreenMesh({
     return tex;
   }, [ratio]);
   useEffect(() => () => frame?.dispose(), [frame]);
+  const image = useScreenImageTexture(imageUrl, imageCrop, sw / sh);
+  const shown = image ?? frame;
 
   const mask = 0.32;
   const edgeZ = bend(sw / 2);
@@ -121,12 +130,13 @@ export function CinemaScreenMesh({
 
       {/* Toile perforée cintrée */}
       <mesh geometry={screenGeo} position={[0, bottom + sh / 2, 0]}>
-        {powered && frame ? (
+        {powered && shown ? (
           <meshStandardMaterial
+            key={shown.uuid}
             color="#ffffff"
-            map={frame}
+            map={shown}
             emissive="#ffffff"
-            emissiveMap={frame}
+            emissiveMap={shown}
             emissiveIntensity={0.9}
             roughness={0.9}
             toneMapped={false}
