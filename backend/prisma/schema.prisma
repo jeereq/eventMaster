@@ -54,6 +54,8 @@ enum PlanType {
   ENTERPRISE_1
   ENTERPRISE_2
   ENTERPRISE_3
+  /** Sur mesure, à partir de 1 000 000 FC / mois (quotas négociés). */
+  CUSTOM
   /** Gestionnaire de salles (catalogue lieux). */
   VENUE
   /** Prestataire de services (catalogue prestations). */

@@ -353,6 +353,7 @@ export default function AdminUserFormModal({
                 <option value="ENTERPRISE_1">Enterprise 1</option>
                 <option value="ENTERPRISE_2">Enterprise 2</option>
                 <option value="ENTERPRISE_3">Enterprise 3</option>
+                <option value="CUSTOM">Custom</option>
               </optgroup>
               <optgroup label="Marketplace">
                 <option value="VENUE">Salle uniquement</option>

@@ -24,6 +24,7 @@ const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
   ENTERPRISE_1: 8,
   ENTERPRISE_2: 9,
   ENTERPRISE_3: 10,
+  CUSTOM: 14,
   VENUE: 11,
   SERVICE: 12,
   CATALOG: 13,
