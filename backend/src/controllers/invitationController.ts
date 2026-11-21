@@ -310,7 +310,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
           const phone = getGuestPhone(guest);
           if (phone) {
             const smsText = `Bonjour ${guest.firstName || ''}, vous êtes invité(e) à ${event.title}. Confirmez votre présence ici : ${rsvpLink}`;
-            sendResult = await sendGuestSms(guest.id, phone, smsText);
+            sendResult = await sendGuestSms({ id: guest.id, eventId: event.id }, phone, smsText);
           } else {
             console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for SMS sending.`);
             sendResult = {

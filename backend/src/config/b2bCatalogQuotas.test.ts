@@ -26,7 +26,7 @@ describe('B2B catalogue salle + prestations', () => {
     const free = getPlanLimits('FREE');
     assert.equal(free.maxRooms, 1);
     assert.equal(free.maxServices, 1);
-    assert.equal(free.maxEvents, 3);
+    assert.equal(free.maxEvents, 1);
   });
 
   it('garde les Particulier (B2C) hors prestations marketplace', () => {

@@ -232,7 +232,7 @@ export async function processReminders() {
             const phone = getGuestPhone(guest);
             if (phone) {
               const smsText = `Rappel : ${guest.firstName ? guest.firstName + ', ' : ''}votre réponse pour ${event.title} est attendue. Confirmez ici : ${rsvpLink}`;
-              await sendGuestSms(guest.id, phone, smsText);
+              await sendGuestSms({ id: guest.id, eventId: event.id }, phone, smsText);
             }
           }
         }

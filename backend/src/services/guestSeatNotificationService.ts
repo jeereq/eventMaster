@@ -369,7 +369,7 @@ export async function notifyGuestTableAssignment(params: {
   if (channelsToSend.includes('SMS') && phone) {
     const smsText = `Bonjour ${guest.firstName || ''}, votre placement pour ${event.title}${event.location ? ' (' + event.location + ')' : ''} : Table ${assignedSeat.tableName}, Siège n°${seatNumber}. Détails : ${rsvpUrl}`;
     tasks.push(
-      sendGuestSms(guest.id, phone, smsText).then((r) => {
+      sendGuestSms({ id: guest.id, eventId }, phone, smsText).then((r) => {
         if (r.success) channels.push(r.simulated ? 'SMS (simulation)' : 'SMS');
         else if (r.error) errors.push(`SMS: ${r.error}`);
       }),

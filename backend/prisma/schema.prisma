@@ -333,7 +333,20 @@ model Event {
   @@index([isPublic, date])
   @@index([city])
   @@index([commune])
+  smsUsages   GuestSmsUsage[]
+
   @@index([tenantId, date])
+}
+
+/** SMS envoyés par numéro et par événement (plafond MAX_SMS_PER_GUEST = 3), résiste à la suppression / recréation d'un invité. */
+model GuestSmsUsage {
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  phone     String
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([eventId, phone])
 }
 
 model Guest {
@@ -356,8 +369,6 @@ model Guest {
   seatVerifiedAt DateTime?
   seatVerifiedByUserId String?
   seatVerifiedBy User?     @relation("GuestSeatVerifications", fields: [seatVerifiedByUserId], references: [id], onDelete: SetNull)
-  /** SMS réellement envoyés à cet invité (plafond MAX_SMS_PER_GUEST = 3). */
-  smsSentCount Int          @default(0)
   seatingInvitationPdfUrl       String?
   seatingInvitationPdfPublicId  String?
   createdAt   DateTime     @default(now())
