@@ -32,6 +32,7 @@ import {
   Square as StopIcon,
   Video,
   Map as MapIcon,
+  Check,
 } from '@/components/icons';
 import * as THREE from 'three';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
@@ -312,7 +313,22 @@ interface RoomWebGLViewerProps {
   allowMusicDancers?: boolean;
   /** Masque le bouton « Musique » (captures, vignettes). */
   hideMusic?: boolean;
+  /** Demande de « vue depuis la place » : la caméra vole jusqu'aux yeux de ce siège (nouvelle `key` = nouveau vol). */
+  seatView?: SeatViewRequest | null;
+  /** Bouton d'action proposé sur la place regardée (billetterie : « Choisir cette place »). */
+  seatActionFor?: AvatarSeatAction;
 }
+
+export interface SeatViewRequest {
+  tableId: string;
+  seatIndex: number;
+  key: number;
+}
+
+export type AvatarSeatAction = (
+  tableId: string,
+  seatIndex: number,
+) => { label: string; disabled?: boolean; active?: boolean; onAction: () => void } | null;
 
 const SPACE_ICONS: Record<RoomSpaceIcon, React.ComponentType<{ className?: string }>> = {
   stage: Mic2,
@@ -4949,6 +4965,8 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   guestSimulation: guestSimulationProp = null,
   allowMusicDancers = false,
   hideMusic = false,
+  seatView = null,
+  seatActionFor,
 }, ref) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
   const touchScreen = useCoarsePointer();
@@ -5370,6 +5388,27 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     if (before) setCameraTargetPose({ pos: before.pos, target: before.target });
     else handleSelectPreset('overview');
   }, [handleSelectPreset]);
+
+  // Billetterie : « Voir depuis cette place » fait voler la caméra jusqu'au siège demandé.
+  const seatViewKey = seatView ? `${seatView.tableId}:${seatView.seatIndex}#${seatView.key}` : null;
+  useEffect(() => {
+    if (!seatViewKey) return;
+    // Entrée par la caméra (mémorise le point de vue d'avant), puis choix du siège demandé.
+    // Réponse à une demande extérieure (bouton de la billetterie) : un seul passage par demande.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    enterAvatarView();
+    avatarLookRef.current = { yaw: 0, pitch: AVATAR_START_PITCH };
+    setAvatarFilter('all');
+    setAvatarViewId(seatViewKey.slice(0, seatViewKey.lastIndexOf('#')));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- un vol par nouvelle demande, pas à chaque rendu
+  }, [seatViewKey]);
+  const avatarSeat = useMemo(() => {
+    if (!avatarViewer) return null;
+    const sep = avatarViewer.id.lastIndexOf(':');
+    const seatIndex = sep >= 0 ? Number.parseInt(avatarViewer.id.slice(sep + 1), 10) : Number.NaN;
+    return sep >= 0 && Number.isFinite(seatIndex) ? { tableId: avatarViewer.id.slice(0, sep), seatIndex } : null;
+  }, [avatarViewer]);
+  const avatarSeatAction = avatarSeat && seatActionFor ? seatActionFor(avatarSeat.tableId, avatarSeat.seatIndex) : null;
 
   useEffect(() => {
     if (!avatarActive) return undefined;
@@ -5926,7 +5965,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
               current={avatarViewer}
               stage={stageSpace}
               onPick={showAvatar}
-              className="absolute right-2.5 top-12 z-20 w-40 sm:top-2.5 sm:w-64"
+              className="absolute right-2.5 top-12 z-30 w-40 sm:top-2.5 sm:w-64"
             />
           ) : null}
           <div className="pointer-events-none absolute top-2.5 left-2.5 right-2.5 z-10 flex justify-start">
@@ -5936,7 +5975,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
                 : 'Glissez pour tourner la tête · molette pour zoomer · Échap pour sortir'}
             </div>
           </div>
-          <div className="absolute bottom-2 left-2 right-2 z-10 flex justify-center pointer-events-none">
+          <div className="absolute bottom-2 left-2 right-2 z-30 flex justify-center pointer-events-none">
             <div
               className="pointer-events-auto w-full max-w-[34rem] rounded-2xl border border-border/70 bg-background/92 p-2 text-foreground shadow-lg dark:bg-surface-elevated/92"
               role="group"
@@ -5981,6 +6020,23 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
                   <X className="h-4 w-4" />
                 </button>
               </div>
+              {avatarSeatAction ? (
+                <button
+                  type="button"
+                  onClick={avatarSeatAction.onAction}
+                  disabled={avatarSeatAction.disabled}
+                  aria-pressed={avatarSeatAction.active}
+                  className={cn(
+                    'mt-1.5 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-semibold transition-colors disabled:opacity-50',
+                    avatarSeatAction.active
+                      ? 'border border-primary bg-primary/10 text-primary'
+                      : 'bg-primary-solid text-primary-foreground hover:opacity-90',
+                  )}
+                >
+                  {avatarSeatAction.active ? <Check className="h-4 w-4" /> : null}
+                  {avatarSeatAction.label}
+                </button>
+              ) : null}
               <div className="mt-1.5 flex flex-wrap items-center gap-1">
                 {avatarFilters.length > 1
                   ? avatarFilters.map((f) => (
