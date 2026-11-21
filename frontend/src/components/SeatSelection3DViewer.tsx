@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import type { PricingZone } from '@/lib/ticketPricing';
@@ -21,7 +21,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  Eye,
 } from '@/components/icons';
+import type { AvatarSeatAction, SeatViewRequest } from '@/components/RoomWebGLViewer';
 
 export type SeatSelection3DRow = {
   tableId: string;
@@ -129,6 +131,8 @@ export default function SeatSelection3DViewer({
 }: SeatSelection3DViewerProps) {
   const [internalFocusedTableId, setInternalFocusedTableId] = useState<string | null>(null);
   const [quality, setQuality] = useState<RoomPreviewQuality>('showcase');
+  const [seatView, setSeatView] = useState<SeatViewRequest | null>(null);
+  const viewerRef = useRef<HTMLDivElement>(null);
 
   const focusedTableId = activeTableId !== undefined ? activeTableId : internalFocusedTableId;
   const setFocusedTableId = (id: string | null) => {
@@ -245,6 +249,43 @@ export default function SeatSelection3DViewer({
     [seats],
   );
 
+  const seatByKey = useMemo(() => {
+    const map = new Map<string, SeatSelection3DRow>();
+    for (const seat of seats) map.set(`${seat.tableId}:${seat.seatIndex}`, seat);
+    return map;
+  }, [seats]);
+
+  // Vue depuis la place, comme une billetterie de stade : on choisit (ou retire) la place sans quitter la vue.
+  const seatActionFor: AvatarSeatAction = (tableId, seatIndex) => {
+    const seat = seatByKey.get(`${tableId}:${seatIndex}`);
+    if (!seat) return null;
+    const isSelected = selectedSeats.some((s) => s.tableId === tableId && s.seatIndex === seatIndex);
+    if (isSelected) {
+      return { label: 'Place choisie · la retirer', active: true, onAction: () => onToggleSeat(tableId, seatIndex) };
+    }
+    if (!seat.available) return { label: 'Place déjà prise', disabled: true, onAction: () => {} };
+    return {
+      label: seat.priceFc > 0 ? `Choisir cette place · ${formatFc(seat.priceFc)}` : 'Choisir cette place',
+      onAction: () => {
+        onToggleSeat(tableId, seatIndex);
+        setFocusedTableId(tableId);
+      },
+    };
+  };
+
+  const viewFromSeat = (tableId: string, seatIndex: number) => {
+    setSeatView((prev) => ({ tableId, seatIndex, key: (prev?.key ?? 0) + 1 }));
+    // Sur téléphone le bouton est sous la 3D : on remonte pour voir le vol jusqu'au siège.
+    viewerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  /** Place à montrer pour la table active : la dernière choisie, sinon la première libre. */
+  const seatToPreview = activeTable
+    ? [...selectedSeats].reverse().find((s) => s.tableId === activeTable.id)
+      ?? activeTable.seats.find((s) => s.available)
+      ?? activeTable.seats[0]
+    : null;
+
   // Navigation table précédente / suivante
   const currentTableIndex = activeTable ? tablesList.findIndex((t) => t.id === activeTable.id) : -1;
   const goToPrevTable = () => {
@@ -288,7 +329,7 @@ export default function SeatSelection3DViewer({
         </div>
       )}
 
-      <div className="relative rounded-2xl overflow-hidden border border-border bg-foreground shadow-[var(--shadow-soft)]">
+      <div ref={viewerRef} className="relative rounded-2xl overflow-hidden border border-border bg-foreground shadow-[var(--shadow-soft)]">
         <div className="absolute top-2 right-2 z-20 hidden sm:block">
           <SeatPreviewQualityChips quality={quality} onChange={setQuality} variant="overlay" />
         </div>
@@ -303,6 +344,8 @@ export default function SeatSelection3DViewer({
           blockedSeats={blockedSeats}
           onSelectTable={(tableId) => setFocusedTableId(tableId)}
           onSelectSeat={onToggleSeat}
+          seatView={seatView}
+          seatActionFor={seatActionFor}
           showMeta={false}
           className="[&_.em-floor-canvas]:min-h-[min(58dvh,440px)] sm:[&_.em-floor-canvas]:min-h-[360px]"
         />
@@ -317,7 +360,7 @@ export default function SeatSelection3DViewer({
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted leading-relaxed">
-          Touchez une chaise, ou un siège dans la liste. Masquez le toit et les murs, puis passez en plein écran pour viser plus facilement.
+          Touchez une chaise, ou un siège dans la liste. « Voir depuis la place » vous assoit à ce siège pour juger la vue avant de le choisir.
         </p>
         <div className="sm:hidden">
           <SeatPreviewQualityChips quality={quality} onChange={setQuality} variant="bar" />
@@ -450,6 +493,16 @@ export default function SeatSelection3DViewer({
               Touchez un siège libre pour l&apos;ajouter ou le retirer
             </span>
             <div className="flex items-center gap-2">
+              {seatToPreview ? (
+                <button
+                  type="button"
+                  onClick={() => viewFromSeat(seatToPreview.tableId, seatToPreview.seatIndex)}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline min-h-11 px-2 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Voir depuis la place
+                </button>
+              ) : null}
               {activeTable.seats.some((s) => s.available && !selectedSeats.some((sel) => sel.tableId === s.tableId && sel.seatIndex === s.seatIndex)) && (
                 <button
                   type="button"

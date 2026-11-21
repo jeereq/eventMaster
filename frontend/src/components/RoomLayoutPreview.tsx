@@ -1,5 +1,6 @@
 'use client';
 
+import type { AvatarSeatAction, SeatViewRequest } from '@/components/RoomWebGLViewer';
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { createPortal } from 'react-dom';
@@ -108,6 +109,10 @@ interface RoomLayoutPreviewProps {
   onSelectSeat?: (tableId: string, seatIndex: number) => void;
   /** Invités simulés en 3D (simulateur) : remplissage et danse. */
   guestSimulation?: GuestSimulationSettings | null;
+  /** Demande de « vue depuis la place » (billetterie) : la caméra vole jusqu'à ce siège. */
+  seatView?: SeatViewRequest | null;
+  /** Bouton d'action sur la place regardée (ex. « Choisir cette place »). */
+  seatActionFor?: AvatarSeatAction;
 }
 
 type WebGLPreviewProps = {
@@ -126,6 +131,8 @@ type WebGLPreviewProps = {
   onWalkthroughProgress?: (label: string) => void;
   onWalkthroughComplete?: () => void;
   guestSimulation?: GuestSimulationSettings | null;
+  seatView?: SeatViewRequest | null;
+  seatActionFor?: AvatarSeatAction;
 };
 
 function WebGLPreviewCanvas({
@@ -144,6 +151,8 @@ function WebGLPreviewCanvas({
   onWalkthroughProgress,
   onWalkthroughComplete,
   guestSimulation = null,
+  seatView = null,
+  seatActionFor,
 }: WebGLPreviewProps) {
   const selected = useMemo(() => {
     return mapTicketSelectionsToWebGL(
@@ -181,6 +190,8 @@ function WebGLPreviewCanvas({
       renderQuality={quality === 'showcase' ? 'showcase' : 'standard'}
       lightingPreset={lightingPreset}
       guestSimulation={guestSimulation}
+      seatView={seatView}
+      seatActionFor={seatActionFor}
       className={cn('absolute inset-0 h-full w-full shadow-[var(--shadow-soft)] touch-none', className)}
     />
   );
@@ -264,6 +275,8 @@ export default function RoomLayoutPreview({
   blockedSeats,
   onSelectSeat,
   guestSimulation = null,
+  seatView = null,
+  seatActionFor,
 }: RoomLayoutPreviewProps) {
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
@@ -393,6 +406,8 @@ export default function RoomLayoutPreview({
                 blockedSeats={blockedSeats}
                 onSelectSeat={onSelectSeat}
                 guestSimulation={guestSimulation}
+                seatView={seatView}
+                seatActionFor={seatActionFor}
                 walkthroughActive={fill && walkthroughActive}
                 onWalkthroughProgress={setWalkthroughLabel}
                 onWalkthroughComplete={stopWalkthrough}
@@ -505,6 +520,8 @@ export default function RoomLayoutPreview({
                   blockedSeats={blockedSeats}
                   onSelectSeat={onSelectSeat}
                   guestSimulation={guestSimulation}
+                  seatView={seatView}
+                  seatActionFor={seatActionFor}
                   walkthroughActive={walkthroughActive}
                   onWalkthroughProgress={setWalkthroughLabel}
                   onWalkthroughComplete={stopWalkthrough}
