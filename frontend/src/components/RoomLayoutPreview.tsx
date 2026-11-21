@@ -42,10 +42,12 @@ function WalkthroughButton({
   active,
   label,
   onToggle,
+  compact = false,
 }: {
   active: boolean;
   label: string;
   onToggle: () => void;
+  compact?: boolean;
 }) {
   return (
     <button
@@ -60,7 +62,7 @@ function WalkthroughButton({
       )}
     >
       <DoorOpen className="w-3.5 h-3.5" aria-hidden />
-      <span>{active ? (label || 'Visite…') : 'Faire le tour'}</span>
+      <span className={compact && !active ? 'sr-only sm:not-sr-only' : undefined}>{active ? (label || 'Visite…') : 'Faire le tour'}</span>
     </button>
   );
 }
@@ -473,14 +475,14 @@ export default function RoomLayoutPreview({
           aria-modal="true"
           aria-labelledby="plan-fullscreen-title"
         >
-          <div className="flex flex-col gap-2 px-3 py-2 border-b border-stage-foreground/15 pt-[max(0.5rem,env(safe-area-inset-top))] sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
+          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-stage-foreground/15 pt-[max(0.5rem,env(safe-area-inset-top))]">
+            <div className="min-w-0 flex-1">
               <p id="plan-fullscreen-title" className="text-xs font-bold text-stage-foreground truncate">{roomTypeLabels[blueprint.roomType]} · {theme.name}</p>
               <p className="text-xs text-stage-foreground/80 tabular-nums">
                 {blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
               </p>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2">
               {onForce2dChange ? (
                 <PlanViewModeToggle
                   force2d={force2d}
@@ -489,7 +491,7 @@ export default function RoomLayoutPreview({
                 />
               ) : null}
               {useWebGL ? (
-                <WalkthroughButton active={walkthroughActive} label={walkthroughLabel} onToggle={toggleWalkthrough} />
+                <WalkthroughButton active={walkthroughActive} label={walkthroughLabel} onToggle={toggleWalkthrough} compact={Boolean(fullscreenPanel)} />
               ) : null}
               <PlanSceneControls
                 showWalls={showWalls}
@@ -505,6 +507,7 @@ export default function RoomLayoutPreview({
                 }}
                 isFullscreen
                 variant="overlay"
+                compact
               />
             </div>
           </div>
@@ -545,7 +548,7 @@ export default function RoomLayoutPreview({
           </div>
           {fullscreenPanel ? (
             <aside
-              className="max-h-[45dvh] shrink-0 overflow-y-auto overscroll-contain border-t border-stage-foreground/15 bg-background p-3 sm:max-h-none sm:w-[24rem] sm:border-l sm:border-t-0"
+              className="max-h-[40dvh] shrink-0 overflow-y-auto overscroll-contain border-t border-stage-foreground/15 bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:max-h-none sm:w-[24rem] sm:border-l sm:border-t-0"
               aria-label="Choix des places"
             >
               {fullscreenPanel(() => {
@@ -556,7 +559,13 @@ export default function RoomLayoutPreview({
             </aside>
           ) : null}
           </div>
-          <p className="text-xs text-stage-foreground/80 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <p
+            className={cn(
+              'text-xs text-stage-foreground/80 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+              // Sur un téléphone, le panneau des places a besoin de cette hauteur : la consigne reste sur grand écran.
+              fullscreenPanel && 'hidden sm:block',
+            )}
+          >
             {useWebGL
               ? walkthroughActive
                 ? `Visite guidée · ${walkthroughLabel || 'entrée par la porte'}`

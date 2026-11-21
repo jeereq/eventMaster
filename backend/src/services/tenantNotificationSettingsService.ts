@@ -1,4 +1,5 @@
 import { prisma } from '../db';
+import { isEventAlertEnabledIn } from './eventNotificationSettings';
 
 export type TenantNotificationRecipientMode =
   | 'OWNER_ONLY'
@@ -147,6 +148,14 @@ export async function resolveNotificationRecipients(params: {
   }
   if (isFailed && !settings.notifyOnPaymentFailed) {
     return { shouldNotify: false, recipientUserIds: [] };
+  }
+
+  // 1 bis. Réglage propre à l’événement (billets / dons coupés pour cet événement seulement).
+  if (eventId) {
+    const event = await prisma.event.findUnique({ where: { id: eventId }, select: { notificationSettings: true } });
+    if (event && !isEventAlertEnabledIn(event.notificationSettings, isDonation ? 'donations' : 'tickets')) {
+      return { shouldNotify: false, recipientUserIds: [] };
+    }
   }
 
   // 2. Détermination des destinataires de base

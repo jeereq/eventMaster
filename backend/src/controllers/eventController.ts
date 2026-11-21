@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { mergeEventNotificationSettings } from '../services/eventNotificationSettings';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { getPlanLimitsForTenant, tenantCanPublishEvents } from '../config/plansConfig';
@@ -286,6 +287,7 @@ const EVENT_LIST_SELECT = {
   themeId: true,
   photos: true,
   eventPrep: true,
+  notificationSettings: true,
   createdAt: true,
   updatedAt: true,
   room: { select: { id: true, name: true, roomType: true } },
@@ -463,6 +465,9 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         photos: toPrismaJson(parsePhotoUrls(req.body.photos)),
         ...(req.body.eventProgram !== undefined
           ? { eventProgram: toPrismaJson(req.body.eventProgram) }
+          : {}),
+        ...(req.body.notificationSettings !== undefined
+          ? { notificationSettings: toPrismaJson(mergeEventNotificationSettings(null, req.body.notificationSettings)) }
           : {}),
         ...visibility,
         ...eventDossierData(req.body, true),
@@ -661,6 +666,13 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         ...(req.body.photos !== undefined ? { photos: toPrismaJson(parsePhotoUrls(req.body.photos)) } : {}),
         ...(req.body.eventProgram !== undefined
           ? { eventProgram: toPrismaJson(req.body.eventProgram) }
+          : {}),
+        ...(req.body.notificationSettings !== undefined
+          ? {
+              notificationSettings: toPrismaJson(
+                mergeEventNotificationSettings(existingEvent.notificationSettings, req.body.notificationSettings),
+              ),
+            }
           : {}),
         ...visibility,
         ...eventDossierData(req.body, false),

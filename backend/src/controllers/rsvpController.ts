@@ -24,6 +24,12 @@ import {
 import { customTenantBranding, escapeHtml } from '../utils/brandingUtils';
 import { GUEST_COPY } from '../utils/guestMessageCopy';
 import { buildGuestRsvpUrl } from '../services/guestAccessService';
+import {
+  isEventAlertEnabledIn,
+  mergeGuestNotificationPrefs,
+  sanitizeEventNotificationSettings,
+  sanitizeGuestNotificationPrefs,
+} from '../services/eventNotificationSettings';
 import { formatEventPlace } from '../utils/eventPlace';
 import { ensureMandatoryRsvpFieldsOnContent, overlayRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
 import { sanitizeLayoutBlueprint } from '../utils/publicVenue';
@@ -248,6 +254,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             eventProgram: true,
             guestGuidelines: true,
             rsvpForm: true,
+            notificationSettings: true,
             room: {
               select: {
                 layoutBlueprint: true,
@@ -859,6 +866,8 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       donations: donationsData,
       eventPassed: isEventDatePassed(guest.event.date),
       rsvpLocked: isEventDatePassed(guest.event.date),
+      notificationPrefs: sanitizeGuestNotificationPrefs(guest.notificationPrefs),
+      eventUpdatesAvailable: sanitizeEventNotificationSettings(guest.event.notificationSettings).guestUpdates,
     });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des détails réponse à l’invitation de l\'invité:', error);
@@ -1120,6 +1129,8 @@ export async function submitRsvp(req: Request, res: Response) {
     if (statusChanged || nameChanged) {
       (async () => {
         try {
+          // L’organisateur peut couper les alertes de réponse pour cet événement seulement.
+          if (!isEventAlertEnabledIn(guest.event.notificationSettings, 'rsvp')) return;
           const organizer = await resolveEventOrganizer(
             guest.event.tenantId,
             guest.event.tenant?.manager ?? null
@@ -1457,5 +1468,43 @@ export async function submitGuestDonation(req: Request, res: Response) {
   } catch (err: any) {
     console.error('Erreur submitGuestDonation:', err);
     return res.status(500).json({ error: 'Erreur lors de l’enregistrement de votre don.' });
+  }
+}
+
+
+/** L’invité active ou coupe les nouvelles de l’événement (publications de l’organisateur). */
+export async function updateGuestNotificationPrefs(req: Request, res: Response) {
+  try {
+    const guestId = req.params.guestId as string;
+    const guest = await prisma.guest.findUnique({
+      where: { id: guestId },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        notificationPrefs: true,
+        event: { select: { notificationSettings: true } },
+      },
+    });
+    if (!guest) {
+      return res.status(404).json({ error: 'Invité non trouvé ou lien invalide.' });
+    }
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    if (body.enabled === true && !sanitizeEventNotificationSettings(guest.event.notificationSettings).guestUpdates) {
+      return res.status(409).json({ error: 'L’organisateur n’envoie pas de nouvelles pour cet événement.' });
+    }
+    const next = mergeGuestNotificationPrefs(guest.notificationPrefs, {
+      enabled: body.enabled,
+      email: body.email,
+      whatsapp: body.whatsapp,
+    });
+    await prisma.guest.update({ where: { id: guest.id }, data: { notificationPrefs: next as any } });
+    return res.json({
+      notificationPrefs: next,
+      reachable: { email: isValidEmail(guest.email || ''), whatsapp: Boolean(getGuestPhone(guest)) },
+    });
+  } catch (error: any) {
+    console.error('Erreur lors de la mise à jour des notifications invité:', error);
+    return res.status(500).json({ error: 'Impossible d’enregistrer vos notifications.' });
   }
 }

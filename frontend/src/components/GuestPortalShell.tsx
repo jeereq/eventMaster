@@ -11,6 +11,7 @@ import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import GuestThemeToggle from '@/components/GuestThemeToggle';
 import CelebrateMood from '@/components/CelebrateMood';
+import { BrandLogoIcon } from '@/components/SiteBrandMark';
 
 interface GuestPortalShellProps {
   title: string;
@@ -36,6 +37,18 @@ function swipeBlocked(target: EventTarget | null) {
   if (!(target instanceof Element)) return false;
   return Boolean(
     target.closest('[data-guest-no-swipe], input, textarea, select, [contenteditable="true"]'),
+  );
+}
+
+/** Logo EventMaster en tête de l’espace invité (sur une tuile claire, lisible en mode sombre aussi). */
+function GuestBrandLogo() {
+  return (
+    <span
+      aria-hidden
+      className="inline-flex items-center justify-center w-9 h-9 rounded-[10px] bg-white border border-border shadow-2xs shrink-0"
+    >
+      <BrandLogoIcon className="w-[78%] h-[78%]" />
+    </span>
   );
 }
 
@@ -105,19 +118,12 @@ export default function GuestPortalShell({
         <div className="w-full max-w-xl mx-auto min-h-14 flex items-center justify-between gap-2 sm:gap-3 py-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
           {showBrand ? (
             <Link href="/" className="flex items-center gap-2.5 min-w-0 hover:opacity-90 transition">
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-[10px] bg-primary-solid text-primary-foreground font-display text-base font-bold shrink-0">
-                {brandLabel.slice(0, 1).toUpperCase()}
-              </span>
+              <GuestBrandLogo />
               <span className="font-display text-lg font-semibold text-foreground truncate">{brandLabel}</span>
             </Link>
           ) : (
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <span
-                aria-hidden
-                className="inline-flex items-center justify-center w-9 h-9 rounded-[10px] bg-primary-solid text-primary-foreground font-display text-base font-bold shrink-0"
-              >
-                {brandLabel.slice(0, 1).toUpperCase()}
-              </span>
+              <GuestBrandLogo />
               <div className="min-w-0">
                 <h1 className="font-display text-base sm:text-base font-semibold text-foreground truncate leading-tight">{title}</h1>
                 <p className="text-xs text-muted truncate leading-snug">{eyebrow || brandLabel}</p>

@@ -128,6 +128,10 @@ export interface GuestRsvpData {
   previewLightingPreset?: string | null;
   eventPassed?: boolean;
   rsvpLocked?: boolean;
+  /** Abonnement de l’invité aux nouvelles de l’événement. */
+  notificationPrefs?: import('@/lib/eventNotifications').GuestNotificationPrefs | null;
+  /** L’organisateur laisse les invités s’abonner aux nouvelles de cet événement. */
+  eventUpdatesAvailable?: boolean;
   event: {
     id: string;
     title: string;

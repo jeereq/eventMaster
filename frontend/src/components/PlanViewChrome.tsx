@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Box, BrickWall, Home, LayoutGrid, Maximize2, Minimize2, RotateCcw, ZoomIn, ZoomOut } from '@/components/icons';
+import { Box, BrickWall, Home, LayoutGrid, Maximize2, Minimize2, RotateCcw, ScanLine, ZoomIn, ZoomOut } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 const FOCUSABLE_SELECTOR = [
@@ -110,6 +110,47 @@ export function PlanZoomControls({
   );
 }
 
+/**
+ * Boutons de zoom posés sur le plan, façon carte : ils ne poussent plus la barre d’outils
+ * sur deux lignes sur un téléphone.
+ */
+export function PlanZoomOverlay({
+  zoom,
+  onZoomOut,
+  onZoomIn,
+  onFit,
+  className,
+}: {
+  zoom: number;
+  onZoomOut: () => void;
+  onZoomIn: () => void;
+  onFit: () => void;
+  className?: string;
+}) {
+  const btn =
+    'flex h-11 w-11 items-center justify-center text-foreground transition hover:bg-surface-muted active:scale-95 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40';
+  return (
+    <div
+      className={cn(
+        'flex flex-col overflow-hidden rounded-xl border border-border bg-surface/95 shadow-md divide-y divide-border',
+        className,
+      )}
+      role="group"
+      aria-label={`Zoom du plan, ${Math.round(zoom * 100)} %`}
+    >
+      <button type="button" onClick={onZoomIn} className={btn} aria-label="Zoom avant" title="Zoom avant">
+        <ZoomIn className="h-4 w-4" aria-hidden />
+      </button>
+      <button type="button" onClick={onZoomOut} className={btn} aria-label="Zoom arrière" title="Zoom arrière">
+        <ZoomOut className="h-4 w-4" aria-hidden />
+      </button>
+      <button type="button" onClick={onFit} className={btn} aria-label="Voir toute la salle" title="Voir toute la salle">
+        <ScanLine className="h-4 w-4" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
 export function usePlanFullscreen() {
   const [expanded, setExpanded] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -185,6 +226,7 @@ export function PlanSceneControls({
   showRoofControl = true,
   showWallsControl = true,
   variant = 'surface',
+  compact = false,
   className,
 }: {
   showWalls: boolean;
@@ -197,8 +239,11 @@ export function PlanSceneControls({
   /** Masqué pour un espace ouvert (plein air) : il n'y a pas de murs à afficher. */
   showWallsControl?: boolean;
   variant?: 'surface' | 'overlay';
+  /** Sur un téléphone, murs et toit en icônes seules (le libellé reste lu par les lecteurs d’écran). */
+  compact?: boolean;
   className?: string;
 }) {
+  const labelClass = compact ? 'sr-only sm:not-sr-only' : undefined;
   const overlay = variant === 'overlay';
   const btn = cn(
     'inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-full text-xs font-semibold transition touch-manipulation active:scale-95',
@@ -226,7 +271,7 @@ export function PlanSceneControls({
           title={showWalls ? 'Masquer les murs' : 'Afficher les murs'}
         >
           <BrickWall className="w-3.5 h-3.5" aria-hidden />
-          <span>{showWalls ? 'Murs' : 'Sans murs'}</span>
+          <span className={labelClass}>{showWalls ? 'Murs' : 'Sans murs'}</span>
         </button>
       ) : null}
       {showRoofControl && onToggleRoof ? (
@@ -238,7 +283,7 @@ export function PlanSceneControls({
           title={showRoof ? 'Masquer le toit' : 'Afficher le toit'}
         >
           <Home className="w-3.5 h-3.5" aria-hidden />
-          <span>{showRoof ? 'Toit' : 'Sans toit'}</span>
+          <span className={labelClass}>{showRoof ? 'Toit' : 'Sans toit'}</span>
         </button>
       ) : null}
       {onToggleFullscreen ? (

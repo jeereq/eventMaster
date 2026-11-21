@@ -1331,6 +1331,7 @@ Merci de confirmer votre présence :
         acceptCollectionTerms: form.acceptCollectionTerms,
         payoutPhone: form.payoutPhone,
         payoutHolderName: form.payoutHolderName,
+        notificationSettings: form.notificationSettings,
       };
 
       if (editingEventId) {

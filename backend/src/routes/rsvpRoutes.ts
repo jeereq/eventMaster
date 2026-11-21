@@ -6,6 +6,7 @@ import {
   downloadSeatingInvitationPdf,
   getGuestQrPng,
   submitGuestDonation,
+  updateGuestNotificationPrefs,
 } from '../controllers/rsvpController';
 import { submitGuestShare, getEventFeed, createEventComment, getPublicEventShares, toggleLikeEventPost } from '../controllers/feedController';
 import { acceptGuestLegalHandler, getGuestLegalStatusHandler } from '../controllers/legalController';
@@ -21,6 +22,7 @@ router.get('/:guestId/qr.png', getGuestQrPng);
 router.get('/:guestId', getGuestRsvpDetails);
 router.post('/:guestId', submitRsvp);
 router.post('/:guestId/donations', submitGuestDonation);
+router.put('/:guestId/notifications', updateGuestNotificationPrefs);
 
 // Guest feed and sharing routes
 router.post('/:guestId/share', submitGuestShare);
