@@ -105,6 +105,12 @@ import {
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import { templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
 import CollectionTermsAcceptanceModal from '@/components/CollectionTermsAcceptanceModal';
+import EventNotificationSettingsFields from '@/components/EventNotificationSettingsFields';
+import {
+  DEFAULT_EVENT_NOTIFICATION_SETTINGS,
+  resolveEventNotificationSettings,
+  type EventNotificationSettings,
+} from '@/lib/eventNotifications';
 import { hasValidCollectionTermsAcceptance } from '@/lib/collectionTerms';
 import {
   COLLECTION_COMMISSION_MAX_PERCENT,
@@ -225,6 +231,9 @@ export default function EventConfigForm({
   const [shareSameTable, setShareSameTable] = useState(true);
   const [shareSameZone, setShareSameZone] = useState(false);
   const [eventProgram, setEventProgram] = useState<EventProgram>(() => createEmptyProgram());
+  const [notificationSettings, setNotificationSettings] = useState<EventNotificationSettings>(
+    () => ({ ...DEFAULT_EVENT_NOTIFICATION_SETTINGS }),
+  );
   const [photos, setPhotos] = useState<string[]>([]);
   const [roomId, setRoomId] = useState('');
   const [roomPreviewQuality, setRoomPreviewQuality] = useState<Exclude<RoomPreviewQuality, 'thumb'>>('standard');
@@ -375,6 +384,7 @@ export default function EventConfigForm({
     setClientName(initialEvent.clientName || '');
     setEstimatedGuests(initialEvent.estimatedGuests != null ? String(initialEvent.estimatedGuests) : '');
     setReminderFrequency(initialEvent.reminderFrequency || 'NONE');
+    setNotificationSettings(resolveEventNotificationSettings(initialEvent.notificationSettings));
     setLatitude(initialEvent.latitude != null ? String(initialEvent.latitude) : '');
     setLongitude(initialEvent.longitude != null ? String(initialEvent.longitude) : '');
     setIsPublic(canPublishEvents && Boolean(initialEvent.isPublic));
@@ -842,6 +852,7 @@ export default function EventConfigForm({
       seatSelectionEnabled: complete ? publicEvent && seatSelection : Boolean((initialEvent as { seatSelectionEnabled?: boolean } | undefined)?.seatSelectionEnabled),
       neighborSharingPolicy,
       eventProgram,
+      notificationSettings,
       photos,
       guestGuidelines,
       formTemplateId,
@@ -1198,7 +1209,7 @@ export default function EventConfigForm({
     title, partnerFirst, partnerSecond, description, date, endsAt, location, city, commune, neighborhood,
     eventKind, clientName, estimatedGuests, isPublic, ticketing, ticketPrice, ticketsTotal, photos,
     roomId, contactName, contactNational, donationsEnabled, donationCause, donationTargetFc,
-    payoutNational, payoutHolderName,
+    payoutNational, payoutHolderName, notificationSettings,
   ]);
 
   // Relevé au rendu qui suit la réinitialisation, une fois les valeurs chargées.
@@ -2795,6 +2806,13 @@ export default function EventConfigForm({
                       <p className="text-xs text-muted">Envoyés aux invités encore « en attente ».</p>
                     </label>
 
+                    <EventNotificationSettingsFields
+                      value={notificationSettings}
+                      onChange={setNotificationSettings}
+                      ticketingEnabled={isPublic && ticketing}
+                      donationsEnabled={donationsEnabled}
+                    />
+
                     <div className="block space-y-2">
                       <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
                         <LayoutTemplate className="w-3.5 h-3.5" />
@@ -2998,6 +3016,13 @@ export default function EventConfigForm({
                   </select>
                   <p className="text-xs text-muted">Envoyés aux invités encore « en attente ».</p>
                 </label>
+
+                <EventNotificationSettingsFields
+                  value={notificationSettings}
+                  onChange={setNotificationSettings}
+                  ticketingEnabled={isPublic && ticketing}
+                  donationsEnabled={donationsEnabled}
+                />
 
                 <div className="block space-y-2">
                   <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">

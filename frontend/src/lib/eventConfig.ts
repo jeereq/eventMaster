@@ -80,6 +80,7 @@ export type EventConfigSource = {
   donations?: import('@/lib/donationsAccess').EventDonationsConfig | null;
   collectionTerms?: import('@/lib/collectionTerms').CollectionTermsAcceptance | null;
   payoutAccount?: { phone: string; holderName: string | null } | null;
+  notificationSettings?: unknown;
 };
 
 export type EventConfigPayload = {
@@ -122,6 +123,8 @@ export type EventConfigPayload = {
   /** Numéro Mobile Money de reversement (obligatoire si billetterie payante ou dons). */
   payoutPhone?: string | null;
   payoutHolderName?: string | null;
+  /** Alertes propres à cet événement (réponses, billets, dons, nouvelles aux invités). */
+  notificationSettings?: import('@/lib/eventNotifications').EventNotificationSettings;
 };
 
 export type NeighborSharingMode = 'full' | 'first_name' | 'hidden';

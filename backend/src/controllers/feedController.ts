@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { canAccessEvent, canManageEvent } from '../services/permissionsService';
 import { resolveFeedActor, type FeedIdentityDependencies } from '../services/feedIdentityService';
 import { decideFeedReadAccess, type FeedReadDependencies } from '../services/feedReadPolicy';
+import { notifyGuestsOfEventPost } from '../services/guestEventUpdateService';
 
 const feedIdentityDependencies: FeedIdentityDependencies = {
   findUser: (id) => prisma.user.findUnique({
@@ -214,6 +215,10 @@ export async function createEventPost(req: AuthenticatedRequest, res: Response) 
         publishedOnListing: req.body.publishedOnListing === true || req.body.publishedOnListing === 'true',
       },
     });
+
+    // Invités abonnés : un e-mail / WhatsApp en arrière-plan, sans retarder la publication.
+    void notifyGuestsOfEventPost({ eventId, content: post.content, hasMedia: finalMediaUrls.length > 0 })
+      .catch((err) => console.error('[Feed] notification des invités abonnés:', err));
 
     return res.status(201).json(post);
   } catch (error: any) {

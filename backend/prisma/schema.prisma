@@ -316,6 +316,8 @@ model Event {
   themeId           String?
   /** Galerie publique (URLs Cloudinary), comme une fiche salle. */
   photos            Json?
+  /** Alertes propres à cet événement : { rsvp, tickets, donations, guestUpdates } (absent = tout activé). */
+  notificationSettings Json?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
@@ -371,6 +373,8 @@ model Guest {
   seatVerifiedBy User?     @relation("GuestSeatVerifications", fields: [seatVerifiedByUserId], references: [id], onDelete: SetNull)
   seatingInvitationPdfUrl       String?
   seatingInvitationPdfPublicId  String?
+  /** Abonnement de l’invité aux nouvelles de l’événement : { enabled, email, whatsapp, updatedAt }. */
+  notificationPrefs Json?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 

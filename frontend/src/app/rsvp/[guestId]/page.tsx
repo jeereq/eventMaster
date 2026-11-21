@@ -20,6 +20,7 @@ import {
   Ticket, Copy, Check, Users, Link2Off, HeartHandshake, RefreshCw, Repeat, CalendarHeart,
 } from '@/components/icons';
 import GuestDonationForm from '@/components/rsvp/GuestDonationForm';
+import GuestEventNotificationsCard from '@/components/rsvp/GuestEventNotificationsCard';
 import {
   type RsvpField,
   buildRsvpPreferencesPayload,
@@ -840,6 +841,16 @@ export default function RsvpPage() {
                     </span>
                     <ChevronRight className="w-4 h-4 text-muted shrink-0" aria-hidden />
                   </button>
+                )}
+
+                {guest.eventUpdatesAvailable && !guest.eventPassed && (
+                  <GuestEventNotificationsCard
+                    guestId={guest.id}
+                    eventTitle={guest.event.title}
+                    initialPrefs={guest.notificationPrefs}
+                    email={guest.email}
+                    phone={guest.phone}
+                  />
                 )}
 
                 {/* Place assignée */}
