@@ -151,7 +151,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'free-trial',
     question: 'Puis-je essayer gratuitement ?',
     answer:
-      'Oui. Le forfait gratuit (Essentiel) permet de créer une organisation, jusqu’à 3 événements et 50 invités au total — sans carte bancaire. Ensuite, choisissez selon votre usage : Particulier, organisation Business+ (catalogue salle + prestations inclus dès Business), ou compte pro salle / métier (prestations et Matériel & Équipements).',
+      'Oui. Le forfait gratuit (Essentiel) permet de créer une organisation, 1 événement et 50 invités au total (invitations par WhatsApp et e-mail, sans SMS) — sans carte bancaire. Ensuite, choisissez selon votre usage : Particulier, organisation Business+ (catalogue salle + prestations inclus dès Business), ou compte pro salle / métier (prestations et Matériel & Équipements).',
   },
   {
     id: 'plans-quotas',

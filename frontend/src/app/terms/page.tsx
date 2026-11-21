@@ -410,7 +410,7 @@ export default function TermsPage() {
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>
-            <strong>Essentiel (Gratuit)</strong> : découverte organisateur (jusqu’à 3 événements et 50 invités au total)
+            <strong>Essentiel (Gratuit)</strong> : découverte organisateur (1 événement et 50 invités au total, invitations par WhatsApp et e-mail sans SMS)
             et essai marketplace limité ;
           </li>
           <li>

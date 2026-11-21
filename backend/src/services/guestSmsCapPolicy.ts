@@ -11,3 +11,17 @@ export function smsResultConsumesCredit(result: { success?: boolean; simulated?:
   return Boolean(result.success) && !result.simulated && result.provider !== 'dedup';
 }
 
+
+export const GUEST_SMS_FREE_PLAN_ERROR =
+  "Les SMS ne sont pas inclus dans l'essai gratuit : l'invitation part par WhatsApp et e-mail.";
+
+/** L'essai gratuit n'envoie pas de SMS (coût réel par message) ; WhatsApp et e-mail restent actifs. */
+export function planAllowsGuestSms(plan?: string | null): boolean {
+  return Boolean(plan) && String(plan).toUpperCase() !== 'FREE';
+}
+
+/** Clé de compteur : chiffres seulement (« +243 81… », « 0024381… » et « 24381… » comptent ensemble). */
+export function normalizeSmsPhoneKey(phone: string): string {
+  const digits = String(phone || '').replace(/\D/g, '');
+  return digits.replace(/^00/, '');
+}

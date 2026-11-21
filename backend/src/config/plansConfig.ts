@@ -163,7 +163,7 @@ export function getDefaultPlans(): PlansConfiguration {
       description:
         'Découverte : tester EventMaster — flux invitations (Réponse à l’invitation, plan de table, QR, PDF/GPS) ou 1 salle / 1 prestation.',
       audience: 'B2B',
-      maxEvents: 3,
+      maxEvents: 1,
       maxGuests: 50,
       maxTemplates: 2,
       maxRooms: 1,
@@ -183,40 +183,40 @@ export function getDefaultPlans(): PlansConfiguration {
     }),
     PERSONAL_50: personalPlan({
       name: 'Particulier 50',
-      price: '60.000 FC',
-      monthlyPriceFc: 60000,
+      price: '72.000 FC',
+      monthlyPriceFc: 72000,
       description:
         'Fête privée jusqu’à 50 invités : organisation complète (QR, modèles, éditeur 2D/3D complet), 2 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
       maxGuests: 50,
     }),
     PERSONAL_100: personalPlan({
       name: 'Particulier 100',
-      price: '90.000 FC',
-      monthlyPriceFc: 90000,
+      price: '108.000 FC',
+      monthlyPriceFc: 108000,
       description:
         'Fête privée jusqu’à 100 invités : organisation complète (QR, modèles, éditeur 2D/3D complet), 2 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
       maxGuests: 100,
     }),
     PERSONAL_200: personalPlan({
       name: 'Particulier 200',
-      price: '120.000 FC',
-      monthlyPriceFc: 120000,
+      price: '144.000 FC',
+      monthlyPriceFc: 144000,
       description:
         'Fête privée jusqu’à 200 invités : organisation complète (QR, modèles, éditeur 2D/3D complet), 2 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
       maxGuests: 200,
     }),
     PERSONAL_PLUS: personalPlan({
       name: 'Particulier +200',
-      price: '180.000 FC',
-      monthlyPriceFc: 180000,
+      price: '216.000 FC',
+      monthlyPriceFc: 216000,
       description:
         'Grande fête privée (plus de 200 invités) : organisation complète avec éditeur 2D/3D complet, jusqu’à 450 invités par trimestre, 2 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
       maxGuests: 450,
     }),
     STANDARD: organizerPlan({
       name: 'Business',
-      price: '30.000 FC',
-      monthlyPriceFc: 30000,
+      price: '36.000 FC',
+      monthlyPriceFc: 36000,
       description:
         'B2B — réceptions, protocole QR, PDF/GPS : 3 salles publiables au catalogue et prestations marketplace illimitées.',
       audience: 'B2B',
@@ -240,8 +240,8 @@ export function getDefaultPlans(): PlansConfiguration {
     }),
     PREMIUM_1: organizerPlan({
       name: 'Premium',
-      price: '55.000 FC',
-      monthlyPriceFc: 55000,
+      price: '66.000 FC',
+      monthlyPriceFc: 66000,
       description:
         'B2B — salles 2D avancées, modèles personnalisés : 5 salles publiables et prestations marketplace illimitées.',
       audience: 'B2B',
@@ -265,8 +265,8 @@ export function getDefaultPlans(): PlansConfiguration {
     }),
     PREMIUM_2: organizerPlan({
       name: 'Premium Plus',
-      price: '85.000 FC',
-      monthlyPriceFc: 85000,
+      price: '102.000 FC',
+      monthlyPriceFc: 102000,
       description:
         'B2B — protocole complet, OCR, multi-salles : 10 salles publiables et prestations marketplace illimitées.',
       audience: 'B2B',
@@ -290,8 +290,8 @@ export function getDefaultPlans(): PlansConfiguration {
     }),
     ENTERPRISE_1: organizerPlan({
       name: 'Enterprise',
-      price: '350.000 FC',
-      monthlyPriceFc: 350000,
+      price: '420.000 FC',
+      monthlyPriceFc: 420000,
       description:
         'B2B — volume élevé, éditeur complet : 25 salles publiables, prestations marketplace illimitées, rapports et support prioritaire.',
       audience: 'B2B',
@@ -315,8 +315,8 @@ export function getDefaultPlans(): PlansConfiguration {
     }),
     ENTERPRISE_2: organizerPlan({
       name: 'Enterprise Pro',
-      price: '525.000 FC',
-      monthlyPriceFc: 525000,
+      price: '630.000 FC',
+      monthlyPriceFc: 630000,
       description:
         'B2B — agences : 50 salles publiables, prestations marketplace illimitées, éditeur complet et support dédié.',
       audience: 'B2B',
@@ -340,8 +340,8 @@ export function getDefaultPlans(): PlansConfiguration {
     }),
     ENTERPRISE_3: organizerPlan({
       name: 'Enterprise Max',
-      price: '700.000 FC',
-      monthlyPriceFc: 700000,
+      price: '840.000 FC',
+      monthlyPriceFc: 840000,
       description:
         'B2B — 40 événements et 1 900 invités par mois, salles publiables et prestations marketplace illimitées, multi-agences, SLA 24/7 et onboarding dédié.',
       audience: 'B2B',
@@ -365,10 +365,10 @@ export function getDefaultPlans(): PlansConfiguration {
     }),
     CUSTOM: organizerPlan({
       name: 'Custom',
-      price: '1.000.000 FC',
-      monthlyPriceFc: 1000000,
+      price: '1.200.000 FC',
+      monthlyPriceFc: 1200000,
       description:
-        'B2B — sur mesure, à partir de 1 000 000 FC / mois : 60 événements et 2 700 invités par mois de base, quotas et prix ajustables selon le volume, salles et prestations illimitées, SLA 24/7 et accompagnement dédié.',
+        'B2B — sur mesure, à partir de 1 200 000 FC / mois : 60 événements et 2 700 invités par mois de base, quotas et prix ajustables selon le volume, salles et prestations illimitées, SLA 24/7 et accompagnement dédié.',
       audience: 'B2B',
       maxEvents: 60,
       maxGuests: 2700,
@@ -390,8 +390,8 @@ export function getDefaultPlans(): PlansConfiguration {
     }),
     VENUE: {
       name: 'Salle',
-      price: '14.900 FC',
-      monthlyPriceFc: 14900,
+      price: '17.900 FC',
+      monthlyPriceFc: 17900,
       description:
         'Gestionnaire de salles : salles illimitées, éditeur 2D/3D complet — sans prestations, sans événements ni invités.',
       audience: 'VENUE',
@@ -416,8 +416,8 @@ export function getDefaultPlans(): PlansConfiguration {
     },
     SERVICE: {
       name: 'Prestataire',
-      price: '9.900 FC',
-      monthlyPriceFc: 9900,
+      price: '11.900 FC',
+      monthlyPriceFc: 11900,
       description:
         'Prestataire : prestations illimitées (traiteur, photo, DJ…) avec photos, vidéos, rayon et calendrier — sans salles, sans événements ni invités.',
       audience: 'SERVICE',
@@ -442,8 +442,8 @@ export function getDefaultPlans(): PlansConfiguration {
     },
     CATALOG: {
       name: 'Salle & presta',
-      price: '19.900 FC',
-      monthlyPriceFc: 19900,
+      price: '23.900 FC',
+      monthlyPriceFc: 23900,
       description:
         'Les deux : salles et prestations illimitées (éditeur complet) — sans événements ni invités.',
       audience: 'CATALOG',
