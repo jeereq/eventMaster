@@ -5,7 +5,7 @@ import { getOpenAiApiKey } from './openaiJsonClient';
 import { loadPlatformSettings } from './platformSettingsService';
 import { serviceCategoryLabel } from '../utils/publicVenue';
 import { defaultMarketUnit } from './marketPriceStats.ts';
-import { sanitizeResearchProposals, sanitizeSources, type ResearchSource } from './marketPriceResearchParse.ts';
+import { keepFacebookSources, sanitizeResearchProposals, sanitizeSources, type ResearchSource } from './marketPriceResearchParse.ts';
 
 type HttpError = Error & { status?: number };
 
@@ -30,15 +30,24 @@ export function parseMarketSlots(value: unknown): string[] {
   return [...new Set(value.map((item) => String(item || '').trim()).filter((slot) => MARKET_SLOTS.includes(slot)))];
 }
 
-function researchPrompt(city: string, slots: string[], usdRate: number, guestHint: number): { system: string; user: string } {
+export type ResearchChannel = 'web' | 'facebook';
+
+export function parseResearchChannel(value: unknown): ResearchChannel {
+  return value === 'facebook' ? 'facebook' : 'web';
+}
+
+function researchPrompt(city: string, slots: string[], usdRate: number, guestHint: number, channel: ResearchChannel): { system: string; user: string } {
   const place = city ? `${city}, République démocratique du Congo` : 'République démocratique du Congo (Kinshasa en priorité)';
   const lines = slots.map((slot) => {
     const unit = defaultMarketUnit(slot) === 'PERSON' ? 'prix PAR INVITÉ' : 'prix FORFAITAIRE pour un événement';
     return `- ${slot} : ${marketSlotLabel(slot)} (${unit})`;
   });
+  const where = channel === 'facebook'
+    ? 'Tu cherches UNIQUEMENT sur des pages et publications Facebook publiques (requêtes du type site:facebook.com) : pages de traiteurs, salles, décorateurs, DJ, loueurs de matériel, groupes publics d’annonces. Chaque source doit être une URL facebook.com.'
+    : 'Tu utilises la recherche web pour trouver des prix récents et publics : sites de prestataires, pages Facebook ou Instagram publiques, annonces, articles de presse, comparateurs.';
   const system = [
     'Tu es analyste des prix de l’événementiel en République démocratique du Congo.',
-    'Tu utilises la recherche web pour trouver des prix récents et publics : sites de prestataires, pages Facebook ou Instagram publiques, annonces, articles de presse, comparateurs.',
+    where,
     'Tu n’inventes jamais un prix. Si tu ne trouves pas de source fiable pour une ligne, tu l’omets.',
     'Tu réponds uniquement avec un objet JSON, sans texte autour.',
   ].join(' ');
@@ -148,7 +157,8 @@ let running = false;
  * Lance une recherche web de prix et enregistre les résultats comme propositions.
  * Rien n’est utilisé par le simulateur avant la validation d’un Super Admin.
  */
-export async function researchMarketPrices(input: { city: string; slots: string[]; guestHint?: number; actorId: string }) {
+export async function researchMarketPrices(input: { city: string; slots: string[]; guestHint?: number; actorId: string; channel?: ResearchChannel }) {
+  const channel = parseResearchChannel(input.channel);
   const slots = parseMarketSlots(input.slots).slice(0, MAX_SLOTS_PER_RUN);
   if (!slots.length) fail(400, 'Choisissez au moins une ligne à rechercher.');
   if (!getGeminiApiKey() && !getOpenAiApiKey()) {
@@ -160,7 +170,7 @@ export async function researchMarketPrices(input: { city: string; slots: string[
     const settings = loadPlatformSettings();
     const usdRate = Number(settings.usdExchangeRateCdf) > 0 ? Number(settings.usdExchangeRateCdf) : 2800;
     const guestHint = Math.min(2000, Math.max(20, Math.round(Number(input.guestHint) || 150)));
-    const { system, user } = researchPrompt(input.city, slots, usdRate, guestHint);
+    const { system, user } = researchPrompt(input.city, slots, usdRate, guestHint, channel);
 
     let answer: { raw: unknown; sources: ResearchSource[]; model: string } | null = null;
     let lastError: Error | null = null;
@@ -181,7 +191,11 @@ export async function researchMarketPrices(input: { city: string; slots: string[
     }
     if (!answer) fail(502, lastError?.message || 'La recherche web n’a rien renvoyé.');
 
-    const proposals = sanitizeResearchProposals(answer.raw, slots, usdRate, answer.sources);
+    const proposals = channel === 'facebook'
+      ? sanitizeResearchProposals(answer.raw, slots, usdRate, keepFacebookSources(answer.sources))
+        .map((proposal) => ({ ...proposal, sources: keepFacebookSources(proposal.sources) }))
+        .filter((proposal) => proposal.sources.length > 0)
+      : sanitizeResearchProposals(answer.raw, slots, usdRate, answer.sources);
     const created = [];
     for (const proposal of proposals) {
       created.push(await prisma.marketPriceReference.create({
@@ -193,7 +207,7 @@ export async function researchMarketPrices(input: { city: string; slots: string[
           typicalFc: proposal.typicalFc,
           highFc: proposal.highFc,
           status: 'PROPOSED',
-          source: 'ai_web',
+          source: channel === 'facebook' ? 'ai_facebook' : 'ai_web',
           sources: proposal.sources,
           rationale: proposal.rationale || null,
           model: answer.model,
@@ -206,6 +220,7 @@ export async function researchMarketPrices(input: { city: string; slots: string[
       proposals: created,
       notFound: slots.filter((slot) => !found.has(slot)),
       model: answer.model,
+      channel,
     };
   } finally {
     running = false;

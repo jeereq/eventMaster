@@ -1,5 +1,6 @@
 'use client';
 
+import MarketEstimateBadge from '@/components/MarketEstimateBadge';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { BookmarkPlus, Building2, CalendarPlus, KeyRound, Sparkles, UserPlus } from '@/components/icons';
@@ -218,6 +219,9 @@ export default function AiSimulationPackModal({
                     href={selected.venue.slug.startsWith('budget:') ? selected.venue.href : undefined}
                     onOpen={() => openElement({ kind: 'venue', slug: selected.venue!.slug })}
                   />
+                  {selected.venue.marketEstimate ? (
+                    <div className="mt-1.5 pl-1"><MarketEstimateBadge estimate={selected.venue.marketEstimate} /></div>
+                  ) : null}
                 </li>
               ) : null}
               {selected.services.map((item) => {
@@ -227,12 +231,15 @@ export default function AiSimulationPackModal({
                   <li key={item.slug}>
                     <ElementRow
                       item={item}
-                      kind={estimate ? (item.categoryLabel || 'Boissons') : rental ? 'Matériel' : 'Prestataire'}
+                      kind={item.marketEstimate ? (item.categoryLabel || 'Estimation') : estimate ? (item.categoryLabel || 'Boissons') : rental ? 'Matériel' : 'Prestataire'}
                       icon={rental ? <KeyRound className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
                       rate={exchangeRate}
                       href={estimate ? item.href : undefined}
                       onOpen={() => openElement({ kind: 'service', slug: item.slug })}
                     />
+                    {item.marketEstimate ? (
+                      <div className="mt-1.5 pl-1"><MarketEstimateBadge estimate={item.marketEstimate} /></div>
+                    ) : null}
                   </li>
                 );
               })}

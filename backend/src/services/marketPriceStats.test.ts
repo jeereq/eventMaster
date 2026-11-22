@@ -3,13 +3,15 @@ import test from 'node:test';
 import {
   checkMarketEstimate,
   marketEstimateAmount,
+  marketSourceNote,
+  parsePriceSource,
   quantile,
   resolveMarketPrice,
   summarizeObservations,
   type MarketObservation,
   type MarketReferenceRow,
 } from './marketPriceStats.ts';
-import { sanitizeResearchProposals } from './marketPriceResearchParse.ts';
+import { keepFacebookSources, sanitizeResearchProposals } from './marketPriceResearchParse.ts';
 
 const catering = (amountFc: number, guestCount: number | null, city = 'Kinshasa'): MarketObservation => ({
   slot: 'CATERING',
@@ -104,4 +106,33 @@ test('le coût estimé est contrôlé : calcul, fourchette, fraîcheur et source
   assert.equal(old.ok, false);
   assert.match(old.messages.join(' '), /plus de 6 mois/);
   assert.equal(checkMarketEstimate({ ...fresh, sources: [] }, 15_000, 100, 1_500_000, now).ok, false, 'sans source');
+});
+
+test('la source choisie filtre les prix : base EventMaster, web ou Facebook', () => {
+  const observed = [catering(1_000_000, 100), catering(1_200_000, 100), catering(1_400_000, 100)];
+  const refs: MarketReferenceRow[] = [
+    { slot: 'CATERING', city: 'Kinshasa', unit: 'PERSON', lowFc: 20_000, typicalFc: 25_000, highFc: 30_000, reviewedAt: '2026-11-22', source: 'ai_web' },
+    { slot: 'CATERING', city: 'Kinshasa', unit: 'PERSON', lowFc: 9_000, typicalFc: 11_000, highFc: 13_000, reviewedAt: '2026-11-22', source: 'ai_facebook' },
+  ];
+  assert.equal(parsePriceSource('facebook'), 'facebook');
+  assert.equal(parsePriceSource('autre'), 'all');
+  assert.equal(resolveMarketPrice('CATERING', 'Kinshasa', observed, refs, undefined, 'all')?.source, 'observed');
+  assert.equal(resolveMarketPrice('CATERING', 'Kinshasa', [], refs, undefined, 'app'), null, 'base EventMaster : pas de prix web');
+  const web = resolveMarketPrice('CATERING', 'Kinshasa', observed, refs, undefined, 'web');
+  assert.equal(web?.typicalFc, 25_000);
+  assert.equal(web?.channel, 'web');
+  const fb = resolveMarketPrice('CATERING', 'Kinshasa', observed, refs, undefined, 'facebook');
+  assert.equal(fb?.typicalFc, 11_000);
+  assert.equal(fb?.channel, 'facebook');
+  assert.match(marketSourceNote(fb!), /pages Facebook publiques/);
+});
+
+test('une recherche Facebook ne garde que des liens Facebook', () => {
+  const kept = keepFacebookSources([
+    { title: 'Traiteur', url: 'https://www.facebook.com/traiteurkin/posts/1' },
+    { title: 'Blog', url: 'https://blog.cd/prix' },
+    { title: 'facebook.com', url: 'https://vertexaisearch.cloud.google.com/grounding-api-redirect/abc' },
+    { title: 'Faux', url: 'https://facebook.com.evil.cd/x' },
+  ]);
+  assert.deepEqual(kept.map((item) => item.title), ['Traiteur', 'facebook.com']);
 });

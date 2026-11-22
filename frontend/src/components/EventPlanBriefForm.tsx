@@ -1,5 +1,6 @@
 'use client';
 
+import PriceSourcePicker from '@/components/PriceSourcePicker';
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, Loader2, Save, Sparkles } from '@/components/icons';
 import { Alert, Button, Input } from '@/components/ui';
@@ -175,6 +176,10 @@ export default function EventPlanBriefForm({
           setScopeError('');
           patch({ budgetScope });
         }}
+      />
+      <PriceSourcePicker
+        value={brief.priceSource || 'all'}
+        onChange={(priceSource) => patch({ priceSource })}
       />
       <BudgetSimulationCriteria
         scope={scope}

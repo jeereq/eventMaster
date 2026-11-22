@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { auditReq } from '../services/adminAuditService';
 import { invalidateMarketPriceCache, observedMarketPriceSummary } from '../services/marketPriceEstimates';
-import { MARKET_SLOTS, marketSlotLabel, parseMarketSlots, researchMarketPrices } from '../services/marketPriceResearchService';
+import { MARKET_SLOTS, marketSlotLabel, parseMarketSlots, parseResearchChannel, researchMarketPrices } from '../services/marketPriceResearchService';
 import { normalizeAllowedCity } from '../utils/rdcCities';
 
 function sendError(res: Response, error: unknown, fallback: string) {
@@ -56,7 +56,9 @@ export async function researchMarketPricesHandler(req: AuthenticatedRequest, res
     const city = parseCity(req.body?.city);
     if (city === null) return res.status(400).json({ error: 'Ville inconnue.' });
     const slots = parseMarketSlots(req.body?.slots);
+    const channel = parseResearchChannel(req.body?.channel);
     const result = await researchMarketPrices({
+      channel,
       city,
       slots,
       guestHint: Number(req.body?.guestHint) || undefined,
@@ -65,8 +67,8 @@ export async function researchMarketPricesHandler(req: AuthenticatedRequest, res
     await auditReq(req, {
       action: 'MARKET_PRICES_RESEARCH',
       targetType: 'market_price',
-      summary: `Recherche web de prix (${city || 'toutes villes'}) : ${result.proposals.length} proposition(s)`,
-      metadata: { city, slots, notFound: result.notFound, model: result.model },
+      summary: `Recherche ${channel === 'facebook' ? 'Facebook' : 'web'} de prix (${city || 'toutes villes'}) : ${result.proposals.length} proposition(s)`,
+      metadata: { city, slots, channel, notFound: result.notFound, model: result.model },
     });
     res.json(result);
   } catch (error) {
@@ -94,7 +96,7 @@ export async function updateMarketPrice(req: AuthenticatedRequest, res: Response
   }
 }
 
-/** POST /admin/market-prices/:id/approve : la référence remplace l’ancienne pour la même ligne et la même ville. */
+/** POST /admin/market-prices/:id/approve : la référence remplace l’ancienne pour la même ligne, la même ville et le même canal (web ou Facebook). */
 export async function approveMarketPrice(req: AuthenticatedRequest, res: Response) {
   try {
     const row = await prisma.marketPriceReference.findUnique({ where: { id: String(req.params.id) } });
@@ -102,7 +104,7 @@ export async function approveMarketPrice(req: AuthenticatedRequest, res: Respons
     const now = new Date();
     const [, approved] = await prisma.$transaction([
       prisma.marketPriceReference.updateMany({
-        where: { slot: row.slot, city: row.city, status: 'APPROVED' },
+        where: { slot: row.slot, city: row.city, source: row.source, status: 'APPROVED' },
         data: { status: 'REPLACED' },
       }),
       prisma.marketPriceReference.update({

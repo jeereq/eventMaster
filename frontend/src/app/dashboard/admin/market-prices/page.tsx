@@ -19,6 +19,8 @@ type ReferenceRow = {
   typicalFc: number;
   highFc: number;
   status: 'PROPOSED' | 'APPROVED';
+  /** ai_web ou ai_facebook */
+  source?: string;
   sources?: Array<{ title: string; url: string }> | null;
   rationale?: string | null;
   model?: string | null;
@@ -56,6 +58,10 @@ const amountClass =
 
 function unitLabel(unit: MarketUnit) {
   return unit === 'PERSON' ? 'par invité' : 'forfait';
+}
+
+function channelLabel(source?: string) {
+  return source === 'ai_facebook' ? 'Facebook' : 'Web';
 }
 
 function formatDay(value?: string | null) {
@@ -144,7 +150,7 @@ function ProposalCard({
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm font-semibold text-foreground">{label}</p>
         <p className="text-xs text-muted">
-          {row.city || 'Toutes villes'} · trouvé le {formatDay(row.createdAt)}
+          {channelLabel(row.source)} · {row.city || 'Toutes villes'} · trouvé le {formatDay(row.createdAt)}
         </p>
       </div>
       {row.rationale ? <p className="text-sm text-muted">{row.rationale}</p> : null}
@@ -193,6 +199,7 @@ export default function AdminMarketPricesPage() {
   const [selected, setSelected] = useState<string[]>(DEFAULT_SLOTS);
   const [guestHint, setGuestHint] = useState('150');
   const [researching, setResearching] = useState(false);
+  const [channel, setChannel] = useState<'web' | 'facebook'>('web');
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -237,6 +244,7 @@ export default function AdminMarketPricesPage() {
       const result = (await api.post('/admin/market-prices/research', {
         city,
         slots: selected,
+        channel,
         guestHint: Number(guestHint) || 150,
       })) as { proposals: ReferenceRow[]; notFound: string[] };
       const missed = result.notFound.map((slot) => labels[slot] || slot);
@@ -281,10 +289,29 @@ export default function AdminMarketPricesPage() {
 
       <Card>
         <CardHeader
-          title="Rechercher des prix sur le web"
+          title="Rechercher des prix sur le web ou Facebook"
           description="L’IA cherche des prix publics récents et cite ses sources. Rien n’est utilisé avant votre validation."
         />
         <div className="space-y-4">
+          <div role="radiogroup" aria-label="Où chercher" className="inline-flex gap-0.5 rounded-[10px] bg-surface-muted p-[3px]">
+            {([
+              { id: 'web', label: 'Tout le web' },
+              { id: 'facebook', label: 'Pages Facebook publiques' },
+            ] as const).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={channel === option.id}
+                onClick={() => setChannel(option.id)}
+                className={`min-h-11 sm:min-h-9 px-3 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                  channel === option.id ? 'bg-surface text-foreground shadow-[0_1px_3px_rgba(23,22,20,0.12)]' : 'text-muted hover:text-foreground'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <div className="flex flex-wrap gap-2">
             {(data?.slots || []).map((item) => {
               const active = selected.includes(item.slot);
@@ -362,7 +389,7 @@ export default function AdminMarketPricesPage() {
                     <div className="min-w-0 flex-1 space-y-1">
                       <p className="text-sm font-semibold text-foreground">
                         {labels[row.slot] || row.slot}
-                        <span className="font-normal text-muted"> · {row.city || 'Toutes villes'} · validé le {formatDay(row.reviewedAt)}</span>
+                        <span className="font-normal text-muted"> · {channelLabel(row.source)} · {row.city || 'Toutes villes'} · validé le {formatDay(row.reviewedAt)}</span>
                       </p>
                       <p className="text-sm tabular-nums">
                         {formatFc(row.lowFc)} · <strong>{formatFc(row.typicalFc)}</strong> · {formatFc(row.highFc)} {unitLabel(row.unit)}
