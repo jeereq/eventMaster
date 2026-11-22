@@ -40,7 +40,27 @@ export type MarketPriceStat = {
   /** Date de validation (source « reference »). */
   reviewedAt?: string | null;
   sourceCount?: number;
+  /** Pages web citées (source « reference »), au plus 3. */
+  sources?: MarketSourceLink[];
 };
+
+export type MarketSourceLink = { title: string; url: string };
+
+/** Au-delà, une référence web est signalée « à revérifier ». */
+export const REFERENCE_MAX_AGE_DAYS = 180;
+
+function sourceLinks(value: unknown): MarketSourceLink[] {
+  if (!Array.isArray(value)) return [];
+  const links: MarketSourceLink[] = [];
+  for (const item of value) {
+    const row = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>;
+    const url = String(row.url || '').trim();
+    if (!/^https?:\/\//i.test(url)) continue;
+    links.push({ title: String(row.title || '').trim().slice(0, 200) || url, url });
+    if (links.length >= 3) break;
+  }
+  return links;
+}
 
 export type MarketReferenceRow = {
   slot: string;
@@ -133,6 +153,7 @@ function referenceToStat(row: MarketReferenceRow): MarketPriceStat {
     source: 'reference',
     reviewedAt,
     sourceCount: Array.isArray(row.sources) ? row.sources.length : 0,
+    sources: sourceLinks(row.sources),
   };
 }
 
@@ -191,7 +212,7 @@ export function marketEstimateAmount(
   guestCount: number,
   style: MarketPriceStyle,
   capFc = Number.POSITIVE_INFINITY,
-): { amountFc: number; unitFc: number; note: string } | null {
+): MarketEstimatePriced | null {
   const guests = Math.max(0, Math.floor(guestCount));
   if (stat.unit === 'PERSON' && guests < 1) return null;
   const preferred = style === 'cheap' ? stat.lowFc : style === 'comfort' ? stat.highFc : stat.typicalFc;
@@ -203,10 +224,78 @@ export function marketEstimateAmount(
       const range = stat.lowFc !== stat.highFc
         ? ` (fourchette ${money(stat.lowFc)} à ${money(stat.highFc)}${stat.unit === 'PERSON' ? ' par invité' : ''})`
         : '';
-      return { amountFc, unitFc, note: `${how}${range}. ${marketSourceNote(stat)}.` };
+      const quantity = stat.unit === 'PERSON' ? guests : 1;
+      return {
+        amountFc,
+        unitFc,
+        quantity,
+        note: `${how}${range}. ${marketSourceNote(stat)}.`,
+        check: checkMarketEstimate(stat, unitFc, quantity, amountFc),
+      };
     }
   }
   return null;
+}
+
+export type MarketEstimateCheck = {
+  /** true : calcul juste, prix dans la fourchette et référence récente. */
+  ok: boolean;
+  messages: string[];
+};
+
+export type MarketEstimatePriced = {
+  amountFc: number;
+  unitFc: number;
+  quantity: number;
+  note: string;
+  check: MarketEstimateCheck;
+};
+
+/**
+ * Contrôle du coût d’une ligne estimée : le total correspond au prix unitaire × quantité,
+ * le prix unitaire reste dans la fourchette du marché, et la référence web n’est pas trop ancienne.
+ */
+export function checkMarketEstimate(
+  stat: MarketPriceStat,
+  unitFc: number,
+  quantity: number,
+  amountFc: number,
+  now: Date = new Date(),
+): MarketEstimateCheck {
+  const messages: string[] = [];
+  let ok = true;
+  const expected = Math.round(unitFc * quantity);
+  if (expected !== amountFc || amountFc <= 0) {
+    ok = false;
+    messages.push(`Calcul incohérent : ${money(unitFc)} × ${quantity} = ${money(expected)}, et non ${money(amountFc)}.`);
+  } else {
+    messages.push(quantity > 1
+      ? `Calcul vérifié : ${quantity} × ${money(unitFc)} = ${money(amountFc)}.`
+      : `Calcul vérifié : forfait de ${money(amountFc)}.`);
+  }
+  if (unitFc < stat.lowFc || unitFc > stat.highFc) {
+    ok = false;
+    messages.push(`Prix hors de la fourchette du marché (${money(stat.lowFc)} à ${money(stat.highFc)}).`);
+  } else {
+    messages.push(`Prix dans la fourchette du marché (${money(stat.lowFc)} à ${money(stat.highFc)}).`);
+  }
+  if (stat.source === 'reference') {
+    const reviewed = stat.reviewedAt ? new Date(stat.reviewedAt) : null;
+    const ageDays = reviewed && !Number.isNaN(reviewed.getTime())
+      ? (now.getTime() - reviewed.getTime()) / (24 * 60 * 60 * 1000)
+      : Number.POSITIVE_INFINITY;
+    if (ageDays > REFERENCE_MAX_AGE_DAYS) {
+      ok = false;
+      messages.push('Prix validé il y a plus de 6 mois : à revérifier.');
+    }
+    if (!stat.sources?.length) {
+      ok = false;
+      messages.push('Aucune source web enregistrée pour ce prix.');
+    }
+  } else if ((stat.sampleCount || 0) < 5) {
+    messages.push(`Basé sur seulement ${stat.sampleCount || 0} prix réels : à confirmer.`);
+  }
+  return { ok, messages };
 }
 
 export function isMarketEstimateSlug(slug: string): boolean {

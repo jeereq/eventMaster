@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  checkMarketEstimate,
   marketEstimateAmount,
   quantile,
   resolveMarketPrice,
@@ -82,4 +83,25 @@ test('la recherche web : lignes connues, dollars convertis, fourchette remise en
   const dj = proposals.find((item) => item.slot === 'DJ');
   assert.equal(dj?.sources[0]?.url, 'https://source.cd/traiteur', 'URL non web écartée');
   assert.deepEqual(sanitizeResearchProposals({ items: [{ slot: 'DJ', lowFc: 100 }] }, ['DJ'], 2500), [], 'sans source, rien');
+});
+
+test('le coût estimé est contrôlé : calcul, fourchette, fraîcheur et sources', () => {
+  const now = new Date('2026-11-22T12:00:00Z');
+  const fresh = {
+    slot: 'CATERING', city: 'Kinshasa', unit: 'PERSON' as const, lowFc: 10_000, typicalFc: 15_000, highFc: 20_000,
+    source: 'reference' as const, reviewedAt: '2026-11-01T00:00:00Z', sources: [{ title: 'Traiteur', url: 'https://t.cd' }],
+  };
+  const priced = marketEstimateAmount(fresh, 100, 'balanced');
+  assert.equal(priced?.quantity, 100);
+  assert.equal(priced?.unitFc, 15_000);
+  const ok = checkMarketEstimate(fresh, 15_000, 100, 1_500_000, now);
+  assert.equal(ok.ok, true);
+  assert.match(ok.messages[0], /Calcul vérifié : 100 × 15[\s ]000 FC = 1[\s ]500[\s ]000 FC/);
+
+  assert.equal(checkMarketEstimate(fresh, 15_000, 100, 1_400_000, now).ok, false, 'total faux');
+  assert.equal(checkMarketEstimate(fresh, 25_000, 100, 2_500_000, now).ok, false, 'hors fourchette');
+  const old = checkMarketEstimate({ ...fresh, reviewedAt: '2026-01-01T00:00:00Z' }, 15_000, 100, 1_500_000, now);
+  assert.equal(old.ok, false);
+  assert.match(old.messages.join(' '), /plus de 6 mois/);
+  assert.equal(checkMarketEstimate({ ...fresh, sources: [] }, 15_000, 100, 1_500_000, now).ok, false, 'sans source');
 });
