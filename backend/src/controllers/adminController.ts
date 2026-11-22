@@ -2056,6 +2056,10 @@ export async function updateAdminSettings(req: AuthenticatedRequest, res: Respon
           from: current.commercialRenewalCommissionRate,
           to: updatedSettings.commercialRenewalCommissionRate,
         },
+        smsCredits: {
+          from: current.smsCredits,
+          to: updatedSettings.smsCredits,
+        },
         onlinePaymentsEnabled: {
           from: current.onlinePaymentsEnabled,
           to: updatedSettings.onlinePaymentsEnabled,

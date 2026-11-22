@@ -2,25 +2,34 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   addMonthsUtc,
+  buildSmsCreditPacks,
+  DEFAULT_SMS_CREDIT_SETTINGS,
   getSmsCreditPack,
-  SMS_CREDIT_PACKS,
+  sanitizeSmsCreditSettings,
   smsIncludedForPlan,
   smsPackMargin,
   smsPeriodKey,
 } from './smsCreditsConfig.ts';
 
 describe('packs de crédits SMS', () => {
-  it('garde une marge légère (4 à 15 % du coût) au coût réel de 0,03 $', () => {
-    for (const pack of SMS_CREDIT_PACKS) {
+  it('calcule les prix par défaut à 0,03 $ le SMS et 2 270 FC pour 1 USD', () => {
+    const prices = buildSmsCreditPacks().map((p) => [p.smsCount, p.priceFc]);
+    assert.deepEqual(prices, [[50, 4000], [100, 8000], [250, 19500], [500, 38500], [1000, 75000]]);
+  });
+
+  it('garde une marge légère (4 à 15 % du coût) aux réglages par défaut', () => {
+    for (const pack of buildSmsCreditPacks()) {
       const { marginRate } = smsPackMargin(pack);
       assert.ok(marginRate >= 0.04 && marginRate <= 0.15, `${pack.id}: ${marginRate}`);
     }
   });
 
-  it('le prix par SMS baisse avec le volume sans passer sous le coût', () => {
-    const unit = SMS_CREDIT_PACKS.map((p) => p.priceFc / p.smsCount);
-    for (let i = 1; i < unit.length; i += 1) assert.ok(unit[i] <= unit[i - 1]);
-    for (const pack of SMS_CREDIT_PACKS) assert.ok(smsPackMargin(pack).gainFc > 0);
+  it('suit le coût du SMS réglé par l\'administrateur', () => {
+    const settings = sanitizeSmsCreditSettings({ ...DEFAULT_SMS_CREDIT_SETTINGS, unitCostUsd: 0.08 });
+    const pack = getSmsCreditPack('sms_100', settings);
+    assert.ok(pack);
+    assert.ok(pack.priceFc > 20000);
+    assert.ok(smsPackMargin(pack, settings).marginRate > 0.04);
   });
 
   it('retrouve un pack par identifiant et refuse un identifiant inconnu', () => {
@@ -30,8 +39,40 @@ describe('packs de crédits SMS', () => {
   });
 });
 
+describe('réglages SMS', () => {
+  it('borne les valeurs et retombe sur les défauts', () => {
+    const s = sanitizeSmsCreditSettings({ unitCostUsd: -1, fxRateCdf: 'abc', paymentFeeRate: 9, validityMonths: 500, lowThreshold: 0, packs: [] });
+    assert.equal(s.unitCostUsd, 0.001);
+    assert.equal(s.fxRateCdf, DEFAULT_SMS_CREDIT_SETTINGS.fxRateCdf);
+    assert.equal(s.paymentFeeRate, 0.2);
+    assert.equal(s.validityMonths, 60);
+    assert.equal(s.lowThreshold, 0.1);
+    assert.equal(s.packs.length, DEFAULT_SMS_CREDIT_SETTINGS.packs.length);
+  });
+
+  it('trie les packs, retire les doublons et les packs trop petits', () => {
+    const s = sanitizeSmsCreditSettings({
+      packs: [{ smsCount: 300, coefficient: 1.1 }, { smsCount: 100, coefficient: 1.2 }, { smsCount: 100, coefficient: 1.5 }, { smsCount: 5, coefficient: 1.2 }],
+    });
+    assert.deepEqual(s.packs.map((p) => p.smsCount), [100, 300]);
+    assert.equal(s.packs[0].coefficient, 1.2);
+  });
+
+  it('refuse un coefficient inférieur à 1 (vente à perte)', () => {
+    const s = sanitizeSmsCreditSettings({ packs: [{ smsCount: 100, coefficient: 0.5 }] });
+    assert.equal(s.packs[0].coefficient, 1);
+  });
+
+  it('accepte des quotas inclus modifiés par forfait', () => {
+    const s = sanitizeSmsCreditSettings({ included: { STANDARD: 250, PREMIUM_1: -5 } });
+    assert.equal(smsIncludedForPlan('STANDARD', s), 250);
+    assert.equal(smsIncludedForPlan('PREMIUM_1', s), 0);
+    assert.equal(smsIncludedForPlan('PREMIUM_2', s), 250);
+  });
+});
+
 describe('SMS inclus par forfait', () => {
-  it('suit la grille proposée', () => {
+  it('suit la grille par défaut', () => {
     assert.equal(smsIncludedForPlan('FREE'), 0);
     assert.equal(smsIncludedForPlan('STANDARD'), 100);
     assert.equal(smsIncludedForPlan('PREMIUM_2'), 250);

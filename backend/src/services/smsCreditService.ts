@@ -1,15 +1,13 @@
 import { prisma } from '../db';
 import {
   addMonthsUtc,
+  buildSmsCreditPacks,
   getSmsCreditPack,
-  SMS_CREDIT_PACKS,
-  SMS_CREDIT_VALIDITY_MONTHS,
-  SMS_LOW_THRESHOLD,
-  SMS_PRICING_FX_CDF,
-  SMS_UNIT_COST_USD,
   smsIncludedForPlan,
   smsPeriodKey,
+  type SmsCreditSettings,
 } from '../config/smsCreditsConfig';
+import { loadPlatformSettings } from './platformSettingsService';
 import {
   buildFlexPayMetadataUpdate,
   buildFlexPayReference,
@@ -34,6 +32,11 @@ import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes'
  */
 
 const FRONTEND_URL = () => (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
+/** Réglages SMS en vigueur (modifiables par l'administrateur). */
+export function getSmsCreditSettings(): SmsCreditSettings {
+  return loadPlatformSettings().smsCredits;
+}
+
 const BILLING_HREF = () => `${FRONTEND_URL()}/dashboard/billing`;
 
 export type SmsReservation =
@@ -44,7 +47,8 @@ export type ReserveSmsResult = { ok: true; reservation: SmsReservation } | { ok:
 
 /** Réserve un SMS : quota inclus de la période d'abord, puis crédits achetés non expirés. */
 export async function reserveTenantSms(tenantId: string, plan?: string | null): Promise<ReserveSmsResult> {
-  const included = smsIncludedForPlan(plan);
+  const settings = getSmsCreditSettings();
+  const included = smsIncludedForPlan(plan, settings);
   const period = smsPeriodKey(plan);
 
   if (included > 0) {
@@ -54,7 +58,7 @@ export async function reserveTenantSms(tenantId: string, plan?: string | null): 
       data: { used: { increment: 1 } },
     });
     if (taken.count > 0) {
-      void notifyIncludedThreshold(tenantId, period, included).catch(() => undefined);
+      void notifyIncludedThreshold(tenantId, period, included, settings.lowThreshold).catch(() => undefined);
       return { ok: true, reservation: { source: 'included', tenantId, period } };
     }
   }
@@ -96,9 +100,9 @@ export async function refundTenantSms(reservation: SmsReservation): Promise<void
   }
 }
 
-async function notifyIncludedThreshold(tenantId: string, period: string, included: number) {
+async function notifyIncludedThreshold(tenantId: string, period: string, included: number, lowThreshold: number) {
   const row = await prisma.smsUsagePeriod.findUnique({ where: { tenantId_period: { tenantId, period } } });
-  if (!row || row.notifiedLow || row.used < Math.ceil(included * SMS_LOW_THRESHOLD)) return;
+  if (!row || row.notifiedLow || row.used < Math.ceil(included * lowThreshold)) return;
   const claimed = await prisma.smsUsagePeriod.updateMany({
     where: { tenantId, period, notifiedLow: false },
     data: { notifiedLow: true },
@@ -107,7 +111,7 @@ async function notifyIncludedThreshold(tenantId: string, period: string, include
   await notifyTenantOperators(tenantId, {
     type: PLATFORM_NOTIFICATION_TYPE.SMS_CREDITS_LOW,
     title: 'SMS inclus bientôt épuisés',
-    message: `Vous avez utilisé ${Math.round(SMS_LOW_THRESHOLD * 100)} % des ${included.toLocaleString('fr-FR')} SMS inclus dans votre forfait. Rechargez des SMS pour ne pas être bloqué.`,
+    message: `Vous avez utilisé ${Math.round(lowThreshold * 100)} % des ${included.toLocaleString('fr-FR')} SMS inclus dans votre forfait. Rechargez des SMS pour ne pas être bloqué.`,
     metadata: { href: BILLING_HREF() },
   });
 }
@@ -142,7 +146,8 @@ export interface SmsCreditSummary {
 }
 
 export async function getSmsCreditSummary(tenantId: string, plan?: string | null): Promise<SmsCreditSummary> {
-  const included = smsIncludedForPlan(plan);
+  const settings = getSmsCreditSettings();
+  const included = smsIncludedForPlan(plan, settings);
   const period = smsPeriodKey(plan);
   const [usage, lots] = await Promise.all([
     prisma.smsUsagePeriod.findUnique({ where: { tenantId_period: { tenantId, period } } }),
@@ -163,8 +168,8 @@ export async function getSmsCreditSummary(tenantId: string, plan?: string | null
     creditBalance,
     nextExpiry: lots[0]?.expiresAt ?? null,
     available: Math.max(0, included - used) + creditBalance,
-    validityMonths: SMS_CREDIT_VALIDITY_MONTHS,
-    packs: SMS_CREDIT_PACKS.map((pack) => ({ id: pack.id, smsCount: pack.smsCount, priceFc: pack.priceFc })),
+    validityMonths: settings.validityMonths,
+    packs: buildSmsCreditPacks(settings),
     onlinePaymentAvailable: isOnlineDepositAvailable(),
   };
 }
@@ -181,13 +186,14 @@ export async function startSmsCreditPurchase(params: {
   paymentMethod: unknown;
   phone?: unknown;
 }): Promise<StartSmsCreditResult> {
-  if (smsIncludedForPlan(params.plan) <= 0 && String(params.plan || 'FREE').toUpperCase() === 'FREE') {
+  const settings = getSmsCreditSettings();
+  if (String(params.plan || 'FREE').toUpperCase() === 'FREE') {
     return { ok: false, status: 403, error: 'Les SMS ne sont pas disponibles sur l’essai gratuit : choisissez un forfait payant.' };
   }
   if (!isOnlineDepositAvailable()) {
     return { ok: false, status: 400, error: 'Le paiement en ligne est momentanément indisponible.' };
   }
-  const pack = getSmsCreditPack(params.packId);
+  const pack = getSmsCreditPack(params.packId, settings);
   if (!pack) return { ok: false, status: 400, error: 'Pack de SMS inconnu.' };
 
   const paymentMethod = params.paymentMethod === 'card' ? 'card' : 'mobile';
@@ -204,8 +210,8 @@ export async function startSmsCreditPurchase(params: {
       packId: pack.id,
       smsCount: pack.smsCount,
       amountFc: pack.priceFc,
-      unitCostUsd: SMS_UNIT_COST_USD,
-      fxRateCdf: SMS_PRICING_FX_CDF,
+      unitCostUsd: settings.unitCostUsd,
+      fxRateCdf: settings.fxRateCdf,
       status: 'PENDING',
       paymentMethod,
       phone,
@@ -309,7 +315,7 @@ export async function verifySmsCreditOrder(orderId: string): Promise<{ status: s
         orderId: order.id,
         initialCount: order.smsCount,
         remaining: order.smsCount,
-        expiresAt: addMonthsUtc(now, SMS_CREDIT_VALIDITY_MONTHS),
+        expiresAt: addMonthsUtc(now, getSmsCreditSettings().validityMonths),
       },
     });
     // Un nouveau pack rouvre les alertes de la période en cours.
