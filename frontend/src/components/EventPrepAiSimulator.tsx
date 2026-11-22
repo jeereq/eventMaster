@@ -33,6 +33,7 @@ import AiTokenBuyButton from '@/components/AiTokenBuyButton';
 import { AiBudgetFullscreenLoader } from '@/components/AiComposeFullscreenLoader';
 import AiSimulationCounter from '@/components/AiSimulationCounter';
 import AiSimulationHistoryList from '@/components/AiSimulationHistoryList';
+import PriceSourcePicker, { type PriceSource } from '@/components/PriceSourcePicker';
 import AiSimulationPackModal from '@/components/AiSimulationPackModal';
 import {
   claimAiSimulationHistory,
@@ -176,6 +177,7 @@ export default function EventPrepAiSimulator({
   const [includeTrades, setIncludeTrades] = useState(true);
   const [includeRentals, setIncludeRentals] = useState(true);
   const [budgetScope, setBudgetScope] = useState<BudgetSimulationScope>('complete');
+  const [priceSource, setPriceSource] = useState<PriceSource>('all');
   const [wantedBrandIds, setWantedBrandIds] = useState<string[]>([]);
   const [wantedSaleUnits, setWantedSaleUnits] = useState<BeverageSaleUnit[]>([]);
   const [wantedDrinkLines, setWantedDrinkLines] = useState<DrinkOrderLine[]>([]);
@@ -503,6 +505,7 @@ export default function EventPrepAiSimulator({
         includeTrades,
         includeRentals,
         budgetScope,
+        priceSource,
         keepVenueSlug: keepVenue ? defaults?.keepVenueSlug : undefined,
         keepServiceSlugs: defaults?.keepServiceSlugs || [],
         ...criteria,
@@ -937,6 +940,9 @@ export default function EventPrepAiSimulator({
           {embedded ? (
             <div className={cn('px-4 sm:px-6 py-3.5', wizardStep !== 0 && 'max-lg:hidden')}>
               <BudgetSimulationScopePicker compact value={budgetScope} onChange={applyBudgetScope} />
+              <div className="mt-3">
+                <PriceSourcePicker value={priceSource} onChange={setPriceSource} />
+              </div>
             </div>
           ) : null}
           {!embedded ? (
@@ -947,6 +953,7 @@ export default function EventPrepAiSimulator({
           ) : null}
           <BudgetFormGroup step={1} title={embedded ? 'Quel événement ?' : 'Votre événement'} flat={embedded} done={embedded} className={mobileHidden('type')}>
             {!embedded ? <BudgetSimulationScopePicker value={budgetScope} onChange={applyBudgetScope} /> : null}
+            {!embedded ? <PriceSourcePicker value={priceSource} onChange={setPriceSource} /> : null}
             <div className="space-y-1.5">
               <p className={cn(FIELD_LABEL, embedded && 'sr-only')}>Type d’événement</p>
               <div

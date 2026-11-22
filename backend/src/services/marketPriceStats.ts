@@ -7,6 +7,27 @@
  */
 
 export type MarketPriceUnit = 'EVENT' | 'PERSON';
+
+/**
+ * Source des prix choisie dans le simulateur :
+ * - all : catalogue EventMaster, puis prix réels et prix web/Facebook validés pour les lignes vides ;
+ * - app : base EventMaster seulement (catalogue et prix réels des réservations et devis) ;
+ * - web : prix trouvés sur le web, validés par l’admin ;
+ * - facebook : prix trouvés sur des pages Facebook publiques, validés par l’admin.
+ */
+export type PriceSource = 'all' | 'app' | 'web' | 'facebook';
+export const PRICE_SOURCES: PriceSource[] = ['all', 'app', 'web', 'facebook'];
+
+export function parsePriceSource(value: unknown): PriceSource {
+  return PRICE_SOURCES.includes(value as PriceSource) ? (value as PriceSource) : 'all';
+}
+
+/** Canal d’une référence : colonne `source` en base (ai_web, ai_facebook). */
+export type ReferenceChannel = 'web' | 'facebook';
+
+export function referenceChannel(source: unknown): ReferenceChannel {
+  return source === 'ai_facebook' ? 'facebook' : 'web';
+}
 export type MarketPriceSource = 'observed' | 'reference';
 export type MarketPriceStyle = 'cheap' | 'balanced' | 'comfort';
 
@@ -42,6 +63,8 @@ export type MarketPriceStat = {
   sourceCount?: number;
   /** Pages web citées (source « reference »), au plus 3. */
   sources?: MarketSourceLink[];
+  /** Canal de la référence (source « reference ») : web ou Facebook. */
+  channel?: ReferenceChannel;
 };
 
 export type MarketSourceLink = { title: string; url: string };
@@ -71,6 +94,8 @@ export type MarketReferenceRow = {
   highFc: number;
   reviewedAt: Date | string | null;
   sources?: unknown;
+  /** ai_web ou ai_facebook */
+  source?: string | null;
 };
 
 export function defaultMarketUnit(slot: MarketSlot): MarketPriceUnit {
@@ -154,6 +179,7 @@ function referenceToStat(row: MarketReferenceRow): MarketPriceStat {
     reviewedAt,
     sourceCount: Array.isArray(row.sources) ? row.sources.length : 0,
     sources: sourceLinks(row.sources),
+    channel: referenceChannel(row.source),
   };
 }
 
@@ -167,8 +193,16 @@ export function resolveMarketPrice(
   observations: MarketObservation[],
   references: MarketReferenceRow[],
   minSamples = MIN_OBSERVED_SAMPLES,
+  priceSource: PriceSource = 'all',
 ): MarketPriceStat | null {
   const wantedCity = normalizeCity(city);
+  // Base EventMaster : pas de référence web. Web ou Facebook : ce canal seulement, sans prix réels.
+  if (priceSource === 'web' || priceSource === 'facebook') {
+    observations = [];
+    references = references.filter((row) => referenceChannel(row.source) === priceSource);
+  } else if (priceSource === 'app') {
+    references = [];
+  }
   const forSlot = references.filter((row) => row.slot === slot);
   if (wantedCity) {
     const local = summarizeObservations(observations, slot, city, minSamples);
@@ -200,7 +234,8 @@ export function marketSourceNote(stat: MarketPriceStat): string {
     return `Prix réels de ${count} réservation${count > 1 ? 's' : ''} ou devis${where}`;
   }
   const day = formatDay(stat.reviewedAt);
-  return `Prix du marché trouvés sur le web${where}, validés${day ? ` le ${day}` : ''}`;
+  const channel = stat.channel === 'facebook' ? 'sur des pages Facebook publiques' : 'sur le web';
+  return `Prix du marché trouvés ${channel}${where}, validés${day ? ` le ${day}` : ''}`;
 }
 
 /**
@@ -290,7 +325,7 @@ export function checkMarketEstimate(
     }
     if (!stat.sources?.length) {
       ok = false;
-      messages.push('Aucune source web enregistrée pour ce prix.');
+      messages.push(stat.channel === 'facebook' ? 'Aucune page Facebook enregistrée pour ce prix.' : 'Aucune source web enregistrée pour ce prix.');
     }
   } else if ((stat.sampleCount || 0) < 5) {
     messages.push(`Basé sur seulement ${stat.sampleCount || 0} prix réels : à confirmer.`);

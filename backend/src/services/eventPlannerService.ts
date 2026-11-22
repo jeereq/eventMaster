@@ -13,7 +13,7 @@ import {
   type SlotPriority,
 } from './eventPlanBrief';
 import { loadMarketPriceBook, type MarketPriceBook } from './marketPriceEstimates';
-import { marketEstimateAmount, marketEstimateSlug, type MarketEstimateCheck, type MarketEstimatePriced, type MarketPriceStat, type MarketSourceLink } from './marketPriceStats.ts';
+import { marketEstimateAmount, marketEstimateSlug, parsePriceSource, type PriceSource, type MarketEstimateCheck, type MarketEstimatePriced, type MarketPriceStat, type MarketSourceLink } from './marketPriceStats.ts';
 import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedDrinkLines, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BudgetSimulationScope, type WantedSaleUnit } from './eventBudgetCost';
 
 export { EVENT_PLAN_TYPES, type EventPlanType };
@@ -296,6 +296,7 @@ type MarketEstimateInfo = {
   reviewedAt?: string | null;
   /** Pages web d’où vient le prix (source « reference »). */
   sources?: MarketSourceLink[];
+  channel?: 'web' | 'facebook';
   unitFc: number;
   quantity: number;
   /** Contrôle du coût : calcul, fourchette et fraîcheur de la référence. */
@@ -332,6 +333,7 @@ function marketInfo(stat: MarketPriceStat, priced: MarketEstimatePriced): Market
     quantity: priced.quantity,
     check: priced.check,
     ...(stat.sources?.length ? { sources: stat.sources } : {}),
+    ...(stat.channel ? { channel: stat.channel } : {}),
     source: stat.source,
     unit: stat.unit,
     lowFc: stat.lowFc,
@@ -651,6 +653,11 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
       : parseWantedSaleUnits(body.wantedSaleUnits))
     : [];
   const input = budgetScope === 'complete' ? parsed : { ...parsed, includeVenue: 'no' as const };
+  // Web ou Facebook : on ne lit pas le catalogue, chaque ligne vient des prix validés de ce canal.
+  const priceSource: PriceSource = parsePriceSource(body.priceSource);
+  const externalOnly = priceSource === 'web' || priceSource === 'facebook';
+  const externalLabel = priceSource === 'facebook' ? 'Facebook' : 'web';
+  const includeDrinksNote = budgetScope === 'complete' || budgetScope === 'drinks';
   const city = normalizeAllowedCity(input.city) || '';
   const commune = city ? (normalizeAllowedCommune(city, input.commune) || '') : '';
   const guests = input.guestCount;
@@ -691,8 +698,10 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     return { listings, offerings };
   };
 
-  let { listings, offerings } = await loadCatalog(city);
-  if (!listings.length && !offerings.length && city && (input.matchMode === 'widen' || input.missingStrategy === 'widen_city')) {
+  let { listings, offerings } = externalOnly
+    ? { listings: [] as Awaited<ReturnType<typeof loadCatalog>>['listings'], offerings: [] as Awaited<ReturnType<typeof loadCatalog>>['offerings'] }
+    : await loadCatalog(city);
+  if (!externalOnly && !listings.length && !offerings.length && city && (input.matchMode === 'widen' || input.missingStrategy === 'widen_city')) {
     const broader = await loadCatalog('');
     listings = broader.listings;
     offerings = broader.offerings;
@@ -784,9 +793,11 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
   }
 
   // Prix du marché (réservations réelles, références web validées) pour les lignes sans aucune offre.
-  const marketBook: MarketPriceBook | null = body.marketEstimates === false ? null : await loadMarketPriceBook(city);
+  const marketBook: MarketPriceBook | null = body.marketEstimates === false && !externalOnly
+    ? null
+    : await loadMarketPriceBook(city, priceSource);
 
-  const drinkRows = (budgetScope === 'complete' || budgetScope === 'drinks') && (guests > 0 || wantedDrinkLines.length > 0)
+  const drinkRows = !externalOnly && (budgetScope === 'complete' || budgetScope === 'drinks') && (guests > 0 || wantedDrinkLines.length > 0)
     ? await prisma.vendorBeveragePrice.findMany({
       where: {
         isAvailable: true,
@@ -886,7 +897,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
         total += venuePick.item.cost;
         if (venuePick.reused) notes.push('Même salle qu’un autre pack : pas d’alternative dans le budget.');
         if (venuePick.item.favorite) notes.push('Salle prise parmi vos favoris.');
-      } else if (requiredVenue) {
+      } else if (requiredVenue || externalOnly) {
         const stat = !rankedVenues.length ? marketBook?.get('venue') ?? null : null;
         const priced = stat ? marketEstimateAmount(stat, guests, style.style, venueBudget) : null;
         if (stat && priced) {
@@ -895,10 +906,15 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
           marketCount += 1;
           return;
         }
+        if (!requiredVenue) return;
         missing.push({
           slot: 'venue',
           label: 'Salle',
-          reason: stat ? formatMarketGap('Salle', stat, guests) : missingReason(rankedVenues, venueBudget, 'Salle'),
+          reason: stat
+            ? formatMarketGap('Salle', stat, guests)
+            : externalOnly
+              ? `Aucun prix ${externalLabel} validé pour « Salle ».`
+              : missingReason(rankedVenues, venueBudget, 'Salle'),
         });
       }
     };
@@ -946,7 +962,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
       const picked = pickForBudget(pool, cap > 0 ? cap : remaining, style.style, usedServiceSlugs, favoriteMode);
       if (!picked) {
         const label = serviceCategoryLabel(slot.category);
-        const stat = !pool.length && (requiredSlot || mustPrice) ? marketBook?.get(slot.category) ?? null : null;
+        const stat = !pool.length && (requiredSlot || mustPrice || externalOnly) ? marketBook?.get(slot.category) ?? null : null;
         const priced = stat ? marketEstimateAmount(stat, guests, style.style, cap > 0 ? cap : remaining) : null;
         if (stat && priced) {
           items.push(marketServiceItem(slot.category, stat, priced));
@@ -954,12 +970,16 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
           marketCount += 1;
           return;
         }
-        if (mustPrice) notes.push(`Aucune offre « ${label} » à chiffrer.`);
+        if (mustPrice) notes.push(externalOnly ? `Aucun prix ${externalLabel} validé pour « ${label} ».` : `Aucune offre « ${label} » à chiffrer.`);
         if (requiredSlot) {
           missing.push({
             slot: slot.category,
             label,
-            reason: stat ? formatMarketGap(label, stat, guests) : missingReason(pool, cap > 0 ? cap : remaining, label),
+            reason: stat
+              ? formatMarketGap(label, stat, guests)
+              : externalOnly
+                ? `Aucun prix ${externalLabel} validé pour « ${label} ».`
+                : missingReason(pool, cap > 0 ? cap : remaining, label),
           });
           skippedRequired.push(slot);
         }
@@ -1067,7 +1087,15 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     if (!missing.length && leftoverFc > 0) {
       notes.push(`Reste ${formatFc(leftoverFc)} à réallouer ou à garder en marge.`);
     }
-    if (marketCount > 0) {
+    if (externalOnly) {
+      notes.push(priceSource === 'facebook'
+        ? 'Source choisie : Facebook. Prix trouvés sur des pages Facebook publiques et validés par EventMaster, sans le catalogue.'
+        : 'Source choisie : web. Prix trouvés sur internet et validés par EventMaster, sans le catalogue.');
+      if (includeDrinksNote) notes.push('Boissons non chiffrées : leurs prix viennent du catalogue EventMaster.');
+    } else if (priceSource === 'app') {
+      notes.push('Source choisie : base EventMaster (catalogue, réservations et devis réels).');
+    }
+    if (marketCount > 0 && !externalOnly) {
       notes.push(
         `${marketCount} ligne${marketCount > 1 ? 's' : ''} chiffrée${marketCount > 1 ? 's' : ''} au prix du marché, faute d’offre sur la marketplace. À confirmer auprès d’un prestataire.`,
       );
@@ -1121,6 +1149,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     guestCount: guests || null,
     eventDate: dateKey || null,
     relaxed,
+    priceSource,
     slots: {
       required: serviceSlots.filter((slot) => slot.required).map((slot) => ({ category: slot.category, label: serviceCategoryLabel(slot.category) })),
       optional: serviceSlots.filter((slot) => !slot.required).map((slot) => ({ category: slot.category, label: serviceCategoryLabel(slot.category) })),

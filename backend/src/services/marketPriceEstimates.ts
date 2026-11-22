@@ -1,5 +1,6 @@
 import { prisma } from '../db';
 import {
+  type PriceSource,
   resolveMarketPrice,
   summarizeObservations,
   type MarketObservation,
@@ -98,7 +99,7 @@ async function loadObservations(): Promise<MarketObservation[]> {
 async function loadReferences(): Promise<MarketReferenceRow[]> {
   return prisma.marketPriceReference.findMany({
     where: { status: 'APPROVED' },
-    select: { slot: true, city: true, unit: true, lowFc: true, typicalFc: true, highFc: true, reviewedAt: true, sources: true },
+    select: { slot: true, city: true, unit: true, lowFc: true, typicalFc: true, highFc: true, reviewedAt: true, sources: true, source: true },
     orderBy: { reviewedAt: 'desc' },
     take: 500,
   });
@@ -129,13 +130,13 @@ const EMPTY_BOOK: MarketPriceBook = { get: () => null };
  * Carnet des prix du marché pour une ville. En cas d’erreur de lecture, le simulateur continue
  * sans estimation plutôt que d’échouer.
  */
-export async function loadMarketPriceBook(city: string): Promise<MarketPriceBook> {
+export async function loadMarketPriceBook(city: string, priceSource: PriceSource = 'all'): Promise<MarketPriceBook> {
   try {
     const data = await snapshot();
     const memo = new Map<string, MarketPriceStat | null>();
     return {
       get(slot: string) {
-        if (!memo.has(slot)) memo.set(slot, resolveMarketPrice(slot, city, data.observations, data.references));
+        if (!memo.has(slot)) memo.set(slot, resolveMarketPrice(slot, city, data.observations, data.references, undefined, priceSource));
         return memo.get(slot) ?? null;
       },
     };

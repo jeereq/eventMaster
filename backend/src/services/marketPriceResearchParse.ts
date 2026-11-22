@@ -94,3 +94,20 @@ export function sanitizeResearchProposals(
   }
   return proposals;
 }
+
+const FACEBOOK_HOST = /(^|\.)(facebook\.com|fb\.com|fb\.me)$/i;
+
+/** Pour une recherche Facebook, ne garde que les liens vers facebook.com (ou un titre qui le cite, pour les liens de redirection de la recherche). */
+export function keepFacebookSources(sources: ResearchSource[]): ResearchSource[] {
+  return sources.filter((source) => {
+    let host = '';
+    try {
+      host = new URL(source.url).hostname;
+    } catch {
+      return false;
+    }
+    if (FACEBOOK_HOST.test(host)) return true;
+    // Les sources de la recherche Google passent par un lien de redirection : on se fie alors au titre (le domaine).
+    return host === 'vertexaisearch.cloud.google.com' && /facebook/i.test(source.title);
+  });
+}

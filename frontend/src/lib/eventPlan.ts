@@ -2,6 +2,7 @@ import type { ListingAmenityId, ListingEventTypeId } from '@/lib/listingDetails'
 import { parseBudgetSimulationScope, type BudgetSimulationScope } from '@/lib/budgetSimulation';
 import { parseDrinkOrderLines, type DrinkOrderLine } from '@/lib/beverageBrands';
 import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS, type ServiceCategory } from '@/lib/marketplace';
+import { parsePriceSource, type PriceSource } from '@/components/PriceSourcePicker';
 
 export const EVENT_PLAN_SLOTS: Record<ListingEventTypeId, { required: ServiceCategory[]; optional: ServiceCategory[] }> = {
   wedding: {
@@ -83,6 +84,8 @@ export type EventPlanBrief = {
   amenityMode: AmenityMode;
   planVersion: number;
   budgetScope: BudgetSimulationScope;
+  /** Source des prix : tout, base EventMaster, web ou Facebook. */
+  priceSource: PriceSource;
   wantedBrandIds: string[];
   wantedSaleUnits: Array<'BOTTLE' | 'CRATE' | 'PACK' | 'OTHER'>;
   wantedDrinkLines: DrinkOrderLine[];
@@ -141,6 +144,7 @@ export function createDefaultBrief(eventType: ListingEventTypeId = 'wedding'): E
     amenityMode: 'preferred',
     planVersion: PLAN_BRIEF_VERSION,
     budgetScope: 'complete',
+    priceSource: 'all',
     wantedBrandIds: [],
     wantedSaleUnits: [],
     wantedDrinkLines: [],
@@ -183,6 +187,7 @@ export function hydrateBrief(raw: unknown): EventPlanBrief {
     guestCount: Number(value.guestCount) || 0,
     venueAmenities: Array.isArray(value.venueAmenities) ? value.venueAmenities : [],
     budgetScope: parseBudgetSimulationScope(value.budgetScope),
+    priceSource: parsePriceSource(value.priceSource),
     wantedBrandIds: Array.isArray(value.wantedBrandIds)
       ? value.wantedBrandIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0).slice(0, 40)
       : [],
@@ -331,6 +336,8 @@ export type PlanMarketEstimate = {
   reviewedAt?: string | null;
   /** Pages web d’où vient le prix (source « reference »). */
   sources?: Array<{ title: string; url: string }>;
+  /** Canal d’une référence : web ou Facebook. */
+  channel?: 'web' | 'facebook';
   unitFc?: number;
   quantity?: number;
   /** Contrôle du coût fait par le serveur : calcul, fourchette, fraîcheur et sources. */

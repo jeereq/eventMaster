@@ -8,6 +8,8 @@ import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
 import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedDrinkLines, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BeverageOrderLine, type BudgetSimulationScope, type BudgetStyle, type WantedSaleUnit } from './eventBudgetCost';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
 import { requestOpenAiJson } from './openaiJsonClient.ts';
+import { buildEventPlanProposals } from './eventPlannerService';
+import { parsePriceSource } from './marketPriceStats.ts';
 
 const HOLD_BOOKING_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
 const RATE_WINDOW_MS = 60_000;
@@ -86,6 +88,8 @@ export type EventPlanAiItem = {
   category?: ServiceCategory;
   href: string;
   capacity?: number | null;
+  /** Ligne chiffrée hors catalogue (prix web, Facebook ou réels), avec ses sources et le contrôle du coût. */
+  marketEstimate?: unknown;
 };
 
 export type EventPlanAiStyleId = 'eco' | 'balanced' | 'comfort';
@@ -433,6 +437,57 @@ async function loadCatalog(opts: {
   return { venues, services: [...trades, ...rentals] };
 }
 
+/** Packs chiffrés uniquement avec les prix web ou Facebook validés, au format du simulateur IA. */
+async function externalSourcePlan(
+  body: Record<string, unknown>,
+  scope: {
+    budgetScope: BudgetSimulationScope;
+    includeVenue: boolean;
+    includeTrades: boolean;
+    includeRentals: boolean;
+    selectedCategories: string[];
+  },
+  criteria: EventPlanAiResult['criteria'],
+): Promise<EventPlanAiResult> {
+  const slots = scope.selectedCategories.length
+    ? Object.fromEntries(scope.selectedCategories.map((category) => [category, 'required']))
+    : undefined;
+  const plan = await buildEventPlanProposals({
+    ...body,
+    budgetScope: scope.budgetScope,
+    includeVenue: scope.includeVenue ? 'yes' : 'no',
+    ...(slots ? { slots } : {}),
+  });
+  const keep = (item: { category?: string }) => {
+    if (!item.category) return true;
+    const rental = isServiceRentalCategory(item.category);
+    return rental ? scope.includeRentals : scope.includeTrades;
+  };
+  const packages: EventPlanAiPackage[] = plan.packages.map((pack) => {
+    const services = pack.services.filter(keep);
+    const total = (pack.venue?.estimatedFc || 0) + services.reduce((sum, item) => sum + item.estimatedFc, 0);
+    return {
+      id: pack.id as EventPlanAiStyleId,
+      label: pack.label,
+      blurb: pack.blurb,
+      summary: `${services.length + (pack.venue ? 1 : 0)} ligne${services.length + (pack.venue ? 1 : 0) > 1 ? 's' : ''} chiffrée${services.length + (pack.venue ? 1 : 0) > 1 ? 's' : ''} avec les prix ${plan.priceSource === 'facebook' ? 'Facebook' : 'web'} validés.`,
+      rationale: '',
+      warnings: [...pack.notes, ...pack.missing.map((slot) => slot.reason)],
+      estimatedTotalFc: total,
+      venue: pack.venue,
+      services,
+    };
+  });
+  return {
+    catalog: { venues: 0, trades: 0, rentals: 0 },
+    packages,
+    warnings: packages.every((pack) => !pack.venue && !pack.services.length)
+      ? [`Aucun prix ${plan.priceSource === 'facebook' ? 'Facebook' : 'web'} validé pour ces lignes. Un administrateur doit d’abord lancer et valider une recherche dans « Prix du marché ».`]
+      : [],
+    criteria,
+  };
+}
+
 async function askPlannerJson(system: string, user: string): Promise<Record<string, unknown>> {
   if (getGeminiApiKey()) {
     try {
@@ -541,6 +596,18 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     wantedDrinkLines,
     venueAmenities,
   };
+
+  // Source « web » ou « Facebook » : pas de catalogue ni d’IA de choix, chaque ligne vient des prix validés de ce canal.
+  const priceSource = parsePriceSource(body.priceSource);
+  if (priceSource === 'web' || priceSource === 'facebook') {
+    return externalSourcePlan(body, {
+      budgetScope,
+      includeVenue,
+      includeTrades,
+      includeRentals,
+      selectedCategories,
+    }, criteria);
+  }
 
   if (budgetScope === 'drinks') {
     const drinkOffers = await loadDrinkOffers(guests, wantedBrandIds, wantedSaleUnits, wantedDrinkLines.length > 0);
