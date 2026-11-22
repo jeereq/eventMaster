@@ -113,11 +113,26 @@ export function seatsGrownForTier(style: AmphitheaterStyle, baseSeats: number, t
   return baseSeats + tierIndex * grow;
 }
 
-export function rowSeatCode(rowName: string | undefined | null, index: number): string {
+/**
+ * Préfixe court d’un rang : « Rang A » → « A », « Gradin 2 — Rangée 3 » → « G2R3 ».
+ * (Avant, tous les rangs « Gradin … » donnaient « GRAD » : les fauteuils de tous les gradins
+ * portaient les mêmes codes.)
+ */
+export function rowLabelPrefix(rowName: string | undefined | null): string {
   const raw = String(rowName || 'A').trim();
+  const tier = raw.match(/\b(?:gradin|niveau|balcon|tier)\s+([\p{L}\d]+)/iu)?.[1];
+  const row = raw.match(/\b(?:rang(?:ée|ee)?|row)\s+([\p{L}\d]+)/iu)?.[1];
+  if (tier && row) return `G${tier}R${row}`.toUpperCase().slice(0, 6);
+  if (row) return row.toUpperCase().slice(0, 4);
+  if (tier) return `G${tier}`.toUpperCase().slice(0, 4);
   const token = raw.replace(/^rang(ée)?\s+/i, '').split(/\s+/)[0] || 'A';
-  const prefix = token.slice(0, 4).toUpperCase();
-  return `${prefix}${index + 1}`;
+  return token.slice(0, 4).toUpperCase();
+}
+
+export function rowSeatCode(rowName: string | undefined | null, index: number): string {
+  const prefix = rowLabelPrefix(rowName);
+  // « G2R3-5 » plutôt que « G2R35 » quand le préfixe finit par un chiffre.
+  return /\d$/.test(prefix) ? `${prefix}-${index + 1}` : `${prefix}${index + 1}`;
 }
 
 export function estimateAmphitheaterSeats(

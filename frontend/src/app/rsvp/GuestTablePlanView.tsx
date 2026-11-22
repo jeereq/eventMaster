@@ -10,6 +10,8 @@ import {
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import ChairRenderer from '@/components/ChairRenderer';
 import GuestRoomPlanCanvas from '@/components/GuestRoomPlanCanvas';
+import GuestRowSeatStrip from '@/components/GuestRowSeatStrip';
+import { planRowSeatCode, planRowShortLabel } from '@/lib/planRowSeats';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import { buildTablePlanPreviewBlueprint } from '@/lib/tablePlanPreviewBlueprint';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
@@ -20,6 +22,7 @@ import { api } from '@/lib/api';
 import { ChairType, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import type { TableSeatingSide, TableShape } from '@/lib/tablePlanUtils';
 import type { PricingZone } from '@/lib/ticketPricing';
+import type { SeatChairMeta, SeatRowMeta } from '@/lib/seatSelectionLayout';
 import type { GuestTicketPlacement } from '@/app/rsvp/guestRsvpTypes';
 
 type GuestPlanView = PlanViewMode;
@@ -55,6 +58,8 @@ export interface GuestTableDetails {
   chairType?: ChairType;
   chairImageUrl?: string;
   pricingZoneId?: string | null;
+  /** Rang de fauteuils : la place s’affiche dans le rang, face à l’écran, et non autour d’une table. */
+  rowMeta?: SeatRowMeta | null;
   zoneName?: string | null;
   zoneColor?: string | null;
   privacyPolicy?: GuestPrivacyPolicy;
@@ -82,6 +87,10 @@ export interface GuestTablePlanOverviewItem {
   seatingSide?: TableSeatingSide;
   /** Rotation de la table (degrés, convention de la vue 3D). */
   rotation?: number;
+  /** Rang de fauteuils (cinéma, amphithéâtre) : courbure, allée, foyer, codes des fauteuils. */
+  rowMeta?: SeatRowMeta | null;
+  /** Chaise seule posée sur le plan. */
+  chairMeta?: SeatChairMeta | null;
 }
 
 export interface GuestPlanFixture {
@@ -518,7 +527,9 @@ export default function GuestTablePlanView({
             <h3 className="text-2xl font-display font-semibold text-foreground leading-none">{tableDetails.tableName}</h3>
             {tableDetails.seatIndex !== undefined && (
               <p className="text-sm font-bold mt-2" style={{ color: theme.accentColor }}>
-                Siège n°{tableDetails.seatIndex + 1}
+                {tableDetails.rowMeta
+                  ? `Fauteuil ${planRowSeatCode(tableDetails.tableName, tableDetails.rowMeta, tableDetails.seatIndex)}`
+                  : `Siège n°${tableDetails.seatIndex + 1}`}
               </p>
             )}
           </div>
@@ -564,8 +575,23 @@ export default function GuestTablePlanView({
 
       <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 shadow-[0_10px_40px_rgba(15,23,42,0.05)]">
         <p className="text-sm font-semibold text-foreground mb-4 text-center">
-          Votre place à la table
+          {tableDetails.rowMeta ? `Votre place dans le rang ${planRowShortLabel(tableDetails.tableName, tableDetails.rowMeta)}` : 'Votre place à la table'}
         </p>
+        {tableDetails.rowMeta ? (
+          <GuestRowSeatStrip
+            name={tableDetails.tableName}
+            rowMeta={tableDetails.rowMeta}
+            capacity={tableDetails.capacity}
+            seatIndex={tableDetails.seatIndex}
+            seatState={(i) => (getSeatOccupant(i, tableDetails, guestFirstName, guestLastName).type === 'empty' ? 'free' : 'taken')}
+            seatTitle={(i) => {
+              const occupant = getSeatOccupant(i, tableDetails, guestFirstName, guestLastName);
+              const code = planRowSeatCode(tableDetails.tableName, tableDetails.rowMeta, i);
+              return occupant.type === 'empty' ? `${code} (libre)` : `${code} · ${occupant.label}`;
+            }}
+            className="py-2"
+          />
+        ) : (
         <div className="relative flex items-center justify-center py-4" style={{ minHeight: Math.max(180, tableDetails.capacity * 28 + 80) }}>
           {(() => {
             const seatRadius = Math.min(48, Math.max(32, 160 / tableDetails.capacity));
@@ -614,7 +640,12 @@ export default function GuestTablePlanView({
             );
           })()}
         </div>
-        <p className="text-xs text-center text-muted font-medium mt-2">Votre siège est mis en évidence</p>
+        )}
+        <p className="text-xs text-center text-muted font-medium mt-2">
+          {tableDetails.rowMeta && typeof tableDetails.seatIndex === 'number'
+            ? `Votre fauteuil ${planRowSeatCode(tableDetails.tableName, tableDetails.rowMeta, tableDetails.seatIndex)} est mis en évidence`
+            : 'Votre siège est mis en évidence'}
+        </p>
       </div>
 
       <div className="space-y-3 pt-1">
@@ -622,7 +653,7 @@ export default function GuestTablePlanView({
           <div className="flex items-center gap-2">
             <h4 className="font-semibold text-foreground text-xs flex items-center gap-2">
               <Users className="w-4 h-4 text-primary" />
-              <span>Voisins de table</span>
+              <span>{tableDetails.rowMeta ? 'Voisins de rang' : 'Voisins de table'}</span>
             </h4>
             {tableDetails.neighbors.length > 0 && (
               <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
@@ -676,7 +707,7 @@ export default function GuestTablePlanView({
                   </span>
                   <span className="text-xs text-muted block truncate mt-0.5">
                     {neighbor.seatIndex !== undefined ? `Siège n°${neighbor.seatIndex + 1}` : 'Invité'}
-                    {neighbor.anonymous ? ' · Profil privé' : ' · Même table'}
+                    {neighbor.anonymous ? ' · Profil privé' : tableDetails.rowMeta ? ' · Même rang' : ' · Même table'}
                   </span>
                 </div>
               </div>

@@ -431,6 +431,10 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
           tableImageUrl: table.tableImageUrl,
           seatingSide: table.seatingSide,
           rotation: typeof table.rotation === 'number' ? table.rotation : undefined,
+          // Rangées de cinéma / d’amphithéâtre et chaises seules : le plan 2D invité
+          // pose chaque fauteuil à sa place au lieu de dessiner une table.
+          ...(table.rowMeta && typeof table.rowMeta === 'object' ? { rowMeta: table.rowMeta } : {}),
+          ...(table.chairMeta && typeof table.chairMeta === 'object' ? { chairMeta: table.chairMeta } : {}),
         }));
 
         if (Array.isArray(plan.fixtures)) {
@@ -553,6 +557,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
               shape: table.shape,
               capacity: table.capacity,
               seatIndex,
+              ...(table.rowMeta && typeof table.rowMeta === 'object' ? { rowMeta: table.rowMeta } : {}),
               chairType: table.chairType,
               chairImageUrl: table.chairImageUrl,
               pricingZoneId: table.pricingZoneId || null,
@@ -583,6 +588,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
               shape: fallbackTable.shape || 'round',
               capacity: fallbackTable.capacity || 8,
               seatIndex,
+              ...(fallbackTable.rowMeta && typeof fallbackTable.rowMeta === 'object' ? { rowMeta: fallbackTable.rowMeta } : {}),
               chairType: fallbackTable.chairType,
               chairImageUrl: fallbackTable.chairImageUrl,
               pricingZoneId: fallbackTable.pricingZoneId || null,
