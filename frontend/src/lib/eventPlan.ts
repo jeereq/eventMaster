@@ -329,6 +329,12 @@ export type PlanMarketEstimate = {
   city: string;
   sampleCount?: number;
   reviewedAt?: string | null;
+  /** Pages web d’où vient le prix (source « reference »). */
+  sources?: Array<{ title: string; url: string }>;
+  unitFc?: number;
+  quantity?: number;
+  /** Contrôle du coût fait par le serveur : calcul, fourchette, fraîcheur et sources. */
+  check?: { ok: boolean; messages: string[] };
 };
 
 export type PlanMissingSlot = {

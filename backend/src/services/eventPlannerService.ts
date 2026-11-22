@@ -13,7 +13,7 @@ import {
   type SlotPriority,
 } from './eventPlanBrief';
 import { loadMarketPriceBook, type MarketPriceBook } from './marketPriceEstimates';
-import { marketEstimateAmount, marketEstimateSlug, type MarketPriceStat } from './marketPriceStats.ts';
+import { marketEstimateAmount, marketEstimateSlug, type MarketEstimateCheck, type MarketEstimatePriced, type MarketPriceStat, type MarketSourceLink } from './marketPriceStats.ts';
 import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedDrinkLines, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BudgetSimulationScope, type WantedSaleUnit } from './eventBudgetCost';
 
 export { EVENT_PLAN_TYPES, type EventPlanType };
@@ -294,6 +294,12 @@ type MarketEstimateInfo = {
   city: string;
   sampleCount?: number;
   reviewedAt?: string | null;
+  /** Pages web d’où vient le prix (source « reference »). */
+  sources?: MarketSourceLink[];
+  unitFc: number;
+  quantity: number;
+  /** Contrôle du coût : calcul, fourchette et fraîcheur de la référence. */
+  check: MarketEstimateCheck;
 };
 
 type ServiceItem = {
@@ -320,8 +326,12 @@ type ServiceItem = {
 
 type PlanItem = VenueItem | ServiceItem;
 
-function marketInfo(stat: MarketPriceStat): MarketEstimateInfo {
+function marketInfo(stat: MarketPriceStat, priced: MarketEstimatePriced): MarketEstimateInfo {
   return {
+    unitFc: priced.unitFc,
+    quantity: priced.quantity,
+    check: priced.check,
+    ...(stat.sources?.length ? { sources: stat.sources } : {}),
     source: stat.source,
     unit: stat.unit,
     lowFc: stat.lowFc,
@@ -333,7 +343,7 @@ function marketInfo(stat: MarketPriceStat): MarketEstimateInfo {
   };
 }
 
-function marketVenueItem(stat: MarketPriceStat, priced: { amountFc: number; unitFc: number; note: string }): VenueItem {
+function marketVenueItem(stat: MarketPriceStat, priced: MarketEstimatePriced): VenueItem {
   return {
     kind: 'venue',
     slug: marketEstimateSlug('venue'),
@@ -352,14 +362,14 @@ function marketVenueItem(stat: MarketPriceStat, priced: { amountFc: number; unit
     match: 'unknown',
     reused: false,
     alternatives: [],
-    marketEstimate: marketInfo(stat),
+    marketEstimate: marketInfo(stat, priced),
   };
 }
 
 function marketServiceItem(
   category: ServiceCategory,
   stat: MarketPriceStat,
-  priced: { amountFc: number; unitFc: number; note: string },
+  priced: MarketEstimatePriced,
 ): ServiceItem {
   const label = serviceCategoryLabel(category);
   return {
@@ -381,7 +391,7 @@ function marketServiceItem(
     match: 'unknown',
     reused: false,
     alternatives: [],
-    marketEstimate: marketInfo(stat),
+    marketEstimate: marketInfo(stat, priced),
   };
 }
 
