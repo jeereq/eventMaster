@@ -14,6 +14,7 @@ export type PlanTypeKey =
   | 'STANDARD'
   | 'PREMIUM_1'
   | 'PREMIUM_2'
+  | 'AGENCY'
   | 'ENTERPRISE_1'
   | 'ENTERPRISE_2'
   | 'ENTERPRISE_3'
@@ -67,6 +68,7 @@ export const PLAN_KEYS: PlanTypeKey[] = [
   'STANDARD',
   'PREMIUM_1',
   'PREMIUM_2',
+  'AGENCY',
   'ENTERPRISE_1',
   'ENTERPRISE_2',
   'ENTERPRISE_3',
@@ -284,6 +286,31 @@ export function getDefaultPlans(): PlansConfiguration {
       guestPhotoAvatars: true,
       guestAvatars: true,
       adminReports: false,
+      roomEditorLevel: 'advanced',
+      commercialNetwork: false,
+      supportLevel: 'priority',
+    }),
+    AGENCY: organizerPlan({
+      name: 'Agence',
+      price: '220.000 FC',
+      monthlyPriceFc: 220000,
+      description:
+        'B2B — petites agences : 600 invités par mois, 12 événements, 15 salles publiables, prestations marketplace illimitées, rapports et support prioritaire.',
+      audience: 'B2B',
+      maxEvents: 12,
+      maxGuests: 600,
+      maxTemplates: 14,
+      maxRooms: 15,
+      maxServices: 9999,
+      maxOrgManagers: 12,
+      customTemplates: true,
+      mockupOcr: true,
+      protocolQr: true,
+      seatNotifications: true,
+      roomThemesFixtures: true,
+      guestPhotoAvatars: true,
+      guestAvatars: true,
+      adminReports: true,
       roomEditorLevel: 'advanced',
       commercialNetwork: false,
       supportLevel: 'priority',
