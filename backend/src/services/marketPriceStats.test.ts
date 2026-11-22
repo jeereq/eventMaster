@@ -11,7 +11,7 @@ import {
   type MarketObservation,
   type MarketReferenceRow,
 } from './marketPriceStats.ts';
-import { keepFacebookSources, sanitizeResearchProposals } from './marketPriceResearchParse.ts';
+import { keepFacebookSources, keepSocialSources, mergeProposals, sanitizeResearchProposals } from './marketPriceResearchParse.ts';
 
 const catering = (amountFc: number, guestCount: number | null, city = 'Kinshasa'): MarketObservation => ({
   slot: 'CATERING',
@@ -113,6 +113,7 @@ test('la source choisie filtre les prix : base EventMaster, web ou Facebook', ()
   const refs: MarketReferenceRow[] = [
     { slot: 'CATERING', city: 'Kinshasa', unit: 'PERSON', lowFc: 20_000, typicalFc: 25_000, highFc: 30_000, reviewedAt: '2026-11-22', source: 'ai_web' },
     { slot: 'CATERING', city: 'Kinshasa', unit: 'PERSON', lowFc: 9_000, typicalFc: 11_000, highFc: 13_000, reviewedAt: '2026-11-22', source: 'ai_facebook' },
+    { slot: 'CATERING', city: 'Kinshasa', unit: 'PERSON', lowFc: 12_000, typicalFc: 14_000, highFc: 16_000, reviewedAt: '2026-11-22', source: 'ai_instagram' },
   ];
   assert.equal(parsePriceSource('facebook'), 'facebook');
   assert.equal(parsePriceSource('autre'), 'all');
@@ -125,6 +126,44 @@ test('la source choisie filtre les prix : base EventMaster, web ou Facebook', ()
   assert.equal(fb?.typicalFc, 11_000);
   assert.equal(fb?.channel, 'facebook');
   assert.match(marketSourceNote(fb!), /pages Facebook publiques/);
+  const ig = resolveMarketPrice('CATERING', 'Kinshasa', observed, refs, undefined, 'instagram');
+  assert.equal(ig?.typicalFc, 14_000);
+  assert.equal(ig?.channel, 'instagram');
+  assert.match(marketSourceNote(ig!), /comptes Instagram publics/);
+});
+
+test('un prix publié sans relecture admin le dit, un prix relu aussi', () => {
+  const now = new Date('2026-11-22T12:00:00Z');
+  const base: MarketReferenceRow = {
+    slot: 'DJ', city: 'Kinshasa', unit: 'EVENT', lowFc: 300_000, typicalFc: 400_000, highFc: 600_000,
+    reviewedAt: '2026-11-22T10:00:00Z', source: 'ai_web', sources: [{ title: 'DJ', url: 'https://dj.cd' }],
+  };
+  const auto = resolveMarketPrice('DJ', 'Kinshasa', [], [base], undefined, 'web')!;
+  assert.equal(auto.adminReviewed, false);
+  assert.doesNotMatch(marketSourceNote(auto), /validés/);
+  const check = checkMarketEstimate(auto, 400_000, 1, 400_000, now);
+  assert.equal(check.ok, true, 'le calcul reste vérifié');
+  assert.match(check.messages.join(' '), /pas encore relu par EventMaster/);
+  const reviewed = resolveMarketPrice('DJ', 'Kinshasa', [], [{ ...base, reviewedById: 'admin' }], undefined, 'web')!;
+  assert.match(marketSourceNote(reviewed), /validés par EventMaster/);
+  assert.doesNotMatch(checkMarketEstimate(reviewed, 400_000, 1, 400_000, now).messages.join(' '), /pas encore relu/);
+});
+
+test('une recherche Instagram ne garde que des liens Instagram ; deux moteurs se complètent', () => {
+  const kept = keepSocialSources([
+    { title: 'Salle', url: 'https://www.instagram.com/p/abc/' },
+    { title: 'Page', url: 'https://facebook.com/salle' },
+    { title: 'instagram.com', url: 'https://vertexaisearch.cloud.google.com/grounding-api-redirect/x' },
+  ], 'instagram');
+  assert.deepEqual(kept.map((item) => item.title), ['Salle', 'instagram.com']);
+  const one = { unit: 'EVENT' as const, lowFc: 1, typicalFc: 2, highFc: 3, rationale: '', sources: [{ title: 'a', url: 'https://a.cd' }] };
+  const merged = mergeProposals([{ ...one, slot: 'DJ' }], [{ ...one, slot: 'DJ', lowFc: 9 }, { ...one, slot: 'CATERING' }]);
+  assert.deepEqual(merged.map((item) => [item.slot, item.lowFc]), [['DJ', 1], ['CATERING', 1]]);
+});
+
+test('une fourchette aberrante (haut > 20 × bas) est écartée', () => {
+  const out = sanitizeResearchProposals({ items: [{ slot: 'DJ', lowFc: 10_000, highFc: 5_000_000, sources: [{ url: 'https://a.cd' }] }] }, ['DJ'], 2500);
+  assert.deepEqual(out, []);
 });
 
 test('une recherche Facebook ne garde que des liens Facebook', () => {

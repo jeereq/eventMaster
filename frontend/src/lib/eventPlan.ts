@@ -84,7 +84,7 @@ export type EventPlanBrief = {
   amenityMode: AmenityMode;
   planVersion: number;
   budgetScope: BudgetSimulationScope;
-  /** Source des prix : tout, base EventMaster, web ou Facebook. */
+  /** Source des prix : tout, base EventMaster, web, Facebook ou Instagram. */
   priceSource: PriceSource;
   wantedBrandIds: string[];
   wantedSaleUnits: Array<'BOTTLE' | 'CRATE' | 'PACK' | 'OTHER'>;
@@ -325,7 +325,7 @@ export type PlanItem = {
 };
 
 export type PlanMarketEstimate = {
-  /** observed : réservations et devis réels de la plateforme. reference : prix web validés par l’admin. */
+  /** observed : réservations et devis réels de la plateforme. reference : prix trouvés en ligne par l’IA. */
   source: 'observed' | 'reference';
   unit: 'EVENT' | 'PERSON';
   lowFc: number;
@@ -336,8 +336,10 @@ export type PlanMarketEstimate = {
   reviewedAt?: string | null;
   /** Pages web d’où vient le prix (source « reference »). */
   sources?: Array<{ title: string; url: string }>;
-  /** Canal d’une référence : web ou Facebook. */
-  channel?: 'web' | 'facebook';
+  /** Canal d’une référence : web, Facebook ou Instagram. */
+  channel?: 'web' | 'facebook' | 'instagram';
+  /** false : prix publié automatiquement, pas encore relu par EventMaster. */
+  adminReviewed?: boolean;
   unitFc?: number;
   quantity?: number;
   /** Contrôle du coût fait par le serveur : calcul, fourchette, fraîcheur et sources. */

@@ -22,7 +22,7 @@ type Snapshot = {
 let cache: Snapshot | null = null;
 let inflight: Promise<Snapshot> | null = null;
 
-/** À appeler après une validation admin, pour que le simulateur voie tout de suite la nouvelle référence. */
+/** À appeler après une recherche ou une action admin, pour que le simulateur voie tout de suite le nouveau prix. */
 export function invalidateMarketPriceCache(): void {
   cache = null;
 }
@@ -99,7 +99,7 @@ async function loadObservations(): Promise<MarketObservation[]> {
 async function loadReferences(): Promise<MarketReferenceRow[]> {
   return prisma.marketPriceReference.findMany({
     where: { status: 'APPROVED' },
-    select: { slot: true, city: true, unit: true, lowFc: true, typicalFc: true, highFc: true, reviewedAt: true, sources: true, source: true },
+    select: { slot: true, city: true, unit: true, lowFc: true, typicalFc: true, highFc: true, reviewedAt: true, sources: true, source: true, reviewedById: true },
     orderBy: { reviewedAt: 'desc' },
     take: 500,
   });

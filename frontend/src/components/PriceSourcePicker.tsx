@@ -4,18 +4,21 @@ import { cn } from '@/lib/cn';
 
 /**
  * Source des prix du simulateur :
- * - all : catalogue EventMaster, complété par les prix réels et les prix web/Facebook validés ;
+ * - all : catalogue EventMaster, complété par les prix réels et les prix trouvés sur internet ;
  * - app : base EventMaster seulement (catalogue, réservations et devis réels) ;
- * - web : prix trouvés sur internet, validés par EventMaster ;
- * - facebook : prix trouvés sur des pages Facebook publiques, validés par EventMaster.
+ * - web : prix trouvés sur internet ;
+ * - facebook : prix trouvés sur des pages Facebook publiques ;
+ * - instagram : prix trouvés sur des comptes Instagram publics.
+ * Les lignes sans prix sont cherchées en direct au moment de la simulation.
  */
-export type PriceSource = 'all' | 'app' | 'web' | 'facebook';
+export type PriceSource = 'all' | 'app' | 'web' | 'facebook' | 'instagram';
 
 export const PRICE_SOURCE_OPTIONS: Array<{ id: PriceSource; label: string; hint: string }> = [
-  { id: 'all', label: 'Tout', hint: 'Catalogue EventMaster d’abord. Les lignes sans offre sont estimées avec les prix réels, du web ou de Facebook.' },
+  { id: 'all', label: 'Tout', hint: 'Catalogue EventMaster d’abord. Les lignes sans offre sont estimées avec les prix réels ou cherchées sur internet.' },
   { id: 'app', label: 'EventMaster', hint: 'Uniquement la base EventMaster : offres du catalogue et prix réels des réservations et devis.' },
-  { id: 'web', label: 'Web', hint: 'Uniquement des prix trouvés sur internet et vérifiés par EventMaster. Chaque ligne cite ses sources.' },
-  { id: 'facebook', label: 'Facebook', hint: 'Uniquement des prix publiés sur des pages Facebook publiques et vérifiés par EventMaster.' },
+  { id: 'web', label: 'Web', hint: 'Uniquement des prix trouvés sur internet, cherchés en direct si besoin. Chaque ligne cite ses sources.' },
+  { id: 'facebook', label: 'Facebook', hint: 'Uniquement des prix publiés sur des pages Facebook publiques. Chaque ligne renvoie vers les pages.' },
+  { id: 'instagram', label: 'Instagram', hint: 'Uniquement des prix publiés sur des comptes Instagram publics. Chaque ligne renvoie vers les publications.' },
 ];
 
 export function parsePriceSource(value: unknown): PriceSource {
