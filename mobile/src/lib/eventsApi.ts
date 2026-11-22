@@ -57,3 +57,14 @@ export async function markAllNotificationsRead(): Promise<void> {
 export async function markNotificationRead(id: string): Promise<void> {
   await api.patch(`/notifications/${id}/read`);
 }
+
+export type PushTestResult = {
+  ok: boolean;
+  devices: number;
+  hint?: string;
+  results?: Array<{ token: string; status: 'delivered' | 'pending' | 'error'; error?: string; hint?: string }>;
+};
+
+export async function sendTestPush(): Promise<PushTestResult> {
+  return api.post<PushTestResult>('/notifications/push-test');
+}

@@ -28,10 +28,26 @@ async function getExpoProjectId(): Promise<string | undefined> {
   );
 }
 
+/**
+ * Android 8+ : une notification a besoin d'un canal, et sur Android 13+ la
+ * demande d'autorisation ne s'affiche pas tant qu'aucun canal n'existe.
+ */
+async function ensureAndroidChannel(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync('default', {
+    name: 'Notifications',
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#31714c',
+  });
+}
+
 export async function requestPushPermissions(): Promise<boolean> {
   if (!isNative || !Device.isDevice) {
     return false;
   }
+
+  await ensureAndroidChannel();
 
   const { status: existing } = await Notifications.getPermissionsAsync();
   if (existing === 'granted') return true;
@@ -74,6 +90,10 @@ export async function registerPushTokenWithBackend(): Promise<string | null> {
   }
 }
 
+/**
+ * À appeler AVANT d'effacer le jeton de session : la route exige d'être
+ * authentifié, sinon l'appareil reste lié à l'ancien compte.
+ */
 export async function unregisterPushTokenFromBackend(): Promise<void> {
   if (!registeredToken) return;
 

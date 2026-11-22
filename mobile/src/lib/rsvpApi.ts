@@ -1,4 +1,5 @@
 import { api } from './api';
+import { env } from '../config/env';
 import type { GuestInvitationsResponse, GuestRsvpData } from '../types/rsvp';
 import type { GuestRsvpPreferences } from './rsvpFormFields';
 import type { RsvpStatus } from '../types/rsvp';

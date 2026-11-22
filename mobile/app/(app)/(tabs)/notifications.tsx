@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -16,11 +17,12 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   saveNotificationPreferences,
+  sendTestPush,
   type NotificationPrefFamily,
   type NotificationPreferences,
 } from '../../../src/lib/eventsApi';
 import { resolveNotificationRoute } from '../../../src/lib/deepLinks';
-import { setBadgeCount } from '../../../src/lib/pushNotifications';
+import { registerPushTokenWithBackend, setBadgeCount } from '../../../src/lib/pushNotifications';
 import type { PlatformNotification } from '../../../src/types/event';
 import { Button } from '../../../src/components/ui/Button';
 import { useTheme } from '../../../src/theme/ThemeContext';
@@ -44,6 +46,7 @@ export default function NotificationsTab() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
+  const [testingPush, setTestingPush] = useState(false);
 
   const load = useCallback(async () => {
     const [res, nextPrefs] = await Promise.all([
@@ -80,6 +83,35 @@ export default function NotificationsTab() {
       router.push(route as never);
     }
     await load();
+  };
+
+  const handleTestPush = async () => {
+    setTestingPush(true);
+    try {
+      const token = await registerPushTokenWithBackend();
+      if (!token) {
+        Alert.alert(
+          'Notifications push',
+          "Impossible d'obtenir l'autorisation ou le jeton push. Vérifiez que les notifications sont autorisées pour EventMaster dans les réglages du téléphone.",
+        );
+        return;
+      }
+      const result = await sendTestPush();
+      const lines = result.results?.length
+        ? result.results.map((r) =>
+            r.status === 'error'
+              ? `Échec : ${r.error ?? 'erreur inconnue'}${r.hint ? `\n${r.hint}` : ''}`
+              : r.status === 'delivered'
+                ? 'Remise au téléphone confirmée.'
+                : 'Acceptée par Expo, remise en cours.',
+          )
+        : [result.hint ?? 'Aucun appareil enregistré.'];
+      Alert.alert(result.ok ? 'Notification de test envoyée' : 'Échec du test push', lines.join('\n\n'));
+    } catch (err) {
+      Alert.alert('Échec du test push', err instanceof Error ? err.message : String(err));
+    } finally {
+      setTestingPush(false);
+    }
   };
 
   const handleReadAll = async () => {
@@ -259,6 +291,14 @@ export default function NotificationsTab() {
               </View>
             </View>
           ))}
+          <View style={styles.familyBlock}>
+            <Button
+              title="Tester les notifications push"
+              onPress={() => void handleTestPush()}
+              loading={testingPush}
+              variant="secondary"
+            />
+          </View>
         </View>
       ) : null}
 
