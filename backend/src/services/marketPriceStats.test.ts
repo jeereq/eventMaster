@@ -11,7 +11,7 @@ import {
   type MarketObservation,
   type MarketReferenceRow,
 } from './marketPriceStats.ts';
-import { extractResearchJson, researchEnginePlan, keepFacebookSources, keepSocialSources, mergeProposals, sanitizeResearchProposals } from './marketPriceResearchParse.ts';
+import { extractResearchJson, researchEnginePlan, sanitizeQueries, keepFacebookSources, keepSocialSources, mergeProposals, sanitizeResearchProposals } from './marketPriceResearchParse.ts';
 
 const catering = (amountFc: number, guestCount: number | null, city = 'Kinshasa'): MarketObservation => ({
   slot: 'CATERING',
@@ -190,4 +190,23 @@ test('la recherche de prix commence par le modèle choisi dans les paramètres I
   assert.deepEqual(researchEnginePlan('gemini-3-flash'), [{ engine: 'gemini', model: 'gemini-3-flash' }, { engine: 'openai' }]);
   assert.deepEqual(researchEnginePlan('gpt-5.6-luna'), [{ engine: 'openai', model: 'gpt-5.6-luna' }, { engine: 'gemini' }]);
   assert.deepEqual(researchEnginePlan(''), [{ engine: 'gemini' }, { engine: 'openai' }]);
+});
+
+test('chaque source garde le prix relevé, la phrase et la date ; le détail suit jusqu’au simulateur', () => {
+  const [proposal] = sanitizeResearchProposals({
+    items: [{
+      slot: 'CATERING', unit: 'PERSON', lowFc: 12_000, typicalFc: 15_000, highFc: 20_000, rationale: 'Buffet sans boissons.',
+      sources: [{ title: 'Traiteur Mama', url: 'https://t.cd/menu', price: '15 000 FC / invité', excerpt: 'Buffet  complet à   15 000 FC par personne', date: '2026-09' }],
+    }],
+  }, ['CATERING'], 2500);
+  assert.deepEqual(proposal.sources[0], { title: 'Traiteur Mama', url: 'https://t.cd/menu', price: '15 000 FC / invité', excerpt: 'Buffet complet à 15 000 FC par personne', date: '2026-09' });
+  assert.deepEqual(sanitizeQueries(['traiteur Kinshasa prix', 'traiteur Kinshasa prix', '', 3]), ['traiteur Kinshasa prix', '3']);
+  const stat = resolveMarketPrice('CATERING', 'Kinshasa', [], [{
+    slot: 'CATERING', city: 'Kinshasa', unit: 'PERSON', lowFc: 12_000, typicalFc: 15_000, highFc: 20_000, reviewedAt: '2026-11-22', source: 'ai_web',
+    sources: proposal.sources, rationale: proposal.rationale, model: 'gemini-3.1-pro-preview', searchQueries: ['traiteur Kinshasa prix'],
+  }], undefined, 'web')!;
+  assert.equal(stat.rationale, 'Buffet sans boissons.');
+  assert.equal(stat.model, 'gemini-3.1-pro-preview');
+  assert.deepEqual(stat.searchQueries, ['traiteur Kinshasa prix']);
+  assert.equal(stat.sources?.[0]?.price, '15 000 FC / invité');
 });

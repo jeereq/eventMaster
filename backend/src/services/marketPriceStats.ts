@@ -87,9 +87,16 @@ export type MarketPriceStat = {
   channel?: ReferenceChannel;
   /** false : prix publié automatiquement après la recherche, sans relecture admin. */
   adminReviewed?: boolean;
+  /** Explication de l’IA : ce que couvre le prix et comment la fourchette est construite. */
+  rationale?: string;
+  /** Modèle d’IA qui a trouvé le prix. */
+  model?: string;
+  /** Requêtes tapées dans le moteur de recherche. */
+  searchQueries?: string[];
 };
 
-export type MarketSourceLink = { title: string; url: string };
+/** Page citée, avec le prix relevé, la phrase qui le donne et sa date quand l’IA les fournit. */
+export type MarketSourceLink = { title: string; url: string; price?: string; excerpt?: string; date?: string };
 
 /** Au-delà, une référence web est signalée « à revérifier ». */
 export const REFERENCE_MAX_AGE_DAYS = 180;
@@ -101,8 +108,12 @@ function sourceLinks(value: unknown): MarketSourceLink[] {
     const row = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>;
     const url = String(row.url || '').trim();
     if (!/^https?:\/\//i.test(url)) continue;
-    links.push({ title: String(row.title || '').trim().slice(0, 200) || url, url });
-    if (links.length >= 3) break;
+    const extra = (key: string, max: number) => {
+      const text = String(row[key] ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+      return text ? { [key]: text } : {};
+    };
+    links.push({ title: String(row.title || '').trim().slice(0, 200) || url, url, ...extra('price', 120), ...extra('excerpt', 400), ...extra('date', 40) });
+    if (links.length >= 5) break;
   }
   return links;
 }
@@ -120,6 +131,9 @@ export type MarketReferenceRow = {
   source?: string | null;
   /** Renseigné quand un Super Admin a validé ou corrigé le prix ; vide pour un prix publié automatiquement. */
   reviewedById?: string | null;
+  rationale?: string | null;
+  model?: string | null;
+  searchQueries?: string[] | null;
 };
 
 export function defaultMarketUnit(slot: MarketSlot): MarketPriceUnit {
@@ -205,6 +219,9 @@ function referenceToStat(row: MarketReferenceRow): MarketPriceStat {
     sources: sourceLinks(row.sources),
     channel: referenceChannel(row.source),
     adminReviewed: Boolean(row.reviewedById),
+    ...(row.rationale ? { rationale: row.rationale } : {}),
+    ...(row.model ? { model: row.model } : {}),
+    ...(row.searchQueries?.length ? { searchQueries: row.searchQueries.slice(0, 12) } : {}),
   };
 }
 

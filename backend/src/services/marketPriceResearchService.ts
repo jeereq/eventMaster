@@ -11,6 +11,7 @@ import {
   keepSocialSources,
   mergeProposals,
   sanitizeResearchProposals,
+  sanitizeQueries,
   sanitizeSources,
   type ResearchProposal,
   type ResearchSource,
@@ -79,13 +80,15 @@ function researchPrompt(city: string, slots: string[], usdRate: number, guestHin
     '',
     `Donne pour chaque ligne une fourchette basse, typique et haute en francs congolais (FC). Si la source est en dollars, convertis au taux 1 USD = ${usdRate} FC, ou renvoie currency "USD" avec les montants en dollars.`,
     'Format :',
-    '{"items":[{"slot":"CATERING","unit":"PERSON","currency":"FC","lowFc":0,"typicalFc":0,"highFc":0,"rationale":"phrase courte en français : ce que couvre le prix et la date des sources","sources":[{"title":"...","url":"https://..."}]}]}',
-    'unit vaut "PERSON" pour un prix par invité, "EVENT" pour un forfait. Chaque ligne cite au moins une source avec son URL.',
+    '{"items":[{"slot":"CATERING","unit":"PERSON","currency":"FC","lowFc":0,"typicalFc":0,"highFc":0,"rationale":"2 à 3 phrases en français : ce que couvre le prix (menu, boissons, service, durée…), comment la fourchette est construite à partir des sources, et ce qui peut le faire varier","sources":[{"title":"nom du prestataire ou de la page","url":"https://...","price":"prix tel qu’affiché sur la page, avec sa devise et son unité","excerpt":"phrase copiée de la page qui donne ce prix","date":"date de publication si connue (AAAA-MM)"}]}]}',
+    'unit vaut "PERSON" pour un prix par invité, "EVENT" pour un forfait. Chaque ligne cite au moins une source avec son URL, et pour chaque source le prix relevé et la phrase qui le donne.',
   ].join('\n');
   return { system, user };
 }
 
-async function askGemini(system: string, user: string, preferredModel?: string): Promise<{ raw: unknown; sources: ResearchSource[]; model: string }> {
+type AiAnswer = { raw: unknown; sources: ResearchSource[]; model: string; queries: string[] };
+
+async function askGemini(system: string, user: string, preferredModel?: string): Promise<AiAnswer> {
   const key = getGeminiApiKey();
   if (!key) fail(503, 'GEMINI_API_KEY manquante.');
   const model = preferredModel || getGeminiTextModel();
@@ -111,7 +114,7 @@ async function askGemini(system: string, user: string, preferredModel?: string):
       error?: { message?: string };
       candidates?: Array<{
         content?: { parts?: Array<{ text?: string }> };
-        groundingMetadata?: { groundingChunks?: Array<{ web?: { uri?: string; title?: string } }> };
+        groundingMetadata?: { groundingChunks?: Array<{ web?: { uri?: string; title?: string } }>; webSearchQueries?: string[] };
       }>;
     };
     if (!response.ok) fail(502, payload.error?.message || 'Gemini n’a pas répondu.');
@@ -121,13 +124,13 @@ async function askGemini(system: string, user: string, preferredModel?: string):
     const sources = sanitizeSources(
       (candidate?.groundingMetadata?.groundingChunks || []).map((chunk) => ({ url: chunk.web?.uri, title: chunk.web?.title })),
     );
-    return { raw: extractResearchJson(text), sources, model };
+    return { raw: extractResearchJson(text), sources, model, queries: sanitizeQueries(candidate?.groundingMetadata?.webSearchQueries) };
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function askOpenAi(system: string, user: string, preferredModel?: string): Promise<{ raw: unknown; sources: ResearchSource[]; model: string }> {
+async function askOpenAi(system: string, user: string, preferredModel?: string): Promise<AiAnswer> {
   const key = getOpenAiApiKey();
   if (!key) fail(503, 'OPENAI_API_KEY manquante.');
   const model = (preferredModel || process.env.OPENAI_RESEARCH_MODEL || process.env.OPENAI_MODEL || 'gpt-4o').trim();
@@ -149,13 +152,19 @@ async function askOpenAi(system: string, user: string, preferredModel?: string):
       error?: { message?: string };
       output?: Array<{
         type?: string;
+        action?: { query?: string; queries?: string[] };
         content?: Array<{ type?: string; text?: string; annotations?: Array<{ type?: string; url?: string; title?: string }> }>;
       }>;
     };
     if (!response.ok) fail(502, payload.error?.message || 'OpenAI n’a pas répondu.');
     let text = '';
     const cited: Array<{ url?: string; title?: string }> = [];
+    const queries: unknown[] = [];
     for (const item of payload.output || []) {
+      if (item.type === 'web_search_call') {
+        if (item.action?.query) queries.push(item.action.query);
+        queries.push(...(item.action?.queries || []));
+      }
       if (item.type !== 'message') continue;
       for (const part of item.content || []) {
         if (part.type !== 'output_text') continue;
@@ -166,15 +175,18 @@ async function askOpenAi(system: string, user: string, preferredModel?: string):
       }
     }
     if (!text.trim()) fail(502, 'OpenAI n’a renvoyé aucun prix.');
-    return { raw: extractResearchJson(text), sources: sanitizeSources(cited), model };
+    return { raw: extractResearchJson(text), sources: sanitizeSources(cited), model, queries: sanitizeQueries(queries) };
   } finally {
     clearTimeout(timer);
   }
 }
 
-type AiAnswer = { raw: unknown; sources: ResearchSource[]; model: string };
-
 function cleanProposals(answer: AiAnswer, slots: string[], usdRate: number, channel: ResearchChannel): ResearchProposal[] {
+  return cleanChannelProposals(answer, slots, usdRate, channel)
+    .map((proposal) => ({ ...proposal, model: answer.model, queries: answer.queries }));
+}
+
+function cleanChannelProposals(answer: AiAnswer, slots: string[], usdRate: number, channel: ResearchChannel): ResearchProposal[] {
   if (channel === 'web') return sanitizeResearchProposals(answer.raw, slots, usdRate, answer.sources);
   const network = channel;
   return sanitizeResearchProposals(answer.raw, slots, usdRate, keepSocialSources(answer.sources, network))
@@ -266,7 +278,8 @@ export async function researchMarketPrices(input: { city: string; slots: string[
             source,
             sources: proposal.sources,
             rationale: proposal.rationale || null,
-            model,
+            model: proposal.model || model,
+            searchQueries: proposal.queries || [],
             proposedById: input.actorId || null,
             reviewedAt: now,
           },

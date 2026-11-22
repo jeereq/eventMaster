@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, ExternalLink, Globe, Loader2, X } from '@/components/icons';
+import { Check, Globe, Loader2, X } from '@/components/icons';
+import MarketResearchDetails, { type MarketResearchSource } from '@/components/MarketResearchDetails';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Card, CardHeader, EmptyState, PageHeader } from '@/components/ui';
@@ -21,7 +22,8 @@ type ReferenceRow = {
   status: 'PROPOSED' | 'APPROVED';
   /** ai_web, ai_facebook ou ai_instagram */
   source?: string;
-  sources?: Array<{ title: string; url: string }> | null;
+  sources?: MarketResearchSource[] | null;
+  searchQueries?: string[] | null;
   rationale?: string | null;
   model?: string | null;
   createdAt: string;
@@ -78,26 +80,6 @@ function errorMessage(err: unknown, fallback: string) {
   return err instanceof Error && err.message ? err.message : fallback;
 }
 
-function Sources({ sources }: { sources?: ReferenceRow['sources'] }) {
-  if (!sources?.length) return null;
-  return (
-    <ul className="space-y-1">
-      {sources.map((source) => (
-        <li key={source.url} className="min-w-0">
-          <a
-            href={source.url}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            className="inline-flex max-w-full items-center gap-1 text-xs text-primary hover:underline"
-          >
-            <ExternalLink className="w-3 h-3 shrink-0" />
-            <span className="truncate">{source.title}</span>
-          </a>
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 function ProposalCard({
   row,
@@ -160,7 +142,6 @@ function ProposalCard({
           {published ? (reviewed ? ' · relu par EventMaster' : ' · publié automatiquement') : ''}
         </p>
       </div>
-      {row.rationale ? <p className="text-sm text-muted">{row.rationale}</p> : null}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <label className="text-xs text-muted space-y-1">
           <span>Bas (FC)</span>
@@ -182,7 +163,20 @@ function ProposalCard({
           </select>
         </label>
       </div>
-      <Sources sources={row.sources} />
+      <details className="group rounded-lg border border-border/70 bg-surface-muted/40 px-3 py-2">
+        <summary className="cursor-pointer select-none min-h-9 flex items-center text-xs font-semibold text-foreground">
+          Détail de la recherche{row.sources?.length ? ` (${row.sources.length} source${row.sources.length > 1 ? 's' : ''})` : ''}
+        </summary>
+        <div className="pt-2">
+          <MarketResearchDetails
+            rationale={row.rationale}
+            sources={row.sources}
+            searchQueries={row.searchQueries}
+            model={row.model}
+            foundAt={row.createdAt}
+          />
+        </div>
+      </details>
       <div className="flex flex-wrap gap-2">
         {!reviewed || dirty ? (
           <Button type="button" size="sm" onClick={() => void approve()} loading={busy === 'approve'} disabled={busy !== null} leftIcon={<Check className="w-4 h-4" />}>

@@ -20,7 +20,18 @@ const MAX_PRICE_FC = 5_000_000_000;
 const MAX_SOURCES = 8;
 const MAX_SPREAD = 20;
 
-export type ResearchSource = { title: string; url: string };
+/** Une page citée : lien, et si l’IA les a relevés, le prix lu sur la page, la phrase qui le donne et sa date. */
+export type ResearchSource = { title: string; url: string; price?: string; excerpt?: string; date?: string };
+
+function shortText(value: unknown, max: number): string {
+  return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+/** Requêtes de recherche tapées par l’IA : textes courts, sans doublon, au plus 12. */
+export function sanitizeQueries(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((item) => shortText(item, 200)).filter(Boolean))].slice(0, 12);
+}
 
 /** Objets JSON complets (accolades équilibrées, hors chaînes) trouvés dans un texte, dans l’ordre. */
 function completeObjects(text: string, from = 0): Array<{ start: number; end: number }> {
@@ -94,6 +105,9 @@ export type ResearchProposal = {
   highFc: number;
   rationale: string;
   sources: ResearchSource[];
+  /** Modèle qui a trouvé la ligne et requêtes qu’il a tapées. */
+  model?: string;
+  queries?: string[];
 };
 
 function toFc(value: unknown, currency: string, usdRate: number): number | null {
@@ -115,7 +129,10 @@ export function sanitizeSources(value: unknown): ResearchSource[] {
     if (!/^https?:\/\//i.test(url) || url.length > 1000 || seen.has(url)) continue;
     seen.add(url);
     const title = String(row.title || '').trim().slice(0, 200) || new URL(url).hostname;
-    sources.push({ title, url });
+    const price = shortText(row.price ?? row.priceText ?? row.amount, 120);
+    const excerpt = shortText(row.excerpt ?? row.quote ?? row.snippet, 400);
+    const date = shortText(row.date ?? row.publishedAt, 40);
+    sources.push({ title, url, ...(price ? { price } : {}), ...(excerpt ? { excerpt } : {}), ...(date ? { date } : {}) });
     if (sources.length >= MAX_SOURCES) break;
   }
   return sources;
