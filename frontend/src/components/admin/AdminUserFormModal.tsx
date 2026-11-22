@@ -350,6 +350,7 @@ export default function AdminUserFormModal({
                 <option value="STANDARD">Business</option>
                 <option value="PREMIUM">Premium</option>
                 <option value="PREMIUM_PLUS">Premium Plus</option>
+                <option value="AGENCY">Agence</option>
                 <option value="ENTERPRISE_1">Enterprise 1</option>
                 <option value="ENTERPRISE_2">Enterprise 2</option>
                 <option value="ENTERPRISE_3">Enterprise 3</option>

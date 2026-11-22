@@ -173,8 +173,8 @@ export default function LandingPricingSection({
               description: 'Éditeur avancé, modèles sur mesure et lecture de listes (OCR), vitrine incluse',
             },
             {
-              label: 'Enterprise',
-              ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3', 'CUSTOM'],
+              label: 'Agence & Enterprise',
+              ids: ['AGENCY', 'ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3', 'CUSTOM'],
               description: 'Gros volumes, plusieurs salles et accompagnement dédié, vitrine incluse',
             },
           ];

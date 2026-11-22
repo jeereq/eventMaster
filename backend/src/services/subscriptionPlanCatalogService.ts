@@ -21,13 +21,14 @@ const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
   STANDARD: 5,
   PREMIUM_1: 6,
   PREMIUM_2: 7,
-  ENTERPRISE_1: 8,
-  ENTERPRISE_2: 9,
-  ENTERPRISE_3: 10,
-  CUSTOM: 14,
-  VENUE: 11,
-  SERVICE: 12,
-  CATALOG: 13,
+  AGENCY: 8,
+  ENTERPRISE_1: 9,
+  ENTERPRISE_2: 10,
+  ENTERPRISE_3: 11,
+  CUSTOM: 15,
+  VENUE: 12,
+  SERVICE: 13,
+  CATALOG: 14,
 };
 
 export function rowToPlanDefinition(row: SubscriptionPlan): PlanDefinition {
