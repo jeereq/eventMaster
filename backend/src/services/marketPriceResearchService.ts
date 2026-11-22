@@ -6,6 +6,7 @@ import { loadPlatformSettings } from './platformSettingsService';
 import { serviceCategoryLabel } from '../utils/publicVenue';
 import { channelSource, defaultMarketUnit, isReferenceChannel, type ReferenceChannel } from './marketPriceStats.ts';
 import {
+  researchEnginePlan,
   extractResearchJson,
   keepSocialSources,
   mergeProposals,
@@ -84,10 +85,10 @@ function researchPrompt(city: string, slots: string[], usdRate: number, guestHin
   return { system, user };
 }
 
-async function askGemini(system: string, user: string): Promise<{ raw: unknown; sources: ResearchSource[]; model: string }> {
+async function askGemini(system: string, user: string, preferredModel?: string): Promise<{ raw: unknown; sources: ResearchSource[]; model: string }> {
   const key = getGeminiApiKey();
   if (!key) fail(503, 'GEMINI_API_KEY manquante.');
-  const model = getGeminiTextModel();
+  const model = preferredModel || getGeminiTextModel();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -126,10 +127,10 @@ async function askGemini(system: string, user: string): Promise<{ raw: unknown; 
   }
 }
 
-async function askOpenAi(system: string, user: string): Promise<{ raw: unknown; sources: ResearchSource[]; model: string }> {
+async function askOpenAi(system: string, user: string, preferredModel?: string): Promise<{ raw: unknown; sources: ResearchSource[]; model: string }> {
   const key = getOpenAiApiKey();
   if (!key) fail(503, 'OPENAI_API_KEY manquante.');
-  const model = (process.env.OPENAI_RESEARCH_MODEL || process.env.OPENAI_MODEL || 'gpt-4o').trim();
+  const model = (preferredModel || process.env.OPENAI_RESEARCH_MODEL || process.env.OPENAI_MODEL || 'gpt-4o').trim();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -182,7 +183,8 @@ function cleanProposals(answer: AiAnswer, slots: string[], usdRate: number, chan
 }
 
 /**
- * Interroge Gemini (recherche Google), puis OpenAI (recherche web) pour les lignes que Gemini n’a pas trouvées.
+ * Interroge d’abord le modèle choisi dans les paramètres IA de la plateforme (Gemini avec Google Search,
+ * ou OpenAI avec la recherche web), puis l’autre fournisseur pour les lignes encore sans prix.
  * Deux moteurs de recherche couvrent plus de pages qu’un seul.
  */
 async function searchPrices(
@@ -191,31 +193,26 @@ async function searchPrices(
   usdRate: number,
   guestHint: number,
   channel: ResearchChannel,
+  chosenModel?: string,
 ): Promise<{ proposals: ResearchProposal[]; model: string }> {
   let proposals: ResearchProposal[] = [];
   const models: string[] = [];
   let lastError: Error | null = null;
-  if (getGeminiApiKey()) {
-    try {
-      const { system, user } = researchPrompt(city, slots, usdRate, guestHint, channel);
-      const answer = await askGemini(system, user);
-      proposals = cleanProposals(answer, slots, usdRate, channel);
-      models.push(answer.model);
-    } catch (error) {
-      lastError = error as Error;
-      console.warn('[marketPrices] Gemini a échoué :', lastError.message);
-    }
-  }
-  const missing = slots.filter((slot) => !proposals.some((item) => item.slot === slot));
-  if (missing.length && getOpenAiApiKey()) {
+  for (const step of researchEnginePlan(chosenModel)) {
+    const available = step.engine === 'gemini' ? getGeminiApiKey() : getOpenAiApiKey();
+    if (!available) continue;
+    const missing = slots.filter((slot) => !proposals.some((item) => item.slot === slot));
+    if (!missing.length) break;
     try {
       const { system, user } = researchPrompt(city, missing, usdRate, guestHint, channel);
-      const answer = await askOpenAi(system, user);
+      const answer = step.engine === 'gemini'
+        ? await askGemini(system, user, step.model)
+        : await askOpenAi(system, user, step.model);
       proposals = mergeProposals(proposals, cleanProposals(answer, missing, usdRate, channel));
       models.push(answer.model);
     } catch (error) {
       lastError = error as Error;
-      console.warn('[marketPrices] OpenAI a échoué :', lastError.message);
+      console.warn(`[marketPrices] ${step.engine === 'gemini' ? 'Gemini' : 'OpenAI'} a échoué :`, lastError.message);
     }
   }
   if (!models.length) fail(502, lastError?.message || 'La recherche web n’a rien renvoyé.');
@@ -246,7 +243,7 @@ export async function researchMarketPrices(input: { city: string; slots: string[
     const settings = loadPlatformSettings();
     const usdRate = Number(settings.usdExchangeRateCdf) > 0 ? Number(settings.usdExchangeRateCdf) : 2800;
     const guestHint = Math.min(2000, Math.max(20, Math.round(Number(input.guestHint) || 150)));
-    const { proposals, model } = await searchPrices(input.city, slots, usdRate, guestHint, channel);
+    const { proposals, model } = await searchPrices(input.city, slots, usdRate, guestHint, channel, settings.aiStudioModels?.priceResearchModel);
 
     const now = new Date();
     const source = channelSource(channel);

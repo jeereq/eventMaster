@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   AVAILABLE_INVITATION_MODELS,
+  AVAILABLE_PRICE_RESEARCH_MODELS,
   AVAILABLE_ROOM_PLAN_MODELS,
   isOpenAiStudioModel,
   sanitizeAiStudioModels,
@@ -26,6 +27,14 @@ describe('sanitizeAiStudioModels', () => {
     });
     assert.equal(next.invitationModel, 'gpt-6-astra');
     assert.equal(next.roomPlanModel, 'gpt-6-astra');
+  });
+
+  it('garde le modèle de recherche de prix choisi, sinon Gemini 3.1 Pro', () => {
+    assert.equal(sanitizeAiStudioModels({ priceResearchModel: 'gpt-5.6-luna' }).priceResearchModel, 'gpt-5.6-luna');
+    assert.equal(sanitizeAiStudioModels({ priceResearchModel: 'gemini-3-flash' }).priceResearchModel, 'gemini-3-flash');
+    assert.equal(sanitizeAiStudioModels({ priceResearchModel: 'gemini-3-pro-image' }).priceResearchModel, 'gemini-3.1-pro-preview', 'modèle image refusé');
+    assert.equal(sanitizeAiStudioModels({}).priceResearchModel, 'gemini-3.1-pro-preview');
+    assert.ok(AVAILABLE_PRICE_RESEARCH_MODELS.some((model) => model.provider === 'openai'));
   });
 
   it('liste OpenAI dans les catalogues admin', () => {
