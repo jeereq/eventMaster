@@ -977,6 +977,7 @@ export default function EventTicketCheckoutForm({
                       zoneColorById={zoneColorById}
                       showZonePricing={zonePricing}
                       height={420}
+                      fullscreenSummary={{ count: selectedSeats.length, totalFc }}
                     />
                   )}
 

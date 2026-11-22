@@ -20,6 +20,7 @@ import {
   type SeatRowMeta,
 } from '@/lib/seatSelectionLayout';
 import { formatFc } from '@/config/landingPricing';
+import { Check } from '@/components/icons';
 import type { PricingZone } from '@/lib/ticketPricing';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
@@ -86,6 +87,11 @@ export interface SeatSelectionPlanCanvasProps {
   showZonePricing?: boolean;
   height?: number;
   className?: string;
+  /**
+   * Billetterie : récapitulatif (places choisies, total) affiché sous le plan en plein écran,
+   * avec « Continuer » pour revenir au formulaire sans chercher le bouton « Réduire ».
+   */
+  fullscreenSummary?: { count: number; totalFc: number };
 }
 
 type PlanTable = {
@@ -123,6 +129,7 @@ export default function SeatSelectionPlanCanvas({
   showZonePricing = false,
   height = 360,
   className = '',
+  fullscreenSummary,
 }: SeatSelectionPlanCanvasProps) {
   // Le plan est dessiné à taille fixe (proportions réelles de la salle) puis ajusté au cadre :
   // sur un téléphone, la salle entière est visible au lieu de déborder de l’écran.
@@ -492,6 +499,30 @@ export default function SeatSelectionPlanCanvas({
           className="absolute top-2 right-2 z-30"
         />
       </div>
+      {expanded && fullscreenSummary ? (
+        <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-border bg-surface p-2.5 shadow-sm">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold text-foreground">
+              {fullscreenSummary.count === 0
+                ? 'Aucune place choisie'
+                : `${fullscreenSummary.count} place${fullscreenSummary.count > 1 ? 's' : ''} choisie${fullscreenSummary.count > 1 ? 's' : ''}`}
+            </p>
+            {fullscreenSummary.totalFc > 0 ? (
+              <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatFc(fullscreenSummary.totalFc)}</p>
+            ) : (
+              <p className="truncate text-xs text-muted">Touchez un siège libre sur le plan</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-[var(--radius-button)] bg-primary-solid px-3.5 text-sm font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <Check className="h-4 w-4" aria-hidden />
+            {fullscreenSummary.count > 0 ? 'Continuer' : 'Fermer'}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 
