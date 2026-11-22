@@ -990,7 +990,7 @@ export default function MarketplaceInquiriesPanel({
             <Input
               type="number"
               min={100}
-              step={1000}
+              step={1}
               placeholder="Ex: 500000"
               value={quoteAmount}
               onChange={(e) => setQuoteAmount(e.target.value)}

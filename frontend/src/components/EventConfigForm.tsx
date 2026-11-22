@@ -2647,7 +2647,7 @@ export default function EventConfigForm({
                               label="Montant minimum d'un don (FC)"
                               type="number"
                               min={100}
-                              step={500}
+                              step={1}
                               value={donationMinAmountFc}
                               onChange={(e) => setDonationMinAmountFc(e.target.value)}
                               placeholder="1000"

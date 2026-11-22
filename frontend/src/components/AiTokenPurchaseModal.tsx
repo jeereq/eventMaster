@@ -437,7 +437,7 @@ export default function AiTokenPurchaseModal({
                 label="Montant libre"
                 type="number"
                 min={pricing.minAmountCdf}
-                step={100}
+                step={1}
                 inputMode="numeric"
                 autoComplete="off"
                 value={amountInput}
