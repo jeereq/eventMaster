@@ -37,6 +37,23 @@ const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
 });
 
 const WALKTHROUGH_START_LABEL = 'Approche de l’entrée';
+/** Pertes du contexte WebGL rapprochées (fenêtre en ms) avant de passer à l’aperçu 2D. */
+const GL_LOSS_WINDOW_MS = 60_000;
+const GL_LOSSES_BEFORE_2D = 3;
+
+function Relaunch3dButton({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="absolute inset-x-2 top-2 z-30 flex justify-center">
+      <button
+        type="button"
+        onClick={onClick}
+        className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-full bg-foreground/90 text-background text-xs font-semibold shadow-lg touch-manipulation active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      >
+        Vue 3D interrompue · Relancer la 3D
+      </button>
+    </div>
+  );
+}
 
 function WalkthroughButton({
   active,
@@ -306,10 +323,47 @@ export default function RoomLayoutPreview({
   const [showRoof, setShowRoof] = useState(false);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
-  // Pertes du contexte WebGL (iPhone à court de mémoire en plein écran) : 1re → 3D recréée en qualité allégée,
-  // 2e → aperçu 2D, pour que la salle reste visible au lieu d'un écran noir.
-  const [glLosses, setGlLosses] = useState(0);
-  const handleContextLost = React.useCallback(() => setGlLosses((n) => n + 1), []);
+  // Pertes du contexte WebGL. Le navigateur libère souvent la 3D quand on quitte l’onglet ou l’application
+  // (retour à WhatsApp, verrouillage du téléphone) : ce n’est pas une panne, la scène est recréée au retour.
+  // Une perte à l’écran recrée la 3D en qualité allégée ; l’aperçu 2D n’arrive qu’après plusieurs pertes
+  // rapprochées, et le visiteur peut alors relancer la 3D d’un geste.
+  const [glEpoch, setGlEpoch] = useState(0);
+  const [glDegraded, setGlDegraded] = useState(false);
+  const [glGaveUp, setGlGaveUp] = useState(false);
+  const [glSuspended, setGlSuspended] = useState(false);
+  const glLossTimesRef = React.useRef<number[]>([]);
+  const handleContextLost = React.useCallback(() => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      setGlSuspended(true);
+      return;
+    }
+    const now = Date.now();
+    const recent = glLossTimesRef.current.filter((t) => now - t < GL_LOSS_WINDOW_MS);
+    recent.push(now);
+    glLossTimesRef.current = recent;
+    setGlDegraded(true);
+    if (recent.length >= GL_LOSSES_BEFORE_2D) {
+      setGlGaveUp(true);
+      return;
+    }
+    setGlEpoch((n) => n + 1);
+  }, []);
+  const relaunch3d = React.useCallback(() => {
+    glLossTimesRef.current = [];
+    setGlGaveUp(false);
+    setGlEpoch((n) => n + 1);
+  }, []);
+  useEffect(() => {
+    if (!glSuspended) return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      setGlSuspended(false);
+      setGlEpoch((n) => n + 1);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    onVisible();
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [glSuspended]);
   const previousForce2dRef = React.useRef(force2d);
 
   const stopWalkthrough = () => {
@@ -357,8 +411,9 @@ export default function RoomLayoutPreview({
 
   const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
   const lightingPreset = lightingPresetOverride ?? blueprint.metadata.lightingPreset ?? 'auto';
-  const useWebGL = !force2d && !localForce2d && glLosses < 2 && quality !== 'thumb' && mounted;
-  const webglQuality: RoomPreviewQuality = glLosses > 0 && quality === 'showcase' ? 'standard' : quality;
+  const useWebGL = !force2d && !localForce2d && !glGaveUp && quality !== 'thumb' && mounted;
+  const webglQuality: RoomPreviewQuality = glDegraded && quality === 'showcase' ? 'standard' : quality;
+  const showRelaunch3d = glGaveUp && !force2d && !localForce2d && quality !== 'thumb';
   const canExpand = (allowExpand ?? allowMobileExpand ?? quality !== 'thumb') && quality !== 'thumb';
   const viewBlueprint = applyPlanSceneVisibility(blueprint, { showWalls, showRoof });
 
@@ -411,7 +466,7 @@ export default function RoomLayoutPreview({
               onFallbackTo2D={() => setLocalForce2d(true)}
             >
               <WebGLPreviewCanvas
-                key={glLosses}
+                key={glEpoch}
                 webglBlueprint={webglBlueprint}
                 quality={webglQuality}
                 onContextLost={handleContextLost}
@@ -438,6 +493,7 @@ export default function RoomLayoutPreview({
               guestSimulation={guestSimulation}
             />
           )}
+          {showRelaunch3d && !expanded ? <Relaunch3dButton onClick={relaunch3d} /> : null}
           {!mounted && !force2d ? (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-end justify-center pb-3">
               <span className="rounded-full bg-foreground/80 px-2.5 py-1 text-xs font-semibold text-background">
@@ -525,13 +581,14 @@ export default function RoomLayoutPreview({
           {/* Téléphone : la salle garde au moins la moitié de l'écran, quel que soit le contenu du panneau
               (pourcentages plutôt que dvh, inconnus des navigateurs plus anciens). */}
           <div className={cn('relative flex-1 min-h-0', fullscreenPanel && 'max-sm:min-h-[50%]')}>
+            {showRelaunch3d ? <Relaunch3dButton onClick={relaunch3d} /> : null}
             {useWebGL ? (
               <Room3DErrorBoundary
                 className="absolute inset-0 h-full w-full"
                 onFallbackTo2D={() => setLocalForce2d(true)}
               >
                 <WebGLPreviewCanvas
-                  key={glLosses}
+                  key={glEpoch}
                   webglBlueprint={webglBlueprint}
                   quality={webglQuality}
                   onContextLost={handleContextLost}

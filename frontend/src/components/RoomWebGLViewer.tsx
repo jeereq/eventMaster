@@ -3500,18 +3500,49 @@ function CinematicCameraController({
   /** Vitesse d’approche (plus bas = glissé plus lent, façon travelling de film). */
   speed?: number;
 }) {
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
   const animatingRef = useRef(false);
+  const elapsedRef = useRef(0);
+  const onArrivalRef = useRef(onArrival);
+  useEffect(() => {
+    onArrivalRef.current = onArrival;
+  }, [onArrival]);
 
   useEffect(() => {
     if (targetPose) {
       animatingRef.current = true;
+      elapsedRef.current = 0;
     }
   }, [targetPose]);
+
+  // Le visiteur reprend la main dès qu’il touche la vue : le travelling s’arrête là où il est,
+  // au lieu de ramener la caméra de force vers la perspective visée.
+  useEffect(() => {
+    const dom = gl.domElement;
+    const release = () => {
+      if (!animatingRef.current) return;
+      animatingRef.current = false;
+      setTimeout(() => onArrivalRef.current?.(), 0);
+    };
+    dom.addEventListener('pointerdown', release);
+    dom.addEventListener('wheel', release, { passive: true });
+    return () => {
+      dom.removeEventListener('pointerdown', release);
+      dom.removeEventListener('wheel', release);
+    };
+  }, [gl]);
 
   useFrame((_, delta) => {
     if (!animatingRef.current || !targetPose) return;
     const ctrl = (orbitControlsRef as { current?: any } | undefined)?.current;
+    // Pose hors des limites de l’orbite (trop bas, trop près) : elle ne serait jamais atteinte et la
+    // caméra resterait aimantée. Au-delà du temps d’un travelling, on rend la main.
+    elapsedRef.current += delta;
+    if (elapsedRef.current > Math.max(4, 12 / speed)) {
+      animatingRef.current = false;
+      setTimeout(() => onArrivalRef.current?.(), 0);
+      return;
+    }
     const t = Math.min(1, 1 - Math.exp(-delta * speed));
     camera.position.lerp(targetPose.pos, t);
     if (ctrl?.target) {
@@ -3528,7 +3559,7 @@ function CinematicCameraController({
       }
       animatingRef.current = false;
       setTimeout(() => {
-        onArrival?.();
+        onArrivalRef.current?.();
       }, 0);
     }
   });
@@ -4041,8 +4072,29 @@ function SceneContent({
   const viewportAspect = size.width > 0 && size.height > 0
     ? Math.round((size.width / size.height) * 20) / 20
     : 1.6;
+  // Dès que le visiteur oriente lui-même la vue, la salle cesse de tourner seule et n’est plus
+  // recadrée quand la hauteur de l’écran bouge (barre d’adresse du téléphone qui apparaît).
+  const [userTookControl, setUserTookControl] = useState(false);
+  const userTookControlRef = useRef(false);
+  const markUserControl = useCallback(() => {
+    if (userTookControlRef.current) return;
+    userTookControlRef.current = true;
+    setUserTookControl(true);
+  }, []);
+  const lastFramingRef = useRef<{ key: string; aspect: number } | null>(null);
   useEffect(() => {
     if (walkthroughActive) return;
+    const framingKey = [depthAmount, widthM, heightM, qualitySettings.fov, stackView, focusY, topStoryElev, wallHeightM, introFlyIn, dollhouseFraming, introView, introReplayKey].join('|');
+    const previousFraming = lastFramingRef.current;
+    lastFramingRef.current = { key: framingKey, aspect: viewportAspect };
+    if (
+      previousFraming
+      && previousFraming.key === framingKey
+      && previousFraming.aspect !== viewportAspect
+      && userTookControlRef.current
+    ) {
+      return;
+    }
     const isTopDown = depthAmount === 0;
     const tilt = (depthAmount / 100) * 55;
     const tiltRad = (tilt * Math.PI) / 180;
@@ -4131,6 +4183,29 @@ function SceneContent({
       }
     }
   }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM, viewportAspect, orbitControlsRef, introFlyIn, reduceMotion, dollhouseFraming, introView, introReplayKey]);
+
+  // Le déplacement latéral (deux doigts) reste libre mais la cible ne quitte pas les abords de la salle :
+  // on ne peut pas « perdre » la salle hors du cadre.
+  const clampOrbitTarget = useCallback((event?: { target?: unknown }) => {
+    const ctrl = event?.target as { target?: THREE.Vector3; object?: THREE.Camera } | undefined;
+    const target = ctrl?.target;
+    const orbitCamera = ctrl?.object;
+    if (!target || !orbitCamera) return;
+    const halfW = widthM / 2 + 2;
+    const halfD = heightM / 2 + 2;
+    const topY = focusY + wallHeightM + topStoryElev + 6;
+    const x = THREE.MathUtils.clamp(target.x, -halfW, halfW);
+    const y = THREE.MathUtils.clamp(target.y, -2, topY);
+    const z = THREE.MathUtils.clamp(target.z, -halfD, halfD);
+    const dx = x - target.x;
+    const dy = y - target.y;
+    const dz = z - target.z;
+    if (dx === 0 && dy === 0 && dz === 0) return;
+    target.set(x, y, z);
+    orbitCamera.position.x += dx;
+    orbitCamera.position.y += dy;
+    orbitCamera.position.z += dz;
+  }, [widthM, heightM, focusY, wallHeightM, topStoryElev]);
 
   const [dragSession, setDragSession] = React.useState<DragSession | null>(null);
 
@@ -4931,10 +5006,12 @@ function SceneContent({
         ref={orbitControlsRef as never}
         key={stackView ? `stack-${stories.length}-${focusY.toFixed(1)}` : 'floor'}
         enabled={!dragSession && !walkthroughActive && !avatarViewGuest}
-        enablePan={!wallEditMode && !lockOrbit && !dragSession && !presentationMode && !walkthroughActive}
+        enablePan={!wallEditMode && !lockOrbit && !dragSession && !walkthroughActive}
         enableRotate={(!wallEditMode && !lockOrbit && !dragSession && !walkthroughActive) || (presentationMode && !walkthroughActive)}
         enableZoom={!walkthroughActive}
-        autoRotate={presentationMode && !walkthroughActive && !avatarViewGuest && !reduceMotion && !filmActive && !introRunning && !introGlide}
+        onStart={markUserControl}
+        onChange={clampOrbitTarget}
+        autoRotate={presentationMode && !userTookControl && !walkthroughActive && !avatarViewGuest && !reduceMotion && !filmActive && !introRunning && !introGlide}
         autoRotateSpeed={0.55}
         maxPolarAngle={Math.PI / 2.05}
         minDistance={3}
@@ -6190,7 +6267,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       ) : film ? null : presentationMode ? (
         <div className="pointer-events-none absolute bottom-2 left-2">
           <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
-            Présentation · la salle tourne toute seule
+            Présentation · touchez la salle pour la piloter
           </div>
         </div>
       ) : qualitySettings.showHints ? (
