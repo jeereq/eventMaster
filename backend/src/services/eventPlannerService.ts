@@ -300,6 +300,9 @@ type MarketEstimateInfo = {
   channel?: 'web' | 'facebook' | 'instagram';
   /** false : prix publié automatiquement, pas encore relu par EventMaster. */
   adminReviewed?: boolean;
+  rationale?: string;
+  model?: string;
+  searchQueries?: string[];
   unitFc: number;
   quantity: number;
   /** Contrôle du coût : calcul, fourchette et fraîcheur de la référence. */
@@ -338,6 +341,9 @@ function marketInfo(stat: MarketPriceStat, priced: MarketEstimatePriced): Market
     ...(stat.sources?.length ? { sources: stat.sources } : {}),
     ...(stat.channel ? { channel: stat.channel } : {}),
     ...(stat.adminReviewed !== undefined ? { adminReviewed: stat.adminReviewed } : {}),
+    ...(stat.rationale ? { rationale: stat.rationale } : {}),
+    ...(stat.model ? { model: stat.model } : {}),
+    ...(stat.searchQueries?.length ? { searchQueries: stat.searchQueries } : {}),
     source: stat.source,
     unit: stat.unit,
     lowFc: stat.lowFc,

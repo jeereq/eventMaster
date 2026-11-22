@@ -334,8 +334,12 @@ export type PlanMarketEstimate = {
   city: string;
   sampleCount?: number;
   reviewedAt?: string | null;
-  /** Pages web d’où vient le prix (source « reference »). */
-  sources?: Array<{ title: string; url: string }>;
+  /** Pages d’où vient le prix (source « reference »), avec le prix relevé et la phrase qui le donne. */
+  sources?: Array<{ title: string; url: string; price?: string; excerpt?: string; date?: string }>;
+  /** Explication de l’IA, modèle utilisé et requêtes tapées dans le moteur de recherche. */
+  rationale?: string;
+  model?: string;
+  searchQueries?: string[];
   /** Canal d’une référence : web, Facebook ou Instagram. */
   channel?: 'web' | 'facebook' | 'instagram';
   /** false : prix publié automatiquement, pas encore relu par EventMaster. */

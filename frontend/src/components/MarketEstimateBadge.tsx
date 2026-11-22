@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AlertTriangle, CheckCircle2, ExternalLink, Globe, Users } from '@/components/icons';
+import { AlertTriangle, CheckCircle2, Globe, Users } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import type { PlanMarketEstimate } from '@/lib/eventPlan';
+import MarketResearchDetails from '@/components/MarketResearchDetails';
 
 /** Signale une ligne chiffrée hors marketplace, avec ses sources et le contrôle du coût. */
 export default function MarketEstimateBadge({ estimate }: { estimate: PlanMarketEstimate }) {
@@ -69,23 +70,13 @@ export default function MarketEstimateBadge({ estimate }: { estimate: PlanMarket
             </ul>
           ) : null}
           {web ? (
-            estimate.sources?.length ? (
-              <ul className="space-y-1">
-                {estimate.sources.map((source) => (
-                  <li key={source.url} className="min-w-0">
-                    <a
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      className="inline-flex max-w-full items-center gap-1 text-primary hover:underline"
-                    >
-                      <ExternalLink className="w-3 h-3 shrink-0" aria-hidden />
-                      <span className="truncate">{source.title}</span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : null
+            <MarketResearchDetails
+              rationale={estimate.rationale}
+              sources={estimate.sources}
+              searchQueries={estimate.searchQueries}
+              model={estimate.model}
+              foundAt={estimate.reviewedAt}
+            />
           ) : (
             <p className="text-muted">
               Médiane de {estimate.sampleCount || 0} réservations ou devis réels sur EventMaster{estimate.city ? ` à ${estimate.city}` : ''}.

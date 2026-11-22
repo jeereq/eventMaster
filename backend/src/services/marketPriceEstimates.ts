@@ -99,7 +99,7 @@ async function loadObservations(): Promise<MarketObservation[]> {
 async function loadReferences(): Promise<MarketReferenceRow[]> {
   return prisma.marketPriceReference.findMany({
     where: { status: 'APPROVED' },
-    select: { slot: true, city: true, unit: true, lowFc: true, typicalFc: true, highFc: true, reviewedAt: true, sources: true, source: true, reviewedById: true },
+    select: { slot: true, city: true, unit: true, lowFc: true, typicalFc: true, highFc: true, reviewedAt: true, sources: true, source: true, reviewedById: true, rationale: true, model: true, searchQueries: true },
     orderBy: { reviewedAt: 'desc' },
     take: 500,
   });

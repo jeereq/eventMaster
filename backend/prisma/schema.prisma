@@ -1773,6 +1773,8 @@ model MarketPriceReference {
   sources      Json?
   rationale    String?
   model        String?
+  /** Requêtes tapées par l’IA dans le moteur de recherche. */
+  searchQueries String[] @default([])
   proposedById String?
   reviewedById String?
   reviewedAt   DateTime?
