@@ -312,6 +312,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
         <MarketplaceBookingForm
           listingSlug={venue.slug}
           unavailableDates={venue.unavailableDates}
+          depositRate={venue.depositRate}
           bookedDates={venue.bookedDates}
           blockedDates={venue.blockedDates}
           priceFromFc={venue.priceFromFc}
@@ -327,6 +328,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
         <MarketplaceBookingForm
           offeringSlug={service.slug}
           unavailableDates={service.unavailableDates}
+          depositRate={service.depositRate}
           bookedDates={service.bookedDates}
           blockedDates={service.blockedDates}
           priceFromFc={service.promoActive && service.promoPriceFc != null ? service.promoPriceFc : service.priceFromFc}

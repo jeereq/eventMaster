@@ -517,6 +517,7 @@ export default function MarketplaceBookingsPanel({
     <div className="space-y-4">
       {!organizerView ? (
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {commissionPct > 0 || commissionDueFc > 0 ? (
         <div className="h-full flex flex-wrap items-center justify-between gap-3 border border-border rounded-[var(--radius-card)] bg-surface px-4 py-3">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-foreground">Commission marketplace à régler</p>
@@ -531,6 +532,7 @@ export default function MarketplaceBookingsPanel({
             ) : null}
           </div>
         </div>
+        ) : null}
         {canHandleAsVendor ? (
           <OnlineDepositSettings depositPct={depositPct} commissionPct={commissionPct} onSaved={onChanged} />
         ) : null}
@@ -1325,7 +1327,7 @@ export default function MarketplaceBookingsPanel({
               <div className="flex items-center justify-between text-xs pt-1 border-t border-primary/15">
                 <span className="font-semibold text-foreground flex items-center gap-1.5">
                   <Coins className="w-4 h-4 text-primary" />
-                  Acompte à verser ({Math.round(depositPct)} %) :
+                  Acompte à verser ({Math.round(depositModal.amountFc > 0 ? (depositModal.depositFc / depositModal.amountFc) * 100 : depositPct)} %) :
                 </span>
                 <span className="text-sm font-bold text-primary">{formatFc(depositModal.depositFc)}</span>
               </div>

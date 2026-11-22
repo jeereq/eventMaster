@@ -182,6 +182,7 @@ export default function MarketplaceServiceDetailPage() {
           <MarketplaceBookingForm
             offeringSlug={service.slug}
             unavailableDates={service.unavailableDates}
+            depositRate={service.depositRate}
             bookedDates={service.bookedDates}
             blockedDates={service.blockedDates}
             priceFromFc={service.promoActive && service.promoPriceFc != null ? service.promoPriceFc : service.priceFromFc}

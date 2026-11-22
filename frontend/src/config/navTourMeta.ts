@@ -184,7 +184,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-catalog-admin': {
     title: 'Catalogue',
     description:
-      'Modération des fiches salles, prestataires et matériel & équipements, devis, réservations, et file des commissions vendeur {commissionPercent} %.',
+      'Modération des fiches salles, prestataires et matériel & équipements, devis et réservations.',
     route: '/dashboard/admin/catalogue',
   },
   'nav-profile': {

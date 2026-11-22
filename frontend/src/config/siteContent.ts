@@ -109,7 +109,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-booking',
     question: 'Comment fonctionne la réservation et la commission marketplace ?',
     answer:
-      'Le professionnel accepte, vous versez l’acompte hors plateforme, il confirme : la date est bloquée. EventMaster n’encaisse pas l’acompte. Une commission de {commissionPercent} % (due par le vendeur) s’applique aux réservations confirmées. Si la location prévoit une livraison en supplément, ce montant est ajouté une seule fois au total, pas multiplié par les jours. Un prix promotionnel encore en cours remplace le tarif normal dans ce total.',
+      'Le professionnel accepte, vous versez l’acompte hors plateforme, il confirme : la date est bloquée. EventMaster n’encaisse pas l’acompte. Aucune commission n’est prélevée sur les réservations des salles et prestataires. Si la location prévoit une livraison en supplément, ce montant est ajouté une seule fois au total, pas multiplié par les jours. Un prix promotionnel encore en cours remplace le tarif normal dans ce total.',
   },
   {
     id: 'marketplace-drinks',

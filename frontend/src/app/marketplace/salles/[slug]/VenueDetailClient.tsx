@@ -182,6 +182,7 @@ export default function MarketplaceVenueDetailPage() {
           <MarketplaceBookingForm
             listingSlug={venue.slug}
             unavailableDates={venue.unavailableDates}
+            depositRate={venue.depositRate}
             bookedDates={venue.bookedDates}
             blockedDates={venue.blockedDates}
             priceFromFc={venue.priceFromFc}

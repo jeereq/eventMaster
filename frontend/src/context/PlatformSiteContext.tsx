@@ -102,7 +102,7 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   ticketPaymentProvider: 'flexpay_card',
   brandPrimary: '',
   brandAccent: '',
-  marketplaceCommissionRate: 0.08,
+  marketplaceCommissionRate: 0,
   marketplaceDepositRate: 0.3,
   marketplaceCommissionPercent: 8,
   marketplaceDepositPercent: 30,

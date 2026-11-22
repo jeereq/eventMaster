@@ -179,6 +179,8 @@ model Tenant {
   receivedReviews MarketplaceReview[] @relation("ReviewVendor")
   /** Le prestataire propose le paiement de l'acompte en ligne (FlexPay). Désactivé : acompte hors plateforme. */
   marketplaceOnlineDeposit Boolean @default(false)
+  /** Taux d'acompte propre au prestataire (0.05 à 0.9). Null : taux par défaut de la plateforme (30 %). */
+  marketplaceDepositRate   Float?
   /** Numéro Mobile Money (243…) sur lequel EventMaster reverse les acomptes payés en ligne. */
   marketplacePayoutPhone   String?
   marketplacePayoutHolder  String?
