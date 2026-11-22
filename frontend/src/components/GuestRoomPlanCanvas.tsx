@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getRoomOutlineClipPath, wallsFromRoomOutline, type RoomWallSegment } from '@/lib/roomLayoutUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
@@ -12,20 +12,16 @@ import {
 } from '@/lib/roomFloorUtils';
 import FloorDepthFrame from '@/components/FloorDepthFrame';
 import { getTableVisualStyle, getTableShapeLabel, getSeatCoordinates, planRotationScreenDeg, rotateSeatCoordinates } from '@/lib/tablePlanUtils';
-import {
-  getGuestTableMarkerSize,
-  GUEST_PLAN_LOGICAL_H,
-  GUEST_PLAN_LOGICAL_W,
-  logicalSizeFromPct,
-  pctToLogical,
-  resolveGuestTablePositions,
-} from '@/lib/guestPlanLayoutUtils';
+import { getGuestTableMarkerSize, resolveGuestTablePositions } from '@/lib/guestPlanLayoutUtils';
+import { isPlanRow, PLAN_ROW_SEAT_WIDTH_M, planRowLabelPoints, planRowSeatCode, planRowSeats, planRowShortLabel, type PlanRowSeat } from '@/lib/planRowSeats';
+import { isStandaloneChairPlan } from '@/lib/seatSelectionLayout';
+import GuestRowSeatStrip from '@/components/GuestRowSeatStrip';
 import FixtureRenderer from '@/components/FixtureRenderer';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import { PlanSceneControls, PlanZoomOverlay, usePlanFullscreen } from '@/components/PlanViewChrome';
 import { usePlanViewport } from '@/components/usePlanViewport';
-import { planFrameHeight, planMarkerBoost } from '@/lib/planViewport';
+import { planFrameHeight, planLogicalSize, planMarkerBoost } from '@/lib/planViewport';
 import { cn } from '@/lib/cn';
 import { MapPin } from '@/components/icons';
 import type { GuestPlanFixture, GuestRoomOutline, GuestTablePlanOverviewItem } from '@/app/rsvp/GuestTablePlanView';
@@ -74,6 +70,7 @@ function TableDetailPopover({
   const zone = table.pricingZoneId ? pricingZones?.find((z) => z.id === table.pricingZoneId) : null;
   const effectiveSeatIndex = typeof guestSeatIndex === 'number' ? guestSeatIndex : table.guestSeatIndex;
   const miniVisual = getTableVisualStyle(table.shape, true, table.tableColor, table.tableImageUrl);
+  const isRow = isPlanRow(table);
 
   return (
     <div className="absolute z-30 inset-2 sm:left-auto sm:w-72 flex flex-col justify-end pointer-events-none animate-fade-in" data-plan-table-card>
@@ -81,7 +78,7 @@ function TableDetailPopover({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="font-bold text-foreground text-xs truncate">{table.name}</p>
-            <p className="text-xs text-muted">{getTableShapeLabel(table.shape)} · {table.occupiedCount}/{table.capacity} places</p>
+            <p className="text-xs text-muted">{isRow ? 'Rang de fauteuils' : getTableShapeLabel(table.shape)} · {table.occupiedCount}/{table.capacity} places</p>
             {zone && (
               <span
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold mt-1 shadow-2xs"
@@ -117,13 +114,22 @@ function TableDetailPopover({
             </div>
             {typeof effectiveSeatIndex === 'number' && (
               <div className="flex items-center justify-between text-xs font-bold text-foreground bg-surface/90 px-2 py-1.5 rounded-lg border border-border">
-                <span>Siège réservé :</span>
+                <span>{isRow ? 'Fauteuil réservé :' : 'Siège réservé :'}</span>
                 <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-xs font-black shadow-xs">
-                  Siège n°{effectiveSeatIndex + 1}
+                  {isRow ? planRowSeatCode(table.name, table.rowMeta, effectiveSeatIndex) : `Siège n°${effectiveSeatIndex + 1}`}
                 </span>
               </div>
             )}
             {/* Schéma miniature de disposition des sièges */}
+            {isRow ? (
+              <GuestRowSeatStrip
+                name={table.name}
+                rowMeta={table.rowMeta}
+                capacity={table.capacity}
+                seatIndex={effectiveSeatIndex}
+                compact
+              />
+            ) : (
             <div className="relative w-36 h-28 mx-auto my-1 flex items-center justify-center">
               <div
                 className={`relative flex items-center justify-center font-bold text-xs text-center shadow-xs ${miniVisual.className}`}
@@ -159,12 +165,13 @@ function TableDetailPopover({
                 })}
               </div>
             </div>
+            )}
           </div>
         )}
 
         {guestNames && guestNames.length > 0 && (
           <div className="pt-1.5 border-t border-border">
-            <p className="text-xs font-semibold text-muted mb-1">Convives à cette table</p>
+            <p className="text-xs font-semibold text-muted mb-1">{isRow ? 'Spectateurs de ce rang' : 'Convives à cette table'}</p>
             <ul className="text-xs text-foreground space-y-1 max-h-32 overflow-y-auto">
               {guestNames.map((n, i) => (
                 <li key={i} className="truncate flex items-center gap-1.5">
@@ -203,6 +210,33 @@ export default function GuestRoomPlanCanvas({
   allowFullscreen = true,
   className = '',
 }: GuestRoomPlanCanvasProps) {
+  const widthM = canvasWidthM && canvasWidthM > 0 ? canvasWidthM : 20;
+  const heightM = canvasHeightM && canvasHeightM > 0 ? canvasHeightM : 16;
+  // Plan aux proportions réelles de la salle (une salle de cinéma tout en longueur n’est plus écrasée).
+  const L = useMemo(() => planLogicalSize(widthM, heightM, 1000), [widthM, heightM]);
+  const pctToLogical = useCallback((xPct: number, yPct: number) => ({ x: (xPct / 100) * L.w, y: (yPct / 100) * L.h }), [L]);
+  const logicalSizeFromPct = (wPct: number, hPct: number) => ({ w: (wPct / 100) * L.w, h: (hPct / 100) * L.h });
+
+  // Rangées de cinéma / d’amphithéâtre et chaises seules : fauteuils posés à leur vraie place,
+  // à l’échelle de la salle (et non plus dessinés comme des tables écartées les unes des autres).
+  const isSeatItem = (t: GuestTablePlanOverviewItem) => isPlanRow(t) || isStandaloneChairPlan(t.chairMeta);
+  const tableItems = useMemo(() => tables.filter((t) => !isSeatItem(t)), [tables]);
+  const seatItems = useMemo(() => tables.filter((t) => isSeatItem(t)), [tables]);
+  const seatLayouts = useMemo(() => {
+    const map = new Map<string, PlanRowSeat[]>();
+    for (const t of seatItems) {
+      map.set(
+        t.id,
+        isPlanRow(t)
+          ? planRowSeats(t, fixtures, widthM, heightM)
+          : [{ index: 0, xPct: t.x, yPct: t.y, rotDeg: planRotationScreenDeg(t.chairMeta?.rotation ?? t.rotation) }],
+      );
+    }
+    return map;
+  }, [seatItems, fixtures, widthM, heightM]);
+  const pxPerM = Math.min(L.w / widthM, L.h / heightM);
+  const seatPx = Math.max(6, Math.min(26, PLAN_ROW_SEAT_WIDTH_M * pxPerM));
+  const seatMaxZoom = seatItems.length > 0 ? Math.min(6, Math.max(2.4, 40 / seatPx)) : 2.4;
   const {
     bindFrame,
     box: frameBox,
@@ -213,7 +247,7 @@ export default function GuestRoomPlanCanvas({
     zoomOut,
     focusOn,
     fit,
-  } = usePlanViewport({ logicalW: GUEST_PLAN_LOGICAL_W, logicalH: GUEST_PLAN_LOGICAL_H });
+  } = usePlanViewport({ logicalW: L.w, logicalH: L.h, maxZoom: seatMaxZoom });
   const { expanded, setExpanded, panelRef } = usePlanFullscreen();
   const filling = fill || expanded;
   const [showWalls, setShowWalls] = useState(true);
@@ -237,11 +271,11 @@ export default function GuestRoomPlanCanvas({
   }, [walls, outline, openSpace]);
 
   const displayPositions = useMemo(
-    () => resolveGuestTablePositions(tables.map((t) => ({ id: t.id, x: t.x, y: t.y }))),
-    [tables],
+    () => resolveGuestTablePositions(tableItems.map((t) => ({ id: t.id, x: t.x, y: t.y }))),
+    [tableItems],
   );
 
-  const markerSize = getGuestTableMarkerSize(tables.length);
+  const markerSize = getGuestTableMarkerSize(tableItems.length);
 
   const guestTable = useMemo(
     () => tables.find((t) => t.isGuestTable || t.id === guestTableId),
@@ -257,11 +291,20 @@ export default function GuestRoomPlanCanvas({
       seatRadius * 2 + 24,
       { readableZoom: 1.1, max: 2.2 },
     ),
-    [zoom, displayPositions, seatRadius],
+    [zoom, displayPositions, seatRadius, pctToLogical],
   );
 
   const handleCenterOnGuestTable = () => {
     if (!guestTable) return;
+    const guestSeats = seatLayouts.get(guestTable.id);
+    if (guestSeats && guestSeats.length > 0) {
+      const idx = typeof guestSeatIndex === 'number' ? guestSeatIndex : guestTable.guestSeatIndex;
+      const seat = guestSeats[typeof idx === 'number' ? idx : Math.floor(guestSeats.length / 2)] ?? guestSeats[0];
+      setSelectedTableId(null);
+      const p = pctToLogical(seat.xPct, seat.yPct);
+      focusOn(p.x, p.y, Math.max(zoom, Math.min(seatMaxZoom, 30 / seatPx)));
+      return;
+    }
     const pos = displayPositions.get(guestTable.id) ?? { x: guestTable.x, y: guestTable.y };
     const logical = pctToLogical(pos.x, pos.y);
     // Assez près pour lire les numéros de siège, même sur un téléphone.
@@ -278,8 +321,9 @@ export default function GuestRoomPlanCanvas({
 
   const frameHeight = filling
     ? undefined
-    : planFrameHeight(frameBox.w, GUEST_PLAN_LOGICAL_W, GUEST_PLAN_LOGICAL_H, { min: 260, max: height, padding: 12 });
-  const pxPerMeter = (GUEST_PLAN_LOGICAL_W * zoom) / Math.max(1, canvasWidthM ?? 20);
+    : planFrameHeight(frameBox.w, L.w, L.h, { min: 260, max: height, padding: 12 });
+  const pxPerMeter = (L.w * zoom) / widthM;
+  const onlySeats = tableItems.length === 0 && seatItems.length > 0;
 
   const viewer = (
     <div
@@ -336,10 +380,10 @@ export default function GuestRoomPlanCanvas({
               <div
                 className="absolute pointer-events-none z-0 overflow-hidden"
                 style={{
-                  left: (outline.x / 100) * GUEST_PLAN_LOGICAL_W,
-                  top: (outline.y / 100) * GUEST_PLAN_LOGICAL_H,
-                  width: (outline.w / 100) * GUEST_PLAN_LOGICAL_W,
-                  height: (outline.h / 100) * GUEST_PLAN_LOGICAL_H,
+                  left: (outline.x / 100) * L.w,
+                  top: (outline.y / 100) * L.h,
+                  width: (outline.w / 100) * L.w,
+                  height: (outline.h / 100) * L.h,
                   border: `${outline.strokeWidth ?? 2}px solid ${outline.stroke ?? theme.roomOutline.stroke}`,
                   borderRadius: outline.shape === 'circle' ? '50%' : 8,
                   clipPath,
@@ -447,7 +491,29 @@ export default function GuestRoomPlanCanvas({
               );
             })}
 
-            {tables.map((table) => {
+            {seatItems.map((item) => {
+              const seats = seatLayouts.get(item.id) ?? [];
+              const isGuest = item.isGuestTable || item.id === guestTableId;
+              const mySeatIdx = isGuest
+                ? typeof guestSeatIndex === 'number' ? guestSeatIndex : item.guestSeatIndex
+                : undefined;
+              return (
+                <GuestPlanRowSeats
+                  key={item.id}
+                  item={item}
+                  seats={seats}
+                  labels={isPlanRow(item) ? planRowLabelPoints(seats, widthM, heightM) : []}
+                  seatPx={seatPx}
+                  toLogical={pctToLogical}
+                  isGuest={isGuest}
+                  isSelected={selectedTableId === item.id}
+                  mySeatIdx={mySeatIdx}
+                  onSelect={() => setSelectedTableId(selectedTableId === item.id ? null : item.id)}
+                />
+              );
+            })}
+
+            {tableItems.map((table) => {
               const pos = displayPositions.get(table.id) ?? { x: table.x, y: table.y };
               const logical = pctToLogical(pos.x, pos.y);
               const isGuest = table.isGuestTable || table.id === guestTableId;
@@ -624,8 +690,8 @@ export default function GuestRoomPlanCanvas({
               );
             })}
             <Room2DScaleCompass
-              widthM={canvasWidthM ?? 20}
-              heightM={canvasHeightM ?? 16}
+              widthM={widthM}
+              heightM={heightM}
               showGrid
               showLabels={false}
             />
@@ -666,13 +732,13 @@ export default function GuestRoomPlanCanvas({
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-full border-2 border-primary bg-primary/15" aria-hidden />
-          Votre table
+          {onlySeats ? 'Votre rang' : 'Votre table'}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-full border border-border bg-surface" aria-hidden />
-          Autres tables
+          {onlySeats ? 'Autres fauteuils' : 'Autres tables'}
         </span>
-        <span className="w-full text-center sm:w-auto">Touchez une table · pincez pour zoomer</span>
+        <span className="w-full text-center sm:w-auto">{onlySeats ? 'Touchez un rang' : 'Touchez une table'} · pincez pour zoomer</span>
       </div>
     </div>
   );
@@ -694,4 +760,135 @@ export default function GuestRoomPlanCanvas({
   }
 
   return viewer;
+}
+
+/**
+ * Rang de fauteuils (cinéma, amphithéâtre) ou chaise seule sur le plan invité : chaque fauteuil
+ * à sa vraie place, la lettre du rang aux deux bouts, la place de l’invité mise en évidence.
+ */
+function GuestPlanRowSeats({
+  item,
+  seats,
+  labels,
+  seatPx,
+  toLogical,
+  isGuest,
+  isSelected,
+  mySeatIdx,
+  onSelect,
+}: {
+  item: GuestTablePlanOverviewItem;
+  seats: PlanRowSeat[];
+  labels: Array<{ xPct: number; yPct: number }>;
+  seatPx: number;
+  toLogical: (xPct: number, yPct: number) => { x: number; y: number };
+  isGuest: boolean;
+  isSelected: boolean;
+  mySeatIdx?: number;
+  onSelect: () => void;
+}) {
+  const short = planRowShortLabel(item.name, item.rowMeta);
+  const strong = isGuest || isSelected;
+  const labelPx = Math.max(7, Math.round(seatPx * 0.6));
+  const mine = typeof mySeatIdx === 'number' ? seats[mySeatIdx] : undefined;
+  const myCode = typeof mySeatIdx === 'number' ? planRowSeatCode(item.name, item.rowMeta, mySeatIdx) : '';
+
+  return (
+    <>
+      {labels.map((p, i) => {
+        const pos = toLogical(p.xPct, p.yPct);
+        return (
+          <button
+            key={`label-${i}`}
+            type="button"
+            onClick={onSelect}
+            className={cn(
+              'absolute z-[12] flex items-center justify-center rounded-md font-extrabold leading-none tabular-nums shadow-2xs touch-manipulation',
+              strong ? 'bg-primary-solid text-primary-foreground' : 'bg-surface/90 text-foreground border border-border',
+            )}
+            style={{
+              left: pos.x,
+              top: pos.y,
+              minWidth: labelPx * 1.6,
+              height: labelPx * 1.6,
+              fontSize: labelPx,
+              padding: '0 3px',
+              transform: 'translate(-50%, -50%)',
+            }}
+            aria-label={`${item.name}${isGuest ? ' (votre rang)' : ''}, ${item.occupiedCount}/${item.capacity} places`}
+          >
+            {short}
+          </button>
+        );
+      })}
+      {seats.map((seat) => {
+        if (mine && seat.index === mine.index) return null;
+        const pos = toLogical(seat.xPct, seat.yPct);
+        return (
+          <button
+            key={seat.index}
+            type="button"
+            onClick={onSelect}
+            tabIndex={-1}
+            className={cn(
+              'absolute z-[11] flex items-center justify-center rounded-[28%] border font-bold leading-none tabular-nums',
+              strong
+                ? 'border-primary bg-surface text-foreground ring-1 ring-primary/40'
+                : 'border-border/80 bg-surface/85 text-foreground/60',
+            )}
+            style={{
+              left: pos.x,
+              top: pos.y,
+              width: seatPx,
+              height: seatPx,
+              fontSize: Math.max(5, Math.round(seatPx * 0.42)),
+              transform: 'translate(-50%, -50%)',
+            }}
+            title={isPlanRow(item) ? planRowSeatCode(item.name, item.rowMeta, seat.index) : item.name}
+            aria-hidden
+          >
+            <span aria-hidden className="pointer-events-none absolute inset-0" style={{ transform: `rotate(${seat.rotDeg}deg)` }}>
+              <span
+                className={cn('absolute left-[12%] right-[12%] rounded-full', strong ? 'bg-primary/60' : 'bg-foreground/25')}
+                style={{ top: -Math.max(1, seatPx * 0.1), height: Math.max(2, seatPx * 0.16) }}
+              />
+            </span>
+            {strong && seatPx >= 12 ? <span className="relative">{seat.index + 1}</span> : null}
+          </button>
+        );
+      })}
+      {mine ? (() => {
+        const pos = toLogical(mine.xPct, mine.yPct);
+        const size = Math.max(seatPx * 1.25, 14);
+        return (
+          <div
+            className="absolute z-30 flex items-center justify-center"
+            style={{ left: pos.x, top: pos.y, transform: 'translate(-50%, -50%)' }}
+          >
+            <span
+              className="animate-ping absolute rounded-full bg-emerald-400 opacity-75 motion-reduce:hidden"
+              style={{ width: size + 6, height: size + 6 }}
+            />
+            <button
+              type="button"
+              onClick={onSelect}
+              className="relative flex items-center justify-center rounded-[30%] border-2 border-white bg-primary-solid font-black text-primary-foreground shadow-lg shadow-primary/40 ring-4 ring-primary/60"
+              style={{ width: size, height: size, fontSize: Math.max(7, Math.round(size * 0.42)) }}
+              title={`Votre place exacte : ${myCode}`}
+              aria-label={`Votre fauteuil ${myCode}`}
+            >
+              {mine.index + 1}
+            </button>
+            <div className="em-seat-float pointer-events-none absolute left-1/2 z-40 flex -translate-x-1/2 flex-col items-center whitespace-nowrap" style={{ bottom: size / 2 + 8 }}>
+              <div className="flex items-center gap-1 rounded-full border border-white bg-primary-solid px-2 py-0.5 text-xs font-black text-primary-foreground shadow-md">
+                <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping motion-reduce:hidden" />
+                <span>Mon fauteuil · {myCode}</span>
+              </div>
+              <div className="-mt-0.5 h-1.5 w-1.5 rotate-45 border-b border-r border-white bg-primary-solid" />
+            </div>
+          </div>
+        );
+      })() : null}
+    </>
+  );
 }

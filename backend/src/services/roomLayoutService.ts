@@ -149,10 +149,26 @@ function emptySeats(capacity: number): Record<number, string | null> {
   return seats;
 }
 
-function rowSeatCode(rowName: string | undefined, index: number): string {
+/**
+ * Préfixe court d’un rang : « Rang A » → « A », « Gradin 2 — Rangée 3 » → « G2R3 ».
+ * (Avant, tous les rangs « Gradin … » donnaient « GRAD » : les fauteuils de tous les gradins
+ * portaient les mêmes codes.)
+ */
+function rowLabelPrefix(rowName: string | undefined): string {
   const raw = String(rowName || 'A').trim();
+  const tier = raw.match(/\b(?:gradin|niveau|balcon|tier)\s+([\p{L}\d]+)/iu)?.[1];
+  const row = raw.match(/\b(?:rang(?:ée|ee)?|row)\s+([\p{L}\d]+)/iu)?.[1];
+  if (tier && row) return `G${tier}R${row}`.toUpperCase().slice(0, 6);
+  if (row) return row.toUpperCase().slice(0, 4);
+  if (tier) return `G${tier}`.toUpperCase().slice(0, 4);
   const token = raw.replace(/^rang(ée)?\s+/i, '').split(/\s+/)[0] || 'A';
-  return `${token.slice(0, 4).toUpperCase()}${index + 1}`;
+  return token.slice(0, 4).toUpperCase();
+}
+
+function rowSeatCode(rowName: string | undefined, index: number): string {
+  const prefix = rowLabelPrefix(rowName);
+  // « G2R3-5 » plutôt que « G2R35 » quand le préfixe finit par un chiffre.
+  return /\d$/.test(prefix) ? `${prefix}-${index + 1}` : `${prefix}${index + 1}`;
 }
 
 function furnitureToPlanTable(item: Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'table' | 'row' | 'chair' }>) {

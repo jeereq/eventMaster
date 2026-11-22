@@ -11,7 +11,7 @@ import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import { getSeatCoordinates, getTableVisualStyle, planRotationScreenDeg, type TableSeatingSide, type TableShape } from '@/lib/tablePlanUtils';
-import { getRowSeatCoordinates2D } from '@/lib/roomAmphitheaterGeom';
+import { PLAN_ROW_SEAT_WIDTH_M, planRowLabelPoints, planRowSeats, planRowShortLabel } from '@/lib/planRowSeats';
 import {
   checkoutPlanShape,
   isStandaloneChairPlan,
@@ -134,6 +134,12 @@ export default function SeatSelectionPlanCanvas({
   // Le plan est dessiné à taille fixe (proportions réelles de la salle) puis ajusté au cadre :
   // sur un téléphone, la salle entière est visible au lieu de déborder de l’écran.
   const logical = useMemo(() => planLogicalSize(canvasWidthM, canvasHeightM, 900), [canvasWidthM, canvasHeightM]);
+  // Rangées de cinéma / d’amphithéâtre : fauteuils à l’échelle de la salle (taille en unités du plan).
+  const pxPerM = Math.min(logical.w / Math.max(1, canvasWidthM), logical.h / Math.max(1, canvasHeightM));
+  const rowSeatPx = Math.max(8, Math.min(30, PLAN_ROW_SEAT_WIDTH_M * pxPerM));
+  const hasRows = useMemo(() => seats.some((s) => isTheaterRowPlan(s.shape, s.rowMeta)), [seats]);
+  // Assez de zoom pour qu’un fauteuil fasse au moins ~36 px sous le doigt.
+  const rowMaxZoom = hasRows ? Math.min(6, Math.max(2, 36 / rowSeatPx)) : 2;
   const {
     bindFrame,
     box: frameBox,
@@ -144,7 +150,7 @@ export default function SeatSelectionPlanCanvas({
     zoomOut,
     focusOn,
     fit,
-  } = usePlanViewport({ logicalW: logical.w, logicalH: logical.h, maxZoom: 2 });
+  } = usePlanViewport({ logicalW: logical.w, logicalH: logical.h, maxZoom: rowMaxZoom });
   const [showWalls, setShowWalls] = useState(true);
   const { expanded, setExpanded, panelRef } = usePlanFullscreen();
 
@@ -195,9 +201,16 @@ export default function SeatSelectionPlanCanvas({
   }, [seats]);
 
   // De loin, les sièges sont trop petits pour le doigt : le premier toucher rapproche la table.
-  const zoomFirst = zoom < 0.62;
+  const tableZoomFirst = zoom < 0.62;
+  // Un fauteuil de rangée doit faire au moins ~22 px à l’écran pour être touché sans erreur.
+  const rowZoomFirst = zoom * rowSeatPx < 22;
+  const zoomFirst = hasRows ? rowZoomFirst : tableZoomFirst;
+  const rowFocusZoom = Math.min(rowMaxZoom, Math.max(1.05, 32 / rowSeatPx));
   const focusTable = (table: PlanTable) => {
     focusOn((table.x / 100) * logical.w, (table.y / 100) * logical.h, 1.05);
+  };
+  const focusPoint = (xPct: number, yPct: number) => {
+    focusOn((xPct / 100) * logical.w, (yPct / 100) * logical.h, rowFocusZoom);
   };
   const frameHeight = expanded
     ? undefined
@@ -208,7 +221,11 @@ export default function SeatSelectionPlanCanvas({
     <div className={cn('space-y-2', expanded && 'flex h-full min-h-0 flex-col p-3', className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="min-w-0 flex-1 text-xs text-muted" aria-live="polite">
-          {zoomFirst ? 'Touchez une table pour la rapprocher, puis choisissez un siège libre' : 'Touchez un siège libre sur le plan'}
+          {zoomFirst
+            ? hasRows
+              ? 'Touchez un rang pour le rapprocher, puis choisissez un fauteuil libre'
+              : 'Touchez une table pour la rapprocher, puis choisissez un siège libre'
+            : 'Touchez un siège libre sur le plan'}
         </p>
         <PlanSceneControls
           showWalls={showWalls}
@@ -348,6 +365,28 @@ export default function SeatSelectionPlanCanvas({
             const zoneColor = table.pricingZoneId ? zoneColorById?.get(table.pricingZoneId) : undefined;
             const isRow = isTheaterRowPlan(table.shape, table.rowMeta);
             const isChair = isStandaloneChairPlan(table.chairMeta);
+            if (isRow && !isChair) {
+              return (
+                <PlanRowSeats
+                  key={table.id}
+                  table={table}
+                  fixtures={fixtures}
+                  widthM={canvasWidthM}
+                  heightM={canvasHeightM}
+                  seatPx={rowSeatPx}
+                  zoomFirst={rowZoomFirst}
+                  highlighted={Boolean(tableHasSelection || isFocused)}
+                  zoneColor={zoneColor}
+                  zoneColorById={zoneColorById}
+                  showZonePricing={showZonePricing}
+                  isSeatSelected={isSeatSelected}
+                  getSeatBadge={getSeatBadge}
+                  onFocusPoint={focusPoint}
+                  onSelectTable={onSelectTable}
+                  onSelect={onSelect}
+                />
+              );
+            }
             const visual = getTableVisualStyle(table.shape, Boolean(tableHasSelection || isFocused), undefined);
             const availableSeatsCount = table.seats.filter((s) => s.available).length;
             // Même sens de rotation que la vue 3D ; une chaise seule s’oriente via son dossier.
@@ -368,7 +407,7 @@ export default function SeatSelectionPlanCanvas({
                   role="button"
                   tabIndex={0}
                   onClick={() => {
-                    if (zoomFirst) focusTable(table);
+                    if (tableZoomFirst) focusTable(table);
                     onSelectTable?.(table.id);
                   }}
                   onKeyDown={(e) => {
@@ -380,13 +419,12 @@ export default function SeatSelectionPlanCanvas({
                   className={cn(
                     'relative flex items-center justify-center text-center cursor-pointer transition-shadow',
                     isChair && 'min-w-10 min-h-10 rounded-full bg-transparent border-0',
-                    isRow && !isChair && 'min-w-[7.5rem] min-h-8 rounded-full bg-surface/90 border border-border px-2',
-                    !isRow && !isChair && visual.className,
+                    !isChair && visual.className,
                     tableHasSelection && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
                     isFocused && !tableHasSelection && 'ring-2 ring-amber-500 ring-offset-1 ring-offset-background',
                   )}
                   style={{
-                    ...(isRow || isChair ? {} : visual.style),
+                    ...(isChair ? {} : visual.style),
                     ...(screenRot ? { transform: `rotate(${screenRot}deg)` } : {}),
                   }}
                   title={`${table.name} (${availableSeatsCount}/${table.capacity} places libres)`}
@@ -410,9 +448,7 @@ export default function SeatSelectionPlanCanvas({
                   {table.seats.map((seat) => {
                     const coords = isChair
                       ? { x: 0, y: 0, rotationDeg: planRotationScreenDeg(table.chairMeta?.rotation) }
-                      : isTheaterRowPlan(table.shape, table.rowMeta)
-                        ? getRowSeatCoordinates2D(table.capacity, seat.seatIndex, table.rowMeta)
-                        : getSeatCoordinates(table.shape, table.capacity, seat.seatIndex, undefined, table.seatingSide);
+                      : getSeatCoordinates(table.shape, table.capacity, seat.seatIndex, undefined, table.seatingSide);
                     const isSelected = isSeatSelected(seat.tableId, seat.seatIndex);
                     const badge = getSeatBadge(seat.tableId, seat.seatIndex);
                     const seatZoneColor = seat.pricingZoneId ? zoneColorById?.get(seat.pricingZoneId) : zoneColor;
@@ -424,7 +460,7 @@ export default function SeatSelectionPlanCanvas({
                         disabled={!seat.available}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (zoomFirst) {
+                          if (tableZoomFirst) {
                             focusTable(table);
                             onSelectTable?.(seat.tableId);
                             return;
@@ -543,4 +579,161 @@ export default function SeatSelectionPlanCanvas({
   }
 
   return viewer;
+}
+
+/**
+ * Rangée de cinéma / d’amphithéâtre : chaque fauteuil à sa vraie place (courbure, allée,
+ * orientation vers l’écran ou la scène), à l’échelle de la salle, avec la lettre du rang aux deux bouts.
+ */
+function PlanRowSeats({
+  table,
+  fixtures,
+  widthM,
+  heightM,
+  seatPx,
+  zoomFirst,
+  highlighted,
+  zoneColor,
+  zoneColorById,
+  showZonePricing,
+  isSeatSelected,
+  getSeatBadge,
+  onFocusPoint,
+  onSelectTable,
+  onSelect,
+}: {
+  table: PlanTable;
+  fixtures?: PlanFixture[] | null;
+  widthM: number;
+  heightM: number;
+  seatPx: number;
+  zoomFirst: boolean;
+  highlighted: boolean;
+  zoneColor?: string;
+  zoneColorById?: Map<string, string>;
+  showZonePricing: boolean;
+  isSeatSelected: (tableId: string, seatIndex: number) => boolean;
+  getSeatBadge: (tableId: string, seatIndex: number) => number | null;
+  onFocusPoint: (xPct: number, yPct: number) => void;
+  onSelectTable?: (tableId: string) => void;
+  onSelect: (tableId: string, seatIndex: number) => void;
+}) {
+  const layout = useMemo(
+    () => planRowSeats(table, fixtures, widthM, heightM),
+    [table, fixtures, widthM, heightM],
+  );
+  const labels = useMemo(() => planRowLabelPoints(layout, widthM, heightM), [layout, widthM, heightM]);
+  const short = planRowShortLabel(table.name, table.rowMeta);
+  const available = table.seats.filter((s) => s.available).length;
+  const fontPx = Math.max(5, Math.round(seatPx * 0.42));
+  const labelPx = Math.max(7, Math.round(seatPx * 0.55));
+  const focusRow = () => {
+    const mid = layout[Math.floor(layout.length / 2)];
+    if (mid) onFocusPoint(mid.xPct, mid.yPct);
+    onSelectTable?.(table.id);
+  };
+
+  return (
+    <>
+      {labels.map((p, i) => (
+        <button
+          key={`label-${i}`}
+          type="button"
+          onClick={focusRow}
+          className={cn(
+            'absolute z-[15] flex items-center justify-center rounded-md font-extrabold leading-none tabular-nums shadow-2xs touch-manipulation',
+            highlighted ? 'bg-primary-solid text-primary-foreground' : 'bg-surface/90 text-foreground border border-border',
+          )}
+          style={{
+            left: `${p.xPct}%`,
+            top: `${p.yPct}%`,
+            minWidth: labelPx * 1.6,
+            height: labelPx * 1.6,
+            fontSize: labelPx,
+            padding: '0 3px',
+            transform: 'translate(-50%, -50%)',
+          }}
+          title={`${table.name} (${available}/${table.capacity} places libres)`}
+          aria-label={`${table.name}, ${available} places libres sur ${table.capacity}`}
+        >
+          {short}
+        </button>
+      ))}
+      {table.seats.map((seat) => {
+        const pos = layout[seat.seatIndex];
+        if (!pos) return null;
+        const isSelected = isSeatSelected(seat.tableId, seat.seatIndex);
+        const badge = getSeatBadge(seat.tableId, seat.seatIndex);
+        const seatZoneColor = seat.pricingZoneId ? zoneColorById?.get(seat.pricingZoneId) : zoneColor;
+        const code = seat.seatCode || `${short}${seat.seatIndex + 1}`;
+        return (
+          <button
+            key={seat.seatIndex}
+            type="button"
+            disabled={!seat.available && !zoomFirst}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (zoomFirst) {
+                onFocusPoint(pos.xPct, pos.yPct);
+                onSelectTable?.(seat.tableId);
+                return;
+              }
+              if (seat.available) {
+                onSelectTable?.(seat.tableId);
+                onSelect(seat.tableId, seat.seatIndex);
+              }
+            }}
+            style={{
+              left: `${pos.xPct}%`,
+              top: `${pos.yPct}%`,
+              width: seatPx,
+              height: seatPx,
+              fontSize: fontPx,
+              transform: `translate(-50%, -50%)${isSelected ? ' scale(1.12)' : ''}`,
+              ...(seatZoneColor && !isSelected ? { borderColor: seatZoneColor, boxShadow: `0 0 0 1px ${seatZoneColor}55` } : {}),
+            }}
+            className={cn(
+              'absolute z-20 flex items-center justify-center rounded-[28%] border font-bold leading-none tabular-nums transition touch-manipulation',
+              !seat.available && 'cursor-not-allowed bg-muted text-muted border-border opacity-40',
+              seat.available && !isSelected && 'bg-surface hover:bg-primary/10 hover:border-primary cursor-pointer border-border text-foreground',
+              isSelected && 'z-[21] bg-primary-solid text-primary-foreground border-primary-solid shadow-md font-extrabold ring-2 ring-primary-solid/40',
+              seat.isPmr && 'ring-1 ring-sky-500/70',
+            )}
+            title={
+              seat.available
+                ? `${code}${seat.isPmr ? ' · PMR' : ''}${seat.pricingZoneName ? ` · ${seat.pricingZoneName}` : ''}${showZonePricing && seat.priceFc ? ` · ${formatFc(seat.priceFc)}` : ''}${isSelected ? ' (Sélectionné — cliquer pour retirer)' : ''}`
+                : `${code} · Occupé`
+            }
+            aria-label={seat.available ? `Fauteuil ${code}${isSelected ? ', sélectionné' : ''}` : `Fauteuil ${code}, occupé`}
+          >
+            {/* Dossier : du côté opposé à l’écran / la scène, comme sur la vue 3D. */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{ transform: `rotate(${pos.rotDeg}deg)` }}
+            >
+              <span
+                className="absolute left-[12%] right-[12%] rounded-full"
+                style={{
+                  top: -Math.max(1, seatPx * 0.1),
+                  height: Math.max(2, seatPx * 0.16),
+                  backgroundColor: isSelected ? 'var(--primary)' : (seatZoneColor || '#94a3b8'),
+                  opacity: seat.available ? 0.9 : 0.4,
+                }}
+              />
+            </span>
+            <span className="relative z-10">{seat.seatIndex + 1}</span>
+            {badge != null && (
+              <span
+                className="absolute -top-1 -right-1 z-20 flex items-center justify-center rounded-full border border-white bg-emerald-500 font-black text-white"
+                style={{ width: Math.max(8, seatPx * 0.5), height: Math.max(8, seatPx * 0.5), fontSize: Math.max(5, seatPx * 0.3) }}
+              >
+                {badge}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </>
+  );
 }
