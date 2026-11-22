@@ -1751,3 +1751,32 @@ model MarketplaceCommissionPayment {
   @@index([vendorTenantId, status])
   @@index([status, createdAt])
 }
+
+/**
+ * Prix du marché hors catalogue, trouvés sur le web par l’IA puis validés par un Super Admin.
+ * Le simulateur de budget s’en sert quand la marketplace n’a aucune offre pour une ligne.
+ * slot : « venue » pour la salle, sinon une catégorie ServiceCategory. city vide : toutes villes.
+ */
+model MarketPriceReference {
+  id           String    @id @default(uuid())
+  slot         String
+  city         String    @default("")
+  /** EVENT (forfait) ou PERSON (par invité) */
+  unit         String    @default("EVENT")
+  lowFc        Int
+  typicalFc    Int
+  highFc       Int
+  /** PROPOSED, APPROVED, REJECTED ou REPLACED */
+  status       String    @default("PROPOSED")
+  source       String    @default("ai_web")
+  sources      Json?
+  rationale    String?
+  model        String?
+  proposedById String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status, slot, city])
+}
