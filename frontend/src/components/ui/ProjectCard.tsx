@@ -140,7 +140,30 @@ export interface ProjectCardProps {
   className?: string;
   /** Classes du bandeau visuel en grille (ex. ratio plus bas pour les listes d’administration). */
   coverClassName?: string;
+  /** Case de sélection (suppression groupée…) — la carte reste cliquable à côté. */
+  selection?: { checked: boolean; onToggle: () => void; label: string };
   children?: React.ReactNode;
+}
+
+function SelectionBox({ selection, className }: { selection: NonNullable<ProjectCardProps['selection']>; className?: string }) {
+  return (
+    <label
+      className={cn(
+        'inline-flex min-h-11 min-w-11 items-center justify-center cursor-pointer touch-manipulation',
+        className,
+      )}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      <input
+        type="checkbox"
+        checked={selection.checked}
+        onChange={selection.onToggle}
+        aria-label={selection.label}
+        className="h-5 w-5 rounded border-border accent-primary cursor-pointer"
+      />
+    </label>
+  );
 }
 
 function MediaFallback({
@@ -201,6 +224,7 @@ export function ProjectCard({
   layout = 'grid',
   className,
   coverClassName,
+  selection,
   children,
 }: ProjectCardProps) {
   const stripe = accentColor ?? accentFromId(id);
@@ -247,8 +271,10 @@ export function ProjectCard({
             'p-2.5 sm:p-3',
             'shadow-[var(--shadow-soft)] hover:border-primary/35 hover:shadow-[var(--shadow-soft)] transition',
             interactive && 'cursor-pointer',
+            selection?.checked && 'border-primary ring-2 ring-primary/30',
           )}
         >
+          {selection ? <SelectionBox selection={selection} className="-mr-2 sm:-mr-3 shrink-0" /> : null}
           <div className="w-14 h-14 min-[380px]:w-20 min-[380px]:h-16 sm:w-28 sm:h-20 rounded-md overflow-hidden bg-surface-muted shrink-0">
             {coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -330,6 +356,7 @@ export function ProjectCard({
         'group relative flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface',
         CARD_HOVER,
         interactive && 'cursor-pointer',
+        selection?.checked && 'border-primary ring-2 ring-primary/40',
         className,
       )}
     >
@@ -342,6 +369,12 @@ export function ProjectCard({
               {overlayBadge}
             </span>
           </div>
+        ) : null}
+        {selection ? (
+          <SelectionBox
+            selection={selection}
+            className="absolute top-1 right-1 z-20 rounded-lg bg-white/90 dark:bg-surface/90 shadow-sm"
+          />
         ) : null}
         <div className="absolute left-3 right-3 bottom-2.5 text-white z-10">
           <p className="font-display font-semibold text-sm leading-snug line-clamp-2 drop-shadow">{title}</p>

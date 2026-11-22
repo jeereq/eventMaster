@@ -23,6 +23,7 @@ import {
   listStackClass,
 } from '@/components/ui';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
+import { AdminBulkDeleteBar, cardSelection, useBulkSelection } from '@/components/admin/AdminBulkDelete';
 import { CatalogueChoicePills, CatalogueFilterField } from '@/components/CatalogueFilterBar';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
 import useIsMobile from '@/hooks/useIsMobile';
@@ -101,6 +102,9 @@ export default function AdminGuestsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [notice, setNotice] = useState('');
+  const bulk = useBulkSelection();
+  const canBulkDelete = user?.role === 'SUPER_ADMIN';
   const {
     mode: viewMode,
     setViewMode,
@@ -183,11 +187,15 @@ export default function AdminGuestsPage() {
     setDeleting(true);
     try {
       await api.delete(`/admin/guests/${pendingDelete.id}`);
+      bulk.remove([pendingDelete.id]);
       setPendingDelete(null);
+      setError('');
+      setNotice(`Invité « ${pendingDelete.name} » supprimé.`);
       await load();
     } catch (err: unknown) {
       setPendingDelete(null);
-      alert(err instanceof Error ? err.message : 'Erreur lors de la suppression.');
+      setNotice('');
+      setError(err instanceof Error ? err.message : 'Erreur lors de la suppression.');
     } finally {
       setDeleting(false);
     }
@@ -242,6 +250,7 @@ export default function AdminGuestsPage() {
       />
 
       {error && <Alert variant="error">{error}</Alert>}
+      {notice && <Alert variant="success">{notice}</Alert>}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -329,6 +338,20 @@ export default function AdminGuestsPage() {
           description="Aucun invité ne correspond à ces critères."
         />
       ) : (
+        <div className="space-y-3">
+        {canBulkDelete && (
+          <AdminBulkDeleteBar
+            type="guest"
+            selection={bulk}
+            visibleIds={items.map((it) => it.id)}
+            onError={(m) => { setNotice(''); setError(m); }}
+            onNotice={(m) => { setError(''); setNotice(m); }}
+            onDeleted={async () => {
+              if (isMobile) setPage(1);
+              await load();
+            }}
+          />
+        )}
         <div className={viewMode === 'grid' ? gridClassName : listStackClass}>
           {items.map((g) => {
             const rsvpTone = g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber';
@@ -346,6 +369,7 @@ export default function AdminGuestsPage() {
               <ProjectCard
                 key={g.id}
                 id={g.id}
+                selection={canBulkDelete ? cardSelection(bulk, g.id, `${g.firstName} ${g.lastName}`) : undefined}
                 title={`${g.lastName} ${g.firstName}`}
                 layout={viewMode}
                 icon={<Users className="w-4 h-4" />}
@@ -410,6 +434,7 @@ export default function AdminGuestsPage() {
               />
             );
           })}
+        </div>
         </div>
       )}
 

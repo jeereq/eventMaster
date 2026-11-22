@@ -34,6 +34,7 @@ import { PLAN_IDS, planAudienceLabel, isB2cPlanId, durationDaysForPlan, duration
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
+import { AdminBulkDeleteBar, cardSelection, useBulkSelection } from '@/components/admin/AdminBulkDelete';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import AdminOpsHome from '@/components/admin/AdminOpsHome';
 import AdminPlatformSettings from '@/components/admin/AdminPlatformSettings';
@@ -631,6 +632,9 @@ function DashboardPageContent() {
  const [modalApprovedAmount, setModalApprovedAmount] = useState('');
  const [updatingTenant, setUpdatingTenant] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<PendingAdminConfirm | null>(null);
+  const tenantsBulk = useBulkSelection();
+  const usersBulk = useBulkSelection();
+  const templatesBulk = useBulkSelection();
   const [confirmBusy, setConfirmBusy] = useState(false);
 
  // User CRUD Modals states
@@ -2117,6 +2121,17 @@ function DashboardPageContent() {
                         description="Aucune organisation."
               />
  ) : (
+ <>
+ {user?.role === 'SUPER_ADMIN' && (
+ <AdminBulkDeleteBar
+ type="tenant"
+ selection={tenantsBulk}
+ visibleIds={paginatedTenants.map((t) => t.id)}
+ onError={(m) => { setNotice(''); setError(m); }}
+ onNotice={(m) => { setError(''); setNotice(m); }}
+ onDeleted={async () => { await refreshStats(); }}
+ />
+ )}
  <div
  className={
  tenantsViewMode === 'grid'
@@ -2216,6 +2231,7 @@ function DashboardPageContent() {
  id={t.id}
  title={t.name}
  layout={tenantsViewMode}
+ selection={user?.role === 'SUPER_ADMIN' ? cardSelection(tenantsBulk, t.id, t.name) : undefined}
  icon={<Building2 className="w-4 h-4" />}
  badge={planChip}
  overlayMeta={t.managerName || t.managerEmail || 'Sans gérant'}
@@ -2277,6 +2293,7 @@ function DashboardPageContent() {
  );
  })}
  </div>
+ </>
  )}
 
  <Pagination
@@ -2303,6 +2320,16 @@ function DashboardPageContent() {
               />
  ) : (
  <>
+ {user?.role === 'SUPER_ADMIN' && (
+ <AdminBulkDeleteBar
+ type="user"
+ selection={usersBulk}
+ visibleIds={paginatedUsers.filter((u) => u.id !== user?.id).map((u) => u.id)}
+ onError={(m) => { setNotice(''); setError(m); }}
+ onNotice={(m) => { setError(''); setNotice(m); }}
+ onDeleted={async () => { await loadUsers(); }}
+ />
+ )}
  <div
  className={
  usersViewMode === 'grid' ? usersGridClass : listStackClass
@@ -2394,6 +2421,7 @@ function DashboardPageContent() {
  id={u.id}
  title={u.name || 'Sans nom'}
  layout={usersViewMode}
+ selection={user?.role === 'SUPER_ADMIN' && u.id !== user?.id ? cardSelection(usersBulk, u.id, u.email) : undefined}
  icon={<Users className="w-4 h-4" />}
  badge={roleChip}
  overlayMeta={u.email}
@@ -2538,6 +2566,16 @@ function DashboardPageContent() {
  <SkeletonTabContent mode="grid" count={6} columns={3} />
  ) : (
  <>
+ {user?.role === 'SUPER_ADMIN' && (
+ <AdminBulkDeleteBar
+ type="template"
+ selection={templatesBulk}
+ visibleIds={paginatedTemplates.map((t) => t.id)}
+ onError={(m) => { setNotice(''); setError(m); }}
+ onNotice={(m) => { setError(''); setNotice(m); }}
+ onDeleted={async () => { await loadTemplates(); }}
+ />
+ )}
  <TemplateCardGrid
  templates={paginatedTemplates.map((t) => ({
  id: t.id,
@@ -2564,6 +2602,8 @@ function DashboardPageContent() {
  onViewDetails={(t) => handleOpenDetailsModal('template', paginatedTemplates.find((x) => x.id === t.id))}
  onDuplicate={(t) => handleDuplicateAdminTemplate(paginatedTemplates.find((x) => x.id === t.id))}
                             onDelete={(id, name) => setPendingConfirm({ kind: 'delete-template', id, label: name })}
+ isSelected={user?.role === 'SUPER_ADMIN' ? templatesBulk.has : undefined}
+ onToggleSelect={user?.role === 'SUPER_ADMIN' ? templatesBulk.toggle : undefined}
  onToggleLanding={handleToggleTemplateLanding}
  />
 
@@ -4211,6 +4251,9 @@ function DashboardPageContent() {
                 await handleDeleteEvent(pendingConfirm.id);
               } else if (pendingConfirm.kind === 'delete-guest') {
                 await handleDeleteGuest(pendingConfirm.id);
+              }
+              if (pendingConfirm.kind !== 'reject-sub') {
+                for (const sel of [tenantsBulk, usersBulk, templatesBulk]) sel.remove([pendingConfirm.id]);
               }
               setPendingConfirm(null);
             } catch {

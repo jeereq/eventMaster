@@ -24,6 +24,7 @@ import {
   OverflowMenu,
 } from '@/components/ui';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
+import { AdminBulkDeleteBar, cardSelection, useBulkSelection } from '@/components/admin/AdminBulkDelete';
 import { CatalogueChoicePills, CatalogueFilterField } from '@/components/CatalogueFilterBar';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
 import { formatFc } from '@/config/landingPricing';
@@ -88,6 +89,9 @@ export default function AdminEventsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [notice, setNotice] = useState('');
+  const bulk = useBulkSelection();
+  const canBulkDelete = user?.role === 'SUPER_ADMIN';
   const {
     mode: viewMode,
     setViewMode,
@@ -162,11 +166,15 @@ export default function AdminEventsPage() {
     setDeleting(true);
     try {
       await api.delete(`/admin/events/${pendingDelete.id}`);
+      bulk.remove([pendingDelete.id]);
       setPendingDelete(null);
+      setError('');
+      setNotice(`Événement « ${pendingDelete.title} » supprimé.`);
       await load();
     } catch (err: unknown) {
       setPendingDelete(null);
-      alert(err instanceof Error ? err.message : 'Erreur lors de la suppression.');
+      setNotice('');
+      setError(err instanceof Error ? err.message : 'Erreur lors de la suppression.');
     } finally {
       setDeleting(false);
     }
@@ -214,6 +222,7 @@ export default function AdminEventsPage() {
     <div className="space-y-6 w-full">
 
       {error && <Alert variant="error">{error}</Alert>}
+      {notice && <Alert variant="success">{notice}</Alert>}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -296,6 +305,20 @@ export default function AdminEventsPage() {
           description="Aucun événement ne correspond à ces filtres."
         />
       ) : (
+        <div className="space-y-3">
+        {canBulkDelete && (
+          <AdminBulkDeleteBar
+            type="event"
+            selection={bulk}
+            visibleIds={items.map((it) => it.id)}
+            onError={(m) => { setNotice(''); setError(m); }}
+            onNotice={(m) => { setError(''); setNotice(m); }}
+            onDeleted={async () => {
+              if (isMobile) setPage(1);
+              await load();
+            }}
+          />
+        )}
         <div className={viewMode === 'grid' ? gridClassName : listStackClass}>
           {items.map((e) => {
             const dateLabel = new Date(e.date).toLocaleDateString('fr-FR', {
@@ -324,6 +347,7 @@ export default function AdminEventsPage() {
               <ProjectCard
                 key={e.id}
                 id={e.id}
+                selection={canBulkDelete ? cardSelection(bulk, e.id, e.title) : undefined}
                 title={e.title}
                 layout={viewMode}
                 icon={<Calendar className="w-4 h-4" />}
@@ -406,6 +430,7 @@ export default function AdminEventsPage() {
               />
             );
           })}
+        </div>
         </div>
       )}
 
