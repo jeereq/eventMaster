@@ -3,6 +3,7 @@ import { defaultMarketUnit, type MarketPriceUnit } from './marketPriceStats.ts';
 /** Plafond de sécurité : au-delà, la réponse de l’IA est jugée aberrante. */
 const MAX_PRICE_FC = 5_000_000_000;
 const MAX_SOURCES = 8;
+const MAX_SPREAD = 20;
 
 export type ResearchSource = { title: string; url: string };
 
@@ -69,6 +70,8 @@ export function sanitizeResearchProposals(
     if (!known.length) continue;
     const lowFc = known[0];
     const highFc = known[known.length - 1];
+    // Une fourchette trop large (haut > 20 × bas) mélange des prestations différentes : on l’écarte.
+    if (highFc > lowFc * MAX_SPREAD) continue;
     // Trois montants : on les remet dans l’ordre. Sinon le typique manquant devient le milieu de la fourchette.
     const typicalRaw = values[1];
     const typicalFc = known.length === 3
@@ -95,10 +98,16 @@ export function sanitizeResearchProposals(
   return proposals;
 }
 
-const FACEBOOK_HOST = /(^|\.)(facebook\.com|fb\.com|fb\.me)$/i;
+const SOCIAL_HOSTS: Record<'facebook' | 'instagram', RegExp> = {
+  facebook: /(^|\.)(facebook\.com|fb\.com|fb\.me)$/i,
+  instagram: /(^|\.)(instagram\.com|instagr\.am)$/i,
+};
 
-/** Pour une recherche Facebook, ne garde que les liens vers facebook.com (ou un titre qui le cite, pour les liens de redirection de la recherche). */
-export function keepFacebookSources(sources: ResearchSource[]): ResearchSource[] {
+/**
+ * Pour une recherche sur un réseau social, ne garde que les liens vers ce réseau
+ * (ou, pour les liens de redirection de la recherche Google, un titre qui cite le réseau).
+ */
+export function keepSocialSources(sources: ResearchSource[], network: 'facebook' | 'instagram'): ResearchSource[] {
   return sources.filter((source) => {
     let host = '';
     try {
@@ -106,8 +115,21 @@ export function keepFacebookSources(sources: ResearchSource[]): ResearchSource[]
     } catch {
       return false;
     }
-    if (FACEBOOK_HOST.test(host)) return true;
+    if (SOCIAL_HOSTS[network].test(host)) return true;
     // Les sources de la recherche Google passent par un lien de redirection : on se fie alors au titre (le domaine).
-    return host === 'vertexaisearch.cloud.google.com' && /facebook/i.test(source.title);
+    return host === 'vertexaisearch.cloud.google.com' && new RegExp(network, 'i').test(source.title);
   });
+}
+
+export function keepFacebookSources(sources: ResearchSource[]): ResearchSource[] {
+  return keepSocialSources(sources, 'facebook');
+}
+
+/**
+ * Fusionne deux séries de propositions : la première l’emporte ligne par ligne,
+ * la seconde complète les lignes manquantes.
+ */
+export function mergeProposals(primary: ResearchProposal[], extra: ResearchProposal[]): ResearchProposal[] {
+  const seen = new Set(primary.map((item) => item.slot));
+  return [...primary, ...extra.filter((item) => !seen.has(item.slot))];
 }

@@ -9,7 +9,7 @@ import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, 
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
 import { requestOpenAiJson } from './openaiJsonClient.ts';
 import { buildEventPlanProposals } from './eventPlannerService';
-import { parsePriceSource } from './marketPriceStats.ts';
+import { channelPlace, isReferenceChannel, parsePriceSource } from './marketPriceStats.ts';
 
 const HOLD_BOOKING_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
 const RATE_WINDOW_MS = 60_000;
@@ -470,7 +470,7 @@ async function externalSourcePlan(
       id: pack.id as EventPlanAiStyleId,
       label: pack.label,
       blurb: pack.blurb,
-      summary: `${services.length + (pack.venue ? 1 : 0)} ligne${services.length + (pack.venue ? 1 : 0) > 1 ? 's' : ''} chiffrée${services.length + (pack.venue ? 1 : 0) > 1 ? 's' : ''} avec les prix ${plan.priceSource === 'facebook' ? 'Facebook' : 'web'} validés.`,
+      summary: `${services.length + (pack.venue ? 1 : 0)} ligne${services.length + (pack.venue ? 1 : 0) > 1 ? 's' : ''} chiffrée${services.length + (pack.venue ? 1 : 0) > 1 ? 's' : ''} avec les prix trouvés ${channelPlace(isReferenceChannel(plan.priceSource) ? plan.priceSource : 'web')}.`,
       rationale: '',
       warnings: [...pack.notes, ...pack.missing.map((slot) => slot.reason)],
       estimatedTotalFc: total,
@@ -482,7 +482,7 @@ async function externalSourcePlan(
     catalog: { venues: 0, trades: 0, rentals: 0 },
     packages,
     warnings: packages.every((pack) => !pack.venue && !pack.services.length)
-      ? [`Aucun prix ${plan.priceSource === 'facebook' ? 'Facebook' : 'web'} validé pour ces lignes. Un administrateur doit d’abord lancer et valider une recherche dans « Prix du marché ».`]
+      ? [`Aucun prix trouvé ${channelPlace(isReferenceChannel(plan.priceSource) ? plan.priceSource : 'web')} pour ces lignes. Réessayez plus tard ou choisissez une autre source.`]
       : [],
     criteria,
   };
@@ -597,9 +597,9 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     venueAmenities,
   };
 
-  // Source « web » ou « Facebook » : pas de catalogue ni d’IA de choix, chaque ligne vient des prix validés de ce canal.
+  // Source web, Facebook ou Instagram : pas de catalogue ni d’IA de choix, chaque ligne vient des prix trouvés sur ce canal.
   const priceSource = parsePriceSource(body.priceSource);
-  if (priceSource === 'web' || priceSource === 'facebook') {
+  if (isReferenceChannel(priceSource)) {
     return externalSourcePlan(body, {
       budgetScope,
       includeVenue,

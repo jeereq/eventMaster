@@ -13,7 +13,8 @@ import {
   type SlotPriority,
 } from './eventPlanBrief';
 import { loadMarketPriceBook, type MarketPriceBook } from './marketPriceEstimates';
-import { marketEstimateAmount, marketEstimateSlug, parsePriceSource, type PriceSource, type MarketEstimateCheck, type MarketEstimatePriced, type MarketPriceStat, type MarketSourceLink } from './marketPriceStats.ts';
+import { researchChannelLabel, researchMissingMarketPrices } from './marketPriceResearchService';
+import { isReferenceChannel, marketEstimateAmount, marketEstimateSlug, parsePriceSource, REFERENCE_MAX_AGE_DAYS, type PriceSource, type MarketEstimateCheck, type MarketEstimatePriced, type MarketPriceStat, type MarketSourceLink } from './marketPriceStats.ts';
 import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedDrinkLines, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BudgetSimulationScope, type WantedSaleUnit } from './eventBudgetCost';
 
 export { EVENT_PLAN_TYPES, type EventPlanType };
@@ -296,7 +297,9 @@ type MarketEstimateInfo = {
   reviewedAt?: string | null;
   /** Pages web d’où vient le prix (source « reference »). */
   sources?: MarketSourceLink[];
-  channel?: 'web' | 'facebook';
+  channel?: 'web' | 'facebook' | 'instagram';
+  /** false : prix publié automatiquement, pas encore relu par EventMaster. */
+  adminReviewed?: boolean;
   unitFc: number;
   quantity: number;
   /** Contrôle du coût : calcul, fourchette et fraîcheur de la référence. */
@@ -334,6 +337,7 @@ function marketInfo(stat: MarketPriceStat, priced: MarketEstimatePriced): Market
     check: priced.check,
     ...(stat.sources?.length ? { sources: stat.sources } : {}),
     ...(stat.channel ? { channel: stat.channel } : {}),
+    ...(stat.adminReviewed !== undefined ? { adminReviewed: stat.adminReviewed } : {}),
     source: stat.source,
     unit: stat.unit,
     lowFc: stat.lowFc,
@@ -653,10 +657,10 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
       : parseWantedSaleUnits(body.wantedSaleUnits))
     : [];
   const input = budgetScope === 'complete' ? parsed : { ...parsed, includeVenue: 'no' as const };
-  // Web ou Facebook : on ne lit pas le catalogue, chaque ligne vient des prix validés de ce canal.
+  // Web, Facebook ou Instagram : on ne lit pas le catalogue, chaque ligne vient des prix trouvés sur ce canal.
   const priceSource: PriceSource = parsePriceSource(body.priceSource);
-  const externalOnly = priceSource === 'web' || priceSource === 'facebook';
-  const externalLabel = priceSource === 'facebook' ? 'Facebook' : 'web';
+  const externalOnly = isReferenceChannel(priceSource);
+  const externalLabel = isReferenceChannel(priceSource) ? researchChannelLabel(priceSource) : 'web';
   const includeDrinksNote = budgetScope === 'complete' || budgetScope === 'drinks';
   const city = normalizeAllowedCity(input.city) || '';
   const commune = city ? (normalizeAllowedCommune(city, input.commune) || '') : '';
@@ -792,10 +796,43 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     relaxed.eventType = true;
   }
 
-  // Prix du marché (réservations réelles, références web validées) pour les lignes sans aucune offre.
-  const marketBook: MarketPriceBook | null = body.marketEstimates === false && !externalOnly
+  // Prix du marché (réservations réelles, prix trouvés en ligne) pour les lignes sans aucune offre.
+  let liveFound = 0;
+  let marketBook: MarketPriceBook | null = body.marketEstimates === false && !externalOnly
     ? null
     : await loadMarketPriceBook(city, priceSource);
+
+  // Lignes encore sans prix (ou au prix trop ancien) : recherche en ligne en direct, puis relecture du carnet.
+  // Source « Tout » : on cherche sur le web ; web, Facebook ou Instagram : sur ce canal.
+  if (marketBook && priceSource !== 'app') {
+    const book = marketBook;
+    const maxAgeMs = REFERENCE_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+    const needsPrice = (slot: string) => {
+      const stat = book.get(slot);
+      if (!stat) return true;
+      if (stat.source !== 'reference' || !stat.reviewedAt) return false;
+      return Date.now() - new Date(stat.reviewedAt).getTime() > maxAgeMs;
+    };
+    const wanted = [
+      ...(input.includeVenue !== 'no' && (externalOnly || !rankedVenues.length) ? ['venue'] : []),
+      ...serviceSlots
+        .map((slot) => slot.category as string)
+        .filter((slot) => externalOnly || !rankedServices.some((service) => service.category === slot)),
+    ];
+    const missingSlots = [...new Set(wanted)].filter(needsPrice);
+    if (missingSlots.length) {
+      const found = await researchMissingMarketPrices({
+        city,
+        slots: missingSlots,
+        channel: isReferenceChannel(priceSource) ? priceSource : 'web',
+        guestHint: guests || undefined,
+      });
+      if (found > 0) {
+        marketBook = await loadMarketPriceBook(city, priceSource);
+        liveFound = found;
+      }
+    }
+  }
 
   const drinkRows = !externalOnly && (budgetScope === 'complete' || budgetScope === 'drinks') && (guests > 0 || wantedDrinkLines.length > 0)
     ? await prisma.vendorBeveragePrice.findMany({
@@ -913,7 +950,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
           reason: stat
             ? formatMarketGap('Salle', stat, guests)
             : externalOnly
-              ? `Aucun prix ${externalLabel} validé pour « Salle ».`
+              ? `Aucun prix ${externalLabel} trouvé pour « Salle ».`
               : missingReason(rankedVenues, venueBudget, 'Salle'),
         });
       }
@@ -970,7 +1007,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
           marketCount += 1;
           return;
         }
-        if (mustPrice) notes.push(externalOnly ? `Aucun prix ${externalLabel} validé pour « ${label} ».` : `Aucune offre « ${label} » à chiffrer.`);
+        if (mustPrice) notes.push(externalOnly ? `Aucun prix ${externalLabel} trouvé pour « ${label} ».` : `Aucune offre « ${label} » à chiffrer.`);
         if (requiredSlot) {
           missing.push({
             slot: slot.category,
@@ -978,7 +1015,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
             reason: stat
               ? formatMarketGap(label, stat, guests)
               : externalOnly
-                ? `Aucun prix ${externalLabel} validé pour « ${label} ».`
+                ? `Aucun prix ${externalLabel} trouvé pour « ${label} ».`
                 : missingReason(pool, cap > 0 ? cap : remaining, label),
           });
           skippedRequired.push(slot);
@@ -1089,8 +1126,10 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     }
     if (externalOnly) {
       notes.push(priceSource === 'facebook'
-        ? 'Source choisie : Facebook. Prix trouvés sur des pages Facebook publiques et validés par EventMaster, sans le catalogue.'
-        : 'Source choisie : web. Prix trouvés sur internet et validés par EventMaster, sans le catalogue.');
+        ? 'Source choisie : Facebook. Prix trouvés sur des pages Facebook publiques, sans le catalogue.'
+        : priceSource === 'instagram'
+          ? 'Source choisie : Instagram. Prix trouvés sur des comptes Instagram publics, sans le catalogue.'
+          : 'Source choisie : web. Prix trouvés sur internet, sans le catalogue.');
       if (includeDrinksNote) notes.push('Boissons non chiffrées : leurs prix viennent du catalogue EventMaster.');
     } else if (priceSource === 'app') {
       notes.push('Source choisie : base EventMaster (catalogue, réservations et devis réels).');
@@ -1099,6 +1138,9 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
       notes.push(
         `${marketCount} ligne${marketCount > 1 ? 's' : ''} chiffrée${marketCount > 1 ? 's' : ''} au prix du marché, faute d’offre sur la marketplace. À confirmer auprès d’un prestataire.`,
       );
+    }
+    if (liveFound > 0) {
+      notes.push(`${liveFound} prix cherché${liveFound > 1 ? 's' : ''} en direct ${externalOnly ? `sur ${externalLabel === 'web' ? 'internet' : externalLabel}` : 'sur internet'} pour cette simulation.`);
     }
     if (relaxed.city) notes.push('Ville élargie faute de catalogue local.');
     if (relaxed.commune) notes.push('Commune élargie pour trouver des offres.');
