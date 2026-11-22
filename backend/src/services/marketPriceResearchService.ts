@@ -4,8 +4,16 @@ import { getGeminiApiKey, getGeminiTextModel, parseGeminiJson } from './geminiJs
 import { getOpenAiApiKey } from './openaiJsonClient';
 import { loadPlatformSettings } from './platformSettingsService';
 import { serviceCategoryLabel } from '../utils/publicVenue';
-import { defaultMarketUnit } from './marketPriceStats.ts';
-import { keepFacebookSources, sanitizeResearchProposals, sanitizeSources, type ResearchSource } from './marketPriceResearchParse.ts';
+import { channelSource, defaultMarketUnit, isReferenceChannel, type ReferenceChannel } from './marketPriceStats.ts';
+import {
+  keepSocialSources,
+  mergeProposals,
+  sanitizeResearchProposals,
+  sanitizeSources,
+  type ResearchProposal,
+  type ResearchSource,
+} from './marketPriceResearchParse.ts';
+import { invalidateMarketPriceCache } from './marketPriceEstimates';
 
 type HttpError = Error & { status?: number };
 
@@ -30,10 +38,14 @@ export function parseMarketSlots(value: unknown): string[] {
   return [...new Set(value.map((item) => String(item || '').trim()).filter((slot) => MARKET_SLOTS.includes(slot)))];
 }
 
-export type ResearchChannel = 'web' | 'facebook';
+export type ResearchChannel = ReferenceChannel;
 
 export function parseResearchChannel(value: unknown): ResearchChannel {
-  return value === 'facebook' ? 'facebook' : 'web';
+  return isReferenceChannel(value) ? value : 'web';
+}
+
+export function researchChannelLabel(channel: ResearchChannel): string {
+  return channel === 'facebook' ? 'Facebook' : channel === 'instagram' ? 'Instagram' : 'web';
 }
 
 function researchPrompt(city: string, slots: string[], usdRate: number, guestHint: number, channel: ResearchChannel): { system: string; user: string } {
@@ -42,12 +54,19 @@ function researchPrompt(city: string, slots: string[], usdRate: number, guestHin
     const unit = defaultMarketUnit(slot) === 'PERSON' ? 'prix PAR INVITÉ' : 'prix FORFAITAIRE pour un événement';
     return `- ${slot} : ${marketSlotLabel(slot)} (${unit})`;
   });
+  const today = new Date().toISOString().slice(0, 10);
+  const cityWord = city || 'Kinshasa';
   const where = channel === 'facebook'
-    ? 'Tu cherches UNIQUEMENT sur des pages et publications Facebook publiques (requêtes du type site:facebook.com) : pages de traiteurs, salles, décorateurs, DJ, loueurs de matériel, groupes publics d’annonces. Chaque source doit être une URL facebook.com.'
-    : 'Tu utilises la recherche web pour trouver des prix récents et publics : sites de prestataires, pages Facebook ou Instagram publiques, annonces, articles de presse, comparateurs.';
+    ? `Tu cherches UNIQUEMENT sur des pages et publications Facebook publiques (requêtes du type « site:facebook.com traiteur ${cityWord} prix ») : pages de traiteurs, salles, décorateurs, DJ, loueurs de matériel, groupes publics d’annonces, Marketplace. Chaque source doit être une URL facebook.com.`
+    : channel === 'instagram'
+      ? `Tu cherches UNIQUEMENT sur des comptes et publications Instagram publics (requêtes du type « site:instagram.com salle de fête ${cityWord} prix ») : comptes de traiteurs, salles, décorateurs, DJ, photographes, loueurs. Les prix sont souvent dans la légende ou les commentaires. Chaque source doit être une URL instagram.com.`
+      : `Tu fais plusieurs recherches web par ligne (en français et en lingala ou anglais si utile, avec le nom de la ville et le mot « prix » ou « tarif ») : sites de prestataires, annuaires, annonces (Jumia, Expat-Dakar, groupes d’annonces), pages Facebook ou Instagram publiques, articles de presse.`;
   const system = [
     'Tu es analyste des prix de l’événementiel en République démocratique du Congo.',
     where,
+    `Nous sommes le ${today}. Privilégie les prix des 12 derniers mois et ignore ceux de plus de 2 ans.`,
+    'Croise au moins deux sources par ligne quand c’est possible ; la fourchette basse et haute reflète l’écart entre les sources, le prix typique la valeur la plus fréquente.',
+    'Un prix au mètre, à l’heure ou par article est ramené au prix par invité ou au forfait pour l’événement de référence, et tu l’expliques dans rationale.',
     'Tu n’inventes jamais un prix. Si tu ne trouves pas de source fiable pour une ligne, tu l’omets.',
     'Tu réponds uniquement avec un objet JSON, sans texte autour.',
   ].join(' ');
@@ -151,78 +170,168 @@ async function askOpenAi(system: string, user: string): Promise<{ raw: unknown; 
   }
 }
 
-let running = false;
+type AiAnswer = { raw: unknown; sources: ResearchSource[]; model: string };
+
+function cleanProposals(answer: AiAnswer, slots: string[], usdRate: number, channel: ResearchChannel): ResearchProposal[] {
+  if (channel === 'web') return sanitizeResearchProposals(answer.raw, slots, usdRate, answer.sources);
+  const network = channel;
+  return sanitizeResearchProposals(answer.raw, slots, usdRate, keepSocialSources(answer.sources, network))
+    .map((proposal) => ({ ...proposal, sources: keepSocialSources(proposal.sources, network) }))
+    .filter((proposal) => proposal.sources.length > 0);
+}
 
 /**
- * Lance une recherche web de prix et enregistre les résultats comme propositions.
- * Rien n’est utilisé par le simulateur avant la validation d’un Super Admin.
+ * Interroge Gemini (recherche Google), puis OpenAI (recherche web) pour les lignes que Gemini n’a pas trouvées.
+ * Deux moteurs de recherche couvrent plus de pages qu’un seul.
  */
-export async function researchMarketPrices(input: { city: string; slots: string[]; guestHint?: number; actorId: string; channel?: ResearchChannel }) {
+async function searchPrices(
+  city: string,
+  slots: string[],
+  usdRate: number,
+  guestHint: number,
+  channel: ResearchChannel,
+): Promise<{ proposals: ResearchProposal[]; model: string }> {
+  let proposals: ResearchProposal[] = [];
+  const models: string[] = [];
+  let lastError: Error | null = null;
+  if (getGeminiApiKey()) {
+    try {
+      const { system, user } = researchPrompt(city, slots, usdRate, guestHint, channel);
+      const answer = await askGemini(system, user);
+      proposals = cleanProposals(answer, slots, usdRate, channel);
+      models.push(answer.model);
+    } catch (error) {
+      lastError = error as Error;
+      console.warn('[marketPrices] Gemini a échoué :', lastError.message);
+    }
+  }
+  const missing = slots.filter((slot) => !proposals.some((item) => item.slot === slot));
+  if (missing.length && getOpenAiApiKey()) {
+    try {
+      const { system, user } = researchPrompt(city, missing, usdRate, guestHint, channel);
+      const answer = await askOpenAi(system, user);
+      proposals = mergeProposals(proposals, cleanProposals(answer, missing, usdRate, channel));
+      models.push(answer.model);
+    } catch (error) {
+      lastError = error as Error;
+      console.warn('[marketPrices] OpenAI a échoué :', lastError.message);
+    }
+  }
+  if (!models.length) fail(502, lastError?.message || 'La recherche web n’a rien renvoyé.');
+  return { proposals, model: models.join(' + ') };
+}
+
+/** Une seule recherche à la fois par ville et canal ; au plus deux en parallèle sur le serveur. */
+const inflight = new Map<string, Promise<unknown>>();
+const MAX_PARALLEL = 2;
+
+/**
+ * Lance une recherche de prix (web, Facebook ou Instagram) et publie tout de suite les résultats :
+ * le simulateur les utilise sans attendre de validation. Chaque nouveau prix remplace l’ancien
+ * pour la même ligne, la même ville et le même canal. Un Super Admin peut ensuite corriger ou retirer un prix.
+ */
+export async function researchMarketPrices(input: { city: string; slots: string[]; guestHint?: number; actorId?: string | null; channel?: ResearchChannel }) {
   const channel = parseResearchChannel(input.channel);
   const slots = parseMarketSlots(input.slots).slice(0, MAX_SLOTS_PER_RUN);
   if (!slots.length) fail(400, 'Choisissez au moins une ligne à rechercher.');
   if (!getGeminiApiKey() && !getOpenAiApiKey()) {
     fail(503, 'Aucune IA configurée sur le serveur (GEMINI_API_KEY ou OPENAI_API_KEY).');
   }
-  if (running) fail(409, 'Une recherche est déjà en cours. Réessayez dans une minute.');
-  running = true;
-  try {
+  const key = `${input.city}|${channel}`;
+  if (inflight.has(key) || inflight.size >= MAX_PARALLEL) {
+    fail(409, 'Une recherche est déjà en cours. Réessayez dans une minute.');
+  }
+  const run = (async () => {
     const settings = loadPlatformSettings();
     const usdRate = Number(settings.usdExchangeRateCdf) > 0 ? Number(settings.usdExchangeRateCdf) : 2800;
     const guestHint = Math.min(2000, Math.max(20, Math.round(Number(input.guestHint) || 150)));
-    const { system, user } = researchPrompt(input.city, slots, usdRate, guestHint, channel);
+    const { proposals, model } = await searchPrices(input.city, slots, usdRate, guestHint, channel);
 
-    let answer: { raw: unknown; sources: ResearchSource[]; model: string } | null = null;
-    let lastError: Error | null = null;
-    if (getGeminiApiKey()) {
-      try {
-        answer = await askGemini(system, user);
-      } catch (error) {
-        lastError = error as Error;
-        console.warn('[marketPrices] Gemini a échoué, essai OpenAI :', lastError.message);
-      }
-    }
-    if (!answer && getOpenAiApiKey()) {
-      try {
-        answer = await askOpenAi(system, user);
-      } catch (error) {
-        lastError = error as Error;
-      }
-    }
-    if (!answer) fail(502, lastError?.message || 'La recherche web n’a rien renvoyé.');
-
-    const proposals = channel === 'facebook'
-      ? sanitizeResearchProposals(answer.raw, slots, usdRate, keepFacebookSources(answer.sources))
-        .map((proposal) => ({ ...proposal, sources: keepFacebookSources(proposal.sources) }))
-        .filter((proposal) => proposal.sources.length > 0)
-      : sanitizeResearchProposals(answer.raw, slots, usdRate, answer.sources);
+    const now = new Date();
+    const source = channelSource(channel);
     const created = [];
     for (const proposal of proposals) {
-      created.push(await prisma.marketPriceReference.create({
-        data: {
-          slot: proposal.slot,
-          city: input.city,
-          unit: proposal.unit,
-          lowFc: proposal.lowFc,
-          typicalFc: proposal.typicalFc,
-          highFc: proposal.highFc,
-          status: 'PROPOSED',
-          source: channel === 'facebook' ? 'ai_facebook' : 'ai_web',
-          sources: proposal.sources,
-          rationale: proposal.rationale || null,
-          model: answer.model,
-          proposedById: input.actorId,
-        },
-      }));
+      const [, row] = await prisma.$transaction([
+        prisma.marketPriceReference.updateMany({
+          where: { slot: proposal.slot, city: input.city, source, status: 'APPROVED' },
+          data: { status: 'REPLACED' },
+        }),
+        prisma.marketPriceReference.create({
+          data: {
+            slot: proposal.slot,
+            city: input.city,
+            unit: proposal.unit,
+            lowFc: proposal.lowFc,
+            typicalFc: proposal.typicalFc,
+            highFc: proposal.highFc,
+            status: 'APPROVED',
+            source,
+            sources: proposal.sources,
+            rationale: proposal.rationale || null,
+            model,
+            proposedById: input.actorId || null,
+            reviewedAt: now,
+          },
+        }),
+      ]);
+      created.push(row);
     }
+    if (created.length) invalidateMarketPriceCache();
     const found = new Set(proposals.map((proposal) => proposal.slot));
     return {
       proposals: created,
       notFound: slots.filter((slot) => !found.has(slot)),
-      model: answer.model,
+      model,
       channel,
     };
+  })();
+  inflight.set(key, run);
+  try {
+    return await run;
   } finally {
-    running = false;
+    inflight.delete(key);
+  }
+}
+
+/** Une ligne cherchée sans succès n’est pas recherchée à nouveau avant ce délai. */
+const RETRY_AFTER_MS = 24 * 60 * 60 * 1000;
+const LIVE_TIMEOUT_MS = 45_000;
+const lastAttempt = new Map<string, number>();
+
+/**
+ * Recherche en direct, depuis le simulateur, des lignes qui n’ont encore aucun prix pour ce canal.
+ * Ne lève jamais d’erreur : au pire le simulateur affiche la ligne comme non chiffrée.
+ * Renvoie le nombre de lignes nouvellement chiffrées.
+ */
+export async function researchMissingMarketPrices(input: {
+  city: string;
+  slots: string[];
+  channel: ResearchChannel;
+  guestHint?: number;
+}): Promise<number> {
+  if (!getGeminiApiKey() && !getOpenAiApiKey()) return 0;
+  const now = Date.now();
+  const slots = parseMarketSlots(input.slots).filter((slot) => {
+    const at = lastAttempt.get(`${input.city}|${input.channel}|${slot}`);
+    return !at || now - at > RETRY_AFTER_MS;
+  });
+  if (!slots.length) return 0;
+  const key = `${input.city}|${input.channel}`;
+  const pending = inflight.get(key);
+  if (pending) {
+    // Une autre recherche pour cette ville et ce canal tourne déjà : on l’attend au lieu d’en relancer une.
+    await Promise.race([pending.catch(() => null), new Promise((resolve) => setTimeout(resolve, LIVE_TIMEOUT_MS))]);
+    return 0;
+  }
+  for (const slot of slots) lastAttempt.set(`${input.city}|${input.channel}|${slot}`, now);
+  try {
+    const result = await Promise.race([
+      researchMarketPrices({ city: input.city, slots, channel: input.channel, guestHint: input.guestHint }),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), LIVE_TIMEOUT_MS)),
+    ]);
+    return result ? result.proposals.length : 0;
+  } catch (error) {
+    console.warn('[marketPrices] recherche en direct impossible :', (error as Error)?.message);
+    return 0;
   }
 }

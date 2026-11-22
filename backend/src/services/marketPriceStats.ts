@@ -3,30 +3,50 @@
  *
  * Deux sources alimentent le simulateur quand la marketplace n’a aucune offre pour une ligne :
  * - « observed » : réservations acceptées et devis envoyés sur la plateforme (prix réels payés ou proposés) ;
- * - « reference » : fourchettes trouvées sur le web par l’IA, puis validées par un Super Admin.
+ * - « reference » : fourchettes trouvées par l’IA sur le web, Facebook ou Instagram, publiées tout de suite
+ *   (un Super Admin peut les corriger ou les retirer).
  */
 
 export type MarketPriceUnit = 'EVENT' | 'PERSON';
 
 /**
  * Source des prix choisie dans le simulateur :
- * - all : catalogue EventMaster, puis prix réels et prix web/Facebook validés pour les lignes vides ;
+ * - all : catalogue EventMaster, puis prix réels et prix trouvés en ligne pour les lignes vides ;
  * - app : base EventMaster seulement (catalogue et prix réels des réservations et devis) ;
- * - web : prix trouvés sur le web, validés par l’admin ;
- * - facebook : prix trouvés sur des pages Facebook publiques, validés par l’admin.
+ * - web : prix trouvés sur le web ;
+ * - facebook : prix trouvés sur des pages Facebook publiques ;
+ * - instagram : prix trouvés sur des comptes Instagram publics.
  */
-export type PriceSource = 'all' | 'app' | 'web' | 'facebook';
-export const PRICE_SOURCES: PriceSource[] = ['all', 'app', 'web', 'facebook'];
+export type PriceSource = 'all' | 'app' | 'web' | 'facebook' | 'instagram';
+export const PRICE_SOURCES: PriceSource[] = ['all', 'app', 'web', 'facebook', 'instagram'];
 
 export function parsePriceSource(value: unknown): PriceSource {
   return PRICE_SOURCES.includes(value as PriceSource) ? (value as PriceSource) : 'all';
 }
 
-/** Canal d’une référence : colonne `source` en base (ai_web, ai_facebook). */
-export type ReferenceChannel = 'web' | 'facebook';
+/** Canal d’une référence : colonne `source` en base (ai_web, ai_facebook, ai_instagram). */
+export type ReferenceChannel = 'web' | 'facebook' | 'instagram';
+export const REFERENCE_CHANNELS: ReferenceChannel[] = ['web', 'facebook', 'instagram'];
 
 export function referenceChannel(source: unknown): ReferenceChannel {
-  return source === 'ai_facebook' ? 'facebook' : 'web';
+  if (source === 'ai_facebook') return 'facebook';
+  if (source === 'ai_instagram') return 'instagram';
+  return 'web';
+}
+
+export function channelSource(channel: ReferenceChannel): string {
+  return `ai_${channel}`;
+}
+
+export function isReferenceChannel(value: unknown): value is ReferenceChannel {
+  return REFERENCE_CHANNELS.includes(value as ReferenceChannel);
+}
+
+/** « sur le web », « sur des pages Facebook publiques »… */
+export function channelPlace(channel: ReferenceChannel | undefined): string {
+  if (channel === 'facebook') return 'sur des pages Facebook publiques';
+  if (channel === 'instagram') return 'sur des comptes Instagram publics';
+  return 'sur le web';
 }
 export type MarketPriceSource = 'observed' | 'reference';
 export type MarketPriceStyle = 'cheap' | 'balanced' | 'comfort';
@@ -63,8 +83,10 @@ export type MarketPriceStat = {
   sourceCount?: number;
   /** Pages web citées (source « reference »), au plus 3. */
   sources?: MarketSourceLink[];
-  /** Canal de la référence (source « reference ») : web ou Facebook. */
+  /** Canal de la référence (source « reference ») : web, Facebook ou Instagram. */
   channel?: ReferenceChannel;
+  /** false : prix publié automatiquement après la recherche, sans relecture admin. */
+  adminReviewed?: boolean;
 };
 
 export type MarketSourceLink = { title: string; url: string };
@@ -94,8 +116,10 @@ export type MarketReferenceRow = {
   highFc: number;
   reviewedAt: Date | string | null;
   sources?: unknown;
-  /** ai_web ou ai_facebook */
+  /** ai_web, ai_facebook ou ai_instagram */
   source?: string | null;
+  /** Renseigné quand un Super Admin a validé ou corrigé le prix ; vide pour un prix publié automatiquement. */
+  reviewedById?: string | null;
 };
 
 export function defaultMarketUnit(slot: MarketSlot): MarketPriceUnit {
@@ -180,6 +204,7 @@ function referenceToStat(row: MarketReferenceRow): MarketPriceStat {
     sourceCount: Array.isArray(row.sources) ? row.sources.length : 0,
     sources: sourceLinks(row.sources),
     channel: referenceChannel(row.source),
+    adminReviewed: Boolean(row.reviewedById),
   };
 }
 
@@ -197,7 +222,7 @@ export function resolveMarketPrice(
 ): MarketPriceStat | null {
   const wantedCity = normalizeCity(city);
   // Base EventMaster : pas de référence web. Web ou Facebook : ce canal seulement, sans prix réels.
-  if (priceSource === 'web' || priceSource === 'facebook') {
+  if (isReferenceChannel(priceSource)) {
     observations = [];
     references = references.filter((row) => referenceChannel(row.source) === priceSource);
   } else if (priceSource === 'app') {
@@ -234,8 +259,8 @@ export function marketSourceNote(stat: MarketPriceStat): string {
     return `Prix réels de ${count} réservation${count > 1 ? 's' : ''} ou devis${where}`;
   }
   const day = formatDay(stat.reviewedAt);
-  const channel = stat.channel === 'facebook' ? 'sur des pages Facebook publiques' : 'sur le web';
-  return `Prix du marché trouvés ${channel}${where}, validés${day ? ` le ${day}` : ''}`;
+  const checked = stat.adminReviewed ? ', validés par EventMaster' : '';
+  return `Prix du marché trouvés ${channelPlace(stat.channel)}${where}${day ? ` le ${day}` : ''}${checked}`;
 }
 
 /**
@@ -321,11 +346,14 @@ export function checkMarketEstimate(
       : Number.POSITIVE_INFINITY;
     if (ageDays > REFERENCE_MAX_AGE_DAYS) {
       ok = false;
-      messages.push('Prix validé il y a plus de 6 mois : à revérifier.');
+      messages.push('Prix trouvé il y a plus de 6 mois : à revérifier.');
     }
     if (!stat.sources?.length) {
       ok = false;
-      messages.push(stat.channel === 'facebook' ? 'Aucune page Facebook enregistrée pour ce prix.' : 'Aucune source web enregistrée pour ce prix.');
+      messages.push(`Aucune source enregistrée ${channelPlace(stat.channel)} pour ce prix.`);
+    }
+    if (!stat.adminReviewed) {
+      messages.push('Prix trouvé automatiquement par l’IA, pas encore relu par EventMaster : comparez avec les sources.');
     }
   } else if ((stat.sampleCount || 0) < 5) {
     messages.push(`Basé sur seulement ${stat.sampleCount || 0} prix réels : à confirmer.`);

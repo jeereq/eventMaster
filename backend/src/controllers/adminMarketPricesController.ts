@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { auditReq } from '../services/adminAuditService';
 import { invalidateMarketPriceCache, observedMarketPriceSummary } from '../services/marketPriceEstimates';
-import { MARKET_SLOTS, marketSlotLabel, parseMarketSlots, parseResearchChannel, researchMarketPrices } from '../services/marketPriceResearchService';
+import { MARKET_SLOTS, marketSlotLabel, parseMarketSlots, parseResearchChannel, researchChannelLabel, researchMarketPrices } from '../services/marketPriceResearchService';
 import { normalizeAllowedCity } from '../utils/rdcCities';
 
 function sendError(res: Response, error: unknown, fallback: string) {
@@ -67,7 +67,7 @@ export async function researchMarketPricesHandler(req: AuthenticatedRequest, res
     await auditReq(req, {
       action: 'MARKET_PRICES_RESEARCH',
       targetType: 'market_price',
-      summary: `Recherche ${channel === 'facebook' ? 'Facebook' : 'web'} de prix (${city || 'toutes villes'}) : ${result.proposals.length} proposition(s)`,
+      summary: `Recherche ${researchChannelLabel(channel)} de prix (${city || 'toutes villes'}) : ${result.proposals.length} prix publié(s)`,
       metadata: { city, slots, channel, notFound: result.notFound, model: result.model },
     });
     res.json(result);
@@ -76,11 +76,11 @@ export async function researchMarketPricesHandler(req: AuthenticatedRequest, res
   }
 }
 
-/** PATCH /admin/market-prices/:id : corriger une proposition avant de la valider. */
+/** PATCH /admin/market-prices/:id : corriger un prix (proposé ou publié). Un prix publié corrigé devient « validé par EventMaster ». */
 export async function updateMarketPrice(req: AuthenticatedRequest, res: Response) {
   try {
     const row = await prisma.marketPriceReference.findUnique({ where: { id: String(req.params.id) } });
-    if (!row || row.status !== 'PROPOSED') return res.status(404).json({ error: 'Proposition introuvable.' });
+    if (!row || (row.status !== 'PROPOSED' && row.status !== 'APPROVED')) return res.status(404).json({ error: 'Prix introuvable.' });
     const low = parseAmount(req.body?.lowFc) ?? row.lowFc;
     const typical = parseAmount(req.body?.typicalFc) ?? row.typicalFc;
     const high = parseAmount(req.body?.highFc) ?? row.highFc;
@@ -88,23 +88,30 @@ export async function updateMarketPrice(req: AuthenticatedRequest, res: Response
     const unit = req.body?.unit === 'PERSON' || req.body?.unit === 'EVENT' ? req.body.unit : row.unit;
     const updated = await prisma.marketPriceReference.update({
       where: { id: row.id },
-      data: { lowFc, typicalFc, highFc, unit },
+      data: {
+        lowFc,
+        typicalFc,
+        highFc,
+        unit,
+        ...(row.status === 'APPROVED' ? { reviewedAt: new Date(), reviewedById: req.user!.id } : {}),
+      },
     });
+    if (row.status === 'APPROVED') invalidateMarketPriceCache();
     res.json({ reference: updated });
   } catch (error) {
     sendError(res, error, 'Impossible de modifier la proposition.');
   }
 }
 
-/** POST /admin/market-prices/:id/approve : la référence remplace l’ancienne pour la même ligne, la même ville et le même canal (web ou Facebook). */
+/** POST /admin/market-prices/:id/approve : marque un prix comme relu par EventMaster ; il remplace l’ancien pour la même ligne, la même ville et le même canal. */
 export async function approveMarketPrice(req: AuthenticatedRequest, res: Response) {
   try {
     const row = await prisma.marketPriceReference.findUnique({ where: { id: String(req.params.id) } });
-    if (!row || row.status !== 'PROPOSED') return res.status(404).json({ error: 'Proposition introuvable.' });
+    if (!row || (row.status !== 'PROPOSED' && row.status !== 'APPROVED')) return res.status(404).json({ error: 'Prix introuvable.' });
     const now = new Date();
     const [, approved] = await prisma.$transaction([
       prisma.marketPriceReference.updateMany({
-        where: { slot: row.slot, city: row.city, source: row.source, status: 'APPROVED' },
+        where: { slot: row.slot, city: row.city, source: row.source, status: 'APPROVED', id: { not: row.id } },
         data: { status: 'REPLACED' },
       }),
       prisma.marketPriceReference.update({

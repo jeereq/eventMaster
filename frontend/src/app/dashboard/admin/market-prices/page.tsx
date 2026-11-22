@@ -19,13 +19,15 @@ type ReferenceRow = {
   typicalFc: number;
   highFc: number;
   status: 'PROPOSED' | 'APPROVED';
-  /** ai_web ou ai_facebook */
+  /** ai_web, ai_facebook ou ai_instagram */
   source?: string;
   sources?: Array<{ title: string; url: string }> | null;
   rationale?: string | null;
   model?: string | null;
   createdAt: string;
   reviewedAt?: string | null;
+  /** Vide : prix publié automatiquement après la recherche, pas encore relu. */
+  reviewedById?: string | null;
 };
 
 type ObservedRow = {
@@ -61,7 +63,9 @@ function unitLabel(unit: MarketUnit) {
 }
 
 function channelLabel(source?: string) {
-  return source === 'ai_facebook' ? 'Facebook' : 'Web';
+  if (source === 'ai_facebook') return 'Facebook';
+  if (source === 'ai_instagram') return 'Instagram';
+  return 'Web';
 }
 
 function formatDay(value?: string | null) {
@@ -112,6 +116,8 @@ function ProposalCard({
   const [unit, setUnit] = useState<MarketUnit>(row.unit);
   const [busy, setBusy] = useState<'approve' | 'reject' | null>(null);
   const dirty = low !== String(row.lowFc) || typical !== String(row.typicalFc) || high !== String(row.highFc) || unit !== row.unit;
+  const published = row.status === 'APPROVED';
+  const reviewed = published && Boolean(row.reviewedById);
 
   const approve = async () => {
     setBusy('approve');
@@ -151,6 +157,7 @@ function ProposalCard({
         <p className="text-sm font-semibold text-foreground">{label}</p>
         <p className="text-xs text-muted">
           {channelLabel(row.source)} · {row.city || 'Toutes villes'} · trouvé le {formatDay(row.createdAt)}
+          {published ? (reviewed ? ' · relu par EventMaster' : ' · publié automatiquement') : ''}
         </p>
       </div>
       {row.rationale ? <p className="text-sm text-muted">{row.rationale}</p> : null}
@@ -177,11 +184,13 @@ function ProposalCard({
       </div>
       <Sources sources={row.sources} />
       <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" onClick={() => void approve()} loading={busy === 'approve'} disabled={busy !== null} leftIcon={<Check className="w-4 h-4" />}>
-          {dirty ? 'Corriger et valider' : 'Valider'}
-        </Button>
+        {!reviewed || dirty ? (
+          <Button type="button" size="sm" onClick={() => void approve()} loading={busy === 'approve'} disabled={busy !== null} leftIcon={<Check className="w-4 h-4" />}>
+            {published ? (dirty ? 'Corriger' : 'Marquer comme relu') : dirty ? 'Corriger et valider' : 'Valider'}
+          </Button>
+        ) : null}
         <Button type="button" size="sm" variant="ghost" onClick={() => void reject()} loading={busy === 'reject'} disabled={busy !== null} leftIcon={<X className="w-4 h-4" />}>
-          Écarter
+          {published ? 'Retirer' : 'Écarter'}
         </Button>
       </div>
     </li>
@@ -199,7 +208,7 @@ export default function AdminMarketPricesPage() {
   const [selected, setSelected] = useState<string[]>(DEFAULT_SLOTS);
   const [guestHint, setGuestHint] = useState('150');
   const [researching, setResearching] = useState(false);
-  const [channel, setChannel] = useState<'web' | 'facebook'>('web');
+  const [channel, setChannel] = useState<'web' | 'facebook' | 'instagram'>('web');
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -249,7 +258,7 @@ export default function AdminMarketPricesPage() {
       })) as { proposals: ReferenceRow[]; notFound: string[] };
       const missed = result.notFound.map((slot) => labels[slot] || slot);
       setNotice(
-        `${result.proposals.length} prix trouvé${result.proposals.length > 1 ? 's' : ''}.`
+        `${result.proposals.length} prix trouvé${result.proposals.length > 1 ? 's' : ''} et publié${result.proposals.length > 1 ? 's' : ''} dans le simulateur.`
         + (missed.length ? ` Aucune source fiable pour : ${missed.join(', ')}.` : ''),
       );
       await load();
@@ -260,21 +269,12 @@ export default function AdminMarketPricesPage() {
     }
   };
 
-  const withdraw = async (row: ReferenceRow) => {
-    try {
-      await api.post(`/admin/market-prices/${row.id}/reject`);
-      await load();
-    } catch (err) {
-      setError(errorMessage(err, 'Impossible de retirer ce prix.'));
-    }
-  };
-
   if (authLoading || !user || user.role !== 'SUPER_ADMIN') return null;
 
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        note="Le simulateur de budget utilise ces prix seulement quand la marketplace n’a aucune offre pour une ligne. La ligne est alors marquée « Prix réels plateforme » ou « Prix du marché »."
+        note="Les prix trouvés en ligne sont publiés tout de suite dans le simulateur, qui cherche aussi lui-même les lignes sans prix. Ici, vous pouvez corriger, marquer comme relu ou retirer un prix."
         action={
           <select aria-label="Ville" value={city} onChange={(e) => setCity(e.target.value)} className={selectClass}>
             {CITIES.map((item) => (
@@ -289,14 +289,15 @@ export default function AdminMarketPricesPage() {
 
       <Card>
         <CardHeader
-          title="Rechercher des prix sur le web ou Facebook"
-          description="L’IA cherche des prix publics récents et cite ses sources. Rien n’est utilisé avant votre validation."
+          title="Rechercher des prix sur le web, Facebook ou Instagram"
+          description="L’IA cherche des prix publics récents avec deux moteurs de recherche et cite ses sources. Les prix trouvés remplacent les anciens de la même ligne."
         />
         <div className="space-y-4">
-          <div role="radiogroup" aria-label="Où chercher" className="inline-flex gap-0.5 rounded-[10px] bg-surface-muted p-[3px]">
+          <div role="radiogroup" aria-label="Où chercher" className="flex max-w-full overflow-x-auto scrollbar-none gap-0.5 rounded-[10px] bg-surface-muted p-[3px]">
             {([
               { id: 'web', label: 'Tout le web' },
               { id: 'facebook', label: 'Pages Facebook publiques' },
+              { id: 'instagram', label: 'Comptes Instagram publics' },
             ] as const).map((option) => (
               <button
                 key={option.id}
@@ -304,7 +305,7 @@ export default function AdminMarketPricesPage() {
                 role="radio"
                 aria-checked={channel === option.id}
                 onClick={() => setChannel(option.id)}
-                className={`min-h-11 sm:min-h-9 px-3 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                className={`shrink-0 whitespace-nowrap min-h-11 sm:min-h-9 px-3 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
                   channel === option.id ? 'bg-surface text-foreground shadow-[0_1px_3px_rgba(23,22,20,0.12)]' : 'text-muted hover:text-foreground'
                 }`}
               >
@@ -361,9 +362,9 @@ export default function AdminMarketPricesPage() {
 
       {data ? (
         <>
-          <Card>
-            <CardHeader title={`À valider (${data.proposals.length})`} />
-            {data.proposals.length ? (
+          {data.proposals.length ? (
+            <Card>
+              <CardHeader title={`Anciennes propositions à valider (${data.proposals.length})`} />
               <ul className="space-y-3">
                 {data.proposals.map((row) => (
                   <ProposalCard
@@ -375,35 +376,28 @@ export default function AdminMarketPricesPage() {
                   />
                 ))}
               </ul>
-            ) : (
-              <EmptyState title="Aucune proposition en attente" description="Lancez une recherche pour obtenir des prix du marché." />
-            )}
-          </Card>
+            </Card>
+          ) : null}
 
           <Card>
-            <CardHeader title={`Prix validés (${data.approved.length})`} />
+            <CardHeader
+              title={`Prix publiés (${data.approved.length})`}
+              description="Utilisés par le simulateur dès leur publication. Corrigez un montant ou retirez un prix douteux."
+            />
             {data.approved.length ? (
-              <ul className="divide-y divide-border/70">
+              <ul className="space-y-3">
                 {data.approved.map((row) => (
-                  <li key={row.id} className="py-3 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="text-sm font-semibold text-foreground">
-                        {labels[row.slot] || row.slot}
-                        <span className="font-normal text-muted"> · {channelLabel(row.source)} · {row.city || 'Toutes villes'} · validé le {formatDay(row.reviewedAt)}</span>
-                      </p>
-                      <p className="text-sm tabular-nums">
-                        {formatFc(row.lowFc)} · <strong>{formatFc(row.typicalFc)}</strong> · {formatFc(row.highFc)} {unitLabel(row.unit)}
-                      </p>
-                      <Sources sources={row.sources} />
-                    </div>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => void withdraw(row)}>
-                      Retirer
-                    </Button>
-                  </li>
+                  <ProposalCard
+                    key={`${row.id}-${row.lowFc}-${row.typicalFc}-${row.highFc}-${row.unit}`}
+                    row={row}
+                    label={labels[row.slot] || row.slot}
+                    onChanged={() => void load()}
+                    onError={setError}
+                  />
                 ))}
               </ul>
             ) : (
-              <EmptyState title="Aucun prix validé" description="Les prix validés apparaissent ici." />
+              <EmptyState title="Aucun prix publié" description="Lancez une recherche, ou laissez le simulateur chercher les lignes sans prix." />
             )}
           </Card>
 
