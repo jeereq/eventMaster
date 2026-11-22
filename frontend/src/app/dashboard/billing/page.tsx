@@ -174,7 +174,7 @@ const BILLING_TIERS: Array<{ label: string; ids: PlanId[] }> = [
   { label: 'Particuliers (B2C)', ids: [...B2C_PLAN_IDS] },
   { label: 'Essentials & Business (B2B)', ids: ['FREE', 'STANDARD'] },
   { label: 'Business Premium (B2B)', ids: ['PREMIUM_1', 'PREMIUM_2'] },
-  { label: 'Business Enterprise (B2B)', ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3', 'CUSTOM'] },
+  { label: 'Agence & Enterprise (B2B)', ids: ['AGENCY', 'ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3', 'CUSTOM'] },
 ];
 
 function BillingPageInner() {
