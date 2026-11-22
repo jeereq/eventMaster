@@ -1,4 +1,19 @@
 import { defaultMarketUnit, type MarketPriceUnit } from './marketPriceStats.ts';
+import { isOpenAiStudioModel } from './aiStudioModels.ts';
+
+export type ResearchEngineStep = { engine: 'gemini' | 'openai'; model?: string };
+
+/**
+ * Ordre des moteurs de la recherche de prix : le modèle choisi dans les paramètres IA de la plateforme
+ * passe en premier ; l’autre fournisseur (avec son modèle par défaut) complète les lignes manquantes.
+ */
+export function researchEnginePlan(chosenModel?: string | null): ResearchEngineStep[] {
+  const model = String(chosenModel || '').trim();
+  if (!model) return [{ engine: 'gemini' }, { engine: 'openai' }];
+  return isOpenAiStudioModel(model)
+    ? [{ engine: 'openai', model }, { engine: 'gemini' }]
+    : [{ engine: 'gemini', model }, { engine: 'openai' }];
+}
 
 /** Plafond de sécurité : au-delà, la réponse de l’IA est jugée aberrante. */
 const MAX_PRICE_FC = 5_000_000_000;

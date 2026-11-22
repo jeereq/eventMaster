@@ -1,11 +1,14 @@
 export interface AiStudioModelsSettings {
   invitationModel: string;
   roomPlanModel: string;
+  /** Modèle principal de la recherche de prix en ligne (web, Facebook, Instagram). */
+  priceResearchModel: string;
 }
 
 export const DEFAULT_AI_STUDIO_MODELS: AiStudioModelsSettings = {
   invitationModel: 'gemini-3-pro-image',
   roomPlanModel: 'gemini-3.1-pro-preview',
+  priceResearchModel: 'gemini-3.1-pro-preview',
 };
 
 export const AVAILABLE_INVITATION_MODELS = [
@@ -28,6 +31,17 @@ export const AVAILABLE_ROOM_PLAN_MODELS = [
   { id: 'gpt-4o', label: 'GPT-4o (OpenAI · Vision & plans de salle)', badge: 'OpenAI', provider: 'openai' },
 ] as const;
 
+/** Modèles texte capables de chercher sur internet (Google Search pour Gemini, recherche web pour OpenAI). */
+export const AVAILABLE_PRICE_RESEARCH_MODELS = [
+  { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Recherche Google approfondie)', badge: 'Précis', provider: 'google' },
+  { id: 'gemini-3-flash', label: 'Gemini 3 Flash (Recherche Google rapide)', badge: 'Rapide', provider: 'google' },
+  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Recherche Google)', badge: 'Stable', provider: 'google' },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Recherche Google économique)', badge: 'Éco', provider: 'google' },
+  { id: 'gpt-6-astra', label: 'GPT-6 Astra (OpenAI · Recherche web avancée)', badge: 'OpenAI', provider: 'openai' },
+  { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna (OpenAI · Recherche web)', badge: 'OpenAI', provider: 'openai' },
+  { id: 'gpt-4o', label: 'GPT-4o (OpenAI · Recherche web)', badge: 'OpenAI', provider: 'openai' },
+] as const;
+
 export function isOpenAiStudioModel(model?: string | null): boolean {
   const id = String(model || '').trim().toLowerCase();
   if (!id) return false;
@@ -38,6 +52,7 @@ export function sanitizeAiStudioModels(raw: unknown): AiStudioModelsSettings {
   const src = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const validInv = AVAILABLE_INVITATION_MODELS.map((m) => m.id as string);
   const validRoom = AVAILABLE_ROOM_PLAN_MODELS.map((m) => m.id as string);
+  const validResearch = AVAILABLE_PRICE_RESEARCH_MODELS.map((m) => m.id as string);
 
   const inv = typeof src.invitationModel === 'string' && validInv.includes(src.invitationModel)
     ? src.invitationModel
@@ -47,5 +62,9 @@ export function sanitizeAiStudioModels(raw: unknown): AiStudioModelsSettings {
     ? src.roomPlanModel
     : DEFAULT_AI_STUDIO_MODELS.roomPlanModel;
 
-  return { invitationModel: inv, roomPlanModel: room };
+  const research = typeof src.priceResearchModel === 'string' && validResearch.includes(src.priceResearchModel)
+    ? src.priceResearchModel
+    : DEFAULT_AI_STUDIO_MODELS.priceResearchModel;
+
+  return { invitationModel: inv, roomPlanModel: room, priceResearchModel: research };
 }

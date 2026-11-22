@@ -11,7 +11,7 @@ import {
   type MarketObservation,
   type MarketReferenceRow,
 } from './marketPriceStats.ts';
-import { extractResearchJson, keepFacebookSources, keepSocialSources, mergeProposals, sanitizeResearchProposals } from './marketPriceResearchParse.ts';
+import { extractResearchJson, researchEnginePlan, keepFacebookSources, keepSocialSources, mergeProposals, sanitizeResearchProposals } from './marketPriceResearchParse.ts';
 
 const catering = (amountFc: number, guestCount: number | null, city = 'Kinshasa'): MarketObservation => ({
   slot: 'CATERING',
@@ -184,4 +184,10 @@ test('la réponse de l’IA est lue même entourée de balises, de texte, ou cou
   const cut = '```json\n{"items":[{"slot":"DJ","note":"prix {forfait} \\"soirée\\"","lowFc":1},{"slot":"CATERING","lowFc":';
   assert.deepEqual(extractResearchJson(cut), { items: [{ slot: 'DJ', note: 'prix {forfait} "soirée"', lowFc: 1 }] }, 'réponse coupée : lignes complètes gardées');
   assert.throws(() => extractResearchJson('Je n’ai rien trouvé.'), /illisible/);
+});
+
+test('la recherche de prix commence par le modèle choisi dans les paramètres IA', () => {
+  assert.deepEqual(researchEnginePlan('gemini-3-flash'), [{ engine: 'gemini', model: 'gemini-3-flash' }, { engine: 'openai' }]);
+  assert.deepEqual(researchEnginePlan('gpt-5.6-luna'), [{ engine: 'openai', model: 'gpt-5.6-luna' }, { engine: 'gemini' }]);
+  assert.deepEqual(researchEnginePlan(''), [{ engine: 'gemini' }, { engine: 'openai' }]);
 });

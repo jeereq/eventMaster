@@ -103,6 +103,7 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
   aiStudioModels?: {
     invitationModel?: string;
     roomPlanModel?: string;
+    priceResearchModel?: string;
   };
   subscriptionDiscountAccess?: {
     enabled?: boolean;
@@ -914,7 +915,7 @@ export default function AdminPlatformSettings({
                 </h4>
               </div>
               <p className="text-xs text-muted -mt-2 leading-relaxed">
-                Configurez les modèles d’intelligence artificielle prioritaires appelés lors de la composition des invitations graphiques et de l’agencement automatique des plans de salle 2D/3D.
+                Configurez les modèles d’intelligence artificielle prioritaires appelés pour les invitations graphiques, les plans de salle 2D/3D et la recherche de prix en ligne.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
@@ -944,6 +945,7 @@ export default function AdminPlatformSettings({
                         aiStudioModels: {
                           invitationModel: e.target.value,
                           roomPlanModel: value.aiStudioModels?.roomPlanModel || 'gemini-3.1-pro-preview',
+                          priceResearchModel: value.aiStudioModels?.priceResearchModel || 'gemini-3.1-pro-preview',
                         },
                       })
                     }
@@ -1007,6 +1009,7 @@ export default function AdminPlatformSettings({
                         aiStudioModels: {
                           invitationModel: value.aiStudioModels?.invitationModel || 'gemini-3-pro-image',
                           roomPlanModel: e.target.value,
+                          priceResearchModel: value.aiStudioModels?.priceResearchModel || 'gemini-3.1-pro-preview',
                         },
                       })
                     }
@@ -1041,6 +1044,50 @@ export default function AdminPlatformSettings({
 
                   <p className="text-xs text-muted leading-relaxed">
                     Modèle d&apos;analyse textuelle et topologique pour convertir les briefs et photos en blueprints de salle avec distances de circulation.
+                  </p>
+                </div>
+
+                {/* Modèle Recherche de prix */}
+                <div className="p-4 rounded-xl border border-border bg-surface-muted/40 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <label htmlFor="ai-price-research-model" className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-emerald-600" />
+                      Recherche de prix (web, Facebook, Instagram)
+                    </label>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                      {value.aiStudioModels?.priceResearchModel?.startsWith('gpt') ? 'OpenAI' : 'Google Search'}
+                    </span>
+                  </div>
+
+                  <select
+                    id="ai-price-research-model"
+                    value={value.aiStudioModels?.priceResearchModel || 'gemini-3.1-pro-preview'}
+                    onChange={(e) =>
+                      patch({
+                        aiStudioModels: {
+                          invitationModel: value.aiStudioModels?.invitationModel || 'gemini-3-pro-image',
+                          roomPlanModel: value.aiStudioModels?.roomPlanModel || 'gemini-3.1-pro-preview',
+                          priceResearchModel: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-11 cursor-pointer transition shadow-2xs"
+                  >
+                    <optgroup label="Google Gemini (Google Search)">
+                      <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Recherche approfondie)</option>
+                      <option value="gemini-3-flash">Gemini 3 Flash (Recherche rapide)</option>
+                      <option value="gemini-2.5-pro">Gemini 2.5 Pro (Stable)</option>
+                      <option value="gemini-2.5-flash">Gemini 2.5 Flash (Économique)</option>
+                    </optgroup>
+                    <optgroup label="OpenAI (recherche web)">
+                      <option value="gpt-6-astra">GPT-6 Astra (Recherche web avancée)</option>
+                      <option value="gpt-5.6-luna">GPT-5.6 Luna (Recherche web)</option>
+                      <option value="gpt-4o">GPT-4o (Recherche web)</option>
+                    </optgroup>
+                  </select>
+
+                  <p className="text-xs text-muted leading-relaxed">
+                    Ce modèle cherche les prix en premier, depuis le simulateur et la page Prix du marché. L&apos;autre fournisseur complète les lignes qu&apos;il n&apos;a pas trouvées.
                   </p>
                 </div>
               </div>
