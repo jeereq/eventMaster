@@ -22,6 +22,8 @@ import {
   ChevronRight,
   Plus,
   Eye,
+  ChevronUp,
+  ChevronDown,
 } from '@/components/icons';
 import type { AvatarSeatAction, SeatViewRequest } from '@/components/RoomWebGLViewer';
 
@@ -132,6 +134,8 @@ export default function SeatSelection3DViewer({
   const [internalFocusedTableId, setInternalFocusedTableId] = useState<string | null>(null);
   const [quality, setQuality] = useState<RoomPreviewQuality>('showcase');
   const [seatView, setSeatView] = useState<SeatViewRequest | null>(null);
+  // Plein écran sur téléphone : liste des sièges repliée par défaut pour laisser la salle à l'écran.
+  const [fullscreenListOpen, setFullscreenListOpen] = useState(false);
   const viewerRef = useRef<HTMLDivElement>(null);
 
   const focusedTableId = activeTableId !== undefined ? activeTableId : internalFocusedTableId;
@@ -275,6 +279,8 @@ export default function SeatSelection3DViewer({
 
   const viewFromSeat = (tableId: string, seatIndex: number) => {
     setSeatView((prev) => ({ tableId, seatIndex, key: (prev?.key ?? 0) + 1 }));
+    // En plein écran sur téléphone, on replie la liste pour voir le vol de la caméra.
+    setFullscreenListOpen(false);
     // Sur téléphone le bouton est sous la 3D : on remonte pour voir le vol jusqu'au siège.
     viewerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
@@ -464,12 +470,15 @@ export default function SeatSelection3DViewer({
     </div>
   ) : null;
 
-  /** Plein écran : le même panneau à côté de la 3D, avec le récapitulatif et un retour au formulaire. */
+  /**
+   * Plein écran : récapitulatif (places, total, « Continuer ») toujours visible, et le panneau de la table.
+   * Sur téléphone la liste se replie derrière un bouton pour que la salle occupe l'écran.
+   */
   const fullscreenPanel = (close: () => void) => (
-    <div className="space-y-3 text-foreground">
-      <div className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-surface p-3 shadow-sm">
-        <div className="min-w-0">
-          <p className="text-sm font-bold">
+    <div className="space-y-2.5 text-foreground sm:space-y-3">
+      <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-2.5 shadow-sm sm:p-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold">
             {selectedSeats.length === 0
               ? 'Aucune place choisie'
               : `${selectedSeats.length} place${selectedSeats.length > 1 ? 's' : ''} choisie${selectedSeats.length > 1 ? 's' : ''}`}
@@ -477,9 +486,24 @@ export default function SeatSelection3DViewer({
           {selectedTotalFc > 0 ? (
             <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatFc(selectedTotalFc)}</p>
           ) : (
-            <p className="text-xs text-muted">Touchez une chaise ou un siège de la liste</p>
+            <p className="truncate text-xs text-muted">
+              <span className="sm:hidden">Touchez une chaise sur la salle</span>
+              <span className="hidden sm:inline">Touchez une chaise ou un siège de la liste</span>
+            </p>
           )}
         </div>
+        {seatPanel ? (
+          <button
+            type="button"
+            onClick={() => setFullscreenListOpen((open) => !open)}
+            aria-expanded={fullscreenListOpen}
+            aria-controls="fullscreen-seat-list"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm font-semibold text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:hidden"
+          >
+            {fullscreenListOpen ? <ChevronDown className="h-4 w-4" aria-hidden /> : <ChevronUp className="h-4 w-4" aria-hidden />}
+            {fullscreenListOpen ? 'Salle' : 'Sièges'}
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={close}
@@ -489,7 +513,9 @@ export default function SeatSelection3DViewer({
           {selectedSeats.length > 0 ? 'Continuer' : 'Fermer'}
         </button>
       </div>
-      {seatPanel}
+      <div id="fullscreen-seat-list" className={cn(!fullscreenListOpen && 'max-sm:hidden')}>
+        {seatPanel}
+      </div>
     </div>
   );
 

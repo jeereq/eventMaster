@@ -140,6 +140,7 @@ type WebGLPreviewProps = {
   guestSimulation?: GuestSimulationSettings | null;
   seatView?: SeatViewRequest | null;
   seatActionFor?: AvatarSeatAction;
+  onContextLost?: () => void;
 };
 
 function WebGLPreviewCanvas({
@@ -160,6 +161,7 @@ function WebGLPreviewCanvas({
   guestSimulation = null,
   seatView = null,
   seatActionFor,
+  onContextLost,
 }: WebGLPreviewProps) {
   const selected = useMemo(() => {
     return mapTicketSelectionsToWebGL(
@@ -199,6 +201,7 @@ function WebGLPreviewCanvas({
       guestSimulation={guestSimulation}
       seatView={seatView}
       seatActionFor={seatActionFor}
+      onContextLost={onContextLost}
       className={cn('absolute inset-0 h-full w-full shadow-[var(--shadow-soft)] touch-none', className)}
     />
   );
@@ -303,6 +306,10 @@ export default function RoomLayoutPreview({
   const [showRoof, setShowRoof] = useState(false);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
+  // Pertes du contexte WebGL (iPhone à court de mémoire en plein écran) : 1re → 3D recréée en qualité allégée,
+  // 2e → aperçu 2D, pour que la salle reste visible au lieu d'un écran noir.
+  const [glLosses, setGlLosses] = useState(0);
+  const handleContextLost = React.useCallback(() => setGlLosses((n) => n + 1), []);
   const previousForce2dRef = React.useRef(force2d);
 
   const stopWalkthrough = () => {
@@ -350,7 +357,8 @@ export default function RoomLayoutPreview({
 
   const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
   const lightingPreset = lightingPresetOverride ?? blueprint.metadata.lightingPreset ?? 'auto';
-  const useWebGL = !force2d && !localForce2d && quality !== 'thumb' && mounted;
+  const useWebGL = !force2d && !localForce2d && glLosses < 2 && quality !== 'thumb' && mounted;
+  const webglQuality: RoomPreviewQuality = glLosses > 0 && quality === 'showcase' ? 'standard' : quality;
   const canExpand = (allowExpand ?? allowMobileExpand ?? quality !== 'thumb') && quality !== 'thumb';
   const viewBlueprint = applyPlanSceneVisibility(blueprint, { showWalls, showRoof });
 
@@ -363,7 +371,7 @@ export default function RoomLayoutPreview({
         metadata: { ...viewBlueprint.metadata, depthAmount: GUEST_PLAN_DEFAULT_DEPTH, depthView: true },
       };
 
-  const webglBlueprint = quality === 'showcase'
+  const webglBlueprint = webglQuality === 'showcase'
     ? {
         ...perspectiveBlueprint,
         metadata: {
@@ -403,8 +411,10 @@ export default function RoomLayoutPreview({
               onFallbackTo2D={() => setLocalForce2d(true)}
             >
               <WebGLPreviewCanvas
+                key={glLosses}
                 webglBlueprint={webglBlueprint}
-                quality={quality}
+                quality={webglQuality}
+                onContextLost={handleContextLost}
                 lightingPreset={lightingPreset}
                 selectedTableId={selectedTableId}
                 selectedTableIds={selectedTableIds}
@@ -512,15 +522,19 @@ export default function RoomLayoutPreview({
             </div>
           </div>
           <div className="flex flex-1 min-h-0 flex-col sm:flex-row">
-          <div className="relative flex-1 min-h-0">
+          {/* Téléphone : la salle garde au moins la moitié de l'écran, quel que soit le contenu du panneau
+              (pourcentages plutôt que dvh, inconnus des navigateurs plus anciens). */}
+          <div className={cn('relative flex-1 min-h-0', fullscreenPanel && 'max-sm:min-h-[50%]')}>
             {useWebGL ? (
               <Room3DErrorBoundary
                 className="absolute inset-0 h-full w-full"
                 onFallbackTo2D={() => setLocalForce2d(true)}
               >
                 <WebGLPreviewCanvas
+                  key={glLosses}
                   webglBlueprint={webglBlueprint}
-                  quality={quality}
+                  quality={webglQuality}
+                  onContextLost={handleContextLost}
                   lightingPreset={lightingPreset}
                   selectedTableId={selectedTableId}
                   selectedTableIds={selectedTableIds}
@@ -548,7 +562,7 @@ export default function RoomLayoutPreview({
           </div>
           {fullscreenPanel ? (
             <aside
-              className="max-h-[40dvh] shrink-0 overflow-y-auto overscroll-contain border-t border-stage-foreground/15 bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:max-h-none sm:w-[24rem] sm:border-l sm:border-t-0"
+              className="max-h-[50%] min-h-0 shrink overflow-y-auto overscroll-contain border-t border-stage-foreground/15 bg-background p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:max-h-none sm:w-[min(24rem,45%)] sm:shrink-0 sm:border-l sm:border-t-0 sm:p-3"
               aria-label="Choix des places"
             >
               {fullscreenPanel(() => {
@@ -564,6 +578,8 @@ export default function RoomLayoutPreview({
               'text-xs text-stage-foreground/80 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
               // Sur un téléphone, le panneau des places a besoin de cette hauteur : la consigne reste sur grand écran.
               fullscreenPanel && 'hidden sm:block',
+              // Téléphone à l'horizontale : chaque ligne compte pour la salle.
+              '[@media(max-height:480px)]:hidden',
             )}
           >
             {useWebGL

@@ -318,6 +318,11 @@ interface RoomWebGLViewerProps {
   seatView?: SeatViewRequest | null;
   /** Bouton d'action proposé sur la place regardée (billetterie : « Choisir cette place »). */
   seatActionFor?: AvatarSeatAction;
+  /**
+   * Le navigateur a retiré le contexte WebGL (mémoire saturée, fréquent sur iPhone au passage en plein écran) :
+   * la scène reste noire tant que le parent ne recrée pas la vue ou ne bascule pas sur un aperçu 2D.
+   */
+  onContextLost?: () => void;
 }
 
 export interface SeatViewRequest {
@@ -4976,8 +4981,17 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   hideMusic = false,
   seatView = null,
   seatActionFor,
+  onContextLost,
 }, ref) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
+  const onContextLostRef = useRef(onContextLost);
+  useEffect(() => {
+    onContextLostRef.current = onContextLost;
+    // Le contexte est aussi libéré volontairement après le démontage : ce n'est pas une perte à signaler.
+    return () => {
+      onContextLostRef.current = undefined;
+    };
+  }, [onContextLost]);
   const touchScreen = useCoarsePointer();
   const [tourCaption, setTourCaption] = useState('entrée par la porte');
   const presentationMode = presentationModeProp ?? blueprint.metadata.presentationMode === true;
@@ -5931,6 +5945,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
           const handleContextLost = (event: Event) => {
             event.preventDefault();
             console.warn('[RoomWebGLViewer] webglcontextlost intercepté pour éviter le crash fatal.');
+            onContextLostRef.current?.();
           };
           dom.addEventListener('webglcontextlost', handleContextLost, false);
           gl.shadowMap.type = qualitySettings.softShadows
