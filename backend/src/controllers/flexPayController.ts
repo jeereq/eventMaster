@@ -32,6 +32,7 @@ import { creditPaidAiTokenOrder } from '../services/aiSimulationWalletService';
 import type { AuthenticatedRequest } from '../middleware/auth';
 import { findDepositPaymentForFlexPay, verifyDepositPayment } from '../services/marketplaceDepositService';
 import { findCommissionPaymentForFlexPay, verifyCommissionPayment } from '../services/marketplaceCommissionPaymentService';
+import { findSmsCreditOrderForFlexPay, verifySmsCreditOrder } from '../services/smsCreditService';
 
 function frontendBaseUrl(): string {
   return (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
@@ -269,6 +270,18 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       return res.json({ ok: true, paid: result.status === 'PAID', kind, paymentId: commission.id });
     }
 
+    // 5 bis) Pack de crédits SMS acheté par une organisation
+    const smsOrder = await findSmsCreditOrderForFlexPay({
+      reference: parsed.reference || null,
+      orderNumber: parsed.orderNumber || null,
+    });
+    if (smsOrder) {
+      const result = await verifySmsCreditOrder(smsOrder.id);
+      const kind = 'sms_credits';
+      if (result.status === 'PENDING') return res.status(202).json({ ok: true, pending: true, kind, orderId: smsOrder.id });
+      return res.json({ ok: true, paid: result.status === 'PAID', kind, orderId: smsOrder.id });
+    }
+
     // 6) Pay Out (versements envoyés avant la route de callback dédiée)
     const payout = await processFlexPayPayoutNotification({
       reference: parsed.reference || null,
@@ -354,6 +367,17 @@ export async function flexPayCardReturn(req: Request, res: Response) {
 
       return res.redirect(
         `${FRONTEND_URL}/dashboard/billing?flexpay=return&requestId=${encodeURIComponent(requestId)}`,
+      );
+    }
+
+    if (kind === 'sms_credits') {
+      const orderId = String(req.query.orderId || '');
+      if (result === 'approve' && orderId) {
+        await verifySmsCreditOrder(orderId).catch((err) => console.warn('[FlexPay] verify sms credits on return:', err));
+      }
+      const state = result === 'approve' ? 'return' : 'canceled';
+      return res.redirect(
+        `${FRONTEND_URL}/dashboard/billing?smsCredits=${state}&orderId=${encodeURIComponent(orderId)}`,
       );
     }
 

@@ -17,6 +17,7 @@ import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel from '@/components/QuotaUsagePanel';
+import SmsCreditsPanel from '@/components/billing/SmsCreditsPanel';
 import SubscriptionFlexPayModal from '@/components/SubscriptionFlexPayModal';
 import SubscriptionDiscountRequestModal from '@/components/SubscriptionDiscountRequestModal';
 import { commercialPercent } from '@/lib/platformRates';
@@ -675,6 +676,7 @@ function BillingPageInner() {
               limits: billing.limits,
             }}
           />
+          {billing.plan !== 'FREE' && access?.canViewBilling ? <SmsCreditsPanel /> : null}
           {billing.capabilities && (
             <details className="group pt-2 border-t border-border">
               <summary className="min-h-11 flex items-center justify-between gap-2 cursor-pointer list-none text-sm font-medium text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-[var(--radius-button)] [&::-webkit-details-marker]:hidden">

@@ -8,6 +8,7 @@ import {
   settleOrgBillingPayout,
   verifyOrgBillingFlexPayPayout,
 } from '../controllers/orgPayoutController';
+import { checkoutSmsCredits, getSmsCreditOrder, getSmsCredits } from '../controllers/smsCreditController';
 import { requireAuth } from '../middleware/auth';
 
 const router = Router();
@@ -24,6 +25,9 @@ router.get('/payouts', listOrgBillingPayouts);
 router.patch('/payouts', settleOrgBillingPayout);
 router.post('/payouts/flexpay', initiateOrgBillingFlexPayPayout);
 router.get('/payouts/flexpay/:transferId/verify', verifyOrgBillingFlexPayPayout);
+router.get('/sms-credits', getSmsCredits);
+router.post('/sms-credits/checkout', checkoutSmsCredits);
+router.get('/sms-credits/orders/:orderId', getSmsCreditOrder);
 router.get('/branding', getMyBranding);
 router.put('/branding', updateMyBranding);
 router.post('/checkout', createCheckoutSession);
