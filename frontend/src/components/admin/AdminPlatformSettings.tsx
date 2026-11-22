@@ -273,7 +273,7 @@ function SmsCreditsSettingsEditor({
         <div className="space-y-1.5">
           <label className={labelClass}>Arrondi des prix (FC)</label>
           <input
-            type="number" min={1} max={10000} step={50}
+            type="number" min={1} max={10000} step={1}
             value={current.roundingFc}
             onChange={(e) => update({ roundingFc: Number(e.target.value) || SMS_DEFAULTS.roundingFc })}
             className={cn(fieldClass, 'font-medium')}
@@ -1143,7 +1143,7 @@ export default function AdminPlatformSettings({
                     type="number"
                     min={1}
                     max={100000000}
-                    step={100}
+                    step={1}
                     value={Number(value.aiTokenMinPurchaseCdf ?? 2500)}
                     onChange={(e) => patch({ aiTokenMinPurchaseCdf: Math.max(1, Number(e.target.value) || 2500) })}
                     className={cn(fieldClass, 'font-medium')}
@@ -2462,7 +2462,7 @@ function DonationsAccessEditor({
               <input
                 type="number"
                 min={100}
-                step={500}
+                step={1}
                 value={access.minAmountFc}
                 onChange={(e) => patch({ minAmountFc: Math.max(100, Number(e.target.value) || 1000) })}
                 className={fieldClass}

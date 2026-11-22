@@ -792,7 +792,7 @@ export default function EventTicketCheckoutForm({
                 label={`Montant libre du don en FC (min ${formatFc(donationsConfig?.minAmountFc ?? 1000)})`}
                 type="number"
                 min={donationsConfig?.minAmountFc ?? 1000}
-                step={500}
+                step={1}
                 value={donationAmountFc}
                 onChange={(e) => setDonationAmountFc(e.target.value)}
                 required
