@@ -9,7 +9,8 @@ import {
   listAdminTenants,
   createTenant,
   updateTenantPlanOrLicense, 
-  deleteTenant, 
+  deleteTenant,
+  bulkDeleteAdminRecords,
   getAllUsers, 
   createUser,
   resendUserVerification,
@@ -246,6 +247,9 @@ router.get('/ai-tokens/export', requireRole(['SUPER_ADMIN']), exportAdminAiToken
 router.post('/ai-tokens/grant', requireRole(['SUPER_ADMIN']), grantAdminAiTokens);
 
 // Gestion des organisations et utilisateurs : Super Admin uniquement
+// Suppression groupée (organisations, utilisateurs, modèles, événements, invités) : Super Admin uniquement
+router.post('/bulk-delete', requireRole(['SUPER_ADMIN']), bulkDeleteAdminRecords);
+
 router.put('/tenants/:id', requireRole(['SUPER_ADMIN']), updateTenantPlanOrLicense);
 router.delete('/tenants/:id', requireRole(['SUPER_ADMIN']), deleteTenant);
 

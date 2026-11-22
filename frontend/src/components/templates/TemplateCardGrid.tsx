@@ -41,6 +41,9 @@ interface TemplateCardGridProps {
   onToggleLanding?: (id: string, current: boolean) => void;
   onViewDetails?: (t: TemplateCardItem) => void;
   onUseInStudio?: (t: TemplateCardItem) => void;
+  /** Sélection multiple (suppression groupée côté admin). */
+  isSelected?: (id: string) => boolean;
+  onToggleSelect?: (id: string) => void;
   /** Défaut grille (aligné plateforme). */
   layout?: ViewMode;
   columns?: GridColumns;
@@ -128,6 +131,8 @@ export default function TemplateCardGrid({
   onToggleLanding,
   onViewDetails,
   onUseInStudio,
+  isSelected,
+  onToggleSelect,
   layout = 'grid',
   columns = 3,
   className,
@@ -292,6 +297,11 @@ export default function TemplateCardGrid({
               aside={t.showOnLanding ? <StatusPill tone="emerald">Landing</StatusPill> : undefined}
               onClick={onViewDetails ? () => onViewDetails(t) : undefined}
               actions={actions}
+              selection={
+                onToggleSelect
+                  ? { checked: Boolean(isSelected?.(t.id)), onToggle: () => onToggleSelect(t.id), label: `Sélectionner ${t.name}` }
+                  : undefined
+              }
             />
           );
         }
@@ -299,8 +309,19 @@ export default function TemplateCardGrid({
         return (
           <article
             key={t.id}
-            className="group flex flex-col min-h-[36rem] sm:min-h-[40rem] bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-soft)] hover:border-primary/40 hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 transition duration-200"
+            className={`relative ${isSelected?.(t.id) ? 'ring-2 ring-primary/40 !border-primary ' : ''}group flex flex-col min-h-[36rem] sm:min-h-[40rem] bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-soft)] hover:border-primary/40 hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 transition duration-200`}
           >
+            {onToggleSelect ? (
+              <label className="absolute top-1 right-1 z-20 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-white/90 dark:bg-surface/90 shadow-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={Boolean(isSelected?.(t.id))}
+                  onChange={() => onToggleSelect(t.id)}
+                  aria-label={`Sélectionner ${t.name}`}
+                  className="h-5 w-5 rounded border-border accent-primary cursor-pointer"
+                />
+              </label>
+            ) : null}
             <TemplatePreviewThumb t={t} onViewDetails={onViewDetails} />
             <div className="p-2.5 space-y-1.5 flex-[1] flex flex-col min-w-0 min-h-0">
               <span className="text-xs font-semibold text-muted">

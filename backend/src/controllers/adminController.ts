@@ -38,6 +38,8 @@ import {
   removeCommercialPermissions,
 } from '../services/platformSettingsService';
 import { auditReq } from '../services/adminAuditService';
+import { deleteAdminRecord, deleteAdminRecords } from '../services/adminDeleteService';
+import { parseBulkDeleteRequest } from '../services/adminBulkDeletePolicy';
 import { adminPager, adminQueryString, adminSearch, listPayload, prismaAnd } from '../utils/adminPager';
 import { grantWelcomeAtPlanActivation } from '../services/welcomeAiTokens';
 import { extractEventDonationsConfig } from '../services/donationsAccess';
@@ -699,39 +701,12 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
 
 // Delete tenant and all associated data
 export async function deleteTenant(req: AuthenticatedRequest, res: Response) {
-  try {
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
-    }
-
-    const id = req.params.id as string;
-
-    const existing = await prisma.tenant.findUnique({
-      where: { id },
-      select: { id: true, name: true, plan: true },
-    });
-    if (!existing) {
-      return res.status(404).json({ error: 'Organisation introuvable.' });
-    }
-
-    await prisma.tenant.delete({
-      where: { id },
-    });
-
-    await auditReq(req, {
-      action: 'TENANT_DELETE',
-      targetType: 'tenant',
-      targetId: existing.id,
-      tenantId: existing.id,
-      summary: `Organisation « ${existing.name} » supprimée`,
-      metadata: { plan: existing.plan },
-    });
-
-    return res.json({ message: 'Tenant supprimé avec succès' });
-  } catch (error: any) {
-    console.error('Erreur lors de la suppression du tenant:', error);
-    return res.status(500).json({ error: 'Erreur lors de la suppression de l\'organisation' });
+  if (req.user?.role !== 'SUPER_ADMIN') {
+    return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
   }
+  const outcome = await deleteAdminRecord(req, 'tenant', String(req.params.id));
+  if (!outcome.ok) return res.status(outcome.status).json({ error: outcome.error });
+  return res.json({ message: 'Tenant supprimé avec succès' });
 }
 
 // Get all users across the platform
@@ -1239,44 +1214,12 @@ export async function updateUserRoleOrStatus(req: AuthenticatedRequest, res: Res
 
 // Delete user
 export async function deleteUser(req: AuthenticatedRequest, res: Response) {
-  try {
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
-    }
-
-    const id = req.params.id as string;
-
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-      select: { id: true, email: true, role: true, tenantId: true },
-    });
-    if (!existingUser) {
-      return res.status(404).json({ error: 'Utilisateur introuvable.' });
-    }
-
-    await prisma.user.delete({
-      where: { id },
-    });
-    invalidateSessionCache(id);
-
-    if (existingUser.role === 'COMMERCIAL') {
-      await removeCommercialPermissions(id);
-    }
-
-    await auditReq(req, {
-      action: 'USER_DELETE',
-      targetType: 'user',
-      targetId: existingUser.id,
-      tenantId: existingUser.tenantId,
-      summary: `Utilisateur ${existingUser.email} supprimé`,
-      metadata: { role: existingUser.role },
-    });
-
-    return res.json({ message: 'Utilisateur supprimé avec succès' });
-  } catch (error: any) {
-    console.error('Erreur lors de la suppression de l\'utilisateur:', error);
-    return res.status(500).json({ error: 'Erreur lors de la suppression de l\'utilisateur' });
+  if (req.user?.role !== 'SUPER_ADMIN') {
+    return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
   }
+  const outcome = await deleteAdminRecord(req, 'user', String(req.params.id));
+  if (!outcome.ok) return res.status(outcome.status).json({ error: outcome.error });
+  return res.json({ message: 'Utilisateur supprimé avec succès' });
 }
 
 // Get all templates across the platform
@@ -1415,22 +1358,12 @@ export async function toggleTemplateLanding(req: AuthenticatedRequest, res: Resp
 
 // Delete template
 export async function deleteTemplate(req: AuthenticatedRequest, res: Response) {
-  try {
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
-    }
-
-    const id = req.params.id as string;
-
-    await prisma.template.delete({
-      where: { id },
-    });
-
-    return res.json({ message: 'Modèle supprimé avec succès' });
-  } catch (error: any) {
-    console.error('Erreur lors de la suppression du modèle:', error);
-    return res.status(500).json({ error: 'Erreur lors de la suppression du modèle' });
+  if (req.user?.role !== 'SUPER_ADMIN') {
+    return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
   }
+  const outcome = await deleteAdminRecord(req, 'template', String(req.params.id));
+  if (!outcome.ok) return res.status(outcome.status).json({ error: outcome.error });
+  return res.json({ message: 'Modèle supprimé avec succès' });
 }
 
 // Get all events across all tenants (Super Admin only)
@@ -1673,38 +1606,12 @@ export async function toggleAdminEventBlock(req: AuthenticatedRequest, res: Resp
 
 // Delete any event (Super Admin only)
 export async function deleteAdminEvent(req: AuthenticatedRequest, res: Response) {
-  try {
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
-    }
-
-    const id = req.params.id as string;
-
-    const existingEvent = await prisma.event.findUnique({
-      where: { id },
-      select: { id: true, title: true, tenantId: true },
-    });
-    if (!existingEvent) {
-      return res.status(404).json({ error: 'Événement introuvable.' });
-    }
-
-    await prisma.event.delete({
-      where: { id },
-    });
-
-    await auditReq(req, {
-      action: 'EVENT_DELETE',
-      targetType: 'event',
-      targetId: existingEvent.id,
-      tenantId: existingEvent.tenantId,
-      summary: `Événement « ${existingEvent.title} » supprimé`,
-    });
-
-    return res.json({ message: 'Événement supprimé avec succès' });
-  } catch (error: any) {
-    console.error('Erreur lors de la suppression de l\'événement par l\'admin:', error);
-    return res.status(500).json({ error: 'Erreur lors de la suppression de l\'événement' });
+  if (req.user?.role !== 'SUPER_ADMIN') {
+    return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
   }
+  const outcome = await deleteAdminRecord(req, 'event', String(req.params.id));
+  if (!outcome.ok) return res.status(outcome.status).json({ error: outcome.error });
+  return res.json({ message: 'Événement supprimé avec succès' });
 }
 
 // === GUESTS MANAGEMENT (Super Admin only) ===
@@ -1958,38 +1865,12 @@ export async function updateAdminGuest(req: AuthenticatedRequest, res: Response)
 
 // Delete any guest
 export async function deleteAdminGuest(req: AuthenticatedRequest, res: Response) {
-  try {
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
-    }
-
-    const id = req.params.id as string;
-
-    const existingGuest = await prisma.guest.findUnique({
-      where: { id },
-      select: { id: true, firstName: true, lastName: true, event: { select: { tenantId: true, title: true } } },
-    });
-    if (!existingGuest) {
-      return res.status(404).json({ error: 'Invité introuvable.' });
-    }
-
-    await prisma.guest.delete({
-      where: { id },
-    });
-
-    await auditReq(req, {
-      action: 'GUEST_DELETE',
-      targetType: 'guest',
-      targetId: existingGuest.id,
-      tenantId: existingGuest.event.tenantId,
-      summary: `Invité ${existingGuest.firstName} ${existingGuest.lastName} supprimé (${existingGuest.event.title})`,
-    });
-
-    return res.json({ message: 'Invité supprimé avec succès' });
-  } catch (error: any) {
-    console.error('Erreur lors de la suppression de l\'invité par l\'admin:', error);
-    return res.status(500).json({ error: 'Erreur lors de la suppression de l\'invité' });
+  if (req.user?.role !== 'SUPER_ADMIN') {
+    return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
   }
+  const outcome = await deleteAdminRecord(req, 'guest', String(req.params.id));
+  if (!outcome.ok) return res.status(outcome.status).json({ error: outcome.error });
+  return res.json({ message: 'Invité supprimé avec succès' });
 }
 
 // === CONFIGURATION & SETTINGS (Super Admin only) ===
@@ -2083,4 +1964,27 @@ export async function updateAdminSettings(req: AuthenticatedRequest, res: Respon
     console.error('Erreur lors de la mise à jour des paramètres:', error);
     return res.status(500).json({ error: 'Erreur lors de la mise à jour des paramètres' });
   }
+}
+
+/** Suppression groupée (Super Admin) : `{ type, ids }`, au plus 100 éléments d'un même type. */
+export async function bulkDeleteAdminRecords(req: AuthenticatedRequest, res: Response) {
+  if (req.user?.role !== 'SUPER_ADMIN') {
+    return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+  }
+  const parsed = parseBulkDeleteRequest(req.body);
+  if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+
+  const { deleted, failed } = await deleteAdminRecords(req, parsed.type, parsed.ids);
+  const message =
+    failed.length === 0
+      ? `${deleted.length} élément${deleted.length > 1 ? 's' : ''} supprimé${deleted.length > 1 ? 's' : ''}.`
+      : `${deleted.length} supprimé${deleted.length > 1 ? 's' : ''}, ${failed.length} non supprimé${failed.length > 1 ? 's' : ''}.`;
+  if (deleted.length === 0) {
+    return res.status(409).json({ error: failed[0]?.error || 'Aucun élément supprimé.', failed });
+  }
+  return res.json({
+    message,
+    deletedIds: deleted.map((d) => d.id),
+    failed,
+  });
 }
