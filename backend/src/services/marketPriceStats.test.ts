@@ -11,7 +11,7 @@ import {
   type MarketObservation,
   type MarketReferenceRow,
 } from './marketPriceStats.ts';
-import { keepFacebookSources, keepSocialSources, mergeProposals, sanitizeResearchProposals } from './marketPriceResearchParse.ts';
+import { extractResearchJson, keepFacebookSources, keepSocialSources, mergeProposals, sanitizeResearchProposals } from './marketPriceResearchParse.ts';
 
 const catering = (amountFc: number, guestCount: number | null, city = 'Kinshasa'): MarketObservation => ({
   slot: 'CATERING',
@@ -174,4 +174,14 @@ test('une recherche Facebook ne garde que des liens Facebook', () => {
     { title: 'Faux', url: 'https://facebook.com.evil.cd/x' },
   ]);
   assert.deepEqual(kept.map((item) => item.title), ['Traiteur', 'facebook.com']);
+});
+
+test('la réponse de l’IA est lue même entourée de balises, de texte, ou coupée', () => {
+  const body = '{"items":[{"slot":"DJ","lowFc":1},{"slot":"CATERING","lowFc":2}]}';
+  assert.deepEqual(extractResearchJson('```json\n' + body + '\n```'), JSON.parse(body));
+  assert.deepEqual(extractResearchJson('```json\n' + body), JSON.parse(body), 'balise jamais fermée');
+  assert.deepEqual(extractResearchJson('Voici les prix :\n' + body + '\nSources : Google.'), JSON.parse(body));
+  const cut = '```json\n{"items":[{"slot":"DJ","note":"prix {forfait} \\"soirée\\"","lowFc":1},{"slot":"CATERING","lowFc":';
+  assert.deepEqual(extractResearchJson(cut), { items: [{ slot: 'DJ', note: 'prix {forfait} "soirée"', lowFc: 1 }] }, 'réponse coupée : lignes complètes gardées');
+  assert.throws(() => extractResearchJson('Je n’ai rien trouvé.'), /illisible/);
 });
