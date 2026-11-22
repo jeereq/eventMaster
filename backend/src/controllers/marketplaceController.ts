@@ -253,6 +253,7 @@ function toPublicVenue(listing: {
     name: string;
     branding: unknown;
     marketplaceUnavailableDates?: unknown;
+    marketplaceDepositRate?: number | null;
     vendorProfile: { displayName: string; city: string | null; slug?: string | null } | null;
   };
   bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }>;
@@ -289,6 +290,7 @@ function toPublicVenue(listing: {
     blockedDates: effectiveBlockedDates(listing),
     bookedDates: collectUnavailableDates([], listing.bookings),
     unavailableDates: rowUnavailableDates(listing),
+    depositRate: listing.tenant.marketplaceDepositRate ?? null,
     details: extra,
   };
 }
@@ -439,6 +441,7 @@ const listingInclude = {
       name: true,
       branding: true,
       marketplaceUnavailableDates: true,
+      marketplaceDepositRate: true,
       vendorProfile: { select: { displayName: true, city: true, slug: true } },
     },
   },
@@ -881,7 +884,7 @@ function toPublicService(offering: {
   blockedDates?: unknown;
   publishedAt: Date | null;
   vendorProfile: { displayName: string; city: string | null; slug: string };
-  tenant: { name: string; marketplaceUnavailableDates?: unknown };
+  tenant: { name: string; marketplaceUnavailableDates?: unknown; marketplaceDepositRate?: number | null };
   bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }>;
 }) {
   const photos = parsePhotoUrls(offering.photos);
@@ -925,6 +928,7 @@ function toPublicService(offering: {
     blockedDates: effectiveBlockedDates(offering),
     bookedDates: collectUnavailableDates([], offering.bookings),
     unavailableDates: rowUnavailableDates(offering),
+    depositRate: offering.tenant.marketplaceDepositRate ?? null,
     details: {
       ...extra,
       deliveryMode: deliveryMode || '',
@@ -935,7 +939,7 @@ function toPublicService(offering: {
 
 const offeringInclude = {
   vendorProfile: { select: { displayName: true, city: true, slug: true, isBlockedByAdmin: true } },
-  tenant: { select: { name: true, marketplaceUnavailableDates: true } },
+  tenant: { select: { name: true, marketplaceUnavailableDates: true, marketplaceDepositRate: true } },
   bookings: {
     where: { status: { in: HOLD_BOOKING_STATUSES } },
     select: { eventDate: true, eventEndDate: true },

@@ -281,6 +281,7 @@ export default function EventPrepListingModal({
           listingSlug={venue?.slug}
           offeringSlug={service?.slug}
           unavailableDates={listing.unavailableDates}
+          depositRate={listing.depositRate}
           bookedDates={listing.bookedDates}
           blockedDates={listing.blockedDates}
           priceFromFc={service?.promoActive && service.promoPriceFc != null ? service.promoPriceFc : listing.priceFromFc}

@@ -1211,7 +1211,7 @@ export const PLATFORM_PILLARS = [
   },
   {
     title: 'Marketplace',
-    description: 'Salles, prestataires, matériel & équipements. Acompte {depositPercent} % hors plateforme · commission vendeur {commissionPercent} %.',
+    description: 'Salles, prestataires, matériel & équipements. Acompte {depositPercent} % par défaut, réglable par chaque prestataire · sans commission marketplace.',
     icon: 'calendar'
   },
   {

@@ -13,6 +13,9 @@ export interface VendorDepositSettings {
   payoutPhoneMasked: string | null;
   payoutHolder: string | null;
   platformAvailable: boolean;
+  /** Taux propre au prestataire (0 à 1), null : taux par défaut de la plateforme. */
+  depositRate?: number | null;
+  defaultDepositRate?: number;
 }
 
 /**
@@ -34,6 +37,7 @@ export default function OnlineDepositSettings({
   const [enabled, setEnabled] = useState(false);
   const [phone, setPhone] = useState('');
   const [holder, setHolder] = useState('');
+  const [ratePercent, setRatePercent] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -58,6 +62,7 @@ export default function OnlineDepositSettings({
     setEnabled(settings.enabled);
     setPhone(settings.payoutPhone || '');
     setHolder(settings.payoutHolder || '');
+    setRatePercent(settings.depositRate != null ? String(Math.round(settings.depositRate * 1000) / 10) : '');
     setError('');
     setOpen(true);
   };
@@ -66,7 +71,12 @@ export default function OnlineDepositSettings({
     setSaving(true);
     setError('');
     try {
-      const data = await api.put('/marketplace/deposit-settings', { enabled, payoutPhone: phone, payoutHolder: holder });
+      const data = await api.put('/marketplace/deposit-settings', {
+        enabled,
+        payoutPhone: phone,
+        payoutHolder: holder,
+        depositRatePercent: ratePercent.trim() === '' ? null : ratePercent,
+      });
       setSettings(data.settings);
       setOpen(false);
       onSaved?.();
@@ -78,6 +88,8 @@ export default function OnlineDepositSettings({
   };
 
   const active = settings.enabled && settings.platformAvailable;
+  const defaultPct = Math.round((settings.defaultDepositRate ?? depositPct / 100) * 1000) / 10;
+  const ownPct = settings.depositRate != null ? Math.round(settings.depositRate * 1000) / 10 : defaultPct;
 
   return (
     <>
@@ -85,11 +97,12 @@ export default function OnlineDepositSettings({
         <div className="min-w-0">
           <p className="text-xs font-semibold text-foreground inline-flex items-center gap-1.5">
             <Smartphone className="w-3.5 h-3.5 text-primary" aria-hidden />
-            Acompte en ligne : {active ? 'activé' : 'désactivé'}
+            Acompte {ownPct} % · paiement en ligne {active ? 'activé' : 'désactivé'}
           </p>
           <p className="text-xs text-muted mt-0.5">
+            {settings.depositRate != null ? `Taux d’acompte fixé par vous (défaut plateforme : ${defaultPct} %). ` : `Taux d’acompte par défaut de la plateforme. `}
             {active
-              ? `Vos clients peuvent payer l’acompte par Mobile Money ou carte. Vous recevez l’acompte moins la commission sur le ${settings.payoutPhoneMasked}.`
+              ? `Vos clients peuvent payer l’acompte par Mobile Money ou carte, versé sur le ${settings.payoutPhoneMasked}.`
               : settings.enabled && !settings.platformAvailable
                 ? 'Activé, mais le paiement en ligne est momentanément indisponible sur la plateforme. L’acompte se règle hors plateforme.'
                 : 'Vos clients vous versent l’acompte directement, puis vous le marquez reçu.'}
@@ -97,7 +110,7 @@ export default function OnlineDepositSettings({
         </div>
         {canEdit ? (
           <Button size="sm" variant="secondary" onClick={openEditor}>
-            {settings.enabled ? 'Modifier' : 'Activer'}
+            Modifier
           </Button>
         ) : null}
       </div>
@@ -107,8 +120,10 @@ export default function OnlineDepositSettings({
         onClose={() => {
           if (!saving) setOpen(false);
         }}
-        title="Acompte en ligne"
-        description={`Le client paie l’acompte (${depositPct} %) sur EventMaster. La commission (${commissionPct} % du total) est retenue dessus et le reste vous est reversé sur Mobile Money.`}
+        title="Acompte"
+        description={commissionPct > 0
+          ? `Fixez votre taux d’acompte. En ligne, le client paie l’acompte sur EventMaster, la commission (${commissionPct} % du total) est retenue dessus et le reste vous est reversé sur Mobile Money.`
+          : 'Fixez votre taux d’acompte. En ligne, le client paie l’acompte sur EventMaster et il vous est reversé sur Mobile Money, sans commission.'}
         size="md"
         footer={(
           <div className="flex items-center justify-end gap-2 w-full">
@@ -130,6 +145,13 @@ export default function OnlineDepositSettings({
               En ligne
             </button>
           </div>
+          <Input
+            label={`Taux d’acompte en % (5 à 90, vide = ${defaultPct} % par défaut)`}
+            placeholder={String(defaultPct)}
+            inputMode="decimal"
+            value={ratePercent}
+            onChange={(e) => setRatePercent(e.target.value)}
+          />
           <Input
             label="Numéro Mobile Money qui reçoit les acomptes"
             placeholder="Ex : 0812345678"

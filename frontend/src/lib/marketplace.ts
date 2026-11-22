@@ -81,6 +81,8 @@ export interface PublicVenue {
   blockedDates?: string[];
   bookedDates?: string[];
   unavailableDates?: string[];
+  /** Taux d'acompte propre au professionnel (0 à 1), null : taux par défaut de la plateforme. */
+  depositRate?: number | null;
   distanceKm?: number | null;
   details?: import('./listingDetails').ListingDetails | null;
   isPublic?: boolean;
@@ -447,6 +449,8 @@ export interface PublicService {
   blockedDates?: string[];
   bookedDates?: string[];
   unavailableDates?: string[];
+  /** Taux d'acompte propre au professionnel (0 à 1), null : taux par défaut de la plateforme. */
+  depositRate?: number | null;
   distanceKm?: number | null;
   details?: import('./listingDetails').ListingDetails | null;
   isPublic?: boolean;
@@ -510,7 +514,7 @@ export type MarketplaceBookingStatus =
   | 'CANCELLED'
   | 'COMPLETED';
 
-export const MARKETPLACE_COMMISSION_RATE = 0.08;
+export const MARKETPLACE_COMMISSION_RATE = 0;
 export const MARKETPLACE_DEPOSIT_RATE = 0.3;
 export const MARKETPLACE_MAX_PHOTOS = 24;
 export const MARKETPLACE_MAX_VIDEOS = 8;

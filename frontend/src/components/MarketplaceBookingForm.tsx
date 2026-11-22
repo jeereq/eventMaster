@@ -42,6 +42,7 @@ export default function MarketplaceBookingForm({
   onEventDateChange,
   onEventEndDateChange,
   showCalendar = true,
+  depositRate,
   eventId,
   onSent,
   flush = false,
@@ -62,13 +63,15 @@ export default function MarketplaceBookingForm({
   onEventDateChange?: (value: string) => void;
   onEventEndDateChange?: (value: string) => void;
   showCalendar?: boolean;
+  /** Taux d'acompte propre au professionnel (0 à 1) ; absent : taux par défaut de la plateforme. */
+  depositRate?: number | null;
   eventId?: string;
   onSent?: () => void;
   flush?: boolean;
 }) {
   const { token, loading } = useAuth();
   const { site } = usePlatformSite();
-  const depositPct = depositPercent(site);
+  const depositPct = depositRate != null ? Math.round(depositRate * 1000) / 10 : depositPercent(site);
   const pathname = usePathname();
   const nextPath = pathname || '/marketplace';
   const [internalDate, setInternalDate] = useState('');
@@ -104,7 +107,7 @@ export default function MarketplaceBookingForm({
   const amounts = priceFromFc != null
     ? previewMarketplaceAmounts(priceFromFc, Math.max(1, rangeKeys.length), priceUnit, {
         commissionRate: site.marketplaceCommissionRate,
-        depositRate: site.marketplaceDepositRate,
+        depositRate: depositRate ?? site.marketplaceDepositRate,
       }, deliveryFee)
     : null;
   const loggedIn = Boolean(token);

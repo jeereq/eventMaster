@@ -599,7 +599,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   customSmsUrl: process.env.CUSTOM_SMS_URL || '',
   customSmsApiKey: process.env.CUSTOM_SMS_API_KEY || '',
   customSmsSenderId: process.env.CUSTOM_SMS_SENDER_ID || '',
-  marketplaceCommissionRate: 0.08,
+  marketplaceCommissionRate: 0,
   marketplaceDepositRate: 0.3,
   eventTicketingRetentionRate: 0.05,
   eventDonationsRetentionRate: 0.04,
@@ -874,7 +874,7 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
   const parsedUsdRate = Number(settings.usdExchangeRateCdf);
   return {
     ...settings,
-    marketplaceCommissionRate: parseRateInput(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
+    marketplaceCommissionRate: parseRateInput(settings.marketplaceCommissionRate, 0, 0, 0.5),
     marketplaceDepositRate: parseRateInput(settings.marketplaceDepositRate, 0.3, 0.05, 0.9),
     eventTicketingRetentionRate: parseRateInput(settings.eventTicketingRetentionRate, 0.05, 0.01, 0.2),
     eventDonationsRetentionRate: parseRateInput(settings.eventDonationsRetentionRate, 0.04, 0.01, 0.2),
@@ -914,7 +914,7 @@ function buildNextSettings(
     }
   }
 
-  next.marketplaceCommissionRate = parseRateInput(next.marketplaceCommissionRate, 0.08, 0.01, 0.5);
+  next.marketplaceCommissionRate = parseRateInput(next.marketplaceCommissionRate, 0, 0, 0.5);
   next.marketplaceDepositRate = parseRateInput(next.marketplaceDepositRate, 0.3, 0.05, 0.9);
   next.eventTicketingRetentionRate = parseRateInput(next.eventTicketingRetentionRate, 0.05, 0.01, 0.2);
   next.eventDonationsRetentionRate = parseRateInput(next.eventDonationsRetentionRate, 0.04, 0.01, 0.2);
@@ -1028,10 +1028,10 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     ticketPaymentProvider: getTicketPaymentProvider(settings),
     brandPrimary: settings.brandPrimary || '',
     brandAccent: settings.brandAccent || '',
-    marketplaceCommissionRate: parseRateInput(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
+    marketplaceCommissionRate: parseRateInput(settings.marketplaceCommissionRate, 0, 0, 0.5),
     marketplaceDepositRate: parseRateInput(settings.marketplaceDepositRate, 0.3, 0.05, 0.9),
     marketplaceCommissionPercent: rateToPercent(
-      parseRateInput(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
+      parseRateInput(settings.marketplaceCommissionRate, 0, 0, 0.5),
     ),
     marketplaceDepositPercent: rateToPercent(parseRateInput(settings.marketplaceDepositRate, 0.3, 0.05, 0.9)),
     eventTicketingRetentionRate: parseRateInput(settings.eventTicketingRetentionRate, 0.05, 0.01, 0.2),

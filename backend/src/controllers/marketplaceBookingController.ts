@@ -6,7 +6,7 @@ import { resolveOrgAccess } from '../services/permissionsService';
 import { notifyTenantOperators, notifyUsers } from '../services/platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
-import { computeMarketplaceAmounts, billedMarketplaceAmount, getMarketplaceBillingRates } from '../config/marketplaceBilling';
+import { computeMarketplaceAmounts, billedMarketplaceAmount, getMarketplaceBillingRates, getVendorBillingRates } from '../config/marketplaceBilling';
 import { completePastMarketplaceBookings } from '../services/marketplaceBookingCompletion';
 import { isOnlineDepositAvailable, serializeDepositPayment } from '../services/marketplaceDepositService';
 import { rentalDeliverySurcharge } from '../services/eventBudgetCost';
@@ -362,7 +362,8 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: 'Indiquez la commune de livraison à Kinshasa.' });
     }
 
-    const rentalBase = billedMarketplaceAmount(price, listing?.priceUnit ?? offering?.priceUnit, range.dayCount);
+    const vendorRates = await getVendorBillingRates(vendorTenantId);
+    const rentalBase = billedMarketplaceAmount(price, listing?.priceUnit ?? offering?.priceUnit, range.dayCount, vendorRates);
     const deliveryFee = offering
       ? rentalDeliverySurcharge({
           deliveryMode: offering.deliveryMode,
@@ -372,7 +373,7 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
         })
       : 0;
     const amounts = deliveryFee
-      ? computeMarketplaceAmounts(rentalBase.amountFc + deliveryFee)
+      ? computeMarketplaceAmounts(rentalBase.amountFc + deliveryFee, vendorRates)
       : rentalBase;
     const parsedGuests = Number.parseInt(String(guestCount || ''), 10);
 
@@ -559,7 +560,7 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
       if (booking.status !== 'REQUESTED') return res.status(400).json({ error: 'Cette demande n’est plus en attente.' });
       const amountFc = req.body?.amountFc != null ? Number.parseInt(String(req.body.amountFc), 10) : booking.amountFc;
       if (!Number.isFinite(amountFc) || amountFc < 0) return res.status(400).json({ error: 'Montant invalide.' });
-      const amounts = computeMarketplaceAmounts(amountFc);
+      const amounts = computeMarketplaceAmounts(amountFc, await getVendorBillingRates(booking.vendorTenantId));
       const updated = await prisma.marketplaceBooking.update({
         where: { id },
         data: { status: 'ACCEPTED', ...amounts },
@@ -846,7 +847,7 @@ export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Respons
       return res.status(409).json({ error: 'Cette date n’est plus disponible. Écrivez au professionnel pour en convenir une autre.' });
     }
 
-    const amounts = computeMarketplaceAmounts(inquiry.quotedAmountFc);
+    const amounts = computeMarketplaceAmounts(inquiry.quotedAmountFc, await getVendorBillingRates(vendorTenantId));
     const booking = await prisma.marketplaceBooking.create({
       data: {
         listingId: inquiry.listingId,
@@ -963,7 +964,7 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
     });
     const organizerUserId = inquirerUser?.id || null;
 
-    const amounts = computeMarketplaceAmounts(price);
+    const amounts = computeMarketplaceAmounts(price, await getVendorBillingRates(tenantId));
     const booking = await prisma.marketplaceBooking.create({
       data: {
         listingId: inquiry.listingId,
@@ -1047,7 +1048,7 @@ export async function createBeverageBooking(req: AuthenticatedRequest, res: Resp
       promoPriceFc: offer.promoPriceFc,
       promoEndsAt: offer.promoEndsAt,
     }) ?? offer.priceFc;
-    const amounts = computeMarketplaceAmounts(unit * packs);
+    const amounts = computeMarketplaceAmounts(unit * packs, await getVendorBillingRates(offer.tenantId));
     const note = req.body?.notes ? String(req.body.notes).trim().slice(0, 2000) : '';
     const booking = await prisma.marketplaceBooking.create({
       data: {
@@ -1096,7 +1097,7 @@ export async function createVendorBeverageBooking(req: AuthenticatedRequest, res
       return res.status(400).json({ error: 'Vous ne pouvez pas réserver vos propres tarifs.' });
     }
     const total = resolved.lines.reduce((sum, line) => sum + line.payableFc * line.packCount, 0);
-    const amounts = computeMarketplaceAmounts(total);
+    const amounts = computeMarketplaceAmounts(total, await getVendorBillingRates(resolved.profile.tenantId));
     const note = req.body?.notes ? String(req.body.notes).trim().slice(0, 2000) : '';
     const dateLabel = range.parsedStart.toISOString().slice(0, 10);
     const first = resolved.lines[0];

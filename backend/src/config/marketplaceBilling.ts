@@ -1,32 +1,47 @@
+import { prisma } from '../db';
 import { loadPlatformSettings } from '../services/platformSettingsService';
-import { parseRateInput } from '../utils/ratePercent';
+import {
+  computeMarketplaceAmountsWith,
+  ratesWithVendorDeposit,
+  resolveMarketplaceRates,
+  type MarketplaceBillingRates,
+} from './marketplaceRates';
 
-/** Défauts si les réglages plateforme n’ont pas encore été enregistrés. */
-export const MARKETPLACE_COMMISSION_RATE = 0.08;
-export const MARKETPLACE_DEPOSIT_RATE = 0.3;
+export {
+  MARKETPLACE_COMMISSION_RATE,
+  MARKETPLACE_DEPOSIT_RATE,
+  MARKETPLACE_DEPOSIT_RATE_MAX,
+  MARKETPLACE_DEPOSIT_RATE_MIN,
+  ratesWithVendorDeposit,
+  type MarketplaceBillingRates,
+} from './marketplaceRates';
 
-export function getMarketplaceBillingRates(settings = loadPlatformSettings()) {
-  return {
-    commissionRate: parseRateInput(settings.marketplaceCommissionRate, MARKETPLACE_COMMISSION_RATE, 0.01, 0.5),
-    depositRate: parseRateInput(settings.marketplaceDepositRate, MARKETPLACE_DEPOSIT_RATE, 0.05, 0.9),
-  };
+export function getMarketplaceBillingRates(settings = loadPlatformSettings()): MarketplaceBillingRates {
+  return resolveMarketplaceRates(settings);
 }
 
-export function computeMarketplaceAmounts(amountFc: number, rates = getMarketplaceBillingRates()) {
-  const amount = Math.max(0, Math.round(amountFc));
-  const depositFc = Math.round(amount * rates.depositRate);
-  const commissionFc = Math.round(amount * rates.commissionRate);
-  return {
-    amountFc: amount,
-    depositFc,
-    commissionFc,
-    commissionRate: rates.commissionRate,
-  };
+export async function getVendorBillingRates(vendorTenantId: string | null | undefined): Promise<MarketplaceBillingRates> {
+  const base = getMarketplaceBillingRates();
+  if (!vendorTenantId) return base;
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: vendorTenantId },
+    select: { marketplaceDepositRate: true },
+  });
+  return ratesWithVendorDeposit(tenant?.marketplaceDepositRate, base);
+}
+
+export function computeMarketplaceAmounts(amountFc: number, rates: MarketplaceBillingRates = getMarketplaceBillingRates()) {
+  return computeMarketplaceAmountsWith(amountFc, rates);
 }
 
 /** Tarif « par jour » × nombre de jours ; les autres unités restent un forfait pour la plage. */
-export function billedMarketplaceAmount(priceFromFc: number, priceUnit: string | null | undefined, dayCount: number) {
+export function billedMarketplaceAmount(
+  priceFromFc: number,
+  priceUnit: string | null | undefined,
+  dayCount: number,
+  rates: MarketplaceBillingRates = getMarketplaceBillingRates(),
+) {
   const days = Math.max(1, dayCount);
   const base = priceUnit === 'DAY' ? priceFromFc * days : priceFromFc;
-  return computeMarketplaceAmounts(base);
+  return computeMarketplaceAmountsWith(base, rates);
 }

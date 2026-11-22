@@ -954,14 +954,14 @@ export default function AdminPlatformSettings({
                 <label className={labelClass}>Commission vendeur marketplace (%)</label>
                 <input
                   type="number"
-                  min={1}
+                  min={0}
                   max={50}
                   step={0.5}
-                  value={Math.round(Number(value.marketplaceCommissionRate ?? 0.08) * 1000) / 10}
+                  value={Math.round(Number(value.marketplaceCommissionRate ?? 0) * 1000) / 10}
                   onChange={(e) => patch({ marketplaceCommissionRate: (Number(e.target.value) || 0) / 100 })}
                   className={cn(fieldClass, 'font-medium')}
                 />
-                <p className="text-xs text-muted">Due par le vendeur. Défaut 8 %.</p>
+                <p className="text-xs text-muted">Due par le vendeur. Défaut 0 % : aucune commission sur les salles et prestataires.</p>
               </div>
               <div className="space-y-1.5">
                 <label className={labelClass}>Acompte hors plateforme (%)</label>
@@ -974,7 +974,7 @@ export default function AdminPlatformSettings({
                   onChange={(e) => patch({ marketplaceDepositRate: (Number(e.target.value) || 0) / 100 })}
                   className={cn(fieldClass, 'font-medium')}
                 />
-                <p className="text-xs text-muted">Versé au professionnel. Défaut 30 %.</p>
+                <p className="text-xs text-muted">Versé au professionnel. Défaut 30 %, chaque professionnel peut fixer son propre taux.</p>
               </div>
               <div className="space-y-1.5">
                 <label className={labelClass}>Commission commerciale — 1er paiement (%)</label>

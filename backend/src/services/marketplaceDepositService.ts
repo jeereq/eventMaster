@@ -21,6 +21,11 @@ import { isOnlinePaymentsEnabled } from './platformSettingsService';
 import { notifyTenantOperators, notifyUsers } from './platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import { normalizePayoutPhone, maskPayoutPhone } from './eventPayoutAccount';
+import {
+  getMarketplaceBillingRates,
+  MARKETPLACE_DEPOSIT_RATE_MAX,
+  MARKETPLACE_DEPOSIT_RATE_MIN,
+} from '../config/marketplaceBilling';
 
 /**
  * Acompte en ligne d'une réservation marketplace, au choix du prestataire.
@@ -59,12 +64,21 @@ export interface VendorDepositSettings {
   payoutHolder: string | null;
   /** Les paiements en ligne sont ouverts sur la plateforme. */
   platformAvailable: boolean;
+  /** Taux d'acompte propre au prestataire (0.05 à 0.9), null : taux par défaut de la plateforme. */
+  depositRate: number | null;
+  /** Taux d'acompte par défaut de la plateforme, appliqué quand le prestataire n'en fixe pas. */
+  defaultDepositRate: number;
 }
 
 export async function getVendorDepositSettings(tenantId: string): Promise<VendorDepositSettings> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: { marketplaceOnlineDeposit: true, marketplacePayoutPhone: true, marketplacePayoutHolder: true },
+    select: {
+      marketplaceOnlineDeposit: true,
+      marketplacePayoutPhone: true,
+      marketplacePayoutHolder: true,
+      marketplaceDepositRate: true,
+    },
   });
   const phone = tenant?.marketplacePayoutPhone || null;
   return {
@@ -73,6 +87,8 @@ export async function getVendorDepositSettings(tenantId: string): Promise<Vendor
     payoutPhoneMasked: phone ? maskPayoutPhone(phone) : null,
     payoutHolder: tenant?.marketplacePayoutHolder || null,
     platformAvailable: isOnlineDepositAvailable(),
+    depositRate: tenant?.marketplaceDepositRate ?? null,
+    defaultDepositRate: getMarketplaceBillingRates().depositRate,
   };
 }
 
@@ -82,11 +98,11 @@ export type SaveDepositSettingsResult =
 
 export async function saveVendorDepositSettings(
   tenantId: string,
-  input: { enabled?: unknown; payoutPhone?: unknown; payoutHolder?: unknown },
+  input: { enabled?: unknown; payoutPhone?: unknown; payoutHolder?: unknown; depositRatePercent?: unknown },
 ): Promise<SaveDepositSettingsResult> {
   const current = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: { marketplacePayoutPhone: true, marketplacePayoutHolder: true },
+    select: { marketplacePayoutPhone: true, marketplacePayoutHolder: true, marketplaceDepositRate: true },
   });
   const enabled = input.enabled === true || input.enabled === 'true';
   let phone = current?.marketplacePayoutPhone ?? null;
@@ -106,9 +122,31 @@ export async function saveVendorDepositSettings(
       ? current?.marketplacePayoutHolder ?? null
       : String(input.payoutHolder ?? '').trim().slice(0, 120) || null;
 
+  // Taux d'acompte en % (ex. 40). Vide ou null : retour au taux par défaut de la plateforme.
+  let depositRate = current?.marketplaceDepositRate ?? null;
+  if (input.depositRatePercent !== undefined) {
+    const raw = input.depositRatePercent;
+    if (raw === null || String(raw).trim() === '') {
+      depositRate = null;
+    } else {
+      const percent = Number(String(raw).replace(',', '.'));
+      const min = Math.round(MARKETPLACE_DEPOSIT_RATE_MIN * 100);
+      const max = Math.round(MARKETPLACE_DEPOSIT_RATE_MAX * 100);
+      if (!Number.isFinite(percent) || percent < min || percent > max) {
+        return { ok: false, error: `Le taux d’acompte doit être compris entre ${min} % et ${max} %.` };
+      }
+      depositRate = Math.round(percent * 10) / 1000;
+    }
+  }
+
   await prisma.tenant.update({
     where: { id: tenantId },
-    data: { marketplaceOnlineDeposit: enabled, marketplacePayoutPhone: phone, marketplacePayoutHolder: holder },
+    data: {
+      marketplaceOnlineDeposit: enabled,
+      marketplacePayoutPhone: phone,
+      marketplacePayoutHolder: holder,
+      marketplaceDepositRate: depositRate,
+    },
   });
   return { ok: true, settings: await getVendorDepositSettings(tenantId) };
 }
