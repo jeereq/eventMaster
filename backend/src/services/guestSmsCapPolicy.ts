@@ -12,6 +12,9 @@ export function smsResultConsumesCredit(result: { success?: boolean; simulated?:
 }
 
 
+export const GUEST_SMS_NO_CREDIT_ERROR =
+  'SMS inclus et crédits épuisés : rechargez des SMS dans Facturation. L’invitation part par WhatsApp et e-mail.';
+
 export const GUEST_SMS_FREE_PLAN_ERROR =
   "Les SMS ne sont pas inclus dans l'essai gratuit : l'invitation part par WhatsApp et e-mail.";
 

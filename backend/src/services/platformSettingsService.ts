@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
+import { DEFAULT_SMS_CREDIT_SETTINGS, sanitizeSmsCreditSettings, type SmsCreditSettings } from '../config/smsCreditsConfig';
 import { parseRateInput, rateToPercent } from '../utils/ratePercent';
 import {
   DEFAULT_AI_TOKEN_MIN_PURCHASE_CDF,
@@ -490,6 +491,8 @@ export interface PlatformSettings {
   aiTokenMinPurchaseCdf: number;
   /** Offres de jetons IA par type de compte et moment de crédit. */
   welcomeAiGrants: WelcomeGrantRules;
+  /** Crédits SMS : coût, taux, marges des packs, quotas inclus par forfait, validité. */
+  smsCredits: SmsCreditSettings;
   /** Sons in-app des notifications plateforme (cloche web). */
   audioNotifications: AudioNotificationsSettings;
   /** Visibilité des studios IA (budget, invitations, plans 3D). */
@@ -615,6 +618,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   aiTokenPriceCdf: DEFAULT_AI_TOKEN_PRICE_CDF,
   aiTokenMinPurchaseCdf: DEFAULT_AI_TOKEN_MIN_PURCHASE_CDF,
   welcomeAiGrants: DEFAULT_WELCOME_GRANT_RULES,
+  smsCredits: DEFAULT_SMS_CREDIT_SETTINGS,
   audioNotifications: DEFAULT_AUDIO_NOTIFICATIONS,
   studioVisibility: DEFAULT_STUDIO_VISIBILITY,
   aiStudioModels: DEFAULT_AI_STUDIO_MODELS,
@@ -891,6 +895,7 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
       sanitizeAiTokenPriceCdf(settings.aiTokenPriceCdf),
     ),
     welcomeAiGrants: sanitizeWelcomeGrantRules(settings.welcomeAiGrants),
+    smsCredits: sanitizeSmsCreditSettings(settings.smsCredits),
     audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
     studioVisibility: sanitizeStudioVisibility(settings.studioVisibility),
     aiStudioModels: sanitizeAiStudioModels(settings.aiStudioModels),
@@ -929,6 +934,7 @@ function buildNextSettings(
   next.aiTokenPriceCdf = sanitizeAiTokenPriceCdf(next.aiTokenPriceCdf);
   next.aiTokenMinPurchaseCdf = sanitizeAiTokenMinPurchaseCdf(next.aiTokenMinPurchaseCdf, next.aiTokenPriceCdf);
   next.welcomeAiGrants = sanitizeWelcomeGrantRules(next.welcomeAiGrants);
+  next.smsCredits = sanitizeSmsCreditSettings(next.smsCredits);
   next.audioNotifications = sanitizeAudioNotifications(next.audioNotifications);
   next.studioVisibility = sanitizeStudioVisibility(next.studioVisibility);
   next.aiStudioModels = sanitizeAiStudioModels(next.aiStudioModels);

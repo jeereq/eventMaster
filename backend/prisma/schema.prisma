@@ -175,6 +175,8 @@ model Tenant {
   serviceOfferings ServiceOffering[]
   marketplaceInquiries MarketplaceInquiry[] @relation("InquiryFromTenant")
   vendorBookings MarketplaceBooking[] @relation("BookingVendor")
+  smsCreditOrders SmsCreditOrder[]
+  smsCreditLots SmsCreditLot[]
   organizerBookings MarketplaceBooking[] @relation("BookingOrganizer")
   receivedReviews MarketplaceReview[] @relation("ReviewVendor")
   /** Le prestataire propose le paiement de l'acompte en ligne (FlexPay). Désactivé : acompte hors plateforme. */
@@ -351,6 +353,62 @@ model GuestSmsUsage {
   updatedAt DateTime @updatedAt
 
   @@id([eventId, phone])
+}
+
+/** Achat d'un pack de crédits SMS par une organisation (paiement FlexPay vérifié côté serveur). */
+model SmsCreditOrder {
+  id                       String    @id @default(uuid())
+  tenantId                 String
+  tenant                   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payerUserId              String?
+  packId                   String
+  smsCount                 Int
+  amountFc                 Int
+  /// Coût réel d'un SMS (USD) et taux retenus à l'achat, pour calculer la marge réelle plus tard.
+  unitCostUsd              Float
+  fxRateCdf                Float
+  status                   String    @default("PENDING") // PENDING | PAID | FAILED
+  paymentMethod            String    // mobile | card
+  phone                    String?
+  flexPayOrderNumber       String?   @unique
+  flexPayReference         String?   @unique
+  flexPayChannel           String?
+  flexPayAmountCustomer    Float?
+  flexPayProviderReference String?
+  paidAt                   DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  lot                      SmsCreditLot?
+
+  @@index([tenantId, status])
+  @@index([status, createdAt])
+}
+
+/// Crédits SMS achetés : un lot par commande payée, valable 12 mois, consommé du plus proche de l'expiration.
+model SmsCreditLot {
+  id           String         @id @default(uuid())
+  tenantId     String
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderId      String         @unique
+  order        SmsCreditOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  initialCount Int
+  remaining    Int
+  expiresAt    DateTime
+  createdAt    DateTime       @default(now())
+
+  @@index([tenantId, expiresAt])
+}
+
+/// SMS inclus dans le forfait consommés sur la période (mois, ou trimestre pour les Particuliers).
+model SmsUsagePeriod {
+  tenantId      String
+  period        String
+  used          Int      @default(0)
+  notifiedLow   Boolean  @default(false)
+  notifiedEmpty Boolean  @default(false)
+  updatedAt     DateTime @updatedAt
+
+  @@id([tenantId, period])
 }
 
 model Guest {

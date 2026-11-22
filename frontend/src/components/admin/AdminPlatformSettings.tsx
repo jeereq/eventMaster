@@ -111,6 +111,19 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
     tenantIds?: string[];
   };
   donationsAccess?: DonationsAccess;
+  smsCredits?: SmsCreditSettingsValues;
+};
+
+type SmsPackSettingValues = { smsCount: number; coefficient: number };
+type SmsCreditSettingsValues = {
+  unitCostUsd?: number;
+  fxRateCdf?: number;
+  paymentFeeRate?: number;
+  roundingFc?: number;
+  validityMonths?: number;
+  lowThreshold?: number;
+  packs?: SmsPackSettingValues[];
+  included?: Record<string, number>;
 };
 
 type SettingsSectionId =
@@ -122,6 +135,7 @@ type SettingsSectionId =
   | 'cities'
   | 'contact'
   | 'messaging'
+  | 'sms'
   | 'audio';
 
 const SECTIONS: Array<{ id: SettingsSectionId; label: string; icon: React.ComponentType<{ className?: string }> }> = [
@@ -133,6 +147,7 @@ const SECTIONS: Array<{ id: SettingsSectionId; label: string; icon: React.Compon
   { id: 'cities', label: 'Villes', icon: MapPin },
   { id: 'contact', label: 'Contact', icon: Mail },
   { id: 'messaging', label: 'Messagerie', icon: MessageSquare },
+  { id: 'sms', label: 'Crédits SMS', icon: Smartphone },
   { id: 'audio', label: 'Sons', icon: Volume2 },
 ];
 
@@ -153,6 +168,244 @@ function SectionTitle({
       <Icon className="w-4 h-4 text-primary" />
       {children}
     </h3>
+  );
+}
+
+const SMS_DEFAULT_INCLUDED: Record<string, number> = {
+  FREE: 0, PERSONAL_50: 75, PERSONAL_100: 150, PERSONAL_200: 300, PERSONAL_PLUS: 810,
+  STANDARD: 100, PREMIUM_1: 150, PREMIUM_2: 250, ENTERPRISE_1: 500, ENTERPRISE_2: 700, ENTERPRISE_3: 900,
+  CUSTOM: 1200, VENUE: 0, SERVICE: 0, CATALOG: 0,
+};
+
+const SMS_DEFAULTS = {
+  unitCostUsd: 0.03,
+  fxRateCdf: 2270,
+  paymentFeeRate: 0.03,
+  roundingFc: 500,
+  validityMonths: 12,
+  lowThreshold: 0.8,
+  packs: [
+    { smsCount: 50, coefficient: 1.155 },
+    { smsCount: 100, coefficient: 1.155 },
+    { smsCount: 250, coefficient: 1.14 },
+    { smsCount: 500, coefficient: 1.12 },
+    { smsCount: 1000, coefficient: 1.1 },
+  ] as SmsPackSettingValues[],
+};
+
+const SMS_PERSONAL_KEYS = ['PERSONAL_50', 'PERSONAL_100', 'PERSONAL_200', 'PERSONAL_PLUS'];
+
+/** Même formule que le serveur : coût réel × coefficient, arrondi au palier supérieur. */
+function smsPackPriceFc(pack: SmsPackSettingValues, s: Required<Omit<SmsCreditSettingsValues, 'packs' | 'included'>>) {
+  const raw = pack.smsCount * s.unitCostUsd * s.fxRateCdf * pack.coefficient;
+  const step = Math.max(1, s.roundingFc);
+  return Math.ceil(Math.round(raw * 1e6) / 1e6 / step) * step;
+}
+
+function SmsCreditsSettingsEditor({
+  value,
+  plans,
+  onChange,
+}: {
+  value?: SmsCreditSettingsValues;
+  plans?: Record<string, { name?: string }>;
+  onChange: (next: SmsCreditSettingsValues) => void;
+}) {
+  const current = {
+    unitCostUsd: Number(value?.unitCostUsd ?? SMS_DEFAULTS.unitCostUsd),
+    fxRateCdf: Number(value?.fxRateCdf ?? SMS_DEFAULTS.fxRateCdf),
+    paymentFeeRate: Number(value?.paymentFeeRate ?? SMS_DEFAULTS.paymentFeeRate),
+    roundingFc: Number(value?.roundingFc ?? SMS_DEFAULTS.roundingFc),
+    validityMonths: Number(value?.validityMonths ?? SMS_DEFAULTS.validityMonths),
+    lowThreshold: Number(value?.lowThreshold ?? SMS_DEFAULTS.lowThreshold),
+  };
+  const packs: SmsPackSettingValues[] = Array.isArray(value?.packs) && value!.packs!.length > 0
+    ? value!.packs!
+    : SMS_DEFAULTS.packs;
+  const included: Record<string, number> = { ...SMS_DEFAULT_INCLUDED, ...(value?.included ?? {}) };
+  const unitCostFc = current.unitCostUsd * current.fxRateCdf;
+
+  const update = (partial: Partial<SmsCreditSettingsValues>) =>
+    onChange({ ...current, packs, included, ...partial });
+  const updatePack = (index: number, partial: Partial<SmsPackSettingValues>) =>
+    update({ packs: packs.map((p, i) => (i === index ? { ...p, ...partial } : p)) });
+  const planLabel = (key: string) => plans?.[key]?.name || key;
+
+  return (
+    <div className={sectionCardClass}>
+      <SectionTitle icon={Smartphone}>Crédits SMS</SectionTitle>
+      <p className="text-xs text-muted -mt-2">
+        Chaque forfait inclut un quota de SMS par période. Au-delà, l’organisation achète des packs de crédits
+        (prix coûtant + marge légère). Les changements s’appliquent aux prochains achats et aux périodes suivantes ;
+        les commandes déjà payées et les crédits déjà achetés ne changent pas.
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-1.5">
+          <label className={labelClass}>Coût réel d’un SMS (USD)</label>
+          <input
+            type="number" min={0.001} max={5} step={0.001}
+            value={current.unitCostUsd}
+            onChange={(e) => update({ unitCostUsd: Number(e.target.value) || SMS_DEFAULTS.unitCostUsd })}
+            className={cn(fieldClass, 'font-medium')}
+          />
+          <p className="text-xs text-muted">≈ {Math.round(unitCostFc * 10) / 10} FC par SMS au taux ci-dessous.</p>
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Taux de change des packs (FC pour 1 $)</label>
+          <input
+            type="number" min={500} max={100000} step={10}
+            value={current.fxRateCdf}
+            onChange={(e) => update({ fxRateCdf: Number(e.target.value) || SMS_DEFAULTS.fxRateCdf })}
+            className={cn(fieldClass, 'font-medium')}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Frais de paiement estimés (%)</label>
+          <input
+            type="number" min={0} max={20} step={0.1}
+            value={Math.round(current.paymentFeeRate * 1000) / 10}
+            onChange={(e) => update({ paymentFeeRate: (Number(e.target.value) || 0) / 100 })}
+            className={cn(fieldClass, 'font-medium')}
+          />
+          <p className="text-xs text-muted">Sert uniquement au calcul de la marge nette affichée.</p>
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Arrondi des prix (FC)</label>
+          <input
+            type="number" min={1} max={10000} step={50}
+            value={current.roundingFc}
+            onChange={(e) => update({ roundingFc: Number(e.target.value) || SMS_DEFAULTS.roundingFc })}
+            className={cn(fieldClass, 'font-medium')}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Validité des crédits achetés (mois)</label>
+          <input
+            type="number" min={1} max={60} step={1}
+            value={current.validityMonths}
+            onChange={(e) => update({ validityMonths: Number(e.target.value) || SMS_DEFAULTS.validityMonths })}
+            className={cn(fieldClass, 'font-medium')}
+          />
+          <p className="text-xs text-muted">Crédits non remboursables, conservés en cas de changement de forfait.</p>
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Alerte quota bientôt épuisé (%)</label>
+          <input
+            type="number" min={10} max={100} step={5}
+            value={Math.round(current.lowThreshold * 100)}
+            onChange={(e) => update({ lowThreshold: (Number(e.target.value) || 80) / 100 })}
+            className={cn(fieldClass, 'font-medium')}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-foreground">Packs de crédits</p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={packs.length >= 8}
+            onClick={() => {
+              const last = packs[packs.length - 1];
+              update({ packs: [...packs, { smsCount: (last?.smsCount ?? 500) * 2, coefficient: last?.coefficient ?? 1.1 }] });
+            }}
+          >
+            Ajouter un pack
+          </Button>
+        </div>
+        <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+          <table className="w-full text-xs">
+            <thead className="text-muted text-left">
+              <tr>
+                <th className="px-3 py-2 font-bold">SMS</th>
+                <th className="px-3 py-2 font-bold">Coefficient</th>
+                <th className="px-3 py-2 font-bold">Prix client</th>
+                <th className="px-3 py-2 font-bold">Coût réel</th>
+                <th className="px-3 py-2 font-bold">Marge nette</th>
+                <th className="px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {packs.map((pack, index) => {
+                const price = smsPackPriceFc(pack, current);
+                const cost = pack.smsCount * unitCostFc;
+                const net = price * (1 - current.paymentFeeRate) - cost;
+                const marginPct = price > 0 ? (net / price) * 100 : 0;
+                return (
+                  <tr key={index} className="border-t border-border">
+                    <td className="px-3 py-2">
+                      <input
+                        type="number" min={10} max={100000} step={10}
+                        value={pack.smsCount}
+                        onChange={(e) => updatePack(index, { smsCount: Math.max(0, Math.round(Number(e.target.value) || 0)) })}
+                        className={cn(fieldClass, 'w-24 py-1.5')}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="number" min={1} max={5} step={0.005}
+                        value={pack.coefficient}
+                        onChange={(e) => updatePack(index, { coefficient: Number(e.target.value) || 1 })}
+                        className={cn(fieldClass, 'w-24 py-1.5')}
+                      />
+                    </td>
+                    <td className="px-3 py-2 font-semibold whitespace-nowrap">{price.toLocaleString('fr-FR')} FC</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-muted">{Math.round(cost).toLocaleString('fr-FR')} FC</td>
+                    <td className={cn('px-3 py-2 whitespace-nowrap font-semibold', marginPct < 3 ? 'text-red-600' : 'text-foreground')}>
+                      {Math.round(net).toLocaleString('fr-FR')} FC ({Math.round(marginPct * 10) / 10} %)
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        disabled={packs.length <= 1}
+                        onClick={() => update({ packs: packs.filter((_, i) => i !== index) })}
+                        className="text-muted hover:text-red-600 disabled:opacity-40"
+                        aria-label="Supprimer ce pack"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-muted">
+          Prix = SMS × coût réel × taux × coefficient, arrondi au palier supérieur. Une marge nette sous 3 % apparaît
+          en rouge (le coût fournisseur ou les frais de paiement la mangent).
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-foreground">SMS inclus par forfait</p>
+        <p className="text-xs text-muted">
+          Par mois ; par trimestre pour les forfaits Particulier ({SMS_PERSONAL_KEYS.map(planLabel).join(', ')}). 0 = aucun
+          SMS inclus (achat de crédits obligatoire).
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Object.keys(SMS_DEFAULT_INCLUDED).map((key) => (
+            <label key={key} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-2">
+              <span className="text-xs font-semibold text-foreground">
+                {planLabel(key)}
+                {SMS_PERSONAL_KEYS.includes(key) && <span className="ml-1 font-normal text-muted">/ trimestre</span>}
+              </span>
+              <input
+                type="number" min={0} max={1000000} step={10}
+                value={included[key] ?? 0}
+                onChange={(e) =>
+                  update({ included: { ...included, [key]: Math.max(0, Math.round(Number(e.target.value) || 0)) } })
+                }
+                className={cn(fieldClass, 'w-24 py-1.5')}
+              />
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1006,6 +1259,14 @@ export default function AdminPlatformSettings({
               </div>
             </div>
           </div>
+        )}
+
+        {section === 'sms' && (
+          <SmsCreditsSettingsEditor
+            value={value.smsCredits}
+            plans={value.plans as Record<string, { name?: string }> | undefined}
+            onChange={(smsCredits) => patch({ smsCredits })}
+          />
         )}
 
         {section === 'cities' && (
