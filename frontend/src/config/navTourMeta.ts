@@ -181,6 +181,12 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
       'Historique des actions Super Admin et Commercial plateforme : impersonation, changements de forfait, suppressions.',
     route: '/dashboard/audit',
   },
+  'nav-market-prices': {
+    title: 'Prix du marché',
+    description:
+      'Prix hors marketplace pour le simulateur de budget : prix réels des réservations et devis, et prix trouvés sur le web par l’IA, à valider avant usage.',
+    route: '/dashboard/admin/market-prices',
+  },
   'nav-catalog-admin': {
     title: 'Catalogue',
     description:

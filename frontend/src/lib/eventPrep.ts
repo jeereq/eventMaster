@@ -316,7 +316,8 @@ export function eventPrepFromSavedPack(
   },
   current: EventPrep,
 ): EventPrep {
-  const venue = pack.venue
+  // Une salle estimée au prix du marché n’est pas une vraie salle : on garde celle déjà choisie.
+  const venue = pack.venue && !pack.venue.slug.startsWith('budget:')
     ? {
         slug: pack.venue.slug,
         name: pack.venue.title,

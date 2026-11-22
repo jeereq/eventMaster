@@ -125,6 +125,14 @@ import {
   exportAdminDonationsReport,
 } from '../controllers/donationReportController';
 
+import {
+  listMarketPrices,
+  researchMarketPricesHandler,
+  updateMarketPrice,
+  approveMarketPrice,
+  rejectMarketPrice,
+} from '../controllers/adminMarketPricesController';
+
 const router = Router();
 
 router.use(requireAuth);
@@ -283,5 +291,12 @@ router.delete('/guests/:id', requireAdminOrCommercialPerm('canManageGuests'), de
 // Réglages système : Super Admin uniquement
 router.get('/settings', requireRole(['SUPER_ADMIN']), getAdminSettings);
 router.put('/settings', requireRole(['SUPER_ADMIN']), updateAdminSettings);
+
+// Prix du marché hors catalogue (simulateur de budget) : Super Admin uniquement
+router.get('/market-prices', requireRole(['SUPER_ADMIN']), listMarketPrices);
+router.post('/market-prices/research', requireRole(['SUPER_ADMIN']), researchMarketPricesHandler);
+router.patch('/market-prices/:id', requireRole(['SUPER_ADMIN']), updateMarketPrice);
+router.post('/market-prices/:id/approve', requireRole(['SUPER_ADMIN']), approveMarketPrice);
+router.post('/market-prices/:id/reject', requireRole(['SUPER_ADMIN']), rejectMarketPrice);
 
 export default router;

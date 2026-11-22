@@ -315,6 +315,20 @@ export type PlanItem = {
   reused?: boolean;
   capacity?: number | null;
   alternatives?: PlanItem[];
+  /** Ligne chiffrée au prix du marché, faute d’offre sur la marketplace. */
+  marketEstimate?: PlanMarketEstimate;
+};
+
+export type PlanMarketEstimate = {
+  /** observed : réservations et devis réels de la plateforme. reference : prix web validés par l’admin. */
+  source: 'observed' | 'reference';
+  unit: 'EVENT' | 'PERSON';
+  lowFc: number;
+  typicalFc: number;
+  highFc: number;
+  city: string;
+  sampleCount?: number;
+  reviewedAt?: string | null;
 };
 
 export type PlanMissingSlot = {
@@ -390,6 +404,7 @@ export type PlanPackage = {
   notes?: string[];
   filledCount?: number;
   requiredCount?: number;
+  marketEstimateCount?: number;
   allocation?: PlanAllocation[];
 };
 

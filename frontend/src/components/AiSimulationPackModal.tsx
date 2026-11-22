@@ -215,6 +215,7 @@ export default function AiSimulationPackModal({
                     kind="Salle"
                     icon={<Building2 className="w-4 h-4" />}
                     rate={exchangeRate}
+                    href={selected.venue.slug.startsWith('budget:') ? selected.venue.href : undefined}
                     onOpen={() => openElement({ kind: 'venue', slug: selected.venue!.slug })}
                   />
                 </li>

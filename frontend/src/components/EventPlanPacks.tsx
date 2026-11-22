@@ -89,6 +89,16 @@ function PackItemRow({
         )}
         <div className="min-w-0 flex-1">
           {titleNode}
+          {item.marketEstimate ? (
+            <span
+              className="inline-flex items-center rounded-full border border-border bg-surface-muted px-2 py-0.5 text-[11px] font-semibold text-muted"
+              title={item.marketEstimate.source === 'observed'
+                ? 'Calculé à partir des réservations et devis réels de la plateforme'
+                : 'Prix trouvés sur le web, validés par EventMaster'}
+            >
+              {item.marketEstimate.source === 'observed' ? 'Prix réels plateforme' : 'Prix du marché'}
+            </span>
+          ) : null}
           <p className="text-xs text-muted truncate">
             {kindLabel}
             {item.match === 'exact' ? ' · adapté' : ''}

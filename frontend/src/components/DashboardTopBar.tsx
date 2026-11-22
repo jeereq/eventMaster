@@ -64,6 +64,7 @@ export function useDashboardTitle(): { title: string } {
       return isPersonal ? 'Salles & prestataires' : 'Explorer';
     }
     if (pathname.startsWith('/dashboard/admin/catalogue')) return 'Catalogue';
+    if (pathname.startsWith('/dashboard/admin/market-prices')) return 'Prix du marché';
     if (pathname.startsWith('/dashboard/admin/payments')) return 'Paiements';
     if (pathname.startsWith('/dashboard/admin/donations')) return 'Dons solidaires';
     if (pathname.startsWith('/dashboard/admin/ai-tokens')) return 'Jetons IA';

@@ -252,6 +252,7 @@ export function buildDashboardNav(opts: DashboardNavInput): NavSection[] {
     { name: 'Plans 2D / 3D vitrine', href: '/plans-3d', tourId: 'nav-showcase-plans', icon: 'LayoutGrid' as const, description: 'Gestion et édition des plans 2D/3D affichés en vitrine' },
     { name: 'Messages automatiques', href: '/dashboard?tab=message-templates', tab: 'message-templates', tourId: 'nav-message-templates', icon: 'MessageSquare' as const },
     { name: 'Catalogue', href: '/dashboard/admin/catalogue', tourId: 'nav-catalog-admin', icon: 'Store' as const },
+    { name: 'Prix du marché', href: '/dashboard/admin/market-prices', tourId: 'nav-market-prices', icon: 'BarChart3' as const, description: 'Prix hors marketplace utilisés par le simulateur de budget' },
    ]),
    navSection('Système', [
     { name: 'Réglages plateforme', href: '/dashboard?tab=settings', tab: 'settings', tourId: 'nav-settings', icon: 'Key' as const },

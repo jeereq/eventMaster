@@ -12,6 +12,8 @@ import {
   type ParsedEventPlanInput,
   type SlotPriority,
 } from './eventPlanBrief';
+import { loadMarketPriceBook, type MarketPriceBook } from './marketPriceEstimates';
+import { marketEstimateAmount, marketEstimateSlug, type MarketPriceStat } from './marketPriceStats.ts';
 import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedDrinkLines, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BudgetSimulationScope, type WantedSaleUnit } from './eventBudgetCost';
 
 export { EVENT_PLAN_TYPES, type EventPlanType };
@@ -279,6 +281,19 @@ type VenueItem = {
   match: 'exact' | 'unknown';
   reused: boolean;
   alternatives: PlanItem[];
+  marketEstimate?: MarketEstimateInfo;
+};
+
+/** Ligne chiffrée avec un prix du marché, faute d’offre sur la marketplace. */
+type MarketEstimateInfo = {
+  source: MarketPriceStat['source'];
+  unit: MarketPriceStat['unit'];
+  lowFc: number;
+  typicalFc: number;
+  highFc: number;
+  city: string;
+  sampleCount?: number;
+  reviewedAt?: string | null;
 };
 
 type ServiceItem = {
@@ -300,9 +315,80 @@ type ServiceItem = {
   match: 'exact' | 'unknown';
   reused: boolean;
   alternatives: PlanItem[];
+  marketEstimate?: MarketEstimateInfo;
 };
 
 type PlanItem = VenueItem | ServiceItem;
+
+function marketInfo(stat: MarketPriceStat): MarketEstimateInfo {
+  return {
+    source: stat.source,
+    unit: stat.unit,
+    lowFc: stat.lowFc,
+    typicalFc: stat.typicalFc,
+    highFc: stat.highFc,
+    city: stat.city,
+    ...(stat.sampleCount != null ? { sampleCount: stat.sampleCount } : {}),
+    ...(stat.reviewedAt !== undefined ? { reviewedAt: stat.reviewedAt } : {}),
+  };
+}
+
+function marketVenueItem(stat: MarketPriceStat, priced: { amountFc: number; unitFc: number; note: string }): VenueItem {
+  return {
+    kind: 'venue',
+    slug: marketEstimateSlug('venue'),
+    title: 'Salle (estimation marché)',
+    orgName: 'Hors marketplace',
+    city: stat.city || null,
+    location: '',
+    coverUrl: null,
+    priceFromFc: priced.unitFc,
+    priceUnitLabel: stat.unit === 'PERSON' ? 'par invité' : 'Estimation',
+    estimatedFc: priced.amountFc,
+    capacity: null,
+    detail: priced.note,
+    href: '/dashboard/catalogue?hub=explore',
+    favorite: false,
+    match: 'unknown',
+    reused: false,
+    alternatives: [],
+    marketEstimate: marketInfo(stat),
+  };
+}
+
+function marketServiceItem(
+  category: ServiceCategory,
+  stat: MarketPriceStat,
+  priced: { amountFc: number; unitFc: number; note: string },
+): ServiceItem {
+  const label = serviceCategoryLabel(category);
+  return {
+    kind: 'service',
+    slug: marketEstimateSlug(category),
+    title: `${label} (estimation marché)`,
+    category,
+    categoryLabel: label,
+    orgName: 'Hors marketplace',
+    city: stat.city || null,
+    location: '',
+    coverUrl: null,
+    priceFromFc: priced.unitFc,
+    priceUnitLabel: stat.unit === 'PERSON' ? 'par invité' : 'Estimation',
+    estimatedFc: priced.amountFc,
+    href: '/dashboard/catalogue?hub=explore',
+    detail: priced.note,
+    favorite: false,
+    match: 'unknown',
+    reused: false,
+    alternatives: [],
+    marketEstimate: marketInfo(stat),
+  };
+}
+
+function formatMarketGap(label: string, stat: MarketPriceStat, guests: number): string {
+  const low = stat.unit === 'PERSON' ? stat.lowFc * Math.max(1, guests) : stat.lowFc;
+  return `Aucune offre « ${label} » sur la marketplace. Prix du marché estimé à partir de ${formatFc(low)}, au-dessus de l’enveloppe.`;
+}
 
 function serializeVenue(listing: Scored<{
   slug: string;
@@ -687,6 +773,9 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     relaxed.eventType = true;
   }
 
+  // Prix du marché (réservations réelles, références web validées) pour les lignes sans aucune offre.
+  const marketBook: MarketPriceBook | null = body.marketEstimates === false ? null : await loadMarketPriceBook(city);
+
   const drinkRows = (budgetScope === 'complete' || budgetScope === 'drinks') && (guests > 0 || wantedDrinkLines.length > 0)
     ? await prisma.vendorBeveragePrice.findMany({
       where: {
@@ -740,6 +829,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     const notes: string[] = [];
     const items: PlanItem[] = [];
     let total = 0;
+    let marketCount = 0;
     const skippedRequired: PackSlot[] = [];
 
     const addVenue = (requiredVenue: boolean) => {
@@ -787,10 +877,18 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
         if (venuePick.reused) notes.push('Même salle qu’un autre pack : pas d’alternative dans le budget.');
         if (venuePick.item.favorite) notes.push('Salle prise parmi vos favoris.');
       } else if (requiredVenue) {
+        const stat = !rankedVenues.length ? marketBook?.get('venue') ?? null : null;
+        const priced = stat ? marketEstimateAmount(stat, guests, style.style, venueBudget) : null;
+        if (stat && priced) {
+          items.push(marketVenueItem(stat, priced));
+          total += priced.amountFc;
+          marketCount += 1;
+          return;
+        }
         missing.push({
           slot: 'venue',
           label: 'Salle',
-          reason: missingReason(rankedVenues, venueBudget, 'Salle'),
+          reason: stat ? formatMarketGap('Salle', stat, guests) : missingReason(rankedVenues, venueBudget, 'Salle'),
         });
       }
     };
@@ -837,12 +935,21 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
       const pool = rankedServices.filter((service) => service.category === slot.category);
       const picked = pickForBudget(pool, cap > 0 ? cap : remaining, style.style, usedServiceSlugs, favoriteMode);
       if (!picked) {
-        if (mustPrice) notes.push(`Aucune offre « ${serviceCategoryLabel(slot.category)} » à chiffrer.`);
+        const label = serviceCategoryLabel(slot.category);
+        const stat = !pool.length && (requiredSlot || mustPrice) ? marketBook?.get(slot.category) ?? null : null;
+        const priced = stat ? marketEstimateAmount(stat, guests, style.style, cap > 0 ? cap : remaining) : null;
+        if (stat && priced) {
+          items.push(marketServiceItem(slot.category, stat, priced));
+          total += priced.amountFc;
+          marketCount += 1;
+          return;
+        }
+        if (mustPrice) notes.push(`Aucune offre « ${label} » à chiffrer.`);
         if (requiredSlot) {
           missing.push({
             slot: slot.category,
-            label: serviceCategoryLabel(slot.category),
-            reason: missingReason(pool, cap > 0 ? cap : remaining, serviceCategoryLabel(slot.category)),
+            label,
+            reason: stat ? formatMarketGap(label, stat, guests) : missingReason(pool, cap > 0 ? cap : remaining, label),
           });
           skippedRequired.push(slot);
         }
@@ -950,6 +1057,11 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     if (!missing.length && leftoverFc > 0) {
       notes.push(`Reste ${formatFc(leftoverFc)} à réallouer ou à garder en marge.`);
     }
+    if (marketCount > 0) {
+      notes.push(
+        `${marketCount} ligne${marketCount > 1 ? 's' : ''} chiffrée${marketCount > 1 ? 's' : ''} au prix du marché, faute d’offre sur la marketplace. À confirmer auprès d’un prestataire.`,
+      );
+    }
     if (relaxed.city) notes.push('Ville élargie faute de catalogue local.');
     if (relaxed.commune) notes.push('Commune élargie pour trouver des offres.');
     if (relaxed.availability) notes.push('Date ignorée : trop peu d’offres disponibles ce jour-là.');
@@ -960,7 +1072,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     const allocation = [
       ...(venueItem ? [{ key: 'venue', label: 'Salle', amountFc: venueItem.estimatedFc }] : []),
       ...serviceItems.map((item) => ({
-        key: item.slug.startsWith('budget:') ? 'beverages' : item.category,
+        key: item.slug.startsWith('budget:boissons:') ? 'beverages' : item.category,
         label: item.categoryLabel,
         amountFc: item.estimatedFc,
       })),
@@ -983,6 +1095,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
       notes: [...new Set(notes)],
       requiredCount: requiredSlots.length + (venueRequired ? 1 : 0),
       filledCount: items.length,
+      marketEstimateCount: marketCount,
       allocation,
     };
   }).filter((packResult) => packResult.items.length > 0 || packResult.missing.length > 0);
