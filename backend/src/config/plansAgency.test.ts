@@ -12,7 +12,7 @@ describe('forfait Agence', () => {
     assert.ok(B2B_PLAN_KEYS.includes('AGENCY'));
     assert.equal(normalizePlanKey('AGENCY'), 'AGENCY');
     assert.equal(plans.AGENCY.audience, 'B2B');
-    assert.equal(plans.AGENCY.monthlyPriceFc, 220000);
+    assert.equal(plans.AGENCY.monthlyPriceFc, 300000);
   });
 
   it('se place entre Premium Plus et Enterprise, sans dépasser Enterprise', () => {
@@ -25,7 +25,7 @@ describe('forfait Agence', () => {
     assert.equal(mid.roomEditorLevel, 'advanced');
   });
 
-  it('inclut 300 SMS par mois', () => {
-    assert.equal(DEFAULT_PLAN_SMS_INCLUDED.AGENCY, 300);
+  it('inclut 400 SMS par mois', () => {
+    assert.equal(DEFAULT_PLAN_SMS_INCLUDED.AGENCY, 400);
   });
 });
