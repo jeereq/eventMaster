@@ -127,6 +127,14 @@ async function fanOutChannels(
           channel: 'PUSH',
           status: 'SENT',
           providerId: `${result.sent} device(s)`,
+          error: result.failed > 0 ? `${result.failed} échec(s) : ${result.error ?? ''}` : undefined,
+        });
+      } else if (result.failed > 0) {
+        await logDelivery({
+          notificationId: notification.id,
+          channel: 'PUSH',
+          status: 'FAILED',
+          error: result.error ?? `${result.failed} échec(s)`,
         });
       }
     } catch (err) {

@@ -15,6 +15,7 @@ import {
   removePushDeviceToken,
   upsertPushDeviceToken,
 } from '../services/pushDeviceTokenService';
+import { fetchExpoPushReceipts, sendExpoPushToUser } from '../services/expoPushService';
 
 export async function listNotifications(req: AuthenticatedRequest, res: Response) {
   try {
@@ -158,5 +159,79 @@ export async function unregisterPushToken(req: AuthenticatedRequest, res: Respon
   } catch (error: any) {
     console.error('[unregisterPushToken]', error);
     return res.status(500).json({ error: 'Impossible de supprimer le token push.' });
+  }
+}
+
+const RECEIPT_HINTS: Record<string, string> = {
+  DeviceNotRegistered: 'Appareil désinscrit : relancez l’app et reconnectez-vous.',
+  InvalidCredentials: 'Identifiants FCM (Android) ou APNs (iOS) absents du projet Expo : à ajouter avec « eas credentials ».',
+  MessageTooBig: 'Message trop volumineux.',
+  MessageRateExceeded: 'Trop de notifications envoyées à cet appareil, réessayez plus tard.',
+  MismatchSenderId: 'Le google-services.json de l’app ne correspond pas à la clé FCM du projet Expo.',
+};
+
+/**
+ * Envoie une notification push de test sur les appareils de l'utilisateur
+ * connecté et renvoie le diagnostic (tickets + reçus Expo).
+ */
+export async function sendTestPush(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Non authentifié.' });
+    }
+
+    const result = await sendExpoPushToUser(req.user.id, {
+      title: 'Test EventMaster',
+      body: 'Les notifications push fonctionnent sur cet appareil.',
+      data: { type: 'PUSH_TEST' },
+    });
+
+    if (result.tickets.length === 0) {
+      return res.json({
+        ok: false,
+        devices: 0,
+        hint: 'Aucun appareil enregistré : ouvrez l’app mobile (build EAS, pas Expo Go), connectez-vous et acceptez les notifications.',
+        tickets: [],
+      });
+    }
+
+    const ticketIds = result.tickets.map((t) => t.id).filter((id): id is string => Boolean(id));
+    let receipts: Awaited<ReturnType<typeof fetchExpoPushReceipts>> = {};
+    let receiptsError: string | undefined;
+    if (ticketIds.length > 0) {
+      // Les reçus ne sont disponibles qu'après la remise à FCM/APNs.
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      try {
+        receipts = await fetchExpoPushReceipts(ticketIds);
+      } catch (err) {
+        receiptsError = err instanceof Error ? err.message : String(err);
+      }
+    }
+
+    const devices = result.tickets.map((ticket) => {
+      const receipt = ticket.id ? receipts[ticket.id] : undefined;
+      const errorCode = ticket.status === 'error'
+        ? ticket.details?.error
+        : receipt?.status === 'error' ? receipt.details?.error : undefined;
+      const status = ticket.status === 'error' || receipt?.status === 'error'
+        ? 'error'
+        : receipt?.status === 'ok' ? 'delivered' : 'pending';
+      return {
+        token: `${ticket.token.slice(0, 24)}…`,
+        status,
+        error: errorCode ?? (status === 'error' ? receipt?.message ?? ticket.message : undefined),
+        hint: errorCode ? RECEIPT_HINTS[errorCode] : undefined,
+      };
+    });
+
+    return res.json({
+      ok: devices.some((d) => d.status !== 'error'),
+      devices: devices.length,
+      results: devices,
+      ...(receiptsError ? { receiptsError } : {}),
+    });
+  } catch (error: unknown) {
+    console.error('[sendTestPush]', error);
+    return res.status(500).json({ error: 'Impossible d’envoyer la notification de test.' });
   }
 }

@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { AppState } from 'react-native';
 import { api, setToken, hasStoredToken } from '../lib/api';
+import { unregisterPushTokenFromBackend } from '../lib/pushNotifications';
 import type {
   AuthLoginResponse,
   OrgAccess,
@@ -179,6 +180,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    // Désinscrire l'appareil tant que la session est encore valide, sinon
+    // il continue de recevoir les push du compte déconnecté.
+    await unregisterPushTokenFromBackend().catch(() => undefined);
     await setToken(null);
     setUser(null);
     setTenant(null);

@@ -6,6 +6,7 @@ import {
   readAllNotifications,
   readNotification,
   registerPushToken,
+  sendTestPush,
   unregisterPushToken,
   updatePreferences,
 } from '../controllers/notificationController';
@@ -19,6 +20,7 @@ router.get('/preferences', getPreferences);
 router.put('/preferences', updatePreferences);
 router.post('/push-token', registerPushToken);
 router.delete('/push-token', unregisterPushToken);
+router.post('/push-test', sendTestPush);
 router.patch('/:id/read', readNotification);
 router.post('/read-all', readAllNotifications);
 
