@@ -1,11 +1,12 @@
 import { ServiceCategory } from '@prisma/client';
 import { prisma } from '../db';
-import { getGeminiApiKey, getGeminiTextModel, parseGeminiJson } from './geminiJsonClient';
+import { getGeminiApiKey, getGeminiTextModel } from './geminiJsonClient';
 import { getOpenAiApiKey } from './openaiJsonClient';
 import { loadPlatformSettings } from './platformSettingsService';
 import { serviceCategoryLabel } from '../utils/publicVenue';
 import { channelSource, defaultMarketUnit, isReferenceChannel, type ReferenceChannel } from './marketPriceStats.ts';
 import {
+  extractResearchJson,
   keepSocialSources,
   mergeProposals,
   sanitizeResearchProposals,
@@ -101,7 +102,7 @@ async function askGemini(system: string, user: string): Promise<{ raw: unknown; 
           contents: [{ role: 'user', parts: [{ text: user }] }],
           // La recherche Google ancre la réponse sur des pages réelles.
           tools: [{ google_search: {} }],
-          generationConfig: { temperature: 0.2 },
+          generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
         }),
       },
     );
@@ -119,7 +120,7 @@ async function askGemini(system: string, user: string): Promise<{ raw: unknown; 
     const sources = sanitizeSources(
       (candidate?.groundingMetadata?.groundingChunks || []).map((chunk) => ({ url: chunk.web?.uri, title: chunk.web?.title })),
     );
-    return { raw: parseGeminiJson(text), sources, model };
+    return { raw: extractResearchJson(text), sources, model };
   } finally {
     clearTimeout(timer);
   }
@@ -164,7 +165,7 @@ async function askOpenAi(system: string, user: string): Promise<{ raw: unknown; 
       }
     }
     if (!text.trim()) fail(502, 'OpenAI n’a renvoyé aucun prix.');
-    return { raw: parseGeminiJson(text), sources: sanitizeSources(cited), model };
+    return { raw: extractResearchJson(text), sources: sanitizeSources(cited), model };
   } finally {
     clearTimeout(timer);
   }

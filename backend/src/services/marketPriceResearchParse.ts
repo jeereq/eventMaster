@@ -7,6 +7,70 @@ const MAX_SPREAD = 20;
 
 export type ResearchSource = { title: string; url: string };
 
+/** Objets JSON complets (accolades équilibrées, hors chaînes) trouvés dans un texte, dans l’ordre. */
+function completeObjects(text: string, from = 0): Array<{ start: number; end: number }> {
+  const found: Array<{ start: number; end: number }> = [];
+  let depth = 0;
+  let start = -1;
+  let inString = false;
+  let escaped = false;
+  for (let i = from; i < text.length; i += 1) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === '{') {
+      if (depth === 0) start = i;
+      depth += 1;
+    } else if (ch === '}' && depth > 0) {
+      depth -= 1;
+      if (depth === 0) found.push({ start, end: i + 1 });
+    }
+  }
+  return found;
+}
+
+function tryParse(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Lit la réponse JSON d’une IA qui fait des recherches : avec l’outil de recherche, le mode JSON strict
+ * n’est pas disponible, donc la réponse peut être entourée de balises de code (fermées ou non),
+ * précédée ou suivie de texte, ou coupée en route. On garde alors les lignes complètes.
+ */
+export function extractResearchJson(raw: string): unknown {
+  const text = String(raw || '')
+    .replace(/^\uFEFF/, '')
+    .replace(/```(?:json|JSON)?/g, '')
+    .trim();
+  const direct = tryParse(text);
+  if (direct !== undefined) return direct;
+  const first = text.indexOf('{');
+  const last = text.lastIndexOf('}');
+  if (first >= 0 && last > first) {
+    const sliced = tryParse(text.slice(first, last + 1));
+    if (sliced !== undefined) return sliced;
+  }
+  // Réponse coupée ou entourée de texte : on récupère chaque ligne complète du tableau « items ».
+  const itemsAt = text.search(/"items"\s*:\s*\[/);
+  const objects = completeObjects(text, itemsAt >= 0 ? text.indexOf('[', itemsAt) + 1 : 0);
+  const items = objects
+    .map((range) => tryParse(text.slice(range.start, range.end)))
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+    .flatMap((item) => (Array.isArray(item.items) ? item.items : [item]));
+  if (items.length) return { items };
+  throw new Error('Réponse de l’IA illisible (JSON attendu).');
+}
+
 export type ResearchProposal = {
   slot: string;
   unit: MarketPriceUnit;
