@@ -136,6 +136,7 @@ export default function VenueImmersiveViewer({
             showMeta={false}
             fill
             allowExpand={false}
+            hostTopInset
             guestSimulation={crowdOn ? crowd : null}
           />
         ) : (
@@ -175,7 +176,7 @@ export default function VenueImmersiveViewer({
           spaces={spaces}
           spaceHref={spaceHref}
           spaceLinkTarget={spaceLinkTarget}
-          className="absolute inset-x-2 bottom-16 z-20 max-h-[48%] lg:inset-x-auto lg:left-2.5 lg:top-16 lg:bottom-16 lg:max-h-none lg:w-72"
+          className="absolute inset-x-2 bottom-16 z-20 max-h-[48%] lg:inset-x-auto lg:left-2.5 lg:top-[7.25rem] lg:bottom-16 lg:max-h-none lg:w-72"
         />
       ) : null}
 
@@ -188,7 +189,7 @@ export default function VenueImmersiveViewer({
             className={overlayButtonClass}
           >
             {panelOpen ? <PanelLeftClose className="h-4 w-4" aria-hidden /> : <PanelLeftOpen className="h-4 w-4" aria-hidden />}
-            <span>{hasLayoutChoice(layouts) ? 'Dispositions' : 'Espaces'}</span>
+            <span className="sr-only sm:not-sr-only">{hasLayoutChoice(layouts) ? 'Dispositions' : 'Espaces'}</span>
           </button>
         ) : null}
         {started && crowdAllowed ? (
@@ -200,7 +201,7 @@ export default function VenueImmersiveViewer({
             className={cn(overlayButtonClass, crowdOn && 'border-primary bg-primary-solid text-primary-foreground hover:bg-primary-solid')}
           >
             <Users className="h-4 w-4" aria-hidden />
-            <span>{crowdOn ? 'Salle remplie ✓' : 'Salle remplie'}</span>
+            <span className="sr-only sm:not-sr-only">{crowdOn ? 'Salle remplie ✓' : 'Salle remplie'}</span>
           </button>
         ) : null}
         {venue.photos.length > 0 ? (
@@ -247,7 +248,7 @@ export default function VenueImmersiveViewer({
 
       {crowdOn && crowd ? (
         <div
-          className="absolute bottom-2.5 right-2.5 z-30 flex max-w-[calc(100%-1.25rem)] flex-wrap items-center gap-1.5 rounded-xl border border-border/70 bg-background/95 p-1.5 text-foreground shadow-lg backdrop-blur-md"
+          className="absolute bottom-16 right-2.5 z-30 flex max-w-[calc(100%-1.25rem)] flex-wrap items-center gap-1.5 rounded-xl border border-border/70 bg-background/95 p-1.5 text-foreground shadow-lg backdrop-blur-md"
           role="group"
           aria-label="Réglages de la salle remplie"
         >
@@ -272,7 +273,7 @@ export default function VenueImmersiveViewer({
         </div>
       ) : null}
 
-      <div className="pointer-events-none absolute inset-x-0 top-14 z-20 flex justify-center px-3" aria-live="polite">
+      <div className="pointer-events-none absolute inset-x-0 top-[7.5rem] z-20 flex justify-center px-3" aria-live="polite">
         {loading ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-foreground/80 px-3 py-1 text-xs font-semibold text-background">
             <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />

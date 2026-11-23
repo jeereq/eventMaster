@@ -284,6 +284,11 @@ interface RoomWebGLViewerProps {
   wallEditMode?: boolean;
   /** L’hôte pose ses propres boutons en haut à droite (éditeur) : la barre caméra leur laisse la place. */
   reserveTopRight?: boolean;
+  /**
+   * L’hôte superpose sa propre rangée en haut de la vue (boutons de la fiche salle, badge « Mon emplacement ») :
+   * la barre caméra et les panneaux qui en dépendent descendent sous cette rangée.
+   */
+  hostTopInset?: boolean;
   /** Bloque orbit / pan pour déplacer le mobilier sans changer la perspective. */
   lockOrbit?: boolean;
   /** Mode aperçu (marketplace / fiches) : pas de hints d’édition, orbit libre. */
@@ -5040,6 +5045,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   className,
   wallEditMode = false,
   reserveTopRight = false,
+  hostTopInset = false,
   lockOrbit = false,
   previewMode = false,
   renderQuality: renderQualityProp,
@@ -5644,7 +5650,8 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       {!walkthroughActive && !wallEditMode && !avatarActive && (
         <div
           className={cn(
-            'absolute top-2.5 left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 border border-border/70 shadow-sm max-w-[calc(100%-4.5rem)] overflow-x-auto no-scrollbar pointer-events-auto',
+            'absolute left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 border border-border/70 shadow-sm overflow-x-auto no-scrollbar pointer-events-auto',
+            hostTopInset ? 'top-[4.25rem] max-w-[calc(100%-1.25rem)]' : 'top-2.5 max-w-[calc(100%-4.5rem)]',
             // Assez large : une seule ligne à côté des boutons de l’éditeur ; sinon, juste en dessous.
             reserveTopRight && 'lg:@max-[62rem]:top-[3.6rem] @min-[62rem]:max-w-[calc(100%-18.5rem)]',
           )}
@@ -5839,7 +5846,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
 
       {filmMenuOpen && !film && !walkthroughActive && !wallEditMode ? (
         <div
-          className="absolute left-2.5 top-16 z-20 w-[min(17rem,calc(100%-1.25rem))] rounded-2xl border border-border/70 bg-background/95 p-2 shadow-lg dark:bg-surface-elevated/95 pointer-events-auto"
+          className={cn('absolute left-2.5 z-20 w-[min(17rem,calc(100%-1.25rem))] rounded-2xl', hostTopInset ? 'top-[7.25rem]' : 'top-16', 'border border-border/70 bg-background/95 p-2 shadow-lg dark:bg-surface-elevated/95 pointer-events-auto')}
           role="menu"
           aria-label="Film de la salle"
         >
@@ -5895,7 +5902,10 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       {/* Panneau « Espaces » : liste, survol = surlignage 3D, clic = la caméra s’envole vers l’espace. */}
       {spacesOpen && !walkthroughActive && !wallEditMode && spaces.length > 0 ? (
         <div
-          className="absolute inset-x-2.5 bottom-12 z-10 flex max-h-[46%] flex-col sm:inset-x-auto sm:right-2.5 sm:top-16 sm:max-h-none sm:w-72 overflow-hidden rounded-2xl border border-border/70 bg-background/90 shadow-lg dark:bg-surface-elevated/90 pointer-events-auto"
+          className={cn(
+            'absolute inset-x-2.5 bottom-12 z-10 flex max-h-[46%] flex-col sm:inset-x-auto sm:right-2.5 sm:max-h-none sm:w-72 overflow-hidden rounded-2xl border border-border/70 bg-background/90 shadow-lg dark:bg-surface-elevated/90 pointer-events-auto',
+            hostTopInset ? 'sm:top-[7.25rem]' : 'sm:top-16',
+          )}
           role="region"
           aria-label="Espaces de la salle"
         >
@@ -6100,7 +6110,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
               current={avatarViewer}
               stage={stageSpace}
               onPick={showAvatar}
-              className="absolute right-2.5 top-12 z-30 w-40 sm:top-2.5 sm:w-64"
+              className={cn('absolute right-2.5 z-30 w-40 sm:w-64', hostTopInset ? 'top-[4.25rem]' : 'top-12 sm:top-2.5')}
             />
           ) : null}
           <div className="pointer-events-none absolute top-2.5 left-2.5 right-2.5 z-10 flex justify-start">
@@ -6264,7 +6274,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             Visite guidée · {tourCaption || 'entrée par la porte'}
           </div>
         </div>
-      ) : film ? null : presentationMode ? (
+      ) : film || previewMode ? null : presentationMode ? (
         <div className="pointer-events-none absolute bottom-2 left-2">
           <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
             Présentation · touchez la salle pour la piloter
