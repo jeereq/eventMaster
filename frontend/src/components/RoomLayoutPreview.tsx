@@ -457,7 +457,7 @@ export default function RoomLayoutPreview({
       {quality === 'thumb' ? (
         <ThumbPreview blueprint={blueprint} className={className} />
       ) : (
-        <div className={cn('relative overflow-hidden rounded-2xl border border-border/60 bg-stage', canvasClass, className)}>
+        <div className={cn('relative overflow-hidden rounded-2xl border border-border/60 bg-stage', canvasClass, className)} data-guest-no-swipe>
           {expanded ? (
             <div className="absolute inset-0 bg-stage" aria-hidden />
           ) : useWebGL ? (
@@ -537,6 +537,7 @@ export default function RoomLayoutPreview({
           ref={panelRef}
           tabIndex={-1}
           className="fixed inset-0 z-[250] flex flex-col bg-stage text-stage-foreground outline-none"
+          data-guest-no-swipe
           role="dialog"
           aria-modal="true"
           aria-labelledby="plan-fullscreen-title"
