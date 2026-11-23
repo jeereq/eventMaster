@@ -33,10 +33,14 @@ interface GuestPortalShellProps {
   inert?: boolean;
 }
 
-function swipeBlocked(target: EventTarget | null) {
+function swipeBlocked(target: EventTarget | null, root: Element) {
   if (!(target instanceof Element)) return false;
+  // Un plein écran ouvert dans un portail (vue 3D de la salle, visionneuse…) est hors de la page dans
+  // le DOM, mais React y propage quand même les touchers : on ne change jamais d’onglet depuis là.
+  if (!root.contains(target)) return true;
+  // Glisser sur un plan (3D ou 2D) sert à tourner ou déplacer la vue, pas à changer d’onglet.
   return Boolean(
-    target.closest('[data-guest-no-swipe], input, textarea, select, [contenteditable="true"]'),
+    target.closest('[data-guest-no-swipe], canvas, input, textarea, select, [contenteditable="true"]'),
   );
 }
 
@@ -91,7 +95,10 @@ export default function GuestPortalShell({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!swipeTabIds?.length || !onTabChange) return;
-    if (swipeBlocked(e.target)) return;
+    if (swipeBlocked(e.target, e.currentTarget)) {
+      touchStart.current = null;
+      return;
+    }
     const t = e.changedTouches[0];
     touchStart.current = { x: t.clientX, y: t.clientY };
   };
