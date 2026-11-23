@@ -19,7 +19,9 @@ import {
   parseLayoutName,
   parseThumbnailUrl,
 } from '../services/venueLayoutInput';
-import { findPublicLayoutBlueprint } from '../services/venueLayoutService';
+import { findPublicLayoutBlueprint, mainLayoutName } from '../services/venueLayoutService';
+import { MAIN_LAYOUT_ID } from '../services/venueLayoutInput';
+import { calculateBlueprintCapacity } from '../services/roomLayoutService';
 import { canViewRestrictedListing } from './marketplaceController';
 
 const LAYOUT_SUMMARY_SELECT = {
@@ -60,8 +62,20 @@ async function loadRoomForOrg(
   if (!allowed) return null;
   return prisma.organizationRoom.findFirst({
     where: { id: roomId, tenantId: ctx.tenantId },
-    select: { id: true, roomType: true, layoutBlueprint: true },
+    select: { id: true, roomType: true, layoutBlueprint: true, layoutName: true },
   });
+}
+
+/** Résumé de la disposition principale (le plan de la salle), affiché en tête de liste. */
+function mainLayoutSummary(room: { layoutBlueprint: unknown; layoutName: string | null }) {
+  const stats = computeLayoutStats(room.layoutBlueprint);
+  return {
+    id: MAIN_LAYOUT_ID,
+    name: mainLayoutName(room.layoutName),
+    capacityMax: stats.capacityMax || null,
+    areaM2: stats.areaM2,
+    hasBlueprint: Boolean(room.layoutBlueprint),
+  };
 }
 
 /** Vérifie que le forfait autorise ce plan (type de salle, thèmes et accessoires). */
@@ -115,6 +129,7 @@ export async function listRoomLayouts(req: AuthenticatedRequest, res: Response) 
       getTenantPlanSnapshot(ctx.tenantId),
     ]);
     return res.json({
+      main: mainLayoutSummary(room),
       layouts,
       maxLayouts: maxSavedLayoutsForLevel(snapshot?.features.roomEditorLevel),
     });
@@ -237,6 +252,17 @@ export async function updateRoomLayout(req: AuthenticatedRequest, res: Response)
     if (!room) return res.status(404).json({ error: ROOM_NOT_FOUND });
 
     const layoutId = String(req.params.layoutId || '');
+    if (layoutId === MAIN_LAYOUT_ID) {
+      // La disposition principale est le plan de la salle : seul son nom se modifie ici.
+      const name = parseLayoutName(req.body?.name);
+      if (!name) return res.status(400).json({ error: 'Nom invalide (80 caractères maximum).' });
+      const updatedRoom = await prisma.organizationRoom.update({
+        where: { id: roomId },
+        data: { layoutName: name },
+        select: { layoutBlueprint: true, layoutName: true, updatedAt: true },
+      });
+      return res.json({ ...mainLayoutSummary(updatedRoom), roomUpdatedAt: updatedRoom.updatedAt });
+    }
     const existing = await prisma.venueLayout.findFirst({ where: { id: layoutId, roomId }, select: { id: true } });
     if (!existing) return res.status(404).json({ error: LAYOUT_NOT_FOUND });
 
@@ -369,6 +395,85 @@ export async function reorderRoomLayouts(req: AuthenticatedRequest, res: Respons
   } catch (error) {
     console.error('reorderRoomLayouts:', error);
     return res.status(500).json({ error: 'Impossible de réordonner les dispositions.' });
+  }
+}
+
+/**
+ * Fait d'une disposition enregistrée la disposition principale de la salle.
+ * Les deux plans sont échangés : l'ancien plan principal prend la place de la disposition
+ * choisie dans la liste, si bien que rien n'est perdu et que le quota ne bouge pas.
+ */
+export async function makeMainRoomLayout(req: AuthenticatedRequest, res: Response) {
+  try {
+    const ctx = resolveOrgContext(req, res);
+    if (!ctx) return;
+    const roomId = String(req.params.roomId || '');
+    const room = await loadRoomForOrg(ctx, roomId, 'manage');
+    if (!room) return res.status(404).json({ error: ROOM_NOT_FOUND });
+
+    const layoutId = String(req.params.layoutId || '');
+    const chosen = await prisma.venueLayout.findFirst({
+      where: { id: layoutId, roomId },
+      select: { id: true, blueprint: true },
+    });
+    if (!chosen) return res.status(404).json({ error: LAYOUT_NOT_FOUND });
+
+    try {
+      await assertBlueprintAllowedByPlan(ctx.tenantId, room.roomType, chosen.blueprint);
+    } catch (err) {
+      if (handlePlanError(err, res)) return;
+      throw err;
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "OrganizationRoom" WHERE "id" = ${roomId} FOR UPDATE`;
+      const [current, layout] = await Promise.all([
+        tx.organizationRoom.findUnique({ where: { id: roomId }, select: { layoutBlueprint: true, layoutName: true } }),
+        tx.venueLayout.findFirst({ where: { id: layoutId, roomId }, select: { name: true, blueprint: true } }),
+      ]);
+      if (!current || !layout) return null;
+
+      const updatedRoom = await tx.organizationRoom.update({
+        where: { id: roomId },
+        data: {
+          layoutBlueprint: layout.blueprint as Prisma.InputJsonValue,
+          layoutName: layout.name,
+          capacity: calculateBlueprintCapacity(layout.blueprint as any),
+        },
+      });
+
+      let replacement = null;
+      if (current.layoutBlueprint) {
+        const stats = computeLayoutStats(current.layoutBlueprint);
+        replacement = await tx.venueLayout.update({
+          where: { id: layoutId },
+          data: {
+            name: mainLayoutName(current.layoutName, true),
+            blueprint: current.layoutBlueprint as Prisma.InputJsonValue,
+            capacityMax: stats.capacityMax,
+            areaM2: stats.areaM2,
+            // La vignette montrait l'autre plan : elle est recalculée par l'éditeur.
+            thumbnailUrl: null,
+            // L'ancien plan principal était visible sur la fiche : il le reste.
+            isPublic: true,
+          },
+          select: LAYOUT_SUMMARY_SELECT,
+        });
+      } else {
+        await tx.venueLayout.delete({ where: { id: layoutId } });
+      }
+      return { updatedRoom, replacement };
+    });
+    if (!result) return res.status(404).json({ error: LAYOUT_NOT_FOUND });
+
+    return res.json({
+      room: result.updatedRoom,
+      main: mainLayoutSummary(result.updatedRoom),
+      replaced: result.replacement,
+    });
+  } catch (error) {
+    console.error('makeMainRoomLayout:', error);
+    return res.status(500).json({ error: 'Impossible de changer la disposition principale.' });
   }
 }
 

@@ -809,6 +809,8 @@ model OrganizationRoom {
   location         String?
   roomType         RoomType @default(SIMPLE)
   layoutBlueprint  Json?
+  /// Nom affiché de la disposition principale (`layoutBlueprint`) ; « Disposition principale » si vide.
+  layoutName       String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
