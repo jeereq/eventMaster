@@ -1,7 +1,9 @@
 import { prisma } from '../db';
 import { sanitizeLayoutBlueprint } from '../utils/publicVenue';
 import { computeLayoutStats } from './venueLayoutStats';
-import { MAIN_LAYOUT_ID, MAIN_LAYOUT_NAME } from './venueLayoutInput';
+import { MAIN_LAYOUT_ID, mainLayoutName } from './venueLayoutInput';
+
+export { mainLayoutName };
 
 export interface PublicLayoutSummary {
   id: string;
@@ -12,7 +14,11 @@ export interface PublicLayoutSummary {
 }
 
 /** Disposition principale d'abord, puis les dispositions publiques dans l'ordre choisi par le propriétaire. */
-export async function listPublicLayouts(roomId: string, mainBlueprint: unknown): Promise<PublicLayoutSummary[]> {
+export async function listPublicLayouts(
+  roomId: string,
+  mainBlueprint: unknown,
+  mainName?: string | null,
+): Promise<PublicLayoutSummary[]> {
   const saved = await prisma.venueLayout.findMany({
     where: { roomId, isPublic: true },
     orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
@@ -22,7 +28,7 @@ export async function listPublicLayouts(roomId: string, mainBlueprint: unknown):
   return [
     {
       id: MAIN_LAYOUT_ID,
-      name: MAIN_LAYOUT_NAME,
+      name: mainLayoutName(mainName),
       capacityMax: mainStats.capacityMax || null,
       areaM2: mainStats.areaM2,
       thumbnailUrl: null,

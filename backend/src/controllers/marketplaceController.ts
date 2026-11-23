@@ -604,7 +604,7 @@ export async function getPublicVenue(req: Request, res: Response) {
         : false,
       isPublic: listing.isPublic,
       isBlockedByAdmin: listing.isBlockedByAdmin,
-      layouts: await listPublicLayouts(listing.roomId, listing.room.layoutBlueprint),
+      layouts: await listPublicLayouts(listing.roomId, listing.room.layoutBlueprint, listing.room.layoutName),
       relatedVenues: relatedVenues.map(toPublicVenue),
       relatedServices: relatedOfferings.map(toPublicService),
       activityPreview: await fetchActivityPreview({ venueListingId: listing.id }),
