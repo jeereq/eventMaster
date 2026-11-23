@@ -13,6 +13,13 @@ import { extractPaletteFromSource, type TemplatePalette } from '@/lib/imagePalet
 import { applyPaletteToElements, invitationColorThemes, ORG_BRAND_THEME_ID, buildOrgBrandInvitationTheme } from '@/lib/templateColorThemes';
 import { FONT_THEMES, applyFontThemeToElements, getFontTheme } from '@/lib/templateFontThemes';
 import { TEMPLATE_IMAGE_STYLES, templateImageStyleClass, templateImageStyleExtra, type TemplateImageStyleId } from '@/lib/templateImageStyle';
+import type { TemplateImageEffects } from '@/lib/templateImageEffects';
+import { TEMPLATE_ILLUSTRATIONS, illustrationDataUri } from '@/lib/templateIllustrations';
+import { layerPosition, nextTopZ, reorderLayer, type LayerAction } from '@/lib/templateLayers';
+import TemplateImage from '@/components/TemplateImage';
+import ImageEffectsPanel from '@/components/templateEditor/ImageEffectsPanel';
+import LayerControls from '@/components/templateEditor/LayerControls';
+import IllustrationPicker from '@/components/templateEditor/IllustrationPicker';
 import { editorialLayoutById, fillEditorialTokens, type EditorialLayoutId } from '@/lib/invitationEditorialLayouts';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
@@ -55,7 +62,7 @@ import {
  Columns, Eye, CheckSquare, Loader2, XCircle, X,
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
- Undo2, Redo2, History, Download, SlidersHorizontal, LayoutTemplate,
+ Undo2, Redo2, BringForward, SendBackward, History, Download, SlidersHorizontal, LayoutTemplate,
  Calendar, MapPin, User, Users, MessageSquare, Layers, Move, Crown, ArrowRight,
  BookOpen, FolderHeart,
 } from '@/components/icons';
@@ -133,7 +140,7 @@ interface TemplateItem {
  } | null;
 }
 
-interface CanvasElement {
+interface CanvasElement extends TemplateImageEffects {
  id: string;
  type: 'text' | 'image' | 'button' | 'rsvp-block' | 'curve' | 'triangle' | 'divider';
  text: string; // Used for text content, button text, image placeholder, shape labels
@@ -173,6 +180,10 @@ interface CanvasElement {
  yPct?: number;
  wPct?: number;
  zIndex?: number;
+ /** Illustration de la bibliothèque (SVG recoloré, stocké en data URI dans imageUrl). */
+ illustrationId?: string;
+ illustrationColor?: string;
+ illustrationColor2?: string;
 }
 
 const darkenColor = (hex: string, percent = 30) => {
@@ -881,10 +892,11 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  layoutMode === 'free'
  ? {
  positionMode: 'absolute' as const,
- xPct: 8,
- yPct: Math.min(80, 8 + canvasElements.length * 12),
- wPct: 84,
- zIndex: canvasElements.length + 1,
+ xPct: type === 'image' ? 16 : 8,
+ // Une image arrive dans la partie visible de la carte (elle déborderait sinon en bas).
+ yPct: type === 'image' ? 24 : Math.min(80, 8 + canvasElements.length * 12),
+ wPct: type === 'image' ? 68 : 84,
+ zIndex: nextTopZ(canvasElements),
  }
  : { positionMode: 'flow' as const };
  const newElement: CanvasElement = {
@@ -952,11 +964,11 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  setMobilePane('inspect');
  };
 
- const handleElementSelect = (id: string) => {
+ const handleElementSelect = (id: string, known?: CanvasElement) => {
  setSelectedElementId(id);
  setPropsAdvanced(false);
  setMobilePane('inspect');
- const el = canvasElements.find(e => e.id === id);
+ const el = known ?? canvasElements.find(e => e.id === id);
  if (el) {
  setElText(el.text);
  setElColor(el.color);
@@ -1011,6 +1023,8 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
 
  setCanvasElements(canvasElements.map(el => {
  if (el.id === selectedElementId) {
+ // Une nouvelle image remplace l’illustration : on ne la recolore plus.
+ if (field === 'imageUrl') return { ...el, imageUrl: value, illustrationId: undefined };
  return { ...el, [field]: value };
  }
  return el;
@@ -1018,6 +1032,78 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  };
 
  // Move element up in the list
+ /** Met à jour plusieurs champs de l’élément sélectionné ; recolore l’illustration si besoin. */
+ const updateSelectedElement = (patch: Partial<CanvasElement>) => {
+ if (!selectedElementId) return;
+ setCanvasElements((prev) =>
+ prev.map((el) => {
+ if (el.id !== selectedElementId) return el;
+ const next = { ...el, ...patch };
+ if (next.illustrationId && ('illustrationColor' in patch || 'illustrationColor2' in patch)) {
+ const uri = illustrationDataUri(next.illustrationId, next.illustrationColor, next.illustrationColor2);
+ if (uri) {
+ next.imageUrl = uri;
+ setElImageUrl(uri);
+ }
+ }
+ return next;
+ }),
+ );
+ };
+
+ /** Superposition : premier plan, avancer, reculer, arrière-plan. */
+ const handleLayerAction = (action: LayerAction, id = selectedElementId) => {
+ if (!id) return;
+ const next = reorderLayer(canvasElements, id, action);
+ if (next === canvasElements) return;
+ setCanvasElements(next);
+ const labels: Record<LayerAction, string> = {
+ front: 'Premier plan',
+ forward: 'Avancer d’un plan',
+ backward: 'Reculer d’un plan',
+ back: 'Arrière-plan',
+ };
+ recordStudioAction(labels[action], next);
+ };
+
+ /** Pose une illustration de la bibliothèque au premier plan, au centre de la carte. */
+ const addIllustration = (illustrationId: string) => {
+ const illu = TEMPLATE_ILLUSTRATIONS.find((i) => i.id === illustrationId);
+ const color = importedPalette?.accent || '#c5a059';
+ const imageUrl = illustrationDataUri(illustrationId, color);
+ if (!illu || !imageUrl) return;
+ const wPct = illu.aspect > 1.5 ? 56 : 34;
+ const newElement: CanvasElement = {
+ id: `illu-${Date.now()}`,
+ type: 'image',
+ text: illu.label,
+ color,
+ fontSize: '15px',
+ align: 'center',
+ width: 'full',
+ imageUrl,
+ imageWidth: '100%',
+ imageHeight: 'auto',
+ imageObjectFit: 'contain',
+ imageStyle: 'plain',
+ illustrationId,
+ illustrationColor: color,
+ ...(layoutMode === 'free'
+ ? {
+ positionMode: 'absolute' as const,
+ xPct: Math.round((100 - wPct) / 2),
+ yPct: 30,
+ wPct,
+ zIndex: nextTopZ(canvasElements),
+ }
+ : { positionMode: 'flow' as const }),
+ };
+ const nextElements = [...canvasElements, newElement];
+ setCanvasElements(nextElements);
+ recordStudioAction(`Illustration : ${illu.label}`, nextElements);
+ handleElementSelect(newElement.id, newElement);
+ };
+
  const handleMoveElementUp = (index: number, e: React.MouseEvent) => {
  e.stopPropagation();
  if (index === 0) return; // Already at the top
@@ -4007,6 +4093,13 @@ const studioModelPhotos = useMemo(
               </div>
             </button>
           </div>
+          <div className="space-y-2 pt-1">
+            <h3 className="text-xs font-bold text-muted">Illustrations</h3>
+            <p className="text-[11px] text-muted leading-snug">
+              Posez-les sur vos photos : couleur, dégradé, forme et plan se règlent ensuite à droite.
+            </p>
+            <IllustrationPicker color={importedPalette?.accent || '#c5a059'} onPick={addIllustration} />
+          </div>
           <button
             type="button"
             onClick={() => setShowDecorTools((v) => !v)}
@@ -5084,25 +5177,35 @@ const studioModelPhotos = useMemo(
                         isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                       }`}>
  {/* Move Up */}
- {index > 0 && (
+ {(layoutMode === 'free' ? isFree : index > 0) && (
  <button 
                             type="button"
- onClick={(e) => handleMoveElementUp(index, e)}
+ onClick={(e) => {
+ if (layoutMode === 'free') {
+ e.stopPropagation();
+ handleLayerAction('forward', el.id);
+ } else handleMoveElementUp(index, e);
+ }}
                             className="bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer"
- title="Déplacer vers le haut"
+ title={layoutMode === 'free' ? 'Avancer d’un plan (passer devant)' : 'Déplacer vers le haut'}
  >
-                            <ArrowUp className="w-3.5 h-3.5" />
+                            {layoutMode === 'free' ? <BringForward className="w-3.5 h-3.5" /> : <ArrowUp className="w-3.5 h-3.5" />}
  </button>
  )}
  {/* Move Down */}
- {index < canvasElements.length - 1 && (
+ {(layoutMode === 'free' ? isFree : index < canvasElements.length - 1) && (
  <button 
                             type="button"
- onClick={(e) => handleMoveElementDown(index, e)}
+ onClick={(e) => {
+ if (layoutMode === 'free') {
+ e.stopPropagation();
+ handleLayerAction('backward', el.id);
+ } else handleMoveElementDown(index, e);
+ }}
                             className="bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer"
- title="Déplacer vers le bas"
+ title={layoutMode === 'free' ? 'Reculer d’un plan (passer derrière)' : 'Déplacer vers le bas'}
  >
-                            <ArrowDown className="w-3.5 h-3.5" />
+                            {layoutMode === 'free' ? <SendBackward className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
  </button>
  )}
  <button
@@ -5203,12 +5306,7 @@ const studioModelPhotos = useMemo(
  {el.type === 'image' && (
  <div className={`flex justify-${el.align === 'left' ? 'start' : el.align === 'right' ? 'end' : 'center'}`}>
  {el.imageUrl ? (
- <img 
- src={el.imageUrl} 
- alt="Invitation" 
- style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: el.imageObjectFit || 'cover', ...templateImageStyleExtra(el.imageStyle) }}
- className={templateImageStyleClass(el.imageStyle)}
- />
+ <TemplateImage el={el} draggable={false} />
  ) : (
  <label 
  style={{ width: el.imageWidth || '100%', height: el.imageHeight || '150px', ...templateImageStyleExtra(el.imageStyle) }}
@@ -5651,24 +5749,44 @@ const studioModelPhotos = useMemo(
  <label className="text-xs font-bold text-muted ">URL</label>
  <input 
  type="text"
- value={elImageUrl}
+ value={elImageUrl.startsWith('data:') ? '' : elImageUrl}
  onChange={(e) => handlePropertyChange('imageUrl', e.target.value)}
- placeholder="https://…"
+ placeholder={elImageUrl.startsWith('data:') ? 'Image intégrée à la carte' : 'https://…'}
  className="w-full px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
  />
  </div>
- {elImageUrl && (
+ {elImageUrl && !elImageUrl.startsWith('data:image/svg') && (
  <button
  type="button"
  onClick={() => handleOpenCropper('element')}
  className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition border border-primary/20"
  >
  <Crop className="w-3.5 h-3.5" />
- Recadrer
+ Couper l’image d’origine
  </button>
  )}
  </div>
  )}
+
+ {(() => {
+ const activeEl = canvasElements.find((e) => e.id === selectedElementId);
+ if (!activeEl || (activeEl.type === 'rsvp-block' && activeEl.rsvpPlacement === 'outside')) return null;
+ const { position, total } = layerPosition(canvasElements, activeEl.id);
+ return (
+ <>
+ {activeEl.type === 'image' && activeEl.imageUrl && (
+ <ImageEffectsPanel el={activeEl} onChange={updateSelectedElement} />
+ )}
+ <LayerControls
+ position={position}
+ total={total}
+ freeLayout={layoutMode === 'free'}
+ onAction={(action) => handleLayerAction(action)}
+ onEnableFreeLayout={convertToFreeLayout}
+ />
+ </>
+ );
+ })()}
 
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' && (
  <div className="space-y-2">

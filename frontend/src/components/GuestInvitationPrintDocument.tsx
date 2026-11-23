@@ -23,7 +23,8 @@ import {
   collectInvitationFontFamilies,
   ensureHeadStylesheet,
 } from '@/lib/headStylesheet';
-import { templateImageStyleClass, templateImageStyleExtra } from '@/lib/templateImageStyle';
+import TemplateImage from '@/components/TemplateImage';
+import type { TemplateImageEffects } from '@/lib/templateImageEffects';
 
 function buildQrCodeUrl(guestId: string, size = 200): string {
   return getGuestQrImageUrl(guestId, size);
@@ -31,7 +32,7 @@ function buildQrCodeUrl(guestId: string, size = 200): string {
 
 const PRINT_FONTS_ID = 'em-invitation-print-google-fonts';
 
-type TemplateElement = {
+type TemplateElement = TemplateImageEffects & {
   id: string;
   type: string;
   text?: string;
@@ -228,18 +229,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
     if (el.type === 'image' && el.imageUrl) {
       return (
         <div className={`flex ${alignFlex(el.align)}`}>
-          <img
-            src={el.imageUrl}
-            alt=""
-            className={templateImageStyleClass(el.imageStyle)}
-            style={{
-              width: el.imageWidth || '100%',
-              height: el.imageHeight || 'auto',
-              maxWidth: '100%',
-              objectFit: (el.imageObjectFit as React.CSSProperties['objectFit']) || 'cover',
-              ...templateImageStyleExtra(el.imageStyle),
-            }}
-          />
+          <TemplateImage el={el} alt="" />
         </div>
       );
     }
