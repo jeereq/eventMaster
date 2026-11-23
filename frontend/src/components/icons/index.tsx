@@ -5,9 +5,11 @@
  * - Bold : contrôles d'interface (flèches, croix, coche, plus).
  * - Classe `fill-…` pleine (`fill-current`, `fill-white`…) : style Fill, couleur du texte.
  *   Classe `fill-…/30` translucide : retirée, l'aplat du Duotone joue déjà ce rôle.
+ * Les icônes dessinées pour EventMaster (custom.tsx) remplacent Phosphor quand leur nom y figure.
  * Ne pas importer 'lucide-react' ni '@phosphor-icons/react' directement dans le code.
  */
 import type { ComponentType, SVGProps } from 'react';
+import { CUSTOM_ICONS } from './custom';
 import type { Icon as PhosphorIcon, IconWeight } from '@phosphor-icons/react';
 import {
   AlignBottom as PhAlignBottom,
@@ -68,6 +70,7 @@ import {
   CaretUp as PhCaretUp,
   ChartBar as PhChartBar,
   ChartPie as PhChartPie,
+  ChartLineUp as PhChartLineUp,
   ChatCircle as PhChatCircle,
   ChatText as PhChatText,
   Check as PhCheck,
@@ -279,6 +282,18 @@ function splitFill(className: string | undefined): { className: string | undefin
 }
 
 function make(Base: PhosphorIcon, defaultWeight: IconWeight, name: string): LucideIcon {
+  const custom = CUSTOM_ICONS[name];
+  if (custom) {
+    function EmCustomIcon({ size = 24, weight: _weight, strokeWidth: _strokeWidth, absoluteStrokeWidth: _absolute, className, ...props }: EmIconProps) {
+      void _weight;
+      void _strokeWidth;
+      void _absolute;
+      const fill = splitFill(className);
+      return custom({ size, solid: fill.solid, className: fill.className, ...props });
+    }
+    EmCustomIcon.displayName = name;
+    return EmCustomIcon;
+  }
   function EmIcon({ size = 24, weight, strokeWidth: _strokeWidth, absoluteStrokeWidth: _absolute, className, ...props }: EmIconProps) {
     void _strokeWidth;
     void _absolute;
@@ -534,6 +549,7 @@ export const PanelLeft = make(PhSidebarSimple, 'duotone', 'PanelLeft');
 export const PanelLeftClose = make(PhSidebarSimple, 'duotone', 'PanelLeftClose');
 export const Percent = make(PhPercent, 'bold', 'Percent');
 export const PieChart = make(PhChartPie, 'duotone', 'PieChart');
+export const LineChart = make(PhChartLineUp, 'duotone', 'LineChart');
 export const Pin = make(PhPushPin, 'duotone', 'Pin');
 export const Redo = make(PhArrowArcRight, 'bold', 'Redo');
 export const ScrollText = make(PhScroll, 'duotone', 'ScrollText');

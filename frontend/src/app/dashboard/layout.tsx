@@ -12,7 +12,7 @@ import {
  LogOut, Loader2, ShieldCheck, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock,
  PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Bell,
- Inbox, Sparkles, Heart, Rss, LayoutGrid,
+ Inbox, Sparkles, Heart, Rss, LayoutGrid, LineChart, User,
 } from '@/components/icons';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import PWAInstallCta from '@/components/PWAInstallCta';
@@ -32,7 +32,7 @@ import DashboardMobileBottomBar, {
 } from '@/components/dashboard/DashboardMobileBottomBar';
 import DashboardMobileMenuSheet from '@/components/dashboard/DashboardMobileMenuSheet';
 import UserAvatar from '@/components/UserAvatar';
-import { Tooltip } from '@/components/ui';
+import { Tooltip, OverflowMenu } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { LANDING_PLANS } from '@/config/landingPricing';
@@ -50,7 +50,7 @@ import {
 } from '@/lib/dashboardNav';
 
 const NAV_ICONS: Record<NavIconName, React.ComponentType<{ className?: string }>> = {
- LayoutDashboard, BarChart3, Calendar, Ticket, ScanLine, Mail, Store, Sparkles, Inbox,
+ LayoutDashboard, BarChart3, LineChart, Calendar, Ticket, ScanLine, Mail, Store, Sparkles, Inbox,
  CalendarCheck, Building2, Briefcase, Rss, Users, CreditCard, FileText, Bell,
  Clock, Heart, LayoutGrid, MessageSquare, Key, ScrollText,
 };
@@ -145,16 +145,16 @@ function SidebarNav({
  const isSheet = variant === 'sheet';
 
  return (
- <nav className={cn(isSheet ? 'space-y-3' : 'space-y-4', collapsed && 'space-y-2.5')} aria-label="Navigation principale">
+ <nav className={cn(isSheet && 'space-y-3')} aria-label="Navigation principale">
  {sections.filter((section) => section.items.length > 0).map((section, sectionIdx) => (
- <div key={section.label ?? sectionIdx}>
+ <div
+  key={section.label ?? sectionIdx}
+  className={cn(!isSheet && sectionIdx > 0 && 'mt-3 border-t border-border pt-3')}
+ >
  {section.label && !collapsed && (
- <p className={cn('mb-1.5 text-xs font-semibold text-muted', isSheet ? 'px-1' : 'px-3')}>
+ <p className={cn('mb-1 text-xs font-medium text-muted', isSheet ? 'px-1 font-semibold' : 'px-2.5')}>
  {section.label}
  </p>
- )}
- {section.label && collapsed && (
- <div className="mx-auto mb-1.5 h-px w-5 bg-border" aria-hidden title={section.label} />
  )}
  <div className={cn(isSheet ? 'grid grid-cols-1 gap-1.5' : 'space-y-0.5')}>
  {section.items.map((item) => {
@@ -215,32 +215,26 @@ function SidebarNav({
  isSheet
   ? 'justify-between min-h-14 gap-3 p-3 rounded-[var(--radius-card)] border'
   : collapsed
-    ? 'justify-center px-2 py-2.5'
-    : 'gap-3 px-3 py-2.5 min-h-11',
+    ? 'justify-center h-10'
+    : 'gap-3 px-2.5 min-h-10',
  isActive
   ? isSheet
     ? 'bg-primary/10 border-primary/30 text-foreground font-semibold'
-    : 'bg-primary/10 text-primary-solid dark:text-primary font-semibold'
+    : 'bg-surface text-foreground shadow-sm ring-1 ring-border'
   : isSheet
     ? 'bg-surface border-border text-foreground hover:bg-surface-muted'
-    : 'text-muted hover:text-foreground hover:bg-surface-muted',
+    : 'text-foreground/75 hover:text-foreground hover:bg-surface/70',
  )}
  >
  <span className={cn('relative shrink-0', isSheet && 'flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10')}>
  <Icon
  className={cn(
  'w-[18px] h-[18px] shrink-0 transition-colors',
- isActive || isSheet ? 'text-primary' : 'text-muted group-hover:text-foreground',
+ isSheet ? 'text-primary' : isActive ? 'text-foreground' : 'text-muted group-hover:text-foreground',
  )}
  />
- {collapsed && !isNotifications && item.badge ? (
-  <span aria-hidden className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-festive-accent ring-2 ring-surface" />
- ) : null}
- {collapsed && isNotifications ? (
-  <UnreadCountBadge
-    count={unreadCount}
-    className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 inline-flex items-center justify-center rounded-full bg-danger text-primary-foreground text-xs font-bold tabular-nums"
-  />
+ {collapsed && ((!isNotifications && item.badge) || (isNotifications && unreadCount > 0)) ? (
+  <span aria-hidden className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary ring-2 ring-background" />
  ) : null}
  </span>
  {!collapsed && (
@@ -251,11 +245,23 @@ function SidebarNav({
  {!collapsed && isNotifications ? (
   <UnreadCountBadge
     count={unreadCount}
-    className="ml-auto min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-danger text-primary-foreground text-xs font-bold tabular-nums"
+    className={cn(
+      'ml-auto tabular-nums text-xs',
+      isSheet
+        ? 'min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-danger text-primary-foreground font-bold'
+        : 'font-semibold text-foreground',
+    )}
   />
  ) : null}
  {!collapsed && !isNotifications && item.badge ? (
-  <span className="ml-auto min-w-[20px] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-festive-accent-soft text-festive-accent text-xs font-bold tabular-nums">
+  <span
+    className={cn(
+      'ml-auto tabular-nums text-xs',
+      isSheet
+        ? 'min-w-[20px] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-festive-accent-soft text-festive-accent font-bold'
+        : 'font-medium text-muted',
+    )}
+  >
     {item.badge > 99 ? '99+' : item.badge}
   </span>
  ) : null}
@@ -582,11 +588,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  >
  <TourProvider>
   <NotificationInboxProvider>
-      <div className="h-dvh max-h-dvh min-h-0 overflow-hidden flex flex-col bg-background text-foreground">
+      <div className="h-dvh max-h-dvh min-h-0 overflow-hidden flex flex-col bg-background md:bg-surface text-foreground">
       <SupportSessionBanner />
       <div
         className="flex-1 min-h-0 flex flex-col md:flex-row"
-        style={{ ['--em-sidebar-width' as string]: sidebarCollapsed ? '4.5rem' : '16rem' }}
+        style={{ ['--em-sidebar-width' as string]: sidebarCollapsed ? '5.25rem' : '16.75rem' }}
       >
         {/* Header mobile */}
         <header className="md:hidden bg-surface/95 border-b border-border px-3 flex items-center justify-between fixed inset-x-0 top-0 z-40 pt-[env(safe-area-inset-top,0px)]">
@@ -615,44 +621,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Sidebar — desktop uniquement ; mobile = bottom sheet */}
         <aside
           className={cn(
-            'hidden md:flex md:flex-col',
-            'md:sticky md:top-0 md:h-full md:max-w-none md:z-30',
-            'bg-surface border-r border-border',
+            'hidden md:flex md:flex-col relative shrink-0',
+            'md:my-3 md:ml-3 md:z-30 md:rounded-2xl md:border md:border-border md:bg-background md:shadow-sm',
             'transition-[width] duration-200 ease-in-out',
             sidebarCollapsed ? 'md:w-[4.5rem]' : 'md:w-64',
           )}
         >
-          <div className={cn('flex-1 overflow-y-auto overscroll-contain space-y-4', sidebarCollapsed ? 'p-2 md:p-2' : 'p-3.5 sm:p-4')}>
-            {/* Logo desktop */}
-            <div className={cn('flex items-center', sidebarCollapsed ? 'flex-col gap-2' : 'justify-between')}>
-              <SiteBrandMark
-                href="/dashboard"
-                showLabel={!sidebarCollapsed}
-              />
-              <div className={cn('flex items-center gap-1', sidebarCollapsed && 'flex-col')}>
-                <Tooltip content={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} side="right">
-                  <button
-                    type="button"
-                    onClick={toggleSidebarCollapsed}
-                    className="p-2 rounded-full border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
-                    aria-label={sidebarCollapsed ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
-                  >
-                    {sidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-                  </button>
-                </Tooltip>
-              </div>
-            </div>
+          <Tooltip content={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} side="right" className="absolute -right-3 top-5 z-10">
+            <button
+              type="button"
+              onClick={toggleSidebarCollapsed}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-sm hover:text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              aria-label={sidebarCollapsed ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
+            >
+              {sidebarCollapsed ? <PanelLeft className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
+            </button>
+          </Tooltip>
 
-            {/* Contexte tenant / admin */}
-            {!sidebarCollapsed && user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' && tenant ? (
-              <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
-                <div className="font-bold text-foreground text-sm truncate" title={tenant.name}>
-                  {tenant.name}
-                </div>
-                <TenantPlanLink isClient={isClientAccount} planLabel={tenantPlanLabel} canOpen={canOpenBilling} onNavigate={() => setMobileMenuOpen(false)} />
-              </div>
-            ) : null}
+          {/* Marque */}
+          <div className={cn('flex h-16 shrink-0 items-center border-b border-border', sidebarCollapsed ? 'justify-center' : 'px-4')}>
+            <SiteBrandMark href="/dashboard" showLabel={!sidebarCollapsed} />
+          </div>
 
+          <div className={cn('flex-1 min-h-0 overflow-y-auto overscroll-contain', sidebarCollapsed ? 'px-2 py-3' : 'px-2.5 py-3')}>
             <Suspense
               fallback={
                 <div className="h-20 flex items-center justify-center">
@@ -660,66 +651,59 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
               }
             >
-              <SidebarNav
-                sections={withNavTips(navSections)}
-                pathname={pathname}
-                setMobileMenuOpen={setMobileMenuOpen}
-                collapsed={sidebarCollapsed}
-                fallbackTab={user.role === 'SUPER_ADMIN' ? 'overview' : 'tenants'}
-              />
+              {(() => {
+                const filtered = withNavTips(navSections);
+                return filtered.length > 0 ? (
+                  <SidebarNav
+                    sections={filtered}
+                    pathname={pathname}
+                    setMobileMenuOpen={setMobileMenuOpen}
+                    collapsed={sidebarCollapsed}
+                    fallbackTab={user.role === 'SUPER_ADMIN' ? 'overview' : 'tenants'}
+                  />
+                ) : (
+                  <p className="px-2.5 py-2 text-sm text-muted">Aucun résultat</p>
+                );
+              })()}
             </Suspense>
           </div>
 
-          {/* Profil & déconnexion */}
-          <div className={cn('border-t border-border bg-surface shrink-0', sidebarCollapsed ? 'p-2 space-y-1' : 'p-3.5 sm:p-4 space-y-2')}>
-            <Tooltip
-              content={
-                <span className="flex flex-col gap-0.5 text-left">
-                  <span className="font-semibold">{user.name}</span>
-                  <span className="opacity-80 font-normal">Mon compte</span>
-                </span>
-              }
-              side="right"
-              disabled={!sidebarCollapsed}
-              className="flex w-full"
-            >
-              <Link
-                href="/dashboard/profile"
-                data-tour="nav-profile"
-                onClick={() => {
-                  if (document.body.dataset.emTour === '1') return;
-                  setMobileMenuOpen(false);
-                }}
-                className={cn(
-                  'flex w-full items-center rounded-[var(--radius-button)] hover:bg-surface-muted transition group',
-                  sidebarCollapsed ? 'justify-center p-2' : 'gap-3 p-2',
-                )}
-              >
-                <UserAvatar name={user.name} src={user.avatarUrl} size="md" />
-                {!sidebarCollapsed && (
-                  <div className="min-w-0 flex-1">
-                    <span className="font-semibold text-foreground text-sm truncate block group-hover:text-primary transition-colors">
-                      {user.name}
-                    </span>
-                    <span className="text-xs text-muted truncate block">{user.email}</span>
+          {/* Forfait */}
+          {user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' && tenant && !isClientAccount && canOpenBilling ? (
+            sidebarCollapsed ? (
+              <div className="flex shrink-0 justify-center pb-2">
+                <Tooltip content={`Forfait ${tenantPlanLabel}`} side="right">
+                  <Link
+                    href="/dashboard/billing"
+                    aria-label={`Changer le forfait ${tenantPlanLabel}`}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary-solid text-primary-foreground shadow-sm hover:bg-primary-solid-hover transition"
+                  >
+                    <Sparkles className="w-[18px] h-[18px]" />
+                  </Link>
+                </Tooltip>
+              </div>
+            ) : (
+              <div className="mx-2.5 mb-2.5 shrink-0 rounded-xl border border-border bg-surface p-3 shadow-sm">
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Sparkles className="w-4 h-4" aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted">Forfait actuel</p>
+                    <p className="truncate text-sm font-semibold text-foreground">{tenantPlanLabel}</p>
                   </div>
-                )}
-              </Link>
-            </Tooltip>
-            <Tooltip content="Se déconnecter" side="right" disabled={!sidebarCollapsed} className="flex w-full">
-              <button
-                type="button"
-                onClick={logout}
-                className={cn(
-                  'flex w-full items-center rounded-xl text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition touch-manipulation',
-                  sidebarCollapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-                )}
-              >
-                <LogOut className="w-4 h-4" />
-                {!sidebarCollapsed && 'Déconnexion'}
-              </button>
-            </Tooltip>
-          </div>
+                </div>
+                <Link
+                  href="/dashboard/billing"
+                  className="mt-3 flex min-h-9 w-full items-center justify-center gap-2 rounded-lg bg-primary-solid px-3 text-sm font-semibold text-primary-foreground hover:bg-primary-solid-hover transition"
+                >
+                  <Sparkles className="w-4 h-4" aria-hidden />
+                  Changer de forfait
+                </Link>
+              </div>
+            )
+          ) : null}
+
         </aside>
 
         <DashboardMobileMenuSheet
@@ -788,8 +772,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DashboardMobileMenuSheet>
 
       {/* Contenu principal */}
-      <main id="main-content" className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain bg-background flex flex-col">
-        <DashboardTopBar />
+      <main id="main-content" className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain bg-surface flex flex-col md:ml-3">
+        <DashboardTopBar
+          accountMenu={
+            <div data-tour="nav-profile">
+              <OverflowMenu
+                menuWidth={256}
+                triggerLabel={`Menu du compte ${user.name}`}
+                triggerClassName="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full hover:ring-2 hover:ring-border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                trigger={<UserAvatar name={user.name} src={user.avatarUrl} size="md" />}
+                header={
+                  <div className="flex items-center gap-3">
+                    <UserAvatar name={user.name} src={user.avatarUrl} size="md" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">{user.name}</p>
+                      <p className="truncate text-xs text-muted">{user.email}</p>
+                    </div>
+                  </div>
+                }
+                items={[
+                  { id: 'profile', label: 'Mon compte', icon: User, onSelect: () => router.push('/dashboard/profile') },
+                  { id: 'notifications', label: 'Notifications', icon: Bell, onSelect: () => router.push('/dashboard/notifications') },
+                  ...(canOpenBilling
+                    ? [{ id: 'billing', label: 'Forfait', icon: CreditCard, onSelect: () => router.push('/dashboard/billing') }]
+                    : []),
+                  { id: 'logout', label: 'Déconnexion', icon: LogOut, onSelect: logout, danger: true, separatorBefore: true },
+                ]}
+              />
+            </div>
+          }
+        />
         <div className="em-auth-container relative z-10 pt-3 sm:pt-6 lg:pt-8 pb-[calc(6.25rem+var(--em-site-install-bar)+env(safe-area-inset-bottom,0px))] md:pb-6 lg:pb-8 flex-1 em-dashboard-content">
           <UserLegalGate>
             {children}

@@ -119,7 +119,7 @@ export default function PhoneInput({
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? errorId : hint ? hintId : undefined}
             className={cn(
-              'block w-full min-h-11 pl-10 pr-3.5 rounded-[var(--radius-button)]',
+              'block w-full min-h-10 pl-10 pr-3.5 rounded-[var(--radius-button)]',
               'bg-surface-muted border text-sm text-foreground',
               'placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary',
               'disabled:opacity-60',

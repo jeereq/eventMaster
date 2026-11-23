@@ -121,7 +121,7 @@ export default function CountryCodePicker({ id, value, onChange, disabled, inval
           }
         }}
         className={cn(
-          'inline-flex min-h-11 h-full items-center gap-2 rounded-[var(--radius-button)] border bg-surface-muted pl-3 pr-2.5',
+          'inline-flex min-h-10 h-full items-center gap-2 rounded-[var(--radius-button)] border bg-surface-muted pl-3 pr-2.5',
           'text-sm font-medium text-foreground tabular-nums',
           'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary disabled:opacity-60',
           invalid ? 'border-danger/40' : 'border-border',

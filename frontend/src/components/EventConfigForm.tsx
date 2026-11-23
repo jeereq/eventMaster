@@ -10,7 +10,6 @@ import {
   LayoutGrid,
   LayoutTemplate,
   Loader2,
-  MapPin,
   Search,
   Ticket,
   Sparkles,
@@ -201,6 +200,9 @@ export default function EventConfigForm({
   const editingId = initialEvent?.id ?? null;
   const [mode, setMode] = useState<EventConfigMode>(defaultMode);
   const [tab, setTab] = useState<EventConfigTab>('essentials');
+  /** Étapes ouvertes au moins une fois : une étape facultative n’est cochée qu’après visite. */
+  const [visitedTabs, setVisitedTabs] = useState<EventConfigTab[]>(['essentials']);
+  if (!visitedTabs.includes(tab)) setVisitedTabs([...visitedTabs, tab]);
   const [title, setTitle] = useState('');
   const [titleManual, setTitleManual] = useState(false);
   const [partnerFirst, setPartnerFirst] = useState('');
@@ -284,8 +286,6 @@ export default function EventConfigForm({
 
   // Sous-onglets pour scinder les formulaires volumineux
   const [accessSubTab, setAccessSubTab] = useState<'ticketing' | 'seating' | 'donations' | 'program'>('ticketing');
-  const [essentialsSubTab, setEssentialsSubTab] = useState<'general' | 'details'>('general');
-  const [placeSubTab, setPlaceSubTab] = useState<'room' | 'address'>('room');
 
   // Sécurité et validation explicite en cas de billets déjà vendus
   const [pendingTicketRisks, setPendingTicketRisks] = useState<Array<{ title: string; risk: string }> | null>(null);
@@ -308,9 +308,8 @@ export default function EventConfigForm({
     setBaseline(null);
     setBaselineToken((n) => n + 1);
     setTab('essentials');
+    setVisitedTabs(['essentials']);
     setAccessSubTab('ticketing');
-    setEssentialsSubTab('general');
-    setPlaceSubTab('room');
     setPendingTicketRisks(null);
     setTicketRiskConfirmed(false);
     setCollectionTermsAccepted(hasValidCollectionTermsAcceptance(initialEvent?.collectionTerms));
@@ -1158,6 +1157,15 @@ export default function EventConfigForm({
     };
   }, [title, date, location, commune, neighborhood, complete, isPublic, ticketing, ticketPricingMode, ticketPrice, pricingZones]);
 
+  const missingRequired = useMemo(() => {
+    const missing: string[] = [];
+    if (!title.trim()) missing.push('titre');
+    if (!date) missing.push('date');
+    if (!(location.trim() && commune.trim() && neighborhood.trim())) missing.push('lieu');
+    if (!tabStatus.accessDone) missing.push('prix du billet');
+    return missing;
+  }, [title, date, location, commune, neighborhood, tabStatus.accessDone]);
+
   const formattedDatePreview = useMemo(() => {
     if (!date) return null;
     const d = new Date(date);
@@ -1186,18 +1194,6 @@ export default function EventConfigForm({
       text: `Durée prévue : ${diffHours}h (jusqu'à ${endFormatted})`,
     };
   }, [date, endsAt]);
-
-  const progressPercentage = useMemo(() => {
-    let score = 0;
-    if (title.trim()) score += 25;
-    if (date) score += 25;
-    if (location.trim()) score += 20;
-    if (commune.trim() && neighborhood.trim()) score += 15;
-    if (roomId || latitude) score += 5;
-    if (guestGuidelines?.dressCode?.enabled || themeId) score += 5;
-    if (photos.length > 0 || eventProgram.slots.length > 0) score += 5;
-    return Math.min(100, Math.max(10, score));
-  }, [title, date, location, commune, neighborhood, roomId, latitude, guestGuidelines, themeId, photos, eventProgram]);
 
   const activeTheme = useMemo(
     () => INVITATION_COLOR_THEMES.find((t) => t.id === themeId),
@@ -1243,11 +1239,6 @@ export default function EventConfigForm({
       open={open}
       onClose={requestClose}
       title={editingId ? `Modifier « ${initialEvent?.title || 'l’événement'} »` : 'Nouvel événement'}
-      description={
-        complete
-          ? 'Renseignez les détails de l’événement. Les onglets se complètent librement.'
-          : 'Mode Express : titre, date et lieu suffisent pour démarrer en quelques clics.'
-      }
       size="xl"
       footer={
         <div className="flex w-full flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -1263,7 +1254,7 @@ export default function EventConfigForm({
             ) : (
               <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
                 <AlertCircle className="w-3.5 h-3.5" />
-                Titre, date et lieu requis
+                À compléter : {missingRequired.join(', ')}
               </span>
             )}
           </div>
@@ -1298,8 +1289,16 @@ export default function EventConfigForm({
               form="event-config-form"
               size="sm"
               loading={saving}
-              disabled={!editingId && createDisabled}
-              title={!editingId && createDisabledTitle ? createDisabledTitle : undefined}
+              disabled={!editingId && (createDisabled || !tabStatus.allRequiredDone)}
+              title={
+                editingId
+                  ? undefined
+                  : createDisabledTitle && createDisabled
+                    ? createDisabledTitle
+                    : !tabStatus.allRequiredDone
+                      ? `À compléter : ${missingRequired.join(', ')}`
+                      : undefined
+              }
               className="font-bold shadow-xs"
               rightIcon={<Check className="w-4 h-4" />}
             >
@@ -1310,11 +1309,66 @@ export default function EventConfigForm({
       }
     >
       <form id="event-config-form" onSubmit={handleFormSubmit} onKeyDown={handleFormKeyDown} className="space-y-4">
-        {/* En-tête Stepper & Mode Switcher */}
-        <div className="space-y-3 pb-3 border-b border-border">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+        {/* Étapes et mode */}
+        <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-border">
+          <div className="grid min-w-0 flex-1 basis-full grid-cols-2 gap-2 sm:basis-0 sm:grid-cols-4" role="tablist" aria-label="Étapes de configuration">
+            {EVENT_CONFIG_TABS.map((item, idx) => {
+              const details = EVENT_CONFIG_TAB_DETAILS[item.id];
+              const isCurrent = tab === item.id;
+              const isCompleted = isTabCompleted(item.id) && (item.id === 'essentials' || item.id === 'place' || visitedTabs.includes(item.id));
+              const hasAttention = tabNeedsAttention(item.id);
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isCurrent}
+                  title={details.subtitle}
+                  onClick={() => {
+                    setFormError('');
+                    setTab(item.id);
+                  }}
+                  className={cn(
+                    'px-3 py-2 rounded-xl border text-left transition flex items-center gap-2.5 min-h-11 touch-manipulation',
+                    isCurrent
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/25 shadow-xs'
+                      : 'border-border bg-surface hover:bg-surface-muted/60 text-muted'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors',
+                      isCompleted && !isCurrent
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                        : isCurrent
+                        ? 'bg-primary-solid text-primary-foreground shadow-2xs'
+                        : 'bg-surface-muted text-muted border border-border'
+                    )}
+                  >
+                    {isCompleted && !isCurrent ? (
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    ) : (
+                      <span>{idx + 1}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1">
+                      <span className={cn('text-xs font-bold truncate', isCurrent ? 'text-foreground' : 'text-foreground/80')}>
+                        {details.label}
+                      </span>
+                      {hasAttention && !isCompleted && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Champ requis" />
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
             {/* Mode switch */}
-            <div className="inline-flex items-center rounded-xl bg-surface-muted p-1 border border-border shrink-0 self-start sm:self-auto">
+            <div className="inline-flex items-center rounded-xl bg-surface-muted p-1 border border-border shrink-0">
               <button
                 type="button"
                 onClick={() => setMode('simple')}
@@ -1345,87 +1399,6 @@ export default function EventConfigForm({
               </button>
             </div>
 
-            {/* Progression & status badge */}
-            <div className="flex items-center gap-2 text-xs">
-              <div className="w-24 sm:w-28 h-2 bg-surface-muted rounded-full overflow-hidden border border-border">
-                <div
-                  className="h-full bg-primary transition-all duration-300 rounded-full"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
-              <span className="font-semibold text-xs text-muted whitespace-nowrap">
-                {progressPercentage}%
-              </span>
-              {tabStatus.allRequiredDone ? (
-                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  <CheckCircle2 className="w-3 h-3" /> Prêt
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                  Champs requis
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Stepper Tabs */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="tablist" aria-label="Étapes de configuration">
-            {EVENT_CONFIG_TABS.map((item, idx) => {
-              const details = EVENT_CONFIG_TAB_DETAILS[item.id];
-              const isCurrent = tab === item.id;
-              const isCompleted = isTabCompleted(item.id);
-              const hasAttention = tabNeedsAttention(item.id);
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={isCurrent}
-                  onClick={() => {
-                    setFormError('');
-                    setTab(item.id);
-                  }}
-                  className={cn(
-                    'p-2.5 rounded-xl border text-left transition flex items-start gap-2.5 min-h-12 touch-manipulation',
-                    isCurrent
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary/25 shadow-xs'
-                      : 'border-border bg-surface hover:bg-surface-muted/60 text-muted'
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 transition-colors',
-                      isCompleted && !isCurrent
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                        : isCurrent
-                        ? 'bg-primary-solid text-primary-foreground shadow-2xs'
-                        : 'bg-surface-muted text-muted border border-border'
-                    )}
-                  >
-                    {isCompleted && !isCurrent ? (
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                    ) : (
-                      <span>{idx + 1}</span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1">
-                      <span className={cn('text-xs font-bold truncate', isCurrent ? 'text-foreground' : 'text-foreground/80')}>
-                        {details.label}
-                      </span>
-                      {hasAttention && !isCompleted && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Champ requis" />
-                      )}
-                    </div>
-                    <p className="text-xs text-muted truncate leading-tight">
-                      {details.subtitle}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {(formError || saveError) && (
@@ -1440,39 +1413,8 @@ export default function EventConfigForm({
 
         {tab === 'essentials' && (
           <section className="space-y-4">
-            {complete && (
-              <div className="flex items-center gap-1.5 p-1 bg-surface-muted border border-border rounded-xl max-w-sm">
-                <button
-                  type="button"
-                  onClick={() => setEssentialsSubTab('general')}
-                  className={cn(
-                    'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-                    essentialsSubTab === 'general'
-                      ? 'bg-surface text-foreground shadow-2xs border border-border/80'
-                      : 'text-muted hover:text-foreground'
-                  )}
-                >
-                  <Calendar className="w-3.5 h-3.5 text-primary" />
-                  <span>Identité &amp; Horaires</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEssentialsSubTab('details')}
-                  className={cn(
-                    'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-                    essentialsSubTab === 'details'
-                      ? 'bg-surface text-foreground shadow-2xs border border-border/80'
-                      : 'text-muted hover:text-foreground'
-                  )}
-                >
-                  <Users className="w-3.5 h-3.5 text-primary" />
-                  <span>Logistique &amp; Accès</span>
-                </button>
-              </div>
-            )}
-
             {/* Sous-onglet 1 : Identité & Horaires (ou formulaire direct en mode express) */}
-            {(!complete || essentialsSubTab === 'general') && (
+            {(
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <span className="block text-xs font-semibold text-muted">Type d’événement</span>
@@ -1544,25 +1486,24 @@ export default function EventConfigForm({
                       required
                     />
                     <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                      <span className="text-xs text-muted font-medium">Raccourcis :</span>
                       <button
                         type="button"
                         onClick={() => setDatePreset('this_saturday')}
-                        className="px-2 py-0.5 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                        className="min-h-9 px-3 rounded-xl text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition touch-manipulation"
                       >
                         Ce samedi (18h)
                       </button>
                       <button
                         type="button"
                         onClick={() => setDatePreset('next_saturday')}
-                        className="px-2 py-0.5 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                        className="min-h-9 px-3 rounded-xl text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition touch-manipulation"
                       >
                         Samedi prochain
                       </button>
                       <button
                         type="button"
                         onClick={() => setDatePreset('in_month')}
-                        className="px-2 py-0.5 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                        className="min-h-9 px-3 rounded-xl text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition touch-manipulation"
                       >
                         Dans 1 mois
                       </button>
@@ -1583,21 +1524,21 @@ export default function EventConfigForm({
                           <button
                             type="button"
                             onClick={() => setEndsAtPreset(2)}
-                            className="px-2 py-0.5 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                            className="min-h-9 px-3 rounded-xl text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition touch-manipulation"
                           >
                             +2h
                           </button>
                           <button
                             type="button"
                             onClick={() => setEndsAtPreset(4)}
-                            className="px-2 py-0.5 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                            className="min-h-9 px-3 rounded-xl text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition touch-manipulation"
                           >
                             +4h
                           </button>
                           <button
                             type="button"
                             onClick={() => setEndsAtPreset(6, true)}
-                            className="px-2 py-0.5 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                            className="min-h-9 px-3 rounded-xl text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition touch-manipulation"
                           >
                             Soirée (minuit)
                           </button>
@@ -1654,24 +1595,11 @@ export default function EventConfigForm({
                   </div>
                 )}
 
-                {complete && (
-                  <div className="pt-2 flex justify-end">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setEssentialsSubTab('details')}
-                      rightIcon={<ChevronRight className="w-4 h-4" />}
-                    >
-                      Continuer : Logistique &amp; Accès
-                    </Button>
-                  </div>
-                )}
               </div>
             )}
 
             {/* Sous-onglet 2 : Logistique, Client & Accès (mode complet uniquement) */}
-            {complete && essentialsSubTab === 'details' && (
+            {complete && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
@@ -1787,26 +1715,6 @@ export default function EventConfigForm({
                   </div>
                 </div>
 
-                <div className="pt-2 flex items-center justify-between">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEssentialsSubTab('general')}
-                    leftIcon={<ArrowLeft className="w-4 h-4" />}
-                  >
-                    Identité &amp; Horaires
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setTab('place')}
-                    rightIcon={<ChevronRight className="w-4 h-4" />}
-                  >
-                    Étape suivante : Lieu
-                  </Button>
-                </div>
               </div>
             )}
           </section>
@@ -1814,40 +1722,8 @@ export default function EventConfigForm({
 
         {tab === 'place' && (
           <section className="space-y-4">
-            {complete && (
-              <div className="flex items-center gap-1.5 p-1 bg-surface-muted border border-border rounded-xl max-w-sm">
-                <button
-                  type="button"
-                  onClick={() => setPlaceSubTab('room')}
-                  className={cn(
-                    'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-                    placeSubTab === 'room'
-                      ? 'bg-surface text-foreground shadow-2xs border border-border/80'
-                      : 'text-muted hover:text-foreground'
-                  )}
-                >
-                  <Building2 className="w-3.5 h-3.5 text-primary" />
-                  <span>Salle &amp; Modèle 3D</span>
-                  {selectedRoom && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPlaceSubTab('address')}
-                  className={cn(
-                    'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-                    placeSubTab === 'address'
-                      ? 'bg-surface text-foreground shadow-2xs border border-border/80'
-                      : 'text-muted hover:text-foreground'
-                  )}
-                >
-                  <MapPin className="w-3.5 h-3.5 text-primary" />
-                  <span>Adresse &amp; GPS</span>
-                </button>
-              </div>
-            )}
-
             {/* Sous-onglet 1 : Salle & Modèle 3D (ou en mode express si sélectionné) */}
-            {(!complete || placeSubTab === 'room') && (
+            {(
               <div className="space-y-4">
                 {selectedRoom && (
                   <div className="flex items-center justify-between p-3 rounded-2xl border border-primary/25 bg-primary/5 dark:bg-primary/10">
@@ -1992,24 +1868,11 @@ export default function EventConfigForm({
                   </div>
                 )}
 
-                {complete && (
-                  <div className="pt-2 flex justify-end">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setPlaceSubTab('address')}
-                      rightIcon={<ChevronRight className="w-4 h-4" />}
-                    >
-                      Continuer : Adresse &amp; GPS
-                    </Button>
-                  </div>
-                )}
               </div>
             )}
 
             {/* Sous-onglet 2 : Adresse & Coordonnées GPS */}
-            {(!complete || placeSubTab === 'address') && (
+            {(
               <div className="space-y-4">
                 <Input
                   label="Lieu / salle"
@@ -2082,28 +1945,6 @@ export default function EventConfigForm({
                   </p>
                 </div>
 
-                {complete && (
-                  <div className="pt-2 flex items-center justify-between">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPlaceSubTab('room')}
-                      leftIcon={<ArrowLeft className="w-4 h-4" />}
-                    >
-                      Salle &amp; Modèle 3D
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setTab('access')}
-                      rightIcon={<ChevronRight className="w-4 h-4" />}
-                    >
-                      Étape suivante : Accès
-                    </Button>
-                  </div>
-                )}
               </div>
             )}
           </section>

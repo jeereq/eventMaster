@@ -45,7 +45,7 @@ const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconB
         data-toolbar-item=""
         className={cn(
           // 44 × 44 px (cible tactile minimale) : la racine du site est à 15px, `h-11` ne ferait que 41px.
-          'inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full transition-colors',
+          'inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[var(--radius-button)] transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
           'disabled:pointer-events-none disabled:opacity-50',
           active

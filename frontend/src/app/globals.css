@@ -28,8 +28,8 @@
   --muted: #3d4f48;
   --sidebar: #edf2ef;
   --card-hover: #f8faf9;
-  --radius-card: 1.25rem; /* cartes arrondies 20px */
-  --radius-button: 0.875rem; /* champs 14px ; les boutons sont en pilule */
+  --radius-card: 0.5rem; /* cartes arrondies 8px */
+  --radius-button: 0.375rem; /* champs et boutons 6px */
   --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -14px rgba(16, 24, 40, 0.18);
   /* Barre publique mobile flottante / surélevée (marge + capsule + safe-area) */
   --em-site-header: 4.75rem;
@@ -442,6 +442,11 @@ h1, h2, h3, h4 {
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+/* Champs de saisie : bordure + halo léger du composant Input, sans second contour. */
+:is(input, textarea, select):focus-visible {
+  outline: none;
 }
 
 @keyframes fade-in {

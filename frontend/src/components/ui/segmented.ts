@@ -5,11 +5,11 @@ import { cn } from '@/lib/cn';
  * rail gris clair, segment choisi en blanc légèrement soulevé.
  * Partagé par les onglets internes des pages publiques pour qu’ils se ressemblent tous.
  */
-export const SEGMENTED_TRACK = 'gap-1 rounded-full bg-surface-muted p-1';
+export const SEGMENTED_TRACK = 'gap-1 rounded-[var(--radius-button)] bg-surface-muted p-1';
 
 export function segmentedItem(selected: boolean, className?: string) {
   return cn(
-    'min-h-11 sm:min-h-10 px-4 rounded-full text-sm font-semibold transition-colors touch-manipulation',
+    'min-h-11 sm:min-h-10 px-4 rounded-[calc(var(--radius-button)-2px)] text-sm font-semibold transition-colors touch-manipulation',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
     selected
       ? 'bg-surface text-foreground shadow-[0_1px_2px_rgba(16,24,40,0.06),0_4px_12px_-6px_rgba(16,24,40,0.18)]'

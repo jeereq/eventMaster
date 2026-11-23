@@ -621,7 +621,7 @@ function ClientMarketplaceInner() {
       <div
         role="tablist"
         aria-label="Sections du marketplace"
-        className="flex items-center gap-1 overflow-x-auto no-scrollbar rounded-xl border border-border bg-muted/40 p-1 sm:flex-wrap"
+        className="flex items-center gap-1 overflow-x-auto no-scrollbar rounded-xl border border-border bg-surface-muted p-1 sm:flex-wrap"
       >
         {[
           { id: 'explore' as const, label: 'Explorer', icon: Store },
