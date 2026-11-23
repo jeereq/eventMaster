@@ -686,7 +686,7 @@ export default function ListingDetailLayout({
 
           <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-5 lg:gap-12">
             <div className="flex min-w-0 flex-col gap-4 lg:col-span-3">
-              <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95', embedded ? 'top-12' : 'top-[var(--em-site-header)]', 'md:top-[var(--em-site-header)]')}>
+              <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background', embedded ? 'top-12' : 'top-[var(--em-site-header)]', 'md:top-[var(--em-site-header)]')}>
                 <MarketplaceFormTabs
                   value={viewTab}
                   onChange={onTab}
@@ -762,7 +762,7 @@ export default function ListingDetailLayout({
       {!error && showCommerce && (
         <div
           className={cn(
-            'lg:hidden fixed inset-x-0 z-40 border-t border-border bg-background/95 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)]',
+            'lg:hidden fixed inset-x-0 z-40 border-t border-border bg-background shadow-[0_-8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)]',
             embedded
               ? 'bottom-[var(--em-dash-bottom-nav)] pb-2.5 md:bottom-0 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]'
               : 'bottom-[var(--em-site-bottom-nav)] pb-2.5 md:bottom-0 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]',

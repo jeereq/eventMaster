@@ -137,6 +137,8 @@ interface RoomLayoutPreviewProps {
    * pour garder les commandes de la page (choix des places, total…). `close` quitte le plein écran.
    */
   fullscreenPanel?: (close: () => void) => React.ReactNode;
+  /** L’hôte pose ses boutons en haut de l’aperçu : la barre des angles de caméra passe en dessous. */
+  hostTopInset?: boolean;
 }
 
 type WebGLPreviewProps = {
@@ -158,6 +160,7 @@ type WebGLPreviewProps = {
   seatView?: SeatViewRequest | null;
   seatActionFor?: AvatarSeatAction;
   onContextLost?: () => void;
+  hostTopInset?: boolean;
 };
 
 function WebGLPreviewCanvas({
@@ -179,6 +182,7 @@ function WebGLPreviewCanvas({
   seatView = null,
   seatActionFor,
   onContextLost,
+  hostTopInset = false,
 }: WebGLPreviewProps) {
   const selected = useMemo(() => {
     return mapTicketSelectionsToWebGL(
@@ -219,6 +223,7 @@ function WebGLPreviewCanvas({
       seatView={seatView}
       seatActionFor={seatActionFor}
       onContextLost={onContextLost}
+      hostTopInset={hostTopInset}
       className={cn('absolute inset-0 h-full w-full shadow-[var(--shadow-soft)] touch-none', className)}
     />
   );
@@ -305,6 +310,7 @@ export default function RoomLayoutPreview({
   seatView = null,
   seatActionFor,
   fullscreenPanel,
+  hostTopInset = false,
 }: RoomLayoutPreviewProps) {
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
@@ -470,6 +476,7 @@ export default function RoomLayoutPreview({
                 webglBlueprint={webglBlueprint}
                 quality={webglQuality}
                 onContextLost={handleContextLost}
+                hostTopInset={hostTopInset}
                 lightingPreset={lightingPreset}
                 selectedTableId={selectedTableId}
                 selectedTableIds={selectedTableIds}
@@ -510,7 +517,7 @@ export default function RoomLayoutPreview({
             showWallsControl={!openSpace}
             onToggleFullscreen={canExpand ? () => setExpanded(true) : undefined}
             variant="overlay"
-            className="absolute bottom-2 left-2 z-20 max-w-[calc(100%-5.5rem)]"
+            className={cn('absolute bottom-2 left-2 z-20', fill && useWebGL ? 'max-w-[calc(100%-9.5rem)]' : 'max-w-[calc(100%-5.5rem)]')}
           />
           {fill && useWebGL ? (
             <div className="absolute bottom-2 right-2 z-20">
