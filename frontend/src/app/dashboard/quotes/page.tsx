@@ -3,6 +3,7 @@
 import React, { Suspense } from 'react';
 import { Loader2 } from '@/components/icons';
 import MarketplaceRequestsHub from '@/components/dashboard/MarketplaceRequestsHub';
+import { PageHero } from '@/components/ui';
 
 export default function QuotesPage() {
   return (
@@ -13,7 +14,15 @@ export default function QuotesPage() {
         </div>
       }
     >
-      <MarketplaceRequestsHub section="quotes" />
+      <div className="space-y-6">
+        <PageHero
+          eyebrow="Marketplace"
+          title="Demandes de devis"
+          subtitle="Envoyez vos demandes et comparez les offres reçues."
+          image="/images/pages/devis.jpg"
+        />
+        <MarketplaceRequestsHub section="quotes" />
+      </div>
     </Suspense>
   );
 }

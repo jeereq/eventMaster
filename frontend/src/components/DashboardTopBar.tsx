@@ -103,14 +103,14 @@ export function useDashboardTitle(): { title: string } {
   return { title };
 }
 
-export default function DashboardTopBar() {
+export default function DashboardTopBar({ accountMenu }: { accountMenu?: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme();
   const { title } = useDashboardTitle();
 
-  // Utilisateur, déconnexion et repli du menu sont dans la barre latérale : pas de doublon ici.
   return (
     <header className="hidden md:block sticky top-0 z-30 shrink-0 border-b border-border bg-surface/95 isolate">
-      <div className="em-auth-container h-16 flex items-center justify-between gap-4">
+      {/* 4.75rem = marge haute du menu (0.75rem) + bloc marque (4rem) : les deux traits du haut restent alignés. */}
+      <div className="em-auth-container h-[4.75rem] flex items-center justify-between gap-4">
         <h1 className="em-dash-title min-w-0 text-base lg:text-lg font-semibold text-foreground truncate leading-tight">{title}</h1>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -126,6 +126,7 @@ export default function DashboardTopBar() {
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
           </Tooltip>
+          {accountMenu}
         </div>
       </div>
     </header>

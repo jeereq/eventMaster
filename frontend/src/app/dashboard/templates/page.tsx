@@ -61,7 +61,7 @@ import {
 } from '@/components/icons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
-import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Pagination, usePaginateItems, usePageSize, Modal, ConfirmDialog } from '@/components/ui';
+import { PageHero, PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Pagination, usePaginateItems, usePageSize, Modal, ConfirmDialog } from '@/components/ui';
 import InvitationDuplicateModal, { type InvitationDuplicateValues } from '@/components/InvitationDuplicateModal';
 import { emptyInvitationStructuredBrief, type InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
 import InvitationAiComposeForm, {
@@ -6114,6 +6114,12 @@ const studioModelPhotos = useMemo(
         onContinueInBackground={hideInvitationLoader}
       />
  <div className="space-y-6">
+ <PageHero
+ eyebrow="Invitations"
+ title="Modèles"
+ subtitle="Choisissez un modèle d’invitation ou créez le vôtre avec l’IA."
+ image="/images/pages/modeles.jpg"
+ />
  <PageHeader
  action={
  <div className="flex flex-wrap gap-2">

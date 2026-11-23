@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Alert } from '@/components/ui';
+import { Alert, PageHero } from '@/components/ui';
 import TeamManagement from '../TeamManagement';
 
 export default function DashboardTeamPage() {
@@ -29,6 +29,12 @@ export default function DashboardTeamPage() {
 
   return (
     <div className="space-y-6 w-full">
+      <PageHero
+        eyebrow="Organisation"
+        title="Équipe"
+        subtitle="Invitez vos collaborateurs et gérez leurs accès."
+        image="/images/pages/equipe.jpg"
+      />
       <TeamManagement />
     </div>
   );

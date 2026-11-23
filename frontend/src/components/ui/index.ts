@@ -34,6 +34,7 @@ export { default as Alert } from './Alert';
 export { default as Modal, modalBackdropClass, modalPanelClass } from './Modal';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as PageHeader } from './PageHeader';
+export { default as PageHero } from './PageHero';
 export { default as EmptyState } from './EmptyState';
 export { default as Badge } from './Badge';
 export { default as Breadcrumbs } from './Breadcrumbs';

@@ -14,6 +14,8 @@ export interface OverflowMenuItem {
   disabled?: boolean;
   /** Compteur affiché à droite du libellé. */
   badge?: string | number;
+  /** Trait de séparation au-dessus de l’entrée. */
+  separatorBefore?: boolean;
 }
 
 const MENU_WIDTH = 208;
@@ -33,6 +35,9 @@ export default function OverflowMenu({
   align = 'right',
   triggerClassName,
   menuWidth = MENU_WIDTH,
+  header,
+  placement = 'vertical',
+  className,
 }: {
   trigger: React.ReactNode;
   /** Nom accessible du bouton (obligatoire si `trigger` n'est qu'une icône). */
@@ -42,6 +47,12 @@ export default function OverflowMenu({
   triggerClassName?: string;
   /** Largeur du panneau en pixels (208 par défaut). */
   menuWidth?: number;
+  /** Bloc affiché en tête du panneau (ex. identité de l’utilisateur). */
+  header?: React.ReactNode;
+  /** `right` : le panneau s’ouvre à droite du bouton, aligné sur son bas. */
+  placement?: 'vertical' | 'right';
+  /** Classe du conteneur du bouton. */
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -53,6 +64,12 @@ export default function OverflowMenu({
     if (!open || !triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const menuHeight = menuRef.current?.offsetHeight ?? items.length * 44 + 12;
+    if (placement === 'right') {
+      const left = Math.min(rect.right + GAP, window.innerWidth - menuWidth - EDGE);
+      const top = Math.max(EDGE, Math.min(rect.bottom - menuHeight, window.innerHeight - menuHeight - EDGE));
+      setPos({ top, left });
+      return;
+    }
     const spaceBelow = window.innerHeight - rect.bottom;
     const top =
       spaceBelow >= menuHeight + GAP + EDGE || rect.top < menuHeight + GAP + EDGE
@@ -61,7 +78,7 @@ export default function OverflowMenu({
     const desired = align === 'right' ? rect.right - menuWidth : rect.left;
     const left = Math.min(Math.max(EDGE, desired), window.innerWidth - menuWidth - EDGE);
     setPos({ top, left });
-  }, [open, align, items.length, menuWidth]);
+  }, [open, align, items.length, menuWidth, placement]);
 
   useEffect(() => {
     if (!open) return;
@@ -90,7 +107,7 @@ export default function OverflowMenu({
   }, [open]);
 
   return (
-    <div className="relative shrink-0">
+    <div className={cn('relative shrink-0', className)}>
       <button
         ref={triggerRef}
         type="button"
@@ -123,11 +140,13 @@ export default function OverflowMenu({
             className="z-[90] py-1.5 rounded-2xl border border-border bg-surface shadow-xl animate-fade-in"
             onClick={(event) => event.stopPropagation()}
           >
+            {header ? <div className="px-3.5 pt-2 pb-3 mb-1.5 border-b border-border">{header}</div> : null}
             {items.map((item) => {
               const Icon = item.icon;
               return (
+                <React.Fragment key={item.id}>
+                {item.separatorBefore ? <div aria-hidden className="my-1.5 h-px bg-border" /> : null}
                 <button
-                  key={item.id}
                   type="button"
                   role="menuitem"
                   disabled={item.disabled}
@@ -147,6 +166,7 @@ export default function OverflowMenu({
                     <span className="text-xs font-semibold text-muted tabular-nums">{item.badge}</span>
                   ) : null}
                 </button>
+                </React.Fragment>
               );
             })}
           </div>,

@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Alert, Button } from '@/components/ui';
+import { Alert, Button, PageHero } from '@/components/ui';
 import { canPublishVenueCatalog } from '@/lib/planAccess';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
 import { CalendarCheck } from '@/components/icons';
@@ -35,6 +35,12 @@ export default function DashboardRoomsPage() {
 
   return (
     <div className="space-y-6 w-full">
+      <PageHero
+        eyebrow="Gestion des salles"
+        title="Salles"
+        subtitle="Créez vos salles, dessinez leur plan et publiez-les dans le catalogue."
+        image="/images/pages/salles.jpg"
+      />
       <RoomsManagement
         headerAction={
           catalogPublish ? (

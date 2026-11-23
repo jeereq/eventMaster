@@ -11,7 +11,7 @@ import {
   Sparkles, CheckCircle2, XCircle, AlertCircle, Loader2,
   Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
   ClipboardList, Utensils, FileSpreadsheet, Download, LayoutGrid,
-  Building2, ScanLine, Shirt, MoreHorizontal, ExternalLink,
+  Building2, ScanLine, Shirt, MoreHorizontal, ExternalLink, ChevronDown,
 } from '@/components/icons';
 import dynamic from 'next/dynamic';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
@@ -32,6 +32,9 @@ import {
   formatGuestGuidelinesBlock,
 } from '@/lib/guestGuidelines';
 import { Button, ProjectCard, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, OverflowMenu, Modal, Input, Pagination, usePaginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, EmptyState, Alert, ConfirmDialog } from '@/components/ui';
+import EventCard from '@/components/events/EventCard';
+import { EventsHero } from '@/components/events/EventsHeader';
+import { isOpenEventTask, type EventTaskItem } from '@/lib/eventTasks';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import { EVENT_ENTRY_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { cn } from '@/lib/cn';
@@ -50,7 +53,7 @@ import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { eventDashboardHref, eventsListHref, isEventWorkspaceTab, type EventWorkspaceTab } from '@/lib/eventRoutes';
 import { isB2cPlanId, formatFc } from '@/config/landingPricing';
 import { formatEventPlace } from '@/lib/eventPlace';
-import type { EventConfigPayload } from '@/lib/eventConfig';
+import { EVENT_KIND_LABELS, type EventConfigPayload, type EventKindId } from '@/lib/eventConfig';
 import { eventPrepSummary, hasEventPrepShortlist, parseEventPrep } from '@/lib/eventPrep';
 import {
   displayGuestEmail,
@@ -116,6 +119,17 @@ function compareEventsByDate(a: { date: string }, b: { date: string }): number {
   if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
   return aUpcoming ? ta - tb : tb - ta;
 }
+
+function compareEventsFarthest(a: { date: string }, b: { date: string }): number {
+  return new Date(b.date).getTime() - new Date(a.date).getTime();
+}
+
+function compareEventsByTitle(a: { title: string }, b: { title: string }): number {
+  return a.title.localeCompare(b.title, 'fr');
+}
+
+const EVENT_SORT_LABELS = { nearest: 'Date (proche)', farthest: 'Date (lointaine)', name: 'Nom (A–Z)' } as const;
+const EVENT_WHEN_LABELS = { ALL: 'Toutes les dates', upcoming: 'À venir', past: 'Passés' } as const;
 
 function EventsFixedOverlay({ children }: { children: React.ReactNode }) {
   if (typeof document === 'undefined') return null;
@@ -756,6 +770,8 @@ function EventsPageInner() {
   const [eventWhen, setEventWhen] = useState<'ALL' | 'upcoming' | 'past'>('ALL');
   const [eventVisibility, setEventVisibility] = useState<'all' | 'public' | 'private'>('all');
   const [eventEntry, setEventEntry] = useState<'' | 'paid' | 'free'>('');
+  const [eventSort, setEventSort] = useState<keyof typeof EVENT_SORT_LABELS>('nearest');
+  const [openTasksCount, setOpenTasksCount] = useState<number | null>(null);
 
   // Tabs
   const [activeTab, setActiveTab] = useState<EventWorkspaceTab>(
@@ -975,6 +991,25 @@ function EventsPageInner() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedGuestDetails, sharingGuest, showBroadcastModal, showBulkInviteModal, showImportModal, showGuestModal]);
 
+  useEffect(() => {
+    if (protocolDesk) return;
+    let cancelled = false;
+    api
+      .get('/events/tasks/inbox')
+      .then((data: unknown) => {
+        if (cancelled) return;
+        const rows = (data as { tasks?: EventTaskItem[] })?.tasks;
+        setOpenTasksCount(Array.isArray(rows) ? rows.filter((t) => isOpenEventTask(t.status)).length : 0);
+      })
+      .catch(() => {
+        if (!cancelled) setOpenTasksCount(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [protocolDesk]);
+
+
   const filteredEventsList = events.filter((event) => {
     const q = eventSearch.trim().toLowerCase();
     const matchesSearch = !q
@@ -996,7 +1031,7 @@ function EventsPageInner() {
       || (eventEntry === 'paid' && paid)
       || (eventEntry === 'free' && !paid);
     return matchesSearch && matchesWhen && matchesVisibility && matchesEntry;
-  }).sort(compareEventsByDate);
+  }).sort(eventSort === 'name' ? compareEventsByTitle : eventSort === 'farthest' ? compareEventsFarthest : compareEventsByDate);
   const paginatedEventsList = usePaginateItems(filteredEventsList, eventsListPage, eventsPageSize);
   const paginatedGuestsList = usePaginateItems(filteredGuests, guestsListPage, guestsPageSize);
 
@@ -2223,66 +2258,62 @@ Merci de confirmer votre présence :
       {/* Header */}
       {!selectedEvent ? (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1 w-fit">
-            <button
-              type="button"
-              onClick={() => setListView('events')}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-3.5 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
-                listView === 'events'
-                  ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              Événements
-            </button>
-            <button
-              type="button"
-              onClick={() => setListView('tasks')}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-3.5 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
-                listView === 'tasks'
-                  ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
-              <ClipboardList className="w-3.5 h-3.5" />
-              Tâches
-            </button>
-          </div>
-            <div className="flex flex-wrap items-center gap-2">
-                {protocolDesk && !isProtocolOnly ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => router.push('/dashboard/events')}
-                  >
-                    Quitter le desk
-                  </Button>
-                ) : null}
-                {listView === 'events' && events.length > 0 && (
-                  <ViewModeToggle
-                    storageKey="em-view-events"
-                    value={eventsViewMode}
-                    onChange={setEventsViewMode}
-                    columns={eventsColumns}
-                    onColumnsChange={setEventsColumns}
-                  />
-                )}
-                {access?.canCreateEvents && !protocolDesk && listView === 'events' && events.length > 0 ? (
-                  <Button
-                    onClick={openCreateEventModal}
-                    disabled={eventsAtLimit}
-                    title={eventsQuotaMsg || undefined}
-                    leftIcon={<PlusCircle className="w-4 h-4" />}
-                  >
-                    Créer un événement
-                  </Button>
-                ) : null}
-            </div>
+          <EventsHero
+            eyebrow="Gestion d’événements"
+            title="Événements"
+            subtitle="Planifiez, organisez et suivez tous vos événements en un seul endroit."
+          />
+
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border">
+            <nav className="flex items-center" aria-label="Sections">
+              {([
+                { id: 'events', label: 'Événements', Icon: Calendar },
+                { id: 'tasks', label: 'Tâches', Icon: ClipboardList },
+              ] as const).map(({ id, label, Icon }) => {
+                const count = id === 'events' ? (events.length > 0 ? events.length : null) : openTasksCount;
+                return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setListView(id)}
+                  aria-current={listView === id ? 'page' : undefined}
+                  className={cn(
+                    'relative inline-flex min-h-12 items-center gap-2 px-4 text-sm transition-colors touch-manipulation',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                    listView === id
+                      ? 'font-semibold text-primary after:absolute after:inset-x-0 after:-bottom-px after:h-[3px] after:rounded-t-full after:bg-primary'
+                      : 'font-medium text-muted hover:text-foreground',
+                  )}
+                >
+                  <Icon className="h-4 w-4" aria-hidden />
+                  {label}
+                  {count ? <span className="text-xs font-medium tabular-nums text-muted">{count}</span> : null}
+                </button>
+                );
+              })}
+            </nav>
+            {protocolDesk && !isProtocolOnly ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="mb-1.5"
+                onClick={() => router.push('/dashboard/events')}
+              >
+                Quitter le desk
+              </Button>
+            ) : access?.canCreateEvents && listView === 'events' ? (
+              <Button
+                size="sm"
+                className="mb-1.5"
+                onClick={openCreateEventModal}
+                disabled={eventsAtLimit}
+                title={eventsQuotaMsg || undefined}
+                leftIcon={<PlusCircle className="w-4 h-4" />}
+              >
+                Créer un événement
+              </Button>
+            ) : null}
           </div>
           {eventsAtLimit && listView === 'events' && (
             <PlanLimitCallout kind="events" planQuota={planQuota} planName={planLabel} />
@@ -2304,6 +2335,53 @@ Merci de confirmer votre présence :
                     if (mode === 'grid' || mode === 'list') setEventsViewMode(mode);
                   }}
                   hideViewToggle
+                  hideShare
+                  actions={
+                    <>
+                      <OverflowMenu
+                        align="right"
+                        triggerLabel="Filtrer par date"
+                        triggerClassName="inline-flex h-9 items-center gap-2 rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm text-foreground transition hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                        trigger={
+                          <>
+                            <Calendar className="h-4 w-4" aria-hidden />
+                            <span>{EVENT_WHEN_LABELS[eventWhen]}</span>
+                            <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+                          </>
+                        }
+                        items={(Object.keys(EVENT_WHEN_LABELS) as Array<keyof typeof EVENT_WHEN_LABELS>).map((id) => ({
+                          id,
+                          label: EVENT_WHEN_LABELS[id],
+                          icon: eventWhen === id ? Check : undefined,
+                          onSelect: () => { setEventWhen(id); setEventsListPage(1); },
+                        }))}
+                      />
+                      <OverflowMenu
+                        align="right"
+                        triggerLabel="Trier les événements"
+                        triggerClassName="inline-flex h-9 items-center gap-2 rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm text-foreground transition hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                        trigger={
+                          <>
+                            <span>{EVENT_SORT_LABELS[eventSort]}</span>
+                            <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+                          </>
+                        }
+                        items={(Object.keys(EVENT_SORT_LABELS) as Array<keyof typeof EVENT_SORT_LABELS>).map((id) => ({
+                          id,
+                          label: EVENT_SORT_LABELS[id],
+                          icon: eventSort === id ? Check : undefined,
+                          onSelect: () => { setEventSort(id); setEventsListPage(1); },
+                        }))}
+                      />
+                      <ViewModeToggle
+                        storageKey="em-view-events"
+                        value={eventsViewMode}
+                        onChange={setEventsViewMode}
+                        columns={eventsColumns}
+                        onColumnsChange={setEventsColumns}
+                      />
+                    </>
+                  }
                   chips={[
                     ...(eventWhen !== 'ALL' ? [{ id: 'when', label: 'Dates', value: eventWhen === 'upcoming' ? 'À venir' : 'Passés' }] : []),
                     ...(eventVisibility !== 'all' ? [{ id: 'visibility', label: 'Visibilité', value: eventVisibility === 'public' ? 'Publics' : 'Privés' }] : []),
@@ -2553,27 +2631,14 @@ Merci de confirmer votre présence :
                 year: 'numeric',
               });
               const timing = eventTimingLabel(event.date);
-              const meta = (
-                <div className="flex flex-col gap-0.5">
-                  <span className="flex items-center gap-1 truncate">
-                    <MapPin className="w-3 h-3 shrink-0 opacity-70" />
-                    {event.placeLabel || formatEventPlace(event) || event.location}
-                  </span>
-                  {event.room && (
-                    <span className="flex items-center gap-1 truncate text-primary dark:text-primary">
-                      <Building2 className="w-3 h-3 shrink-0" />
-                      {event.room.name}
-                    </span>
-                  )}
-                </div>
-              );
+              const place = event.placeLabel || formatEventPlace(event) || event.location;
               const actions = (
                 <>
                   {!protocolDesk && canManageEvents && (
                     <OverflowMenu
                       align="right"
                       triggerLabel={`Autres actions pour ${event.title}`}
-                      triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-[var(--radius-button)] border border-border bg-surface text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
                       items={[
                         { id: 'edit', label: 'Modifier', icon: Edit3, onSelect: () => handleEditEventClick(event) },
@@ -2585,24 +2650,20 @@ Merci de confirmer votre présence :
               );
 
               return (
-                <ProjectCard
+                <EventCard
                   key={event.id}
-                  id={event.id}
                   title={event.title}
                   layout={eventsViewMode}
-                  icon={<Calendar className="w-4 h-4" />}
                   coverUrl={coverFromPhotos(event.photos)}
-                  overlayMeta={timing ? `${dateLabel} · ${timing}` : dateLabel}
-                  badge={event.isPublic ? <StatusPill tone="emerald">Public</StatusPill> : undefined}
-                  hideCta
-                  meta={
-                    eventsViewMode === 'list'
-                      ? [event.placeLabel || formatEventPlace(event) || event.location, event.room?.name].filter(Boolean).join(' · ')
-                      : meta
-                  }
-                  value={eventsViewMode === 'list' ? dateLabel : undefined}
-                  valueMeta={eventsViewMode === 'list' ? timing || undefined : undefined}
-                  onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? 'protocol' : undefined, protocol: protocolDesk }))}
+                  location={place}
+                  roomName={event.room?.name}
+                  kindLabel={event.eventKind && event.eventKind in EVENT_KIND_LABELS ? EVENT_KIND_LABELS[event.eventKind as EventKindId] : null}
+                  guests={event.estimatedGuests}
+                  isPublic={Boolean(event.isPublic)}
+                  dateLabel={dateLabel}
+                  timing={timing}
+                  past={timing === 'Terminé'}
+                  onOpen={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? 'protocol' : undefined, protocol: protocolDesk }))}
                   actions={actions}
                 />
               );

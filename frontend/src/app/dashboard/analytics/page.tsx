@@ -9,7 +9,7 @@ import {
  Clock, Download, FileSpreadsheet, RefreshCw, HelpCircle
 } from '@/components/icons';
 import Link from 'next/link';
-import { PageHeader, Alert, EmptyState, Button, SkeletonAnalyticsView, SkeletonStatsRow } from '@/components/ui';
+import { PageHero, PageHeader, Alert, EmptyState, Button, SkeletonAnalyticsView, SkeletonStatsRow } from '@/components/ui';
 import WorkspaceStatsOverview, { type WorkspaceStats } from '@/components/WorkspaceStatsOverview';
 import VendorStatsView from '@/components/dashboard/VendorStatsView';
 import { getWorkspaceModules } from '@/lib/planAccess';
@@ -238,6 +238,12 @@ function EventAnalyticsView() {
 
  return (
  <div className="space-y-8 w-full">
+ <PageHero
+ eyebrow="Analyses"
+ title="Statistiques"
+ subtitle="Suivez les invités, les réponses et les entrées de chaque événement."
+ image="/images/pages/statistiques.jpg"
+ />
  <PageHeader
  action={
  events.length > 0 ? (

@@ -9,7 +9,7 @@ import type { AdminPendingCounts } from '@/components/admin/useAdminPendingCount
 import { isB2cPlanId } from '../config/landingPricing.ts';
 
 export type NavIconName =
- | 'LayoutDashboard' | 'BarChart3' | 'Calendar' | 'Ticket' | 'ScanLine' | 'Mail' | 'Store'
+ | 'LayoutDashboard' | 'BarChart3' | 'LineChart' | 'Calendar' | 'Ticket' | 'ScanLine' | 'Mail' | 'Store'
  | 'Sparkles' | 'Inbox' | 'CalendarCheck' | 'Building2' | 'Briefcase' | 'Rss' | 'Users'
  | 'CreditCard' | 'FileText' | 'Bell' | 'Clock' | 'Heart' | 'LayoutGrid'
  | 'MessageSquare' | 'Key' | 'ScrollText';
@@ -103,28 +103,20 @@ function buildNavSections(...sections: Array<NavSection | null>): NavSection[] {
 }
 
 /**
- * Forfait et factures : réservés aux profils qui y ont accès, rangés avec les paramètres du compte.
- * Avec les deux droits, une seule entrée « Forfait » : les factures sont un onglet de la page Forfait.
+ * Le forfait (et ses factures) s’ouvre depuis la carte « Forfait actuel » et le menu de l’avatar :
+ * pas d’entrée dans la barre latérale. Seuls les profils qui voient les factures sans le forfait
+ * gardent une entrée « Factures ».
  */
 function billingNavItems(access?: OrgAccess | null): NavItem[] {
- if (access?.canViewBilling && access?.canViewInvoices) {
-  return [{ name: 'Forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: 'CreditCard' as const, activePaths: ['/dashboard/invoices'] }];
+ if (access?.canViewInvoices && !access?.canViewBilling) {
+  return [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: 'FileText' as const }];
  }
- return [
-  ...(access?.canViewBilling
-   ? [{ name: 'Forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: 'CreditCard' as const }]
-   : []),
-  ...(access?.canViewInvoices
-   ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: 'FileText' as const }]
-   : []),
- ];
+ return [];
 }
 
+/** Les notifications sont dans la cloche de l’en-tête et le menu de l’avatar, pas dans la barre latérale. */
 function compteNavItems(extra: NavItem[] = []): NavItem[] {
- return [
-  ...extra,
-  { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: 'Bell' as const },
- ];
+ return extra;
 }
 
 /**
@@ -141,7 +133,7 @@ function buildB2bOrganizerNav(opts: {
   navSection('Pilotage', [
    { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: 'LayoutDashboard' as const, description: 'À traiter, indicateurs et agenda de l’organisation' },
    ...(workspace.showAnalytics
-    ? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: 'BarChart3' as const, description: 'Réponses, présences et check-in par événement' }]
+    ? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: 'LineChart' as const, description: 'Réponses, présences et check-in par événement' }]
     : []),
   ]),
   navSection('Événements', [
@@ -359,7 +351,7 @@ export function buildDashboardNav(opts: DashboardNavInput): NavSection[] {
     { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: 'CalendarCheck' as const },
    ]),
    navSection('Suivi', [
-    { name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: 'BarChart3' as const },
+    { name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: 'LineChart' as const },
    ]),
    navSection('Compte', compteNavItems()),
   );
@@ -505,7 +497,7 @@ export function buildDashboardNav(opts: DashboardNavInput): NavSection[] {
 					? [{ name: 'Billetterie & dons', href: '/dashboard/tickets', tourId: 'nav-tickets-org', icon: 'Ticket' as const, description: 'Entrées payantes et cagnotte' }]
 					: []),
 				...(workspace.showAnalytics
-					? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: 'BarChart3' as const }]
+					? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: 'LineChart' as const }]
 					: []),
 				{ name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: 'Rss' as const, description: 'Photos des salles et prestataires' },
 				...(workspace.showTeam
@@ -554,7 +546,7 @@ export function buildDashboardNav(opts: DashboardNavInput): NavSection[] {
 			? [{ name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: 'Mail' as const }]
 			: []),
 		...(workspace.showAnalytics
-			? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: 'BarChart3' as const }]
+			? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: 'LineChart' as const }]
 			: []),
 	];
 

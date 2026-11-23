@@ -10,6 +10,7 @@ import {
   Button,
   EmptyState,
   OverflowMenu,
+  PageHero,
   ProjectCard,
   StatusPill,
   ViewModeToggle,
@@ -242,6 +243,13 @@ export default function TicketsPage() {
 
   return (
     <div className="space-y-6 w-full">
+      <PageHero
+        eyebrow="Ventes et entrées"
+        title="Billetterie"
+        subtitle="Vendez et suivez les billets de vos événements, ou retrouvez ceux que vous avez achetés."
+        image="/images/pages/billetterie.jpg"
+        imagePosition="center 22%"
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         {isOrgRole ? (
           <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1 w-fit" role="group" aria-label="Billetterie ou achats personnels">

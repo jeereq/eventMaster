@@ -2,12 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Building2, Calendar, KeyRound, MapPin, Sparkles, Users } from '@/components/icons';
+import { ArrowRight, Building2, Calendar, KeyRound, Sparkles } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { listStackClass, StatusPill } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
 import FavoriteHeart from '@/components/FavoriteHeart';
-import { catalogueDeliveryCaption, catalogueHasPromo, catalogueItemDisplayKind, catalogueKindAccent, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, listingSrcSet, serviceMobilityLabel, sizedMediaUrl, type CatalogueDisplayKind, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
+import { catalogueDeliveryCaption, catalogueHasPromo, catalogueItemDisplayKind, catalogueKindAccent, catalogueKindFilterLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, listingSrcSet, serviceMobilityLabel, sizedMediaUrl, type CatalogueDisplayKind, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
 import { formatFc } from '@/config/landingPricing';
 import { rememberCurrentCatalogueList } from '@/lib/catalogueQuery';
 import useIsMobile from '@/hooks/useIsMobile';
@@ -83,17 +83,6 @@ function VisibilityMark({ item }: { item: CatalogueItem }) {
   return null;
 }
 
-function KindMark({ item, size = 'md' }: { item: CatalogueItem; size?: 'sm' | 'md' }) {
-  const displayKind = catalogueItemDisplayKind(item);
-  const Icon = kindIcon(displayKind);
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stage border border-stage-foreground/20 text-stage-foreground text-xs font-bold shadow-sm">
-      <Icon className="w-3 h-3 text-stage-foreground" strokeWidth={2.4} />
-      <span className="hidden sm:inline">{catalogueKindLabel(displayKind)}</span>
-    </span>
-  );
-}
-
 function GroupHeading({ kind, count }: { kind: CatalogueDisplayKind; count: number }) {
   const Icon = kindIcon(kind);
   const accent = catalogueKindAccent(kind);
@@ -126,8 +115,12 @@ function GridCard({
   actions?: React.ReactNode;
 }) {
   const distance = formatDistanceKm(item.distanceKm);
+  const meta = [
+    item.location || item.orgName || item.categoryLabel,
+    item.capacity ? `${item.capacity} pers.` : item.location ? item.categoryLabel : null,
+  ].filter(Boolean);
   return (
-    <article className="group relative flex flex-col bg-surface border border-border/80 rounded-[var(--radius-card)] overflow-hidden shadow-2xs hover:shadow-xl hover:border-primary/40 hover:-translate-y-1 transition-all duration-300 motion-reduce:translate-y-0 motion-reduce:transition-none motion-reduce:hover:-translate-y-0">
+    <article className="group relative flex flex-col">
       {onToggleFavorite && item.kind !== 'event' ? (
         <div className="absolute top-2.5 right-2.5 z-10">
           <FavoriteHeart active={Boolean(favorited)} onToggle={() => onToggleFavorite(item)} />
@@ -141,9 +134,9 @@ function GridCard({
       <Link
         href={item.href}
         onClick={onNavigate}
-        className="flex min-w-0 flex-1 flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset"
+        className="flex min-w-0 flex-1 flex-col rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
       >
-        <div className={cn('relative overflow-hidden bg-surface-muted', compact ? 'aspect-[5/4]' : 'aspect-[4/3]')}>
+        <div className={cn('relative overflow-hidden rounded-2xl bg-surface-muted', compact ? 'aspect-[5/4]' : 'aspect-[4/3]')}>
           <Cover
             item={item}
             eager={eager}
@@ -155,57 +148,31 @@ function GridCard({
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           />
           <div className="absolute top-2.5 left-2.5 z-[1] flex flex-col items-start gap-1">
-            <KindMark item={item} size="sm" />
             <VisibilityMark item={item} />
           </div>
         </div>
 
-        <div className="p-2.5 sm:p-4 space-y-1.5 sm:space-y-2 flex-1 flex flex-col justify-between">
-          <div className="space-y-1">
-            <h3 className="font-bold text-xs sm:text-base text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
-              {item.title}
-            </h3>
-
-            {item.location ? (
-              <p className="text-xs text-muted inline-flex items-center gap-1 truncate w-full">
-                <MapPin className="w-3.5 h-3.5 text-muted/80 shrink-0" />
-                <span className="truncate">{item.location}</span>
-              </p>
-            ) : (
-              <p className="text-xs text-muted truncate">
-                {item.orgName || item.categoryLabel || 'Événementiel'}
-              </p>
-            )}
-
-            <div className="text-xs text-muted pt-0.5 flex items-center gap-1.5">
-              {item.capacity ? (
-                <span className="inline-flex items-center gap-1 font-medium text-foreground/80">
-                  <Users className="w-3 h-3 text-muted" /> Jusqu&apos;à {item.capacity} pers.
-                </span>
-              ) : item.categoryLabel ? (
-                <span className="font-medium text-foreground/80 truncate">{item.categoryLabel}</span>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-border/50 flex items-baseline justify-between text-xs">
-            <div>
-              <span className="font-bold text-sm sm:text-base text-foreground tabular-nums">
-                {cataloguePriceCaption(item)}
-              </span>
-              {catalogueHasPromo(item) && item.priceFromFc != null ? (
-                <span className="text-xs text-muted line-through ml-1.5 tabular-nums">{formatFc(item.priceFromFc)}</span>
-              ) : null}
-              <span className="text-muted text-xs ml-1">
-                · {item.priceUnitLabel}
-                {catalogueDeliveryCaption(item) ? ` · ${catalogueDeliveryCaption(item)}` : ''}
-              </span>
-            </div>
-          </div>
+        <div className="pt-2.5 px-0.5 space-y-0.5">
+          <h3 className="font-semibold text-sm sm:text-[15px] text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
+            {item.title}
+          </h3>
+          {meta.length ? (
+            <p className="text-xs sm:text-[13px] text-muted truncate">{meta.join(' · ')}</p>
+          ) : null}
+          <p className="pt-0.5 text-sm text-foreground">
+            <span className="font-bold tabular-nums">{cataloguePriceCaption(item)}</span>
+            {catalogueHasPromo(item) && item.priceFromFc != null ? (
+              <span className="text-xs text-muted line-through ml-1.5 tabular-nums">{formatFc(item.priceFromFc)}</span>
+            ) : null}
+            <span className="text-muted text-xs ml-1">
+              {item.priceUnitLabel}
+              {catalogueDeliveryCaption(item) ? ` · ${catalogueDeliveryCaption(item)}` : ''}
+            </span>
+          </p>
         </div>
       </Link>
       {actions ? (
-        <div className="flex flex-wrap gap-1.5 border-t border-border/50 px-2.5 py-2.5 sm:px-4">
+        <div className="flex flex-wrap gap-1.5 pt-2 px-0.5">
           {actions}
         </div>
       ) : null}
@@ -259,8 +226,7 @@ function ListRow({
           </div>
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <KindMark item={item} size="sm" />
-              <VisibilityMark item={item} />
+                <VisibilityMark item={item} />
             </div>
             <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition truncate">
               {item.title}

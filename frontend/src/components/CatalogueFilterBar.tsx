@@ -398,17 +398,17 @@ export default function CatalogueFilterBar({
         </div>
       ) : null}
       <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 sm:max-w-sm">
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
             aria-label={searchLabel || searchPlaceholder}
             leftIcon={<Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-            className="!py-1.5 sm:!py-2.5 text-sm h-9 sm:h-auto"
+            className="!min-h-9 h-9 !py-1.5 text-sm"
           />
         </div>
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0 min-w-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0 min-w-0 sm:ml-auto">
           {hasFilters && (
             <Button
               type="button"
@@ -416,7 +416,7 @@ export default function CatalogueFilterBar({
               size="sm"
               onClick={openModal}
               leftIcon={<SlidersHorizontal className="w-3.5 h-3.5" />}
-              className="shrink-0 !min-h-11 px-2.5 sm:px-3"
+              className="shrink-0 !min-h-9 h-9 px-2.5 sm:px-3"
             >
               <span className="hidden min-[380px]:inline">Filtres</span>
               {count > 0 ? (

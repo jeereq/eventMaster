@@ -4,6 +4,7 @@ import React, { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from '@/components/icons';
 import MarketplaceRequestsHub from '@/components/dashboard/MarketplaceRequestsHub';
+import { PageHero } from '@/components/ui';
 
 function Spinner() {
   return (
@@ -28,7 +29,17 @@ function BookingsView() {
   }, [legacyQuotes, searchParams, router]);
 
   if (legacyQuotes) return <Spinner />;
-  return <MarketplaceRequestsHub section="bookings" />;
+  return (
+    <div className="space-y-6">
+      <PageHero
+        eyebrow="Marketplace"
+        title="Réservations"
+        subtitle="Suivez les réservations de salles et de prestations."
+        image="/images/pages/reservations.jpg"
+      />
+      <MarketplaceRequestsHub section="bookings" />
+    </div>
+  );
 }
 
 export default function ClientBookingsPage() {

@@ -102,14 +102,11 @@ describe('menu du dashboard', () => {
     assert.ok(all.some((item) => item.tourId === 'nav-invoices' && item.href === '/dashboard?tab=invoices'));
   });
 
-  it('range les factures dans Forfait quand les deux droits sont accordés', () => {
+  it('n’a ni « Forfait » ni « Notifications » : la carte forfait et le menu de l’avatar y mènent', () => {
     for (const name of ['vendor', 'b2c', 'b2b', 'organizer']) {
       const all = items(buildDashboardNav(PROFILES[name]));
-      const billing = all.filter((item) => item.href === '/dashboard/billing' || item.href === '/dashboard/invoices');
-      assert.equal(billing.length, 1, name);
-      assert.equal(billing[0].name, 'Forfait');
-      for (const url of ['/dashboard/billing', '/dashboard/billing?tab=invoices', '/dashboard/invoices']) {
-        assert.ok(isActive(billing[0], url), `${name} ${url}`);
+      for (const href of ['/dashboard/billing', '/dashboard/invoices', '/dashboard/notifications']) {
+        assert.ok(!all.some((item) => item.href === href), `${name} ${href}`);
       }
     }
   });
