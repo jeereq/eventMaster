@@ -83,6 +83,10 @@ export default function GlobalAiSimulatorFab() {
   if (hidden || allStudiosBlocked) return null;
 
   const showCounter = isAiSimulationThresholdReached(allowance);
+  const comingSoon =
+    (isBudgetBlocked && placement.highlight === 'budget') ||
+    (isInviteBlocked && placement.highlight === 'invite') ||
+    (isRoomBlocked && placement.highlight === 'room');
   const Icon = placement.highlight === 'invite'
     ? Mail
     : placement.highlight === 'room'
@@ -110,52 +114,35 @@ export default function GlobalAiSimulatorFab() {
       <button
         type="button"
         onClick={handleClick}
+        data-mood={placement.mood === 'celebrate' ? 'celebrate' : undefined}
         className={cn(
-          'em-ai-fab fixed z-[60] right-[max(1rem,env(safe-area-inset-right))] bottom-[var(--em-site-fab-bottom)] md:bottom-6 md:right-6',
+          'em-ai-fab em-ai-fab-pill fixed z-[60] right-[max(1rem,env(safe-area-inset-right))] bottom-[var(--em-site-fab-bottom)] md:bottom-6 md:right-6',
           iconOnly
             ? 'hidden md:inline-flex items-center justify-center w-12 h-12 rounded-full'
-            : 'inline-flex items-center gap-2.5 min-h-12 pl-3 pr-3.5 sm:pr-4 rounded-2xl',
-          'transition cursor-pointer touch-manipulation text-left',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-          placement.mood === 'celebrate'
-            ? 'bg-stage text-stage-foreground shadow-lg hover:bg-stage-elevated focus-visible:ring-festive-on-stage focus-visible:ring-offset-stage'
-            : 'bg-primary-solid text-primary-foreground shadow-xl shadow-primary/30 hover:bg-primary-solid-hover focus-visible:ring-primary-foreground focus-visible:ring-offset-primary-solid',
+            : 'inline-flex items-center gap-3 min-h-12 p-1.5 pr-5 rounded-full',
+          'cursor-pointer touch-manipulation text-left',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          placement.mood === 'celebrate' ? 'text-stage-foreground' : 'text-foreground',
         )}
         aria-label={placement.ariaLabel}
         aria-haspopup="dialog"
         aria-expanded={open}
-        title={placement.title}
+        title={comingSoon ? `${placement.label} · Fonctionnalité à venir` : placement.title}
       >
         <span
           className={cn(
-            'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
-            placement.mood === 'celebrate' ? 'bg-festive-on-stage/20 text-festive-on-stage' : 'bg-primary-foreground/15',
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]',
+            placement.mood === 'celebrate' ? 'bg-festive-on-stage/20 text-festive-on-stage' : 'bg-primary-solid text-primary-foreground',
           )}
         >
-          <Icon className="w-4 h-4" aria-hidden />
+          <Icon className="h-[18px] w-[18px]" aria-hidden />
         </span>
-        <span className={cn('flex flex-col leading-tight min-w-0', iconOnly && 'sr-only')}>
-          <span className="text-xs font-bold tracking-tight">{placement.label}</span>
-          <span
-            className={cn(
-              'text-xs font-semibold truncate max-w-[10rem] sm:max-w-none',
-              placement.mood === 'celebrate' ? 'text-stage-foreground/75' : 'text-primary-foreground/80',
-            )}
-          >
-            {isBudgetBlocked && placement.highlight === 'budget'
-              ? 'Fonctionnalité à venir'
-              : isInviteBlocked && placement.highlight === 'invite'
-                ? 'Fonctionnalité à venir'
-                : isRoomBlocked && placement.highlight === 'room'
-                  ? 'Fonctionnalité à venir'
-                  : placement.subtitle}
-          </span>
-        </span>
+        <span className={cn('min-w-0 text-sm font-bold tracking-tight', iconOnly && 'sr-only')}>{placement.label}</span>
         {showCounter && !iconOnly ? (
           <span
             className={cn(
-              'text-xs font-black tabular-nums px-1.5 py-0.5 rounded-full shrink-0',
-              placement.mood === 'celebrate' ? 'bg-festive-on-stage/20 text-festive-on-stage' : 'bg-primary-foreground/20',
+              'shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums',
+              placement.mood === 'celebrate' ? 'bg-festive-on-stage/20 text-festive-on-stage' : 'bg-primary/10 text-primary',
             )}
           >
             {allowance.unlimited ? '∞' : allowance.totalRemaining}

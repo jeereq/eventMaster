@@ -98,7 +98,7 @@ function TemplatePreviewThumb({
 
   const shellClass = cn(
     'relative bg-surface-muted overflow-hidden flex items-center justify-center',
-    compact ? 'min-h-[120px] w-28 shrink-0 rounded-md p-2' : 'w-full flex-[9] min-h-[28rem] sm:min-h-[32rem] rounded-none p-2',
+    compact ? 'min-h-[120px] w-28 shrink-0 rounded-md p-2' : 'w-full aspect-[4/5] rounded-none bg-surface-muted p-2',
   );
 
   if (onViewDetails) {
@@ -161,12 +161,6 @@ export default function TemplateCardGrid({
 
         const badges = (
           <>
-            {global && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 border border-sky-100 dark:border-sky-900/50">
-                <Globe className="w-3 h-3" />
-                Bibliothèque EventMaster
-              </span>
-            )}
             {isSuperAdmin && (
               <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {global ? (
@@ -225,13 +219,13 @@ export default function TemplateCardGrid({
           <div
             className={cn(
               'flex gap-2',
-              layout === 'grid' ? 'pt-3 border-t border-border' : 'shrink-0',
+              layout === 'grid' ? 'mt-auto pt-3 border-t border-border' : 'shrink-0',
             )}
           >
             {editable && (editHref ? (
               <Link
                 href={editHref(t)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-primary/10 hover:bg-primary/15 text-primary font-semibold rounded-[var(--radius-button)] text-xs transition"
               >
                 <Edit3 className="w-4 h-4" />
                 {layout === 'grid' ? 'Modifier' : ''}
@@ -240,7 +234,7 @@ export default function TemplateCardGrid({
               <button
                 type="button"
                 onClick={() => onEdit(t)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-primary/10 hover:bg-primary/15 text-primary font-semibold rounded-[var(--radius-button)] text-xs transition"
               >
                 <Edit3 className="w-4 h-4" />
                 {layout === 'grid' ? 'Modifier' : ''}
@@ -251,7 +245,7 @@ export default function TemplateCardGrid({
               <button
                 type="button"
                 onClick={() => onDuplicate(t)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-primary/10 hover:bg-primary/15 text-primary font-semibold rounded-[var(--radius-button)] text-xs transition"
               >
                 <Copy className="w-4 h-4" />
                 {layout === 'grid' ? 'Utiliser ce modèle' : ''}
@@ -262,7 +256,7 @@ export default function TemplateCardGrid({
               <OverflowMenu
                 align="right"
                 triggerLabel={`Autres actions pour ${t.name}`}
-                triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
                 items={menuItems}
               />
@@ -309,7 +303,7 @@ export default function TemplateCardGrid({
         return (
           <article
             key={t.id}
-            className={`relative ${isSelected?.(t.id) ? 'ring-2 ring-primary/40 !border-primary ' : ''}group flex flex-col min-h-[36rem] sm:min-h-[40rem] bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-soft)] hover:border-primary/40 hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 transition duration-200`}
+            className={`relative ${isSelected?.(t.id) ? 'ring-2 ring-primary/40 !border-primary ' : ''}group flex flex-col bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-soft)] hover:border-primary/40 transition`}
           >
             {onToggleSelect ? (
               <label className="absolute top-1 right-1 z-20 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-white/90 dark:bg-surface/90 shadow-sm cursor-pointer">
@@ -323,17 +317,14 @@ export default function TemplateCardGrid({
               </label>
             ) : null}
             <TemplatePreviewThumb t={t} onViewDetails={onViewDetails} />
-            <div className="p-2.5 space-y-1.5 flex-[1] flex flex-col min-w-0 min-h-0">
-              <span className="text-xs font-semibold text-muted">
-                {global ? 'Bibliothèque' : 'Organisation'}
-              </span>
-              <h3 className="text-sm font-semibold text-foreground tracking-tight line-clamp-1">{t.name}</h3>
-              <p className="text-xs text-muted">
-                Créé le {new Date(t.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
-              </p>
-              <p className="text-xs text-muted line-clamp-1" title={summary}>
-                {summary}
-              </p>
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-3.5">
+              <div className="min-w-0">
+                <h3 className="truncate text-base font-semibold tracking-tight text-foreground">{t.name}</h3>
+                <p className="mt-1 truncate text-xs text-muted" title={summary}>
+                  {new Date(t.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  {summary ? ` · ${summary}` : ''}
+                </p>
+              </div>
               {badges}
               {actions}
             </div>

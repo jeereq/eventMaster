@@ -31,7 +31,7 @@ import {
   applyInvitationGuidelineVariables,
   formatGuestGuidelinesBlock,
 } from '@/lib/guestGuidelines';
-import { Button, ProjectCard, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, OverflowMenu, Modal, Input, Pagination, usePaginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, EmptyState, Alert, ConfirmDialog } from '@/components/ui';
+import { Button, ProjectCard, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, OverflowMenu, Modal, Input, Pagination, usePaginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, EmptyState, Alert, ConfirmDialog, UnderlineTabs } from '@/components/ui';
 import EventCard from '@/components/events/EventCard';
 import { EventsHero } from '@/components/events/EventsHeader';
 import { isOpenEventTask, type EventTaskItem } from '@/lib/eventTasks';
@@ -2264,57 +2264,31 @@ Merci de confirmer votre présence :
             subtitle="Planifiez, organisez et suivez tous vos événements en un seul endroit."
           />
 
-          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border">
-            <nav className="flex items-center" aria-label="Sections">
-              {([
-                { id: 'events', label: 'Événements', Icon: Calendar },
-                { id: 'tasks', label: 'Tâches', Icon: ClipboardList },
-              ] as const).map(({ id, label, Icon }) => {
-                const count = id === 'events' ? (events.length > 0 ? events.length : null) : openTasksCount;
-                return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setListView(id)}
-                  aria-current={listView === id ? 'page' : undefined}
-                  className={cn(
-                    'relative inline-flex min-h-12 items-center gap-2 px-4 text-sm transition-colors touch-manipulation',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                    listView === id
-                      ? 'font-semibold text-primary after:absolute after:inset-x-0 after:-bottom-px after:h-[3px] after:rounded-t-full after:bg-primary'
-                      : 'font-medium text-muted hover:text-foreground',
-                  )}
+          <UnderlineTabs
+            value={listView}
+            onChange={setListView}
+            tabs={[
+              { id: 'events', label: 'Événements', icon: Calendar, count: events.length > 0 ? events.length : null },
+              { id: 'tasks', label: 'Tâches', icon: ClipboardList, count: openTasksCount },
+            ]}
+            action={
+              protocolDesk && !isProtocolOnly ? (
+                <Button type="button" size="sm" variant="secondary" onClick={() => router.push('/dashboard/events')}>
+                  Quitter le desk
+                </Button>
+              ) : access?.canCreateEvents && listView === 'events' ? (
+                <Button
+                  size="sm"
+                  onClick={openCreateEventModal}
+                  disabled={eventsAtLimit}
+                  title={eventsQuotaMsg || undefined}
+                  leftIcon={<PlusCircle className="w-4 h-4" />}
                 >
-                  <Icon className="h-4 w-4" aria-hidden />
-                  {label}
-                  {count ? <span className="text-xs font-medium tabular-nums text-muted">{count}</span> : null}
-                </button>
-                );
-              })}
-            </nav>
-            {protocolDesk && !isProtocolOnly ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="mb-1.5"
-                onClick={() => router.push('/dashboard/events')}
-              >
-                Quitter le desk
-              </Button>
-            ) : access?.canCreateEvents && listView === 'events' ? (
-              <Button
-                size="sm"
-                className="mb-1.5"
-                onClick={openCreateEventModal}
-                disabled={eventsAtLimit}
-                title={eventsQuotaMsg || undefined}
-                leftIcon={<PlusCircle className="w-4 h-4" />}
-              >
-                Créer un événement
-              </Button>
-            ) : null}
-          </div>
+                  Créer un événement
+                </Button>
+              ) : null
+            }
+          />
           {eventsAtLimit && listView === 'events' && (
             <PlanLimitCallout kind="events" planQuota={planQuota} planName={planLabel} />
           )}
@@ -2626,7 +2600,7 @@ Merci de confirmer votre présence :
           ) : (
             paginatedEventsList.map((event) => {
               const dateLabel = new Date(event.date).toLocaleDateString('fr-FR', {
-                month: 'long',
+                month: 'short',
                 day: 'numeric',
                 year: 'numeric',
               });
@@ -2638,7 +2612,7 @@ Merci de confirmer votre présence :
                     <OverflowMenu
                       align="right"
                       triggerLabel={`Autres actions pour ${event.title}`}
-                      triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-[var(--radius-button)] border border-border bg-surface text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-[var(--radius-button)] text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
                       items={[
                         { id: 'edit', label: 'Modifier', icon: Edit3, onSelect: () => handleEditEventClick(event) },

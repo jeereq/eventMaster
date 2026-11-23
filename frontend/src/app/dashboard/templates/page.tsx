@@ -58,10 +58,11 @@ import {
  Undo2, Redo2, History, Download, SlidersHorizontal, LayoutTemplate,
  Calendar, MapPin, User, Users, MessageSquare, Layers, Move, Crown, ArrowRight,
  BookOpen, FolderHeart,
+ MoreHorizontal,
 } from '@/components/icons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
-import { PageHero, PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Pagination, usePaginateItems, usePageSize, Modal, ConfirmDialog } from '@/components/ui';
+import { PageHero, UnderlineTabs, OverflowMenu, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Pagination, usePaginateItems, usePageSize, Modal, ConfirmDialog } from '@/components/ui';
 import InvitationDuplicateModal, { type InvitationDuplicateValues } from '@/components/InvitationDuplicateModal';
 import { emptyInvitationStructuredBrief, type InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
 import InvitationAiComposeForm, {
@@ -6120,63 +6121,9 @@ const studioModelPhotos = useMemo(
  subtitle="Choisissez un modèle d’invitation ou créez le vôtre avec l’IA."
  image="/images/pages/modeles.jpg"
  />
- <PageHeader
- action={
- <div className="flex flex-wrap gap-2">
- {isSuperAdmin && (
- <Link
- href={ADMIN_TEMPLATES_HREF}
- className="inline-flex items-center gap-2 px-4 py-2.5 border border-border text-foreground font-semibold rounded-[var(--radius-button)] text-xs transition hover:bg-surface-muted"
- >
- <ArrowLeft className="w-4 h-4" />
- Catalogue Super Admin
- </Link>
- )}
- <Button
- onClick={startAiComposeFromList}
- disabled={aiComposeBusy}
- title={`Décrire la fête et laisser l’IA créer la carte (dès ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
- leftIcon={aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
- >
- Créer avec l’IA
- </Button>
- <>
- <input
- ref={mockupInputRef}
- type="file"
- accept="image/jpeg,image/png,image/webp"
- className="hidden"
- onChange={(e) => handleMockupFileChange(e, true)}
- />
- <Button
- variant="secondary"
- onClick={() => mockupInputRef.current?.click()}
- disabled={mockupImporting}
- leftIcon={mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
- >
- {mockupImporting ? (ocrProgress !== null ? `Texte ${ocrProgress}%` : 'Import…') : 'Importer une carte'}
- </Button>
- </>
- <Button
- variant="ghost"
- onClick={() => handleCreateTemplateClick('studio')}
- leftIcon={<PlusCircle className="w-4 h-4" />}
- >
- Partir de zéro
- </Button>
- </div>
- }
-/>
-
- {user?.role === 'USER' && (
- templatesAtLimit ? (
+ {user?.role === 'USER' && templatesAtLimit ? (
  <PlanLimitCallout kind="templates" planQuota={planQuota} planName={planLabel} />
- ) : !canUseCustomTemplates ? (
- <PlanLimitCallout feature="customTemplates" planName={planLabel} />
- ) : !canUseMockupOcr ? (
- <PlanLimitCallout feature="mockupOcr" planName={planLabel} />
- ) : null
- )}
+ ) : null}
 
  {error && <Alert variant="error">{error}</Alert>}
 
@@ -6215,50 +6162,59 @@ const studioModelPhotos = useMemo(
  ? [{ id: 'library' as const, label: 'Bibliothèque', icon: BookOpen, count: catalogTemplates.length }]
  : []),
  ];
- const onTabKeyDown = (e: React.KeyboardEvent) => {
- if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
- e.preventDefault();
- const ids = tabs.map((t) => t.id);
- const i = Math.max(0, ids.indexOf(activeListTab));
- const next = ids[(i + (e.key === 'ArrowRight' ? 1 : -1) + ids.length) % ids.length];
- setListTab(next);
- window.requestAnimationFrame(() => document.getElementById(`templates-tab-${next}`)?.focus());
- };
  return (
- <div
- role="tablist"
- aria-label="Sections des modèles"
- onKeyDown={onTabKeyDown}
- className="flex items-center gap-1 overflow-x-auto no-scrollbar rounded-xl border border-border bg-surface-muted p-1 w-full sm:w-fit"
+ <UnderlineTabs
+ value={activeListTab}
+ onChange={setListTab}
+ ariaLabel="Sections des modèles"
+ idPrefix="templates-tab"
+ tabs={tabs}
+ action={
+ <>
+
+ {isSuperAdmin && (
+ <Link
+ href={ADMIN_TEMPLATES_HREF}
+ className="inline-flex items-center gap-2 px-4 py-2.5 border border-border text-foreground font-semibold rounded-[var(--radius-button)] text-xs transition hover:bg-surface-muted"
  >
- {tabs.map((item) => {
- const selected = activeListTab === item.id;
- return (
- <button
- key={item.id}
- id={`templates-tab-${item.id}`}
- type="button"
- role="tab"
- aria-selected={selected}
- aria-controls={`templates-panel-${item.id}`}
- tabIndex={selected ? 0 : -1}
- onClick={() => setListTab(item.id)}
- className={cn(
- 'flex-1 sm:flex-none inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 sm:px-3.5 py-2 text-sm font-medium transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
- selected
- ? 'bg-surface text-foreground shadow-2xs font-semibold'
- : 'text-muted hover:bg-surface/70 hover:text-foreground',
+ <ArrowLeft className="w-4 h-4" />
+ Catalogue Super Admin
+ </Link>
  )}
+ <Button
+ onClick={startAiComposeFromList}
+ disabled={aiComposeBusy}
+ title={`Décrire la fête et laisser l’IA créer la carte (dès ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
+ leftIcon={aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
  >
- <item.icon className="w-4 h-4 shrink-0" aria-hidden />
- <span>{item.label}</span>
- <span className="ml-0.5 rounded-full bg-primary/10 px-1.5 text-xs font-semibold text-primary tabular-nums">
- {item.count}
- </span>
- </button>
- );
- })}
- </div>
+ Créer avec l’IA
+ </Button>
+ <input
+ ref={mockupInputRef}
+ type="file"
+ accept="image/jpeg,image/png,image/webp"
+ className="hidden"
+ onChange={(e) => handleMockupFileChange(e, true)}
+ />
+ <OverflowMenu
+ align="right"
+ triggerLabel="Autres façons de créer un modèle"
+ triggerClassName="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-button)] text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+ items={[
+ {
+ id: 'import',
+ label: mockupImporting ? (ocrProgress !== null ? `Texte ${ocrProgress}%` : 'Import…') : 'Importer une carte',
+ icon: Upload,
+ disabled: mockupImporting,
+ onSelect: () => mockupInputRef.current?.click(),
+ },
+ { id: 'scratch', label: 'Partir de zéro', icon: PlusCircle, onSelect: () => handleCreateTemplateClick('studio') },
+ ]}
+ />
+ </>
+ }
+ />
  );
  })()}
 

@@ -661,6 +661,35 @@ html[data-mood="celebrate"] .font-display {
   contain-intrinsic-size: auto 720px;
 }
 
+/* Bouton Studios IA : pastille claire cerclée d’un filet vert qui vire à l’or, signature EventMaster. */
+.em-ai-fab-pill {
+  --fab-fill: var(--color-surface);
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--fab-fill), var(--fab-fill)) padding-box,
+    conic-gradient(from 210deg, var(--color-primary-solid), var(--color-festive-accent) 38%, var(--color-primary-solid) 72%) border-box;
+  box-shadow:
+    0 12px 28px -14px color-mix(in srgb, var(--color-primary-solid) 60%, transparent),
+    0 2px 6px rgba(15, 31, 26, 0.08);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.em-ai-fab-pill[data-mood='celebrate'] {
+  --fab-fill: var(--color-stage);
+}
+.em-ai-fab-pill:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 16px 32px -14px color-mix(in srgb, var(--color-primary-solid) 70%, transparent),
+    0 3px 8px rgba(15, 31, 26, 0.1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .em-ai-fab-pill,
+  .em-ai-fab-pill:hover {
+    transform: none;
+    transition: none;
+  }
+}
+
 body[data-em-sheet-open] .em-ai-fab {
   display: none;
 }

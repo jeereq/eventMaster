@@ -72,6 +72,7 @@ export default function EventCard({
       role="button"
       tabIndex={0}
       onClick={onOpen}
+      title={isGrid && place ? place : undefined}
       onKeyDown={(e) => {
         if (e.target !== e.currentTarget) return;
         if (e.key === 'Enter' || e.key === ' ') {
@@ -96,16 +97,16 @@ export default function EventCard({
         </div>
       ) : null}
 
-      <div className={cn('min-w-0 flex-1', isGrid ? 'px-1 pb-1 pt-3' : '')}>
+      <div className={cn('min-w-0 flex-1', isGrid ? cn('px-1 pb-1 pt-3', actions && 'pr-12') : '')}>
         <h3 className="truncate text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
           {title}
         </h3>
-        <p className="mt-1 text-sm text-foreground">
-          <time>{dateLabel}</time>
-          {timing ? <span className={cn('ml-2', past ? 'text-muted' : 'text-primary')}>{timing}</span> : null}
+        <p className="mt-1 truncate text-sm text-muted">
+          <time className="text-foreground">{dateLabel}</time>
+          {!isGrid && timing ? <span className={cn('ml-2 font-medium', past ? 'text-muted' : 'text-primary')}>{timing}</span> : null}
+          {!isGrid && place ? <span> · {place}</span> : null}
         </p>
-        {place ? <p className="mt-0.5 truncate text-sm text-muted">{place}</p> : null}
-        {details.length > 0 ? <p className="mt-0.5 truncate text-xs text-muted">{details.join(' · ')}</p> : null}
+        {!isGrid && details.length > 0 ? <p className="mt-0.5 truncate text-xs text-muted">{details.join(' · ')}</p> : null}
       </div>
 
       {actions ? (
