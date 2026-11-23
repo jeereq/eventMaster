@@ -23,7 +23,7 @@ import { guestRsvpUrl } from '@/lib/share';
 import { applyOrgInvitationThemeIfNeeded } from '@/lib/templateColorThemes';
 import { DEFAULT_BRAND_PALETTE } from '@/lib/brandTheme';
 import type { GuestRsvpData } from './guestRsvpTypes';
-import { templateImageStyleClass, templateImageStyleExtra } from '@/lib/templateImageStyle';
+import TemplateImage from '@/components/TemplateImage';
 
 const darkenColor = (hex: string, percent = 30) => {
   if (!hex || !hex.startsWith('#')) return hex || '#000000';
@@ -1122,12 +1122,7 @@ export default function GuestPendingInvitationView({
                     {el.type === 'image' && (
                       <div className={`flex justify-${el.align === 'left' ? 'start' : el.align === 'right' ? 'end' : 'center'}`}>
                         {el.imageUrl ? (
-                          <img 
-                            src={el.imageUrl} 
-                            alt="Invitation" 
-                            style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: el.imageObjectFit || 'cover', ...templateImageStyleExtra(el.imageStyle) }}
-                            className={templateImageStyleClass(el.imageStyle)}
-                          />
+                          <TemplateImage el={el} />
                         ) : (
                           <div className="bg-surface-muted border border-border rounded-xl p-6 text-center text-xs text-muted font-semibold w-full">
                             {el.text || "Image d'illustration"}
