@@ -465,7 +465,7 @@ export default function GuestTablePlanView({
             </div>
 
             <p className="text-xs text-muted leading-relaxed shrink-0 px-1 flex items-center justify-between">
-              <span>Orbitez pour explorer la salle. Touchez une table pour voir ses détails ou revenez à votre place.</span>
+              <span>Glissez pour tourner, pincez pour zoomer, deux doigts (ou clic droit) pour vous déplacer. Touchez une table pour voir ses détails.</span>
               <button type="button" onClick={() => setPlanView('2d')} className="font-semibold text-primary hover:underline ml-2 shrink-0">
                 Voir en 2D →
               </button>
