@@ -14,6 +14,8 @@ import { applyPaletteToElements, invitationColorThemes, ORG_BRAND_THEME_ID, buil
 import { FONT_THEMES, applyFontThemeToElements, getFontTheme } from '@/lib/templateFontThemes';
 import { TEMPLATE_IMAGE_STYLES, templateImageStyleClass, templateImageStyleExtra, type TemplateImageStyleId } from '@/lib/templateImageStyle';
 import type { TemplateImageEffects } from '@/lib/templateImageEffects';
+import { scaleFontSize, snapAngle, templateElementWrapperStyle, type TemplateElementEffects } from '@/lib/templateElementStyle';
+import ElementArrangePanel, { type AlignTarget } from '@/components/templateEditor/ElementArrangePanel';
 import { TEMPLATE_ILLUSTRATIONS, illustrationDataUri } from '@/lib/templateIllustrations';
 import { layerPosition, nextTopZ, reorderLayer, type LayerAction } from '@/lib/templateLayers';
 import TemplateImage from '@/components/TemplateImage';
@@ -62,7 +64,7 @@ import {
  Columns, Eye, CheckSquare, Loader2, XCircle, X,
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
- Undo2, Redo2, BringForward, SendBackward, History, Download, SlidersHorizontal, LayoutTemplate,
+ Undo2, Redo2, BringForward, SendBackward, Lock, Unlock, RotateCw, History, Download, SlidersHorizontal, LayoutTemplate,
  Calendar, MapPin, User, Users, MessageSquare, Layers, Move, Crown, ArrowRight,
  BookOpen, FolderHeart,
 } from '@/components/icons';
@@ -140,7 +142,7 @@ interface TemplateItem {
  } | null;
 }
 
-interface CanvasElement extends TemplateImageEffects {
+interface CanvasElement extends TemplateImageEffects, TemplateElementEffects {
  id: string;
  type: 'text' | 'image' | 'button' | 'rsvp-block' | 'curve' | 'triangle' | 'divider';
  text: string; // Used for text content, button text, image placeholder, shape labels
@@ -184,6 +186,11 @@ interface CanvasElement extends TemplateImageEffects {
  illustrationId?: string;
  illustrationColor?: string;
  illustrationColor2?: string;
+}
+
+/** Bloque ou rétablit la sélection de texte de la page pendant un glisser. */
+function setBodyUserSelect(value: string) {
+ document.body.style.userSelect = value;
 }
 
 const darkenColor = (hex: string, percent = 30) => {
@@ -521,10 +528,36 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  const freeCanvasRef = useRef<HTMLDivElement>(null);
  /** Repères d’alignement affichés pendant un déplacement libre (en % du canevas). */
  const [freeGuides, setFreeGuides] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
+ /** Valeur affichée sous l’élément pendant un redimensionnement ou une rotation. */
+ const [handleBadge, setHandleBadge] = useState<{ id: string; text: string } | null>(null);
+ /** Presse-papiers interne de l’éditeur (Ctrl + C / Ctrl + V). */
+ const elementClipboardRef = useRef<CanvasElement | null>(null);
+ /** Hauteur mesurée de l’élément sélectionné : ses poignées vivent dans un calque au-dessus de tout. */
+ const [selectedBoxH, setSelectedBoxH] = useState(0);
  const canvasElementsRef = useRef(canvasElements);
  useEffect(() => {
  canvasElementsRef.current = canvasElements;
  }, [canvasElements]);
+ useEffect(() => {
+ const canvas = freeCanvasRef.current;
+ const node =
+ layoutMode === 'free' && selectedElementId
+ ? canvas?.querySelector<HTMLElement>(`[data-free-el="${CSS.escape(selectedElementId)}"]`)
+ : null;
+ if (!node) {
+ setSelectedBoxH(0);
+ return;
+ }
+ const measure = () => setSelectedBoxH(node.offsetHeight);
+ measure();
+ const observer = new ResizeObserver(measure);
+ observer.observe(node);
+ return () => observer.disconnect();
+ }, [selectedElementId, layoutMode, canvasElements]);
+ const selectedFreeEl =
+ layoutMode === 'free' && selectedElementId ? canvasElements.find((item) => item.id === selectedElementId) : undefined;
+ const selectedOverlay =
+ selectedFreeEl && !selectedFreeEl.locked && selectedBoxH > 0 ? { el: selectedFreeEl, h: selectedBoxH } : null;
  const [importedWithOcr, setImportedWithOcr] = useState(false);
  const [generatedByAi, setGeneratedByAi] = useState(false);
  const [quickTextModalOpen, setQuickTextModalOpen] = useState(false);
@@ -2439,6 +2472,144 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  setLayoutMode('flow');
  };
 
+ /** Copie un élément juste à côté de l’original, au premier plan, et la sélectionne. */
+ const duplicateElement = (source: CanvasElement, offset = 4) => {
+ const isFree = layoutMode === 'free' || source.positionMode === 'absolute';
+ const clone: CanvasElement = {
+ ...JSON.parse(JSON.stringify(source)),
+ id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+ locked: false,
+ };
+ if (isFree) {
+ clone.xPct = Math.min(88, (source.xPct ?? 8) + offset);
+ clone.yPct = Math.min(88, (source.yPct ?? 8) + offset);
+ clone.zIndex = nextTopZ(canvasElements);
+ }
+ const next = [...canvasElements, clone];
+ setCanvasElements(next);
+ recordStudioAction('Duplication d’élément', next);
+ handleElementSelect(clone.id, clone);
+ };
+
+ const toggleElementLock = (id: string) => {
+ const next = canvasElements.map((el) => (el.id === id ? { ...el, locked: !el.locked } : el));
+ setCanvasElements(next);
+ recordStudioAction(next.find((el) => el.id === id)?.locked ? 'Verrouillage' : 'Déverrouillage', next);
+ };
+
+ /** Aligne l’élément sélectionné sur un bord ou le centre de la carte. */
+ const alignSelectedElement = (target: AlignTarget) => {
+ const canvas = freeCanvasRef.current;
+ if (!selectedElementId || !canvas) return;
+ const node = canvas.querySelector<HTMLElement>(`[data-free-el="${CSS.escape(selectedElementId)}"]`);
+ const rect = canvas.getBoundingClientRect();
+ if (!node || !rect.width || !rect.height) return;
+ const w = (node.offsetWidth / rect.width) * 100;
+ const h = (node.offsetHeight / rect.height) * 100;
+ const round = (v: number) => Math.round(Math.max(0, v) * 10) / 10;
+ const next = canvasElements.map((el) => {
+ if (el.id !== selectedElementId) return el;
+ const patch: Partial<CanvasElement> = { positionMode: 'absolute' };
+ if (target === 'left') patch.xPct = 0;
+ if (target === 'center') patch.xPct = round((100 - w) / 2);
+ if (target === 'right') patch.xPct = round(100 - w);
+ if (target === 'top') patch.yPct = 0;
+ if (target === 'middle') patch.yPct = round((100 - h) / 2);
+ if (target === 'bottom') patch.yPct = round(100 - h);
+ return { ...el, ...patch };
+ });
+ setCanvasElements(next);
+ recordStudioAction('Alignement', next);
+ };
+
+ /**
+  * Poignées de l’élément sélectionné : largeur (bord droit), taille proportionnelle
+  * (coin : image et police suivent) et rotation (aimantée tous les 45°, Maj = libre).
+  */
+ const startHandleDrag = (e: React.PointerEvent, elId: string, kind: 'width' | 'scale' | 'rotate') => {
+ if (e.button !== 0) return;
+ e.stopPropagation();
+ e.preventDefault();
+ const canvas = freeCanvasRef.current;
+ const el = canvasElementsRef.current.find((item) => item.id === elId);
+ const node = canvas?.querySelector<HTMLElement>(`[data-free-el="${CSS.escape(elId)}"]`);
+ if (!canvas || !el || !node) return;
+ const rect = canvas.getBoundingClientRect();
+ const box = node.getBoundingClientRect();
+ if (!rect.width) return;
+ const pointerId = e.pointerId;
+ const startX = e.clientX;
+ const startY = e.clientY;
+ const startW = el.wPct ?? 84;
+ const x = el.xPct ?? 8;
+ const maxW = Math.max(5, 100 - x);
+ const cx = box.left + box.width / 2;
+ const cy = box.top + box.height / 2;
+ const startAngle = (Math.atan2(startY - cy, startX - cx) * 180) / Math.PI;
+ const startRotation = el.rotation ?? 0;
+ const startHeightPx = /^(\d+(?:\.\d+)?)px$/.exec(el.imageHeight || '')?.[1];
+ let latest: Partial<CanvasElement> = {};
+ let frame = 0;
+ const previousUserSelect = document.body.style.userSelect;
+ setBodyUserSelect('none');
+
+ const apply = () => {
+ frame = 0;
+ const patch = latest;
+ setCanvasElements((prev) => prev.map((item) => (item.id === elId ? { ...item, ...patch } : item)));
+ };
+ const onMove = (ev: PointerEvent) => {
+ if (ev.pointerId !== pointerId) return;
+ ev.preventDefault();
+ if (kind === 'rotate') {
+ const angle = (Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180) / Math.PI;
+ const raw = startRotation + angle - startAngle;
+ const rotation = ev.shiftKey ? Math.round(((raw + 540) % 360) - 180) : snapAngle(raw);
+ latest = { rotation };
+ setHandleBadge({ id: elId, text: `${rotation}°` });
+ } else {
+ // Le déplacement est projeté dans le repère de l’élément pivoté.
+ const rad = ((el.rotation ?? 0) * Math.PI) / 180;
+ const dx = ev.clientX - startX;
+ const dy = ev.clientY - startY;
+ const along = dx * Math.cos(rad) + dy * Math.sin(rad);
+ const deltaPct = (along / rect.width) * 100;
+ const wPct = Math.round(Math.min(maxW, Math.max(5, startW + deltaPct)) * 10) / 10;
+ latest = { wPct, positionMode: 'absolute' };
+ if (kind === 'scale') {
+ const factor = wPct / startW;
+ if ((el.type === 'text' || el.type === 'button') && el.fontSize) latest.fontSize = scaleFontSize(el.fontSize, factor);
+ if (el.type === 'image' && startHeightPx) latest.imageHeight = `${Math.max(16, Math.round(parseFloat(startHeightPx) * factor))}px`;
+ if (el.type === 'triangle' && el.shapeSize) latest.shapeSize = scaleFontSize(el.shapeSize, factor);
+ }
+ setHandleBadge({ id: elId, text: latest.fontSize ? `${Math.round(wPct)} % · ${latest.fontSize}` : `${Math.round(wPct)} %` });
+ }
+ if (!frame) frame = window.requestAnimationFrame(apply);
+ };
+ const onUp = (ev: PointerEvent) => {
+ if (ev.pointerId !== pointerId) return;
+ window.removeEventListener('pointermove', onMove);
+ window.removeEventListener('pointerup', onUp);
+ window.removeEventListener('pointercancel', onUp);
+ if (frame) window.cancelAnimationFrame(frame);
+ setBodyUserSelect(previousUserSelect);
+ setHandleBadge(null);
+ if (!Object.keys(latest).length) return;
+ apply();
+ const patch = latest;
+ if (patch.fontSize) setElFontSize(patch.fontSize);
+ if (patch.imageHeight) setElImageHeight(patch.imageHeight);
+ if (patch.shapeSize) setElShapeSize(patch.shapeSize);
+ recordStudioAction(
+ kind === 'rotate' ? 'Rotation' : 'Redimensionnement',
+ canvasElementsRef.current.map((item) => (item.id === elId ? { ...item, ...patch } : item)),
+ );
+ };
+ window.addEventListener('pointermove', onMove, { passive: false });
+ window.addEventListener('pointerup', onUp);
+ window.addEventListener('pointercancel', onUp);
+ };
+
  /** Déplacement libre : l’élément suit le pointeur depuis l’endroit où on l’a saisi,
   *  reste entièrement dans la carte et s’aimante au centre et aux bords des autres éléments
   *  (maintenir Alt pour un placement sans aimantation). */
@@ -2451,6 +2622,7 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  if (!canvas || !el) return;
  e.stopPropagation();
  handleElementSelect(elId);
+ if (el.locked) return;
 
  const rect = canvas.getBoundingClientRect();
  if (rect.width === 0 || rect.height === 0) return;
@@ -2506,7 +2678,7 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  if (!moved) {
  if (Math.hypot(dxPx, dyPx) < 4) return;
  moved = true;
- document.body.style.userSelect = 'none';
+ setBodyUserSelect('none');
  window.getSelection()?.removeAllRanges();
  setFreeDragId(elId);
  }
@@ -2543,7 +2715,7 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  if (frame) window.cancelAnimationFrame(frame);
  if (!moved) return;
  apply();
- document.body.style.userSelect = previousUserSelect;
+ setBodyUserSelect(previousUserSelect);
  setFreeDragId(null);
  setFreeGuides({ x: [], y: [] });
  const { xPct, yPct } = last;
@@ -2700,10 +2872,34 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
         e.target instanceof HTMLSelectElement ||
         (e.target instanceof HTMLElement && e.target.isContentEditable);
       // Flèches : déplacer finement l’élément sélectionné en placement libre (Maj = plus grand pas).
+      const selectedEl = selectedElementId ? canvasElements.find((item) => item.id === selectedElementId) : undefined;
+      if (!isInput && selectedEl && !e.altKey) {
+        // Suppr / Retour arrière : supprimer ; Ctrl + D : dupliquer ; Ctrl + C / V : copier / coller.
+        if ((e.key === 'Delete' || e.key === 'Backspace') && !e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          handleDeleteElement(selectedEl.id);
+          return;
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
+          e.preventDefault();
+          duplicateElement(selectedEl);
+          return;
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c' && !window.getSelection()?.toString()) {
+          elementClipboardRef.current = JSON.parse(JSON.stringify(selectedEl));
+          return;
+        }
+      }
+      if (!isInput && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'v' && elementClipboardRef.current) {
+        e.preventDefault();
+        duplicateElement(elementClipboardRef.current, 6);
+        return;
+      }
       if (
         !isInput &&
         layoutMode === 'free' &&
         selectedElementId &&
+        !selectedEl?.locked &&
         !e.metaKey &&
         !e.ctrlKey &&
         !e.altKey &&
@@ -2744,7 +2940,7 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editorOpen, selectedElementId, studioHistoryModalOpen, cropperOpen, studioHistoryIndex, studioHistory, aiComposeModalOpen, aiComposeBusy, layoutMode]);
+  }, [editorOpen, selectedElementId, studioHistoryModalOpen, cropperOpen, studioHistoryIndex, studioHistory, aiComposeModalOpen, aiComposeBusy, layoutMode, canvasElements]);
 
  useEffect(() => {
  if (!editorOpen) return;
@@ -5050,6 +5246,51 @@ const studioModelPhotos = useMemo(
  ))}
  </div>
  )}
+ {selectedOverlay && (() => {
+ const el = selectedOverlay.el;
+ return (
+ <div
+ data-no-drag
+ className="absolute pointer-events-none z-[70]"
+ style={{
+ left: `${el.xPct ?? 8}%`,
+ top: `${el.yPct ?? 8}%`,
+ width: `${el.wPct ?? 84}%`,
+ height: selectedOverlay.h,
+ transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
+ }}
+ >
+ <span
+ data-no-drag
+ onPointerDown={(e) => startHandleDrag(e, el.id, 'width')}
+ className="absolute top-1/2 -right-2 -translate-y-1/2 w-3 h-8 rounded-full bg-surface border-2 border-primary shadow cursor-ew-resize z-30 touch-none pointer-events-auto"
+ title="Élargir ou rétrécir"
+ aria-hidden
+ />
+ <span
+ data-no-drag
+ onPointerDown={(e) => startHandleDrag(e, el.id, 'scale')}
+ className="absolute -bottom-2 -right-2 w-4 h-4 rounded-full bg-primary border-2 border-white shadow cursor-nwse-resize z-30 touch-none pointer-events-auto"
+ title={el.type === 'text' || el.type === 'button' ? 'Agrandir (texte compris)' : 'Agrandir en gardant les proportions'}
+ aria-hidden
+ />
+ <span
+ data-no-drag
+ onPointerDown={(e) => startHandleDrag(e, el.id, 'rotate')}
+ className="absolute left-1/2 -bottom-9 -translate-x-1/2 w-6 h-6 rounded-full bg-surface border-2 border-primary text-primary shadow flex items-center justify-center cursor-grab z-30 touch-none pointer-events-auto"
+ title="Faire pivoter (aimanté tous les 45°)"
+ aria-hidden
+ >
+ <RotateCw className="w-3 h-3" />
+ </span>
+ {handleBadge && handleBadge.id === el.id && (
+ <span className="absolute left-1/2 -bottom-16 -translate-x-1/2 px-2 py-0.5 rounded-md bg-foreground text-background text-[11px] font-bold tabular-nums whitespace-nowrap z-30 pointer-events-none">
+ {handleBadge.text}
+ </span>
+ )}
+ </div>
+ );
+ })()}
  {canvasElements.length === 0 ? (
             <div className="w-full text-center py-16 px-6 rounded-2xl border border-dashed border-border/80 bg-surface flex flex-col items-center justify-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-2xs">
@@ -5158,18 +5399,19 @@ const studioModelPhotos = useMemo(
  onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
  onPointerDown={(e) => isFree && handleFreePointerDown(el.id, e)}
  data-free-el={isFree ? el.id : undefined}
- className={`${widthClass} group transition relative ${isFree ? 'touch-none select-none' : ''} ${isFree && layoutMode === 'free' ? (freeDragId === el.id ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-pointer'}`}
- style={
- isFree
+ className={`${widthClass} group transition relative ${isFree ? 'touch-none select-none' : ''} ${isFree && layoutMode === 'free' && !el.locked ? (freeDragId === el.id ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-pointer'}`}
+ style={{
+ ...(isFree
  ? {
- position: 'absolute',
+ position: 'absolute' as const,
  left: `${el.xPct ?? 8}%`,
  top: `${el.yPct ?? 8}%`,
  width: `${el.wPct ?? 84}%`,
  zIndex: el.zIndex ?? index + 1,
  }
- : undefined
- }
+ : {}),
+ ...templateElementWrapperStyle(el, isFree),
+ }}
  >
                     <div className={`${el.type === 'image' && isFree && !isSelected ? 'p-0' : 'p-2.5'} rounded-xl border transition ${isSelected ? 'border-primary bg-primary/5 shadow-xs ring-2 ring-primary/20' : 'border-dashed border-transparent hover:border-border/60'}`}>
  {/* Element Controls (Delete & Reorder) */}
@@ -5212,19 +5454,27 @@ const studioModelPhotos = useMemo(
                           type="button"
  onClick={(e) => {
  e.stopPropagation();
- const clone = { ...el, id: `${Date.now()}` };
- if (isFree) {
- clone.xPct = Math.min(88, (el.xPct ?? 8) + 4);
- clone.yPct = Math.min(88, (el.yPct ?? 8) + 4);
- }
- setCanvasElements((prev) => [...prev, clone]);
- setSelectedElementId(clone.id);
+ duplicateElement(el);
  }}
                           className="bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer"
- title="Dupliquer"
+ title="Dupliquer (Ctrl + D)"
  >
                           <Copy className="w-3.5 h-3.5" />
  </button>
+ {isFree && layoutMode === 'free' && (
+ <button
+ type="button"
+ onClick={(e) => {
+ e.stopPropagation();
+ toggleElementLock(el.id);
+ }}
+ className={`border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer ${el.locked ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated'}`}
+ title={el.locked ? 'Déverrouiller (l’élément pourra bouger)' : 'Verrouiller (l’élément ne bougera plus)'}
+ aria-pressed={Boolean(el.locked)}
+ >
+ {el.locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+ </button>
+ )}
  {/* Delete */}
  <button 
                           type="button"
@@ -5238,22 +5488,10 @@ const studioModelPhotos = useMemo(
                           <Trash2 className="w-3.5 h-3.5" />
  </button>
  </div>
- {isFree && isSelected && (
- <input
- type="range"
- min={20}
- max={Math.max(20, Math.floor(100 - (el.xPct ?? 8)))}
- value={el.wPct ?? 84}
- onClick={(e) => e.stopPropagation()}
- onChange={(e) => {
- const wPct = Number(e.target.value);
- setCanvasElements((prev) =>
- prev.map((item) => (item.id === el.id ? { ...item, wPct, positionMode: 'absolute' } : item)),
- );
- }}
- className="absolute -bottom-3 left-2 right-2 h-1 accent-[var(--primary)] cursor-ew-resize z-20"
- title="Largeur (%)"
- />
+ {isFree && el.locked && layoutMode === 'free' && (
+ <span className="absolute -top-2.5 -left-2.5 w-5 h-5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center z-30 pointer-events-none" title="Verrouillé">
+ <Lock className="w-3 h-3" />
+ </span>
  )}
 
  {el.type === 'text' && (
@@ -5783,6 +6021,13 @@ const studioModelPhotos = useMemo(
  freeLayout={layoutMode === 'free'}
  onAction={(action) => handleLayerAction(action)}
  onEnableFreeLayout={convertToFreeLayout}
+ />
+ <ElementArrangePanel
+ el={activeEl}
+ freeLayout={layoutMode === 'free'}
+ onChange={updateSelectedElement}
+ onAlign={alignSelectedElement}
+ onToggleLock={() => toggleElementLock(activeEl.id)}
  />
  </>
  );

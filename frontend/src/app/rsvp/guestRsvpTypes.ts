@@ -142,6 +142,8 @@ export interface GuestRsvpData {
     longitude?: number;
     guestGuidelines?: GuestGuidelines | null;
     rsvpForm?: unknown;
+    /** Palette choisie dans la fiche de l’événement. */
+    themeId?: string | null;
     invitations?: Array<{
       template?: {
         id: string;
