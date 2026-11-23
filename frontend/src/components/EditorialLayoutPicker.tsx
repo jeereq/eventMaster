@@ -7,81 +7,66 @@ import {
   type EditorialLayout,
   type EditorialLayoutCategory,
   type EditorialLayoutId,
+  fillEditorialTokens,
 } from '@/lib/invitationEditorialLayouts';
+import TemplateImage from '@/components/TemplateImage';
+import { templateElementWrapperStyle } from '@/lib/templateElementStyle';
 import { cn } from '@/lib/cn';
 
-const CEREMONY_CATEGORIES = new Set<EditorialLayoutCategory>(['mariage']);
+const CEREMONY_CATEGORIES = new Set<EditorialLayoutCategory>(['mariage', 'fete']);
 
-function LayoutThumb({ layout }: { layout: EditorialLayout }) {
-  if (layout.id === 'wedding-arch') {
-    return (
-      <div className="relative h-full bg-[#0b1220] overflow-hidden">
-        <div className="absolute inset-x-[20%] top-[8%] h-[42%] rounded-t-full border-2 border-amber-400/90 bg-amber-200/15" />
-        <div className="absolute bottom-[16%] inset-x-1 text-center text-[6px] font-semibold tracking-[0.18em] text-amber-200">
-          NOMS
-        </div>
-      </div>
-    );
-  }
-  if (layout.id === 'moodboard') {
-    return (
-      <div className="relative h-full bg-[#111] overflow-hidden p-1 grid grid-cols-3 gap-0.5">
-        <span className="bg-zinc-600" />
-        <span className="rounded-full bg-zinc-400" />
-        <span className="bg-zinc-500" />
-        <span className="col-span-3 text-center text-[6px] tracking-[0.22em] text-zinc-100 self-center">INSPO</span>
-        <span className="bg-zinc-700" />
-        <span className="bg-zinc-500" />
-        <span className="bg-zinc-600" />
-      </div>
-    );
-  }
-  if (layout.id === 'diamonds') {
-    return (
-      <div className="relative h-full bg-[#f5c400] overflow-hidden">
-        <span className="absolute left-[12%] top-[10%] size-6 rotate-45 bg-zinc-900" />
-        <span className="absolute right-[12%] top-[10%] size-6 rotate-45 bg-zinc-800" />
-        <span className="absolute left-1/2 top-[38%] size-8 -translate-x-1/2 rotate-45 bg-zinc-950" />
-        <span className="absolute left-[12%] bottom-[18%] size-6 rotate-45 bg-zinc-700" />
-        <span className="absolute right-[12%] bottom-[18%] size-6 rotate-45 bg-zinc-800" />
-      </div>
-    );
-  }
-  if (layout.id === 'club-flyer') {
-    return (
-      <div className="relative h-full bg-black overflow-hidden">
-        <div className="absolute inset-x-[18%] top-[8%] h-[48%] rounded-full bg-zinc-700" />
-        <div className="absolute bottom-[18%] inset-x-1 text-center text-[9px] font-black leading-none text-white">
-          BLACK
-        </div>
-      </div>
-    );
-  }
-  if (layout.id === 'magazine-cover') {
-    return (
-      <div className="relative h-full bg-[#2a2a2c] overflow-hidden">
-        <div className="absolute inset-x-[22%] top-[22%] bottom-[12%] bg-zinc-500" />
-        <div className="absolute top-1 inset-x-0.5 text-center text-[5px] tracking-[0.16em] text-zinc-100">
-          MAGAZINE
-        </div>
-      </div>
-    );
-  }
-  if (layout.id === 'affiche-hero') {
-    return (
-      <div className="relative h-full bg-[#0a0606] overflow-hidden">
-        <div className="absolute inset-x-[24%] top-[6%] bottom-[28%] bg-gradient-to-b from-amber-700/40 to-transparent" />
-        <div className="absolute bottom-[10%] inset-x-1 text-center text-[7px] font-bold tracking-widest text-amber-200">
-          HÉRO
-        </div>
-      </div>
-    );
-  }
+const THUMB_TOKENS = { title: 'Amina & Jean', date: 'Samedi 20 décembre', location: 'Kinshasa' };
+
+/** Vraie miniature de la mise en page (mêmes éléments, mêmes effets, mise à l’échelle). */
+function LayoutThumb({ layout, height = 112 }: { layout: EditorialLayout; height?: number }) {
+  const scale = height / layout.canvasHeight;
   return (
-    <div className="relative h-full bg-[#111] overflow-hidden">
-      <div className="absolute inset-x-[10%] top-[8%] bottom-[22%] rounded-full bg-zinc-600" />
-      <div className="absolute bottom-[8%] inset-x-1 text-center text-[6px] tracking-[0.18em] text-zinc-200">
-        REGARD
+    <div className="relative h-full overflow-hidden" style={{ backgroundColor: layout.bgColor }}>
+      <div
+        className="absolute top-0 left-1/2 origin-top"
+        style={{
+          width: layout.canvasWidth,
+          height: layout.canvasHeight,
+          transform: `translateX(-50%) scale(${scale})`,
+          backgroundColor: layout.bgColor,
+        }}
+      >
+        {layout.elements
+          .filter((el) => el.type !== 'rsvp-block')
+          .map((el) => (
+            <div
+              key={el.id}
+              style={{
+                position: 'absolute',
+                left: `${el.xPct}%`,
+                top: `${el.yPct}%`,
+                width: `${el.wPct}%`,
+                zIndex: el.zIndex,
+                ...templateElementWrapperStyle(el, true),
+              }}
+            >
+              {el.type === 'image' ? (
+                <TemplateImage el={{ ...el, imageUrl: el.imageUrl?.replace(/([?&])w=\d+/, '$1w=240') }} alt="" draggable={false} />
+              ) : el.type === 'divider' ? (
+                <div className="border-t" style={{ borderColor: el.color }} />
+              ) : (
+                <div
+                  className="whitespace-pre-line leading-tight"
+                  style={{
+                    color: el.color,
+                    fontSize: el.fontSize,
+                    textAlign: el.align,
+                    fontFamily: el.fontFamily || 'Cormorant Garamond',
+                    letterSpacing: el.letterSpacing || 'normal',
+                    fontWeight: el.bold ? 700 : 400,
+                    fontStyle: el.italic ? 'italic' : 'normal',
+                  }}
+                >
+                  {fillEditorialTokens(el.text, THUMB_TOKENS)}
+                </div>
+              )}
+            </div>
+          ))}
       </div>
     </div>
   );
@@ -170,7 +155,7 @@ function LayoutCategoryGroup({
                   : 'border-border hover:border-primary/40 hover:bg-surface-muted',
               )}
             >
-              <div className="h-20 border-b border-border/60" aria-hidden>
+              <div className="h-28 border-b border-border/60" aria-hidden>
                 <LayoutThumb layout={layout} />
               </div>
               <span className="block px-2 py-1.5">

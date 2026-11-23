@@ -161,11 +161,14 @@ export function applyOrgInvitationThemeIfNeeded<T extends ColorableElement>(
   global: { colorThemeId?: string; importedFromMockup?: boolean } | undefined,
   elements: T[],
   branding?: TenantBranding | null,
+  /** Palette choisie dans la fiche de l’événement : prioritaire sur les couleurs de l’organisation. */
+  eventThemeId?: string | null,
 ): { elements: T[]; background?: string } {
   if (!usesLiveOrgInvitationTheme(global)) {
     return { elements };
   }
-  const theme = buildOrgBrandInvitationTheme(branding);
+  const eventTheme = eventThemeId ? INVITATION_COLOR_THEMES.find((t) => t.id === eventThemeId) : undefined;
+  const theme = eventTheme || buildOrgBrandInvitationTheme(branding);
   return {
     elements: applyPaletteToElements(elements, theme.palette),
     background: theme.palette.background,

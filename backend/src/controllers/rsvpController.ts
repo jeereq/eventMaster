@@ -255,6 +255,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             guestGuidelines: true,
             rsvpForm: true,
             notificationSettings: true,
+            themeId: true,
             room: {
               select: {
                 layoutBlueprint: true,

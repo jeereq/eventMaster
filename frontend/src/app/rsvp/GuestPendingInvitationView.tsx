@@ -24,6 +24,7 @@ import { applyOrgInvitationThemeIfNeeded } from '@/lib/templateColorThemes';
 import { DEFAULT_BRAND_PALETTE } from '@/lib/brandTheme';
 import type { GuestRsvpData } from './guestRsvpTypes';
 import TemplateImage from '@/components/TemplateImage';
+import { templateElementWrapperStyle } from '@/lib/templateElementStyle';
 
 const darkenColor = (hex: string, percent = 30) => {
   if (!hex || !hex.startsWith('#')) return hex || '#000000';
@@ -252,6 +253,7 @@ export default function GuestPendingInvitationView({
     global,
     (template?.content?.elements || []) as Array<{ id: string; type: string; rsvpPlacement?: string; color?: string; fontSize?: string; text?: string; [key: string]: unknown }>,
     guest.branding,
+    guest.event.themeId,
   );
   const bgType = global.bgType || 'color';
   const bgColor = themedInvitation.background || global.bgColor || '#ffffff';
@@ -1007,8 +1009,8 @@ export default function GuestPendingInvitationView({
                   <div
                     key={el.id}
                     className={widthClass}
-                    style={
-                      isFree
+                    style={{
+                      ...(isFree
                         ? {
                             position: 'absolute',
                             left: `${el.xPct ?? 8}%`,
@@ -1016,8 +1018,9 @@ export default function GuestPendingInvitationView({
                             width: `${el.wPct ?? 84}%`,
                             zIndex: el.zIndex ?? index + 1,
                           }
-                        : undefined
-                    }
+                        : {}),
+                      ...templateElementWrapperStyle(el, isFree),
+                    }}
                   >
                     {el.type === 'text' && (
                       <div 
