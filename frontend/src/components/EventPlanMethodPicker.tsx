@@ -1,159 +1,85 @@
 'use client';
 
 import React from 'react';
-import { Check, ListChecks, MousePointerClick, Wand2, Clock } from '@/components/icons';
+import { Check } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 
 export type EventPlanMethodId = 'manual' | 'ai' | 'final';
 
-const SIM_METHODS: Array<{
-  id: Exclude<EventPlanMethodId, 'final'>;
-  label: string;
-  icon: typeof MousePointerClick;
-}> = [
-  {
-    id: 'manual',
-    label: 'Par critères (Direct)',
-    icon: MousePointerClick,
-  },
-  {
-    id: 'ai',
-    label: 'Assisté par l’IA',
-    icon: Wand2,
-  },
+const METHODS: Array<{ id: EventPlanMethodId; label: string }> = [
+  { id: 'manual', label: 'Par critères' },
+  { id: 'ai', label: 'Avec l’IA' },
+  { id: 'final', label: 'Pack final' },
 ];
-
-const cardFocus =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 export default function EventPlanMethodPicker({
   value,
   onChange,
   counts,
   finalLocked = false,
+  packs,
 }: {
   value: EventPlanMethodId;
   onChange: (next: EventPlanMethodId) => void;
   counts: { manual: number; ai: number; final: number };
-  /** Désactive l’étape 2 tant qu’aucune simulation n’a produit de pack. */
+  /** Désactive « Pack final » tant qu’aucune simulation n’a produit de pack. */
   finalLocked?: boolean;
+  /** Ajoute « Mes packs » à la même rangée (page Simulateur du dashboard). */
+  packs?: { active: boolean; count: number; onOpen: () => void };
 }) {
   const { site } = usePlatformSite();
   const isBudgetBlocked = site?.studioVisibility?.budget === false;
   const simReady = counts.manual > 0 || counts.ai > 0;
 
   return (
-    <section className="space-y-4" aria-label="Choix de la méthode de simulation">
-      <div className="space-y-2">
-        <h2 className="text-sm font-bold text-foreground">Composer le pack budget</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {SIM_METHODS.map((item) => {
-            const Icon = item.icon;
-            const selected = value === item.id;
-            const count = counts[item.id];
-            const isItemUpcoming = item.id === 'ai' && isBudgetBlocked;
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => onChange(item.id)}
-                className={cn(
-                  'text-left rounded-2xl border p-4 transition touch-manipulation cursor-pointer flex flex-col gap-2',
-                  cardFocus,
-                  isItemUpcoming && !selected && 'border-amber-500/30 bg-amber-500/5',
-                  selected
-                    ? 'border-primary bg-primary/8 shadow-[var(--shadow-soft)] ring-1 ring-primary/30'
-                    : !isItemUpcoming && 'border-border bg-surface hover:border-primary/40 hover:bg-surface-muted/50',
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className={cn(
-                    'w-9 h-9 rounded-xl inline-flex items-center justify-center shrink-0',
-                    selected
-                      ? 'bg-primary/10 text-primary'
-                      : isItemUpcoming
-                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                        : 'bg-surface-muted text-muted',
-                  )}>
-                    {isItemUpcoming ? <Clock className="w-4 h-4" /> : <Icon className="w-4 h-4" aria-hidden />}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    {isItemUpcoming ? (
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-                        À venir
-                      </span>
-                    ) : count > 0 ? (
-                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-primary/15 text-primary-solid">
-                        {count} pack{count > 1 ? 's' : ''}
-                      </span>
-                    ) : null}
-                    {selected ? (
-                      <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground inline-flex items-center justify-center">
-                        <Check className="w-3 h-3" strokeWidth={3} aria-hidden />
-                      </span>
-                    ) : (
-                      <span className="w-5 h-5 rounded-full border border-border bg-surface" aria-hidden />
-                    )}
-                  </span>
-                </div>
-                <p className="text-sm font-bold text-foreground min-w-0">
-                  {item.label}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <h2 className="text-sm font-bold text-foreground">Retenir le pack budget final</h2>
+    <div
+      role="group"
+      aria-label="Méthode de simulation"
+      className={cn('inline-flex max-w-full overflow-x-auto', SEGMENTED_TRACK)}
+    >
+      {METHODS.map((item) => {
+        const selected = !packs?.active && value === item.id;
+        const disabled =
+          (item.id === 'final' && finalLocked && !simReady && counts.final === 0)
+          || (item.id === 'ai' && isBudgetBlocked && !selected);
+        const done = item.id === 'final' ? counts.final > 0 : counts[item.id] > 0;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            aria-pressed={selected}
+            disabled={disabled}
+            title={
+              item.id === 'final' && disabled
+                ? 'Lancez d’abord une simulation'
+                : item.id === 'ai' && isBudgetBlocked
+                  ? 'À venir'
+                  : undefined
+            }
+            onClick={() => onChange(item.id)}
+            className={segmentedItem(
+              selected,
+              'inline-flex items-center gap-1.5 whitespace-nowrap disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:text-muted',
+            )}
+          >
+            {item.label}
+            {done ? <Check className="w-3.5 h-3.5 text-primary-solid" strokeWidth={3} aria-label="fait" /> : null}
+          </button>
+        );
+      })}
+      {packs ? (
         <button
           type="button"
-          onClick={() => onChange('final')}
-          aria-pressed={value === 'final'}
-          disabled={finalLocked && !simReady && counts.final === 0}
-          className={cn(
-            'w-full text-left rounded-2xl border p-4 transition touch-manipulation flex items-start gap-3',
-            cardFocus,
-            value === 'final'
-              ? 'border-primary bg-primary/8 ring-1 ring-primary/25 shadow-[var(--shadow-soft)]'
-              : 'border-border bg-surface hover:border-primary/35 hover:bg-primary/5',
-            finalLocked && !simReady && counts.final === 0 && 'opacity-60 cursor-not-allowed hover:border-border hover:bg-surface',
-          )}
+          aria-pressed={packs.active}
+          onClick={packs.onOpen}
+          className={segmentedItem(packs.active, 'inline-flex items-center gap-1.5 whitespace-nowrap')}
         >
-          <span className={cn(
-            'w-9 h-9 rounded-xl inline-flex items-center justify-center shrink-0',
-            value === 'final' ? 'bg-primary/10 text-primary' : 'bg-surface-muted text-muted',
-          )}>
-            <ListChecks className="w-4 h-4" aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1 space-y-0.5">
-            <span className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-foreground">Pack budget final</span>
-              {counts.final > 0 ? (
-                <span className="text-xs font-bold px-2 py-1 rounded-full bg-primary/15 text-primary-solid">
-                  Pack retenu
-                </span>
-              ) : null}
-            </span>
-            {simReady || counts.final > 0 ? null : (
-              <span className="block text-xs text-muted leading-relaxed">
-                Lancez d’abord une simulation pour débloquer le pack final.
-              </span>
-            )}
-          </span>
-          {value === 'final' ? (
-            <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground inline-flex items-center justify-center shrink-0 mt-0.5">
-              <Check className="w-3 h-3" strokeWidth={3} aria-hidden />
-            </span>
-          ) : (
-            <span className="w-5 h-5 rounded-full border border-border bg-surface shrink-0 mt-0.5" aria-hidden />
-          )}
+          Mes packs
+          {packs.count > 0 ? <span className="text-xs tabular-nums text-muted">{packs.count}</span> : null}
         </button>
-      </div>
-    </section>
+      ) : null}
+    </div>
   );
 }

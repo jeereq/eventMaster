@@ -30,5 +30,7 @@ const LISTING_DETAIL =
 export function isAiFabHiddenRoute(pathname: string): boolean {
   // Accueil : le formulaire « Estimer mon budget » du haut de page fait déjà office d'entrée.
   if (pathname === '/') return true;
+  // Explorer et Simulateur du dashboard : le menu et le bouton « Acheter des jetons » suffisent.
+  if (pathname === '/dashboard/catalogue' || pathname === '/dashboard/catalogue/') return true;
   return HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix)) || LISTING_DETAIL.test(pathname);
 }

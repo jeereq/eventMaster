@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Heart, Minimize2, Store, Wallet, Bookmark, Sparkles, Check } from '@/components/icons';
+import { Check, ChevronDown, Minimize2, Store, Wallet } from '@/components/icons';
 import { api } from '@/lib/api';
 import {
   Alert,
@@ -9,7 +9,9 @@ import {
   EmptyState,
   Input,
   Modal,
+  OverflowMenu,
   Pagination,
+  UnderlineTabs,
   usePaginateItems,
   usePageSize,
 } from '@/components/ui';
@@ -477,6 +479,26 @@ function ClientMarketplaceInner() {
     return () => window.removeEventListener('keydown', onKey);
   }, [immersiveExplore, setView]);
 
+  const selectKind = (id: string) => {
+      const kind = id as CatalogueKind;
+      applyFilters({
+        ...applied,
+        kind,
+        roomType: kind === 'service' || kind === 'rental' || kind === 'event' ? '' : applied.roomType,
+        category: kind === 'venue' || kind === 'event'
+          ? ''
+          : kind === 'service' && isServiceRentalCategory(applied.category)
+            ? ''
+            : kind === 'rental' && applied.category && !isServiceRentalCategory(applied.category)
+              ? ''
+              : applied.category,
+        mobility: kind === 'service' ? applied.mobility : '',
+        delivery: kind === 'rental' ? applied.delivery : '',
+        priceUnit: kind === 'venue' || kind === 'event' ? '' : applied.priceUnit,
+        entry: kind === 'venue' || kind === 'service' || kind === 'rental' ? '' : applied.entry,
+      });
+  };
+
   const kindPills = (
     <div className="flex flex-nowrap sm:flex-wrap items-center gap-1.5">
       {KIND_FILTER_OPTIONS.map((item) => {
@@ -486,23 +508,7 @@ function ClientMarketplaceInner() {
             key={item.id}
             type="button"
             onClick={() => {
-              const kind = item.id as CatalogueKind;
-              applyFilters({
-                ...applied,
-                kind,
-                roomType: kind === 'service' || kind === 'rental' || kind === 'event' ? '' : applied.roomType,
-                category: kind === 'venue' || kind === 'event'
-                  ? ''
-                  : kind === 'service' && isServiceRentalCategory(applied.category)
-                    ? ''
-                    : kind === 'rental' && applied.category && !isServiceRentalCategory(applied.category)
-                      ? ''
-                      : applied.category,
-                mobility: kind === 'service' ? applied.mobility : '',
-                delivery: kind === 'rental' ? applied.delivery : '',
-                priceUnit: kind === 'venue' || kind === 'event' ? '' : applied.priceUnit,
-                entry: kind === 'venue' || kind === 'service' || kind === 'rental' ? '' : applied.entry,
-              });
+              selectKind(item.id);
             }}
             className={cn(
               'px-3 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation shrink-0',
@@ -518,10 +524,30 @@ function ClientMarketplaceInner() {
     </div>
   );
 
-  const exploreFilterBar = (variant: 'card' | 'float') => (
+  const kindMenu = (
+    <OverflowMenu
+      align="left"
+      triggerLabel="Type de fiche"
+      triggerClassName="inline-flex h-10 items-center gap-2 rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm text-foreground transition hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      trigger={
+        <>
+          <span>{KIND_FILTER_OPTIONS.find((item) => item.id === applied.kind)?.label ?? 'Tous'}</span>
+          <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+        </>
+      }
+      items={KIND_FILTER_OPTIONS.map((item) => ({
+        id: item.id,
+        label: item.label,
+        selected: applied.kind === item.id,
+        onSelect: () => selectKind(item.id),
+      }))}
+    />
+  );
+
+  const exploreFilterBar = (variant: 'card' | 'float' | 'plain') => (
     <CatalogueFilterBar
       variant={variant}
-      topSlot={kindPills}
+      topSlot={variant === 'plain' ? kindMenu : kindPills}
       hideViewToggle={variant === 'float'}
       compactToggle={variant === 'float'}
       hideShare={variant === 'float'}
@@ -618,42 +644,34 @@ function ClientMarketplaceInner() {
 
     <div className={cn('space-y-6 w-full', immersiveExplore && 'hidden')}>
 
-      <div
-        role="tablist"
-        aria-label="Sections du marketplace"
-        className="flex items-center gap-1 overflow-x-auto no-scrollbar rounded-xl border border-border bg-surface-muted p-1 sm:flex-wrap"
-      >
-        {[
-          { id: 'explore' as const, label: 'Explorer', icon: Store },
-          { id: 'favorites' as const, label: 'Favoris', icon: Heart },
-          { id: 'plan' as const, label: 'Simulateur', icon: Sparkles },
-          { id: 'packs' as const, label: 'Mes packs', icon: Bookmark },
-        ].map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.id}
-            onClick={() => setTab(item.id)}
-            className={cn(
-              'inline-flex min-h-10 sm:min-h-11 items-center gap-1.5 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap shrink-0',
-              tab === item.id
-                ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                : 'text-muted hover:bg-surface/70 hover:text-foreground',
-            )}
-          >
-            <item.icon className="w-4 h-4 shrink-0" />
-            {item.label}
-            {item.id === 'favorites' && favoriteRows.length > 0 ? ` (${favoriteRows.length})` : ''}
-            {item.id === 'packs' && savedPacks.length > 0 ? ` (${savedPacks.length})` : ''}
-          </button>
-        ))}
-      </div>
+      {tab === 'plan' || tab === 'packs' ? (
+        <EventPlanMethodPicker
+          value={planView}
+          onChange={setPlanView}
+          packs={{ active: tab === 'packs', count: savedPacks.length, onOpen: () => setTab('packs') }}
+          counts={{
+            manual: manualPackages.length,
+            ai: aiPackages.length,
+            final: finalPackage ? 1 : 0,
+          }}
+          finalLocked
+        />
+      ) : (
+        <UnderlineTabs
+          ariaLabel="Sections du marketplace"
+          value={tab}
+          onChange={setTab}
+          tabs={[
+            { id: 'explore', label: 'Explorer' },
+            { id: 'favorites', label: 'Favoris', count: favoriteRows.length },
+          ]}
+        />
+      )}
 
       {tab === 'explore' && !immersiveExplore ? (
           <>
             <div className="sticky top-0 md:top-14 z-10 -mx-1 px-1 py-1 bg-background/90">
-              {exploreFilterBar('card')}
+              {exploreFilterBar('plain')}
             </div>
 
             {loading ? (
@@ -760,17 +778,6 @@ function ClientMarketplaceInner() {
         <DashboardAiStudios
           budget={
         <div className="space-y-5">
-          <EventPlanMethodPicker
-            value={planView}
-            onChange={setPlanView}
-            counts={{
-              manual: manualPackages.length,
-              ai: aiPackages.length,
-              final: finalPackage ? 1 : 0,
-            }}
-            finalLocked
-          />
-
           <div className="space-y-5">
             {planView === 'ai' ? (
                   <EventPrepAiSimulator
@@ -944,22 +951,14 @@ function ClientMarketplaceInner() {
                   } : undefined}
                 />
               </div>
-            ) : !planning && (planView !== 'manual' || !planError) ? (
+            ) : !planning && planView !== 'ai' && (planView !== 'manual' || !planError) ? (
               <EmptyState illustration="payments"
                 icon={<Wallet className="w-5 h-5" />}
-                title={
-                  planView === 'ai'
-                    ? 'Aucune simulation IA retenue'
-                    : planView === 'final'
-                      ? 'Pas encore de solution finale'
-                      : 'Préparez votre événement'
-                }
+                title={planView === 'final' ? 'Pas encore de solution finale' : 'Préparez votre événement'}
                 description={
-                  planView === 'ai'
-                    ? 'Décrivez l’événement ci-dessus, lancez la simulation, puis retenez le mix proposé.'
-                    : planView === 'final'
-                      ? 'Choisissez un pack issu de la simulation par critères ou de l’IA.'
-                      : 'Indiquez le budget, la date et les prestataires, puis lancez la recherche.'
+                  planView === 'final'
+                    ? 'Choisissez un pack issu de la simulation par critères ou de l’IA.'
+                    : 'Indiquez le budget, la date et les prestataires, puis lancez la recherche.'
                 }
               />
             ) : null}
