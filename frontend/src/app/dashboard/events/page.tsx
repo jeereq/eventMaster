@@ -2326,7 +2326,7 @@ Merci de confirmer votre présence :
                         items={(Object.keys(EVENT_WHEN_LABELS) as Array<keyof typeof EVENT_WHEN_LABELS>).map((id) => ({
                           id,
                           label: EVENT_WHEN_LABELS[id],
-                          icon: eventWhen === id ? Check : undefined,
+                          selected: eventWhen === id,
                           onSelect: () => { setEventWhen(id); setEventsListPage(1); },
                         }))}
                       />
@@ -2343,7 +2343,7 @@ Merci de confirmer votre présence :
                         items={(Object.keys(EVENT_SORT_LABELS) as Array<keyof typeof EVENT_SORT_LABELS>).map((id) => ({
                           id,
                           label: EVENT_SORT_LABELS[id],
-                          icon: eventSort === id ? Check : undefined,
+                          selected: eventSort === id,
                           onSelect: () => { setEventSort(id); setEventsListPage(1); },
                         }))}
                       />

@@ -3,6 +3,7 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { LucideIcon } from '@/components/icons';
+import { Check } from '@/components/icons';
 import { cn } from '@/lib/cn';
 
 export interface OverflowMenuItem {
@@ -14,6 +15,8 @@ export interface OverflowMenuItem {
   disabled?: boolean;
   /** Compteur affiché à droite du libellé. */
   badge?: string | number;
+  /** Mode choix : l’entrée courante est cochée à droite (les autres gardent le même alignement). */
+  selected?: boolean;
   /** Trait de séparation au-dessus de l’entrée. */
   separatorBefore?: boolean;
 }
@@ -80,6 +83,15 @@ export default function OverflowMenu({
     setPos({ top, left });
   }, [open, align, items.length, menuWidth, placement]);
 
+  const isChoice = items.some((item) => item.selected !== undefined);
+
+  useEffect(() => {
+    if (!open || !pos) return;
+    const entries = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]:not(:disabled)');
+    const current = menuRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]');
+    (current ?? entries?.[0])?.focus();
+  }, [open, pos]);
+
   useEffect(() => {
     if (!open) return;
     const close = () => setOpen(false);
@@ -92,7 +104,19 @@ export default function OverflowMenu({
       if (event.key === 'Escape') {
         close();
         triggerRef.current?.focus();
+        return;
       }
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+      const entries = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]:not(:disabled)') ?? []);
+      if (!entries.length) return;
+      event.preventDefault();
+      const index = entries.indexOf(document.activeElement as HTMLButtonElement);
+      const next =
+        event.key === 'Home' ? 0
+        : event.key === 'End' ? entries.length - 1
+        : event.key === 'ArrowDown' ? (index + 1) % entries.length
+        : (index - 1 + entries.length) % entries.length;
+      entries[next].focus();
     };
     document.addEventListener('pointerdown', onPointer);
     document.addEventListener('keydown', onKey);
@@ -148,7 +172,8 @@ export default function OverflowMenu({
                 {item.separatorBefore ? <div aria-hidden className="my-1.5 h-px bg-border" /> : null}
                 <button
                   type="button"
-                  role="menuitem"
+                  role={item.selected !== undefined ? 'menuitemradio' : 'menuitem'}
+                  aria-checked={item.selected !== undefined ? item.selected : undefined}
                   disabled={item.disabled}
                   onClick={() => {
                     setOpen(false);
@@ -164,6 +189,9 @@ export default function OverflowMenu({
                   <span className="flex-1 min-w-0 truncate">{item.label}</span>
                   {item.badge !== undefined && item.badge !== '' ? (
                     <span className="text-xs font-semibold text-muted tabular-nums">{item.badge}</span>
+                  ) : null}
+                  {isChoice ? (
+                    <Check className={cn('w-4 h-4 shrink-0 text-muted', item.selected ? 'opacity-100' : 'opacity-0')} aria-hidden />
                   ) : null}
                 </button>
                 </React.Fragment>
