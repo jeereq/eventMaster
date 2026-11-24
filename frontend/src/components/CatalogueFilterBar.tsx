@@ -154,7 +154,8 @@ export default function CatalogueFilterBar({
   onOpen?: () => void;
   resultLabel?: string;
   modalSize?: 'sm' | 'md' | 'lg' | 'xl';
-  variant?: 'card' | 'float';
+  /** `plain` : une seule ligne sans cadre (recherche, `topSlot`, filtres, vue en icônes). */
+  variant?: 'card' | 'float' | 'plain';
   hideViewToggle?: boolean;
   compactToggle?: boolean;
   hideMap?: boolean;
@@ -385,6 +386,57 @@ export default function CatalogueFilterBar({
           </div>
         ) : null}
         {count > 0 ? chipsRow : null}
+        {filterModal}
+      </div>
+    );
+  }
+
+  if (variant === 'plain') {
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <div className="flex-1 min-w-[12rem] sm:max-w-sm">
+            <Input
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={searchPlaceholder}
+              aria-label={searchLabel || searchPlaceholder}
+              leftIcon={<Search className="w-4 h-4" />}
+              className="!min-h-10 h-10 !py-1.5 text-sm"
+            />
+          </div>
+          {topSlot}
+          {hasFilters ? (
+            <Button
+              type="button"
+              variant={count ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={openModal}
+              leftIcon={<SlidersHorizontal className="w-3.5 h-3.5" />}
+              className="shrink-0 !min-h-10 h-10 px-3"
+            >
+              Filtres
+              {count > 0 ? (
+                <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white/20 px-1 text-xs font-semibold tabular-nums">
+                  {count}
+                </span>
+              ) : null}
+            </Button>
+          ) : null}
+          {actions}
+          {!hideViewToggle ? (
+            <CatalogueViewToggle
+              value={view}
+              onChange={onViewChange}
+              compact
+              iconOnly
+              hideMap={hideMap}
+              alwaysShow={hideMap}
+              className="shrink-0 sm:ml-auto"
+            />
+          ) : null}
+        </div>
+        {chipsRow}
         {filterModal}
       </div>
     );

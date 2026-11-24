@@ -26,7 +26,6 @@ export default function BudgetSimulationScopePicker({
     return (
       <div className="min-w-0 space-y-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="text-sm font-semibold text-muted">À chiffrer</span>
         <div
           role="radiogroup"
           aria-label="À chiffrer"
@@ -56,9 +55,6 @@ export default function BudgetSimulationScopePicker({
           })}
         </div>
         </div>
-        <p className="text-xs text-muted leading-relaxed">
-          {note || complete.hint}
-        </p>
       </div>
     );
   }

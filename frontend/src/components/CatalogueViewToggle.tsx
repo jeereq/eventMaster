@@ -145,6 +145,7 @@ export default function CatalogueViewToggle({
   compact = false,
   hideMap = false,
   alwaysShow = false,
+  iconOnly = false,
 }: {
   value: CatalogueViewMode;
   onChange: (mode: CatalogueViewMode) => void;
@@ -152,6 +153,8 @@ export default function CatalogueViewToggle({
   compact?: boolean;
   hideMap?: boolean;
   alwaysShow?: boolean;
+  /** Icônes seules (le nom reste dans l’infobulle et pour les lecteurs d’écran). */
+  iconOnly?: boolean;
 }) {
   const options: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = hideMap
     ? [
@@ -191,7 +194,7 @@ export default function CatalogueViewToggle({
           )}
         >
           <Icon className="h-4 w-4" />
-          <span className={cn('ml-1 text-xs font-semibold', !compact && 'hidden lg:inline')}>{label}</span>
+          <span className={cn('ml-1 text-xs font-semibold', iconOnly ? 'sr-only' : !compact && 'hidden lg:inline')}>{label}</span>
         </button>
       ))}
     </div>

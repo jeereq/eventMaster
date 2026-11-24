@@ -7,6 +7,7 @@ import { Alert, Button, Input } from '@/components/ui';
 import BudgetSimulationScopePicker from '@/components/BudgetSimulationScopePicker';
 import BudgetSimulationCriteria from '@/components/BudgetSimulationCriteria';
 import { cn } from '@/lib/cn';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import { formatFc } from '@/config/landingPricing';
 import { communesForCity, normalizeRdcCity } from '@/lib/rdcCities';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -17,7 +18,6 @@ import {
   briefMarginFc,
   briefSpendableFc,
   briefWithEventType,
-  createDemoWeddingBrief,
   cycleSlotPriority,
   defaultShares,
   shareRows,
@@ -72,6 +72,84 @@ function FieldSelect({
   );
 }
 
+/** Liste de métiers ou de matériel : une ligne de résumé, les pastilles ne s’ouvrent qu’au clic sur « Modifier ». */
+function SlotGroup({
+  label,
+  all,
+  suggested,
+  slots,
+  onCycle,
+}: {
+  label: string;
+  all: readonly ServiceCategory[];
+  suggested: readonly ServiceCategory[];
+  slots: Record<string, SlotPriority | undefined>;
+  onCycle: (category: ServiceCategory) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const required = all.filter((category) => slots[category] === 'required');
+  const optionalCount = all.filter((category) => slots[category] === 'optional').length;
+  const visible = showAll ? all : suggested.length ? suggested : all;
+  const summary = required.length
+    ? `${required.map((category) => SERVICE_CATEGORY_LABELS[category]).join(', ')}${optionalCount ? ` · si ça rentre : ${optionalCount}` : ''}`
+    : optionalCount
+      ? `Si ça rentre : ${optionalCount}`
+      : 'Aucun';
+
+  return (
+    <div className="flex flex-col sm:flex-row gap-x-3 gap-y-2">
+      <p className="text-xs font-semibold text-muted w-28 shrink-0 sm:pt-2">{label}</p>
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex items-start justify-between gap-3">
+          <p className="min-w-0 text-sm text-foreground sm:pt-1">{summary}</p>
+          <button
+            type="button"
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+            className="shrink-0 min-h-9 px-2 text-xs font-semibold text-primary rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
+            {open ? 'Fermer' : 'Modifier'}
+          </button>
+        </div>
+        {open ? (
+          <div className="flex flex-wrap gap-1.5 items-center">
+            {visible.map((category) => {
+              const priority = slots[category] || 'excluded';
+              return (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => onCycle(category)}
+                  title={`${SLOT_HINT[priority]} · cliquer pour changer`}
+                  className={cn(
+                    'px-2.5 py-1 rounded-full text-xs font-semibold border transition',
+                    priority === 'required' && 'bg-primary-solid text-primary-foreground border-primary-solid',
+                    priority === 'optional' && 'bg-primary/10 text-primary border-primary/40',
+                    priority === 'excluded' && 'bg-surface text-muted border-border line-through decoration-muted/70',
+                  )}
+                >
+                  {SERVICE_CATEGORY_LABELS[category]}
+                  <span className="opacity-70"> · {SLOT_SHORT[priority]}</span>
+                </button>
+              );
+            })}
+            {suggested.length < all.length ? (
+              <button
+                type="button"
+                className="px-2 py-1 text-xs font-semibold text-primary"
+                onClick={() => setShowAll((value) => !value)}
+              >
+                {showAll ? 'Moins' : 'Tous'}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function EventPlanBriefForm({
   brief,
   onChange,
@@ -96,9 +174,6 @@ export default function EventPlanBriefForm({
   const { site } = usePlatformSite();
   const marketplaceCities = enabledMarketplaceCities(site);
   const [advanced, setAdvanced] = useState(false);
-  const [showUseCase, setShowUseCase] = useState(false);
-  const [showAllTrades, setShowAllTrades] = useState(false);
-  const [showAllRentals, setShowAllRentals] = useState(false);
   const [briefName, setBriefName] = useState('');
   const [scopeError, setScopeError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -107,15 +182,12 @@ export default function EventPlanBriefForm({
   const shareSum = rows.reduce((sum, row) => sum + row.pct, 0);
   const spendable = briefSpendableFc(brief);
   const reserved = briefMarginFc(brief);
-  const allocated = rows.reduce((sum, row) => sum + row.amountFc, 0);
   const suggestedTrades = SERVICE_TRADE_CATEGORIES.filter(
     (category) => brief.slots[category] === 'required' || brief.slots[category] === 'optional',
   );
   const suggestedRentals = SERVICE_RENTAL_CATEGORIES.filter(
     (category) => brief.slots[category] === 'required' || brief.slots[category] === 'optional',
   );
-  const visibleTrades = showAllTrades ? SERVICE_TRADE_CATEGORIES : suggestedTrades.length ? suggestedTrades : SERVICE_TRADE_CATEGORIES;
-  const visibleRentals = showAllRentals ? SERVICE_RENTAL_CATEGORIES : suggestedRentals.length ? suggestedRentals : SERVICE_RENTAL_CATEGORIES;
 
   const patch = (partial: Partial<EventPlanBrief>) => onChange({ ...brief, ...partial });
 
@@ -150,95 +222,20 @@ export default function EventPlanBriefForm({
     }
   };
 
-  const demo = useMemo(() => createDemoWeddingBrief(), []);
-  const demoSpendable = briefSpendableFc(demo);
-  const demoReserved = briefMarginFc(demo);
-  const demoRows = shareRows(demo);
-
   return (
-    <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-4">
-      <div className="space-y-1">
-        <h2 className="text-sm font-semibold text-foreground">Brief budget</h2>
-        <p className="text-xs text-muted leading-relaxed">
-          {scope === 'drinks'
-            ? 'Trois formules de boissons (Éco, Équilibré, Confort), selon les invités et le type d’événement.'
-            : scope === 'rentals'
-              ? 'Trois formules de locations, selon la ville, les invités et le matériel choisi.'
-              : scope === 'services'
-                ? 'Trois formules de métiers, selon la ville et les prestataires choisis.'
-                : 'Simulation complète : salle, métiers, locations et boissons. Trois packs (Éco, Équilibré, Confort).'}
-        </p>
-      </div>
-
+    <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-5">
       <BudgetSimulationScopePicker
+        compact
         value={scope}
         onChange={(budgetScope) => {
           setScopeError('');
           patch({ budgetScope });
         }}
       />
-      <PriceSourcePicker
-        value={brief.priceSource || 'all'}
-        onChange={(priceSource) => patch({ priceSource })}
-      />
-      <BudgetSimulationCriteria
-        scope={scope}
-        selectedBrandIds={brief.wantedBrandIds || []}
-        onToggleBrand={(id) => {
-          const current = brief.wantedBrandIds || [];
-          patch({
-            wantedBrandIds: current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-          });
-        }}
-        selectedSaleUnits={brief.wantedSaleUnits || []}
-        onToggleSaleUnit={(unit) => {
-          const current = brief.wantedSaleUnits || [];
-          patch({
-            wantedSaleUnits: current.includes(unit) ? current.filter((item) => item !== unit) : [...current, unit],
-          });
-        }}
-        orderLines={brief.wantedDrinkLines || []}
-        onChangeOrderLines={(wantedDrinkLines) => patch({ wantedDrinkLines })}
-        onClearCatalog={() => patch({ wantedBrandIds: [], wantedSaleUnits: [] })}
-      />
 
-      {scope === 'complete' ? (
-      <div className="rounded-xl border border-primary/20 bg-primary/5">
-        <button
-          type="button"
-          onClick={() => setShowUseCase((value) => !value)}
-          className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left"
-        >
-          <span className="text-sm font-semibold text-foreground">Exemple — mariage à Kinshasa, 100 invités</span>
-          <ChevronDown className={cn('w-4 h-4 text-muted shrink-0 transition', showUseCase && 'rotate-180')} />
-        </button>
-        {showUseCase ? (
-          <div className="px-3 pb-3 space-y-2 text-xs text-muted leading-relaxed border-t border-primary/15 pt-2">
-            <p>
-              Marie veut un mariage pour 100 personnes à Kinshasa, avec <strong className="text-foreground">{formatFc(demo.budgetMaxFc)}</strong>.
-              Elle garde <strong className="text-foreground">{demo.marginPct} % = {formatFc(demoReserved)}</strong> de réserve (imprévus).
-              EventMaster cherche donc pour <strong className="text-foreground">{formatFc(demoSpendable)}</strong>.
-            </p>
-            <p>
-              Répartition type :{' '}
-              {demoRows.slice(0, 4).map((row) => `${row.label} ${row.pct} % → ${formatFc(row.amountFc)}`).join(' · ')}
-              {demoRows.length > 4 ? '…' : ''}.
-            </p>
-            <p>
-              Elle clique « Appliquer l’exemple », lance la recherche, compare les 3 packs, enregistre celui qui lui convient, puis envoie un devis depuis la fiche.
-            </p>
-            <Button size="sm" variant="secondary" onClick={() => onChange(createDemoWeddingBrief())}>
-              Appliquer cet exemple
-            </Button>
-          </div>
-        ) : null}
-      </div>
-      ) : null}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <FieldSelect
           label="Type d’événement"
-          hint="Préremplit les prestataires et le matériel (mariage = traiteur, photo, DJ, habits…)."
           value={brief.eventType}
           onChange={(value) => onChange(briefWithEventType(brief, value as ListingEventTypeId))}
         >
@@ -254,44 +251,33 @@ export default function EventPlanBriefForm({
           value={brief.budgetMaxFc}
           onChange={(e) => patch({ budgetMaxFc: Number(e.target.value) || 0 })}
           required
-          hint="Plafond à ne pas dépasser. Minimum 50 000 FC."
+          hint={reserved > 0 ? `Recherche sur ${formatFc(spendable)}, ${formatFc(reserved)} en réserve` : undefined}
         />
-        <FieldSelect
-          label="Marge de sécurité"
-          hint={
-            reserved > 0
-              ? `${brief.marginPct} % = ${formatFc(reserved)} mis de côté. Recherche sur ${formatFc(spendable)}.`
-              : '0 % = tout le budget est cherché. Utile si vous n’avez aucun imprévu.'
-          }
-          value={String(brief.marginPct)}
-          onChange={(value) => patch({ marginPct: Number(value) as MarginPct })}
-        >
-          <option value="0">0 % — {formatFc(brief.budgetMaxFc)} cherchés, 0 FC de réserve</option>
-          <option value="5">5 % — recommandé · {formatFc(Math.round(brief.budgetMaxFc * 0.05))} de réserve</option>
-          <option value="10">10 % — confort · {formatFc(Math.round(brief.budgetMaxFc * 0.10))} de réserve</option>
-        </FieldSelect>
+        <Input
+          label="Nombre d’invités"
+          type="number"
+          min={1}
+          required={scope === 'drinks'}
+          value={brief.guestCount || ''}
+          onChange={(e) => {
+            setScopeError('');
+            patch({ guestCount: Number(e.target.value) || 0 });
+          }}
+        />
         {scope !== 'drinks' ? (
           <>
             <FieldSelect
               label="Ville"
-              hint={
-                scope === 'rentals'
-                  ? 'Limite la recherche au matériel de cette ville.'
-                  : scope === 'services'
-                    ? 'Limite la recherche aux métiers de cette ville.'
-                    : 'Limite la recherche aux salles, prestataires et matériel de cette ville.'
-              }
               value={brief.city}
               onChange={(value) => patch({ city: normalizeRdcCity(value) || '', commune: '' })}
             >
-              <option value="">Toutes les villes actives</option>
+              <option value="">Toutes les villes</option>
               {marketplaceCities.map((name) => (
                 <option key={name} value={name}>{name}</option>
               ))}
             </FieldSelect>
             <FieldSelect
               label="Commune"
-              hint="Optionnel. Affinez par commune ; vide = toute la ville."
               value={brief.commune}
               onChange={(value) => patch({ commune: value })}
             >
@@ -303,77 +289,52 @@ export default function EventPlanBriefForm({
           </>
         ) : null}
         <Input
-          label="Nombre d’invités"
-          type="number"
-          min={1}
-          required={scope === 'drinks'}
-          value={brief.guestCount || ''}
-          onChange={(e) => {
-            setScopeError('');
-            patch({ guestCount: Number(e.target.value) || 0 });
-          }}
-          hint={
-            scope === 'drinks'
-              ? 'Obligatoire. Les quantités sont calculées à partir des invités.'
-              : scope === 'rentals'
-                ? 'Chaises et vaisselle : une pièce par invité.'
-                : 'Sert à la salle, au traiteur au plat, aux chaises (une pièce par invité) et aux boissons.'
-          }
-        />
-        <Input
           label="Date"
           type="date"
           value={brief.eventDate}
           onChange={(e) => patch({ eventDate: e.target.value })}
-          hint="Optionnel. Évite les salles déjà prises ce jour-là."
         />
       </div>
 
-      <div className="rounded-xl border border-border bg-surface-muted/60 px-3 py-3 space-y-1.5">
-        <p className="text-sm font-semibold text-foreground">
-          Budget {formatFc(brief.budgetMaxFc)}
-          {brief.marginPct > 0 ? ` · réserve ${formatFc(reserved)}` : ''}
-        </p>
-        <p className="text-xs text-muted leading-relaxed">
-          EventMaster cherche pour <strong className="text-foreground">{formatFc(spendable)}</strong>
-          {brief.marginPct > 0
-            ? ` (${brief.marginPct} % = ${formatFc(reserved)} restent de côté pour les imprévus).`
-            : ' (toute l’enveloppe).'}
-          {scope === 'drinks'
-            ? ' Le plafond signale un dépassement. Les quantités suivent les invités, au conditionnement le moins cher.'
-            : scope === 'complete'
-              ? ' Les boissons s’ajoutent ensuite, au conditionnement le moins cher du catalogue.'
-              : ''}
-        </p>
-        {scope === 'complete' && rows.length > 0 ? (
-          <p className="text-xs text-muted leading-relaxed">
-            Répartition actuelle : {rows.map((row) => `${row.label} ${row.pct} % → ${formatFc(row.amountFc)}`).join(' · ')}
-            {shareSum !== 100 ? ` · total ${shareSum} % (${formatFc(allocated)}) — rééquilibré à 100 % au lancement.` : ''}
-          </p>
-        ) : null}
-      </div>
+      {scope === 'drinks' ? (
+        <BudgetSimulationCriteria
+          scope={scope}
+          selectedBrandIds={brief.wantedBrandIds || []}
+          onToggleBrand={(id) => {
+            const current = brief.wantedBrandIds || [];
+            patch({
+              wantedBrandIds: current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+            });
+          }}
+          selectedSaleUnits={brief.wantedSaleUnits || []}
+          onToggleSaleUnit={(unit) => {
+            const current = brief.wantedSaleUnits || [];
+            patch({
+              wantedSaleUnits: current.includes(unit) ? current.filter((item) => item !== unit) : [...current, unit],
+            });
+          }}
+          orderLines={brief.wantedDrinkLines || []}
+          onChangeOrderLines={(wantedDrinkLines) => patch({ wantedDrinkLines })}
+          onClearCatalog={() => patch({ wantedBrandIds: [], wantedSaleUnits: [] })}
+        />
+      ) : null}
 
       {scope === 'complete' ? (
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted">Salle</p>
-        <p className="text-xs text-muted leading-relaxed">
-          Choisissez si un lieu doit figurer dans chaque pack. « Si ça rentre » ajoute une salle seulement s’il reste de l’argent.
-        </p>
-        <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="text-xs font-semibold text-muted w-28 shrink-0">Salle</p>
+        <div className={cn('inline-flex', SEGMENTED_TRACK)} role="group" aria-label="Salle">
           {([
             ['yes', 'Obligatoire', 'Chaque pack contient une salle.'],
             ['if_fits', 'Si ça rentre', 'Salle ajoutée seulement s’il reste du budget.'],
-            ['no', 'Sans salle', 'Uniquement prestataires et matériel & équipements (vous avez déjà un lieu).'],
+            ['no', 'Sans salle', 'Vous avez déjà un lieu.'],
           ] as Array<[IncludeVenue, string, string]>).map(([id, label, hint]) => (
             <button
               key={id}
               type="button"
               title={hint}
+              aria-pressed={brief.includeVenue === id}
               onClick={() => setIncludeVenue(id)}
-              className={cn(
-                'px-3 py-1.5 rounded-full text-xs font-semibold border',
-                brief.includeVenue === id ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted hover:text-foreground',
-              )}
+              className={segmentedItem(brief.includeVenue === id, 'min-h-9 sm:min-h-9 px-3 text-xs')}
             >
               {label}
             </button>
@@ -383,142 +344,109 @@ export default function EventPlanBriefForm({
       ) : null}
 
       {scope === 'complete' || scope === 'services' ? (
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted">Prestataires</p>
-        <p className="text-xs text-muted leading-relaxed">
-          Traiteur, photo, DJ… Un clic fait tourner : <strong className="text-foreground">obligatoire</strong> → <strong className="text-foreground">si ça rentre</strong> → <strong className="text-foreground">exclu</strong>.
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {visibleTrades.map((category) => {
-            const priority = brief.slots[category] || 'excluded';
-            return (
-              <button
-                key={category}
-                type="button"
-                onClick={() => setSlot(category)}
-                title={SLOT_HINT[priority]}
-                className={cn(
-                  'px-2.5 py-1 rounded-full text-xs font-semibold border transition',
-                  priority === 'required' && 'bg-primary-solid text-primary-foreground border-primary-solid',
-                  priority === 'optional' && 'bg-primary/10 text-primary border-primary/40',
-                  priority === 'excluded' && 'bg-surface text-muted border-border line-through decoration-muted/70',
-                )}
-              >
-                {SERVICE_CATEGORY_LABELS[category]}
-                <span className="opacity-70"> · {SLOT_SHORT[priority]}</span>
-              </button>
-            );
-          })}
-        </div>
-        {suggestedTrades.length < SERVICE_TRADE_CATEGORIES.length ? (
-          <button
-            type="button"
-            className="text-xs font-semibold text-primary"
-            onClick={() => setShowAllTrades((value) => !value)}
-          >
-            {showAllTrades ? 'Masquer les autres prestataires' : 'Afficher tous les prestataires'}
-          </button>
-        ) : null}
-        {scope === 'services' && suggestedTrades.length === 0 ? (
-          <p className="text-xs text-muted leading-relaxed">
-            Aucun métier n’est coché : la simulation reprend les métiers obligatoires du type d’événement.
-          </p>
-        ) : null}
-      </div>
+      <SlotGroup
+        label="Prestataires"
+        all={SERVICE_TRADE_CATEGORIES}
+        suggested={suggestedTrades}
+        slots={brief.slots}
+        onCycle={setSlot}
+      />
       ) : null}
 
       {scope === 'complete' || scope === 'rentals' ? (
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted">Matériel & Équipements</p>
-        <p className="text-xs text-muted leading-relaxed">
-          {scope === 'rentals'
-            ? 'Chaises et vaisselle : une pièce par invité, plus la livraison si elle est en supplément. Tente, sono, véhicule et habits restent un lot.'
-            : 'Chaises et vaisselle : une pièce par invité, plus la livraison si elle est en supplément. Tente, sono, véhicule et habits restent un lot. Les boissons sont calculées à part.'}
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {visibleRentals.map((category) => {
-            const priority = brief.slots[category] || 'excluded';
-            return (
-              <button
-                key={category}
-                type="button"
-                onClick={() => setSlot(category)}
-                title={SLOT_HINT[priority]}
-                className={cn(
-                  'px-2.5 py-1 rounded-full text-xs font-semibold border transition',
-                  priority === 'required' && 'bg-primary-solid text-primary-foreground border-primary-solid',
-                  priority === 'optional' && 'bg-primary/10 text-primary border-primary/40',
-                  priority === 'excluded' && 'bg-surface text-muted border-border line-through decoration-muted/70',
-                )}
-              >
-                {SERVICE_CATEGORY_LABELS[category]}
-                <span className="opacity-70"> · {SLOT_SHORT[priority]}</span>
-              </button>
-            );
-          })}
-        </div>
-        {suggestedRentals.length < SERVICE_RENTAL_CATEGORIES.length ? (
-          <button
-            type="button"
-            className="text-xs font-semibold text-primary"
-            onClick={() => setShowAllRentals((value) => !value)}
-          >
-            {showAllRentals ? 'Masquer les autres équipements' : 'Afficher tout le matériel & équipements'}
-          </button>
-        ) : null}
-        {scope === 'rentals' && suggestedRentals.length === 0 ? (
-          <p className="text-xs text-muted leading-relaxed">
-            Aucune location n’est cochée : la simulation reprend tout le matériel.
-          </p>
-        ) : null}
-      </div>
+      <SlotGroup
+        label="Matériel"
+        all={SERVICE_RENTAL_CATEGORIES}
+        suggested={suggestedRentals}
+        slots={brief.slots}
+        onCycle={setSlot}
+      />
       ) : null}
 
-      {scope === 'complete' ? (
       <div className="rounded-xl border border-border">
         <button
           type="button"
           onClick={() => setAdvanced((value) => !value)}
-          className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold"
+          aria-expanded={advanced}
+          className="w-full flex items-center justify-between gap-2 min-h-11 px-3 py-2.5 text-sm font-semibold"
         >
-          Affiner (répartition, favoris, équipements)
+          Affiner le calcul
           <ChevronDown className={cn('w-4 h-4 text-muted transition', advanced && 'rotate-180')} />
         </button>
         {advanced ? (
           <div className="px-3 pb-4 space-y-4 border-t border-border pt-3">
-            <Input
-              label="Budget minimum (FC)"
-              type="number"
-              min={0}
-              step={50000}
-              value={brief.budgetMinFc || ''}
-              onChange={(e) => patch({ budgetMinFc: Number(e.target.value) || 0 })}
-              hint="Optionnel. 0 = pas de plancher. Utile si vous refusez les packs trop bas."
+            <PriceSourcePicker
+              value={brief.priceSource || 'all'}
+              onChange={(priceSource) => patch({ priceSource })}
             />
+            {scope !== 'drinks' ? (
+              <BudgetSimulationCriteria
+                scope={scope}
+                selectedBrandIds={brief.wantedBrandIds || []}
+                onToggleBrand={(id) => {
+                  const current = brief.wantedBrandIds || [];
+                  patch({
+                    wantedBrandIds: current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+                  });
+                }}
+                selectedSaleUnits={brief.wantedSaleUnits || []}
+                onToggleSaleUnit={(unit) => {
+                  const current = brief.wantedSaleUnits || [];
+                  patch({
+                    wantedSaleUnits: current.includes(unit) ? current.filter((item) => item !== unit) : [...current, unit],
+                  });
+                }}
+                orderLines={brief.wantedDrinkLines || []}
+                onChangeOrderLines={(wantedDrinkLines) => patch({ wantedDrinkLines })}
+                onClearCatalog={() => patch({ wantedBrandIds: [], wantedSaleUnits: [] })}
+              />
+            ) : null}
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FieldSelect
+                label="Réserve pour imprévus"
+                value={String(brief.marginPct)}
+                onChange={(value) => patch({ marginPct: Number(value) as MarginPct })}
+              >
+                <option value="0">Aucune</option>
+                <option value="5">5 % · {formatFc(Math.round(brief.budgetMaxFc * 0.05))}</option>
+                <option value="10">10 % · {formatFc(Math.round(brief.budgetMaxFc * 0.10))}</option>
+              </FieldSelect>
+              {scope === 'complete' ? (
+                <Input
+                  label="Budget minimum (FC)"
+                  type="number"
+                  min={0}
+                  step={50000}
+                  value={brief.budgetMinFc || ''}
+                  onChange={(e) => patch({ budgetMinFc: Number(e.target.value) || 0 })}
+                  placeholder="Aucun"
+                />
+              ) : null}
+            </div>
+
+            {scope === 'complete' ? (
+            <>
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold text-muted">
                   Répartition de {formatFc(spendable)}
-                  {shareSum !== 100 ? ` · ${shareSum} % saisis (rééquilibré au lancement)` : ''}
+                  {shareSum !== 100 ? ` · ${shareSum} % (ramené à 100 % au lancement)` : ''}
                 </p>
                 <button
                   type="button"
                   className="text-xs font-semibold text-primary"
                   onClick={() => patch({ shares: defaultShares(brief.eventType, brief.includeVenue, brief.slots) })}
                 >
-                  Preset {eventTypeLabel(brief.eventType)}
+                  Réinitialiser
                 </button>
               </div>
-              <p className="text-xs text-muted leading-relaxed">
-                Chaque curseur fixe la part de l’enveloppe utile. Le pourcentage et le montant exact s’affichent ensemble.
-              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {rows.map((row) => (
                   <label key={row.key} className="space-y-1">
                     <span className="flex justify-between gap-2 text-xs font-semibold text-muted">
                       <span>{row.label}</span>
-                      <span>{row.pct} % · {formatFc(row.amountFc)}</span>
+                      <span className="tabular-nums">{row.pct} % · {formatFc(row.amountFc)}</span>
                     </span>
                     <input
                       type="range"
@@ -536,7 +464,6 @@ export default function EventPlanBriefForm({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FieldSelect
                 label="Favoris"
-                hint="Bonus : vos cœurs pèsent si deux offres se valent. Forcer : on les prend s’ils tiennent dans le poste. Ignorer : catalogue seul."
                 value={brief.favoriteMode}
                 onChange={(value) => patch({ favoriteMode: value as FavoriteMode })}
               >
@@ -546,7 +473,6 @@ export default function EventPlanBriefForm({
               </FieldSelect>
               <FieldSelect
                 label="Catalogue"
-                hint="Élargir : si trop peu d’offres, on relâche type ou date. Strict : uniquement adapté à votre type d’événement."
                 value={brief.matchMode}
                 onChange={(value) => patch({ matchMode: value as MatchMode })}
               >
@@ -555,7 +481,6 @@ export default function EventPlanBriefForm({
               </FieldSelect>
               <FieldSelect
                 label="Prestataire introuvable"
-                hint="Réallouer : l’argent du poste manquant va aux autres. Trou : le pack reste incomplet. Ville : on cherche plus loin."
                 value={brief.missingStrategy}
                 onChange={(value) => patch({ missingStrategy: value as MissingStrategy })}
               >
@@ -564,8 +489,7 @@ export default function EventPlanBriefForm({
                 <option value="widen_city">Élargir la ville / commune</option>
               </FieldSelect>
               <FieldSelect
-                label="Équipements salle"
-                hint="Préférés : bonus si la salle les a. Obligatoires : une salle sans ces équipements est écartée."
+                label="Équipements de salle"
                 value={brief.amenityMode}
                 onChange={(value) => patch({ amenityMode: value as AmenityMode })}
               >
@@ -574,57 +498,47 @@ export default function EventPlanBriefForm({
               </FieldSelect>
             </div>
 
-            <label className="flex items-start gap-2 text-xs font-medium text-foreground">
+            <div className="flex flex-wrap gap-1.5">
+              {VENUE_AMENITIES.map((item) => {
+                const active = brief.venueAmenities.includes(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => patch({
+                      venueAmenities: active
+                        ? brief.venueAmenities.filter((id) => id !== item.id)
+                        : [...brief.venueAmenities, item.id],
+                    })}
+                    className={cn(
+                      'px-2.5 py-1 rounded-full text-xs font-semibold border',
+                      active ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted hover:text-foreground',
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <label className="flex items-center gap-2 text-xs font-medium text-foreground">
               <input
                 type="checkbox"
-                className="mt-0.5"
                 checked={brief.distinctVenues}
                 onChange={(e) => patch({ distinctVenues: e.target.checked })}
               />
-              <span>
-                Trois salles distinctes si le catalogue le permet
-                <span className="block font-normal text-muted mt-0.5">
-                  Les 3 packs n’affichent pas la même salle, pour comparer vraiment.
-                </span>
-              </span>
+              Une salle différente dans chaque pack
             </label>
-
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted">Équipements souhaités pour la salle</p>
-              <p className="text-xs text-muted leading-relaxed">
-                Cochez ce que vous voulez (parking, groupe électrogène…). Selon le champ ci-dessus, ce sera un plus ou un filtre bloquant.
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {VENUE_AMENITIES.map((item) => {
-                  const active = brief.venueAmenities.includes(item.id);
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => patch({
-                        venueAmenities: active
-                          ? brief.venueAmenities.filter((id) => id !== item.id)
-                          : [...brief.venueAmenities, item.id],
-                      })}
-                      className={cn(
-                        'px-2.5 py-1 rounded-full text-xs font-semibold border',
-                        active ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted hover:text-foreground',
-                      )}
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            </>
+            ) : null}
           </div>
         ) : null}
       </div>
-      ) : null}
 
       {scopeError || error ? <Alert variant="error">{scopeError || error}</Alert> : null}
 
-      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
         <Button onClick={launch} disabled={planning} leftIcon={planning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}>
           {planning ? 'Recherche…' : 'Lancer la recherche'}
         </Button>
@@ -632,7 +546,7 @@ export default function EventPlanBriefForm({
           <Input
             value={briefName}
             onChange={(e) => setBriefName(e.target.value)}
-            placeholder="Nom du brief (ex. Mariage juin)"
+            placeholder="Nom du brief"
           />
           <Button variant="secondary" loading={saving} onClick={() => void saveBrief()} leftIcon={<Save className="w-4 h-4" />}>
             Sauver
@@ -642,7 +556,7 @@ export default function EventPlanBriefForm({
 
       {briefs.length > 0 ? (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-muted">Briefs enregistrés — cliquez pour les recharger</p>
+          <p className="text-xs font-semibold text-muted">Briefs enregistrés</p>
           <ul className="flex flex-wrap gap-1.5">
             {briefs.map((item) => (
               <li key={item.id} className="inline-flex items-center rounded-full border border-border bg-surface-muted">
