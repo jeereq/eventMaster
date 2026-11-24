@@ -19,13 +19,13 @@ import {
   Pagination,
   usePaginateItems,
   usePageSize,
+  UnderlineTabs,
 } from '@/components/ui';
 import { SkeletonListRow } from '@/components/ui/Skeleton';
 import { formatFc } from '@/config/landingPricing';
 import { CLIENT_AGENDA_HREF, dashboardEventHref } from '@/lib/marketplace';
 import { rememberCatalogueReturn } from '@/lib/catalogueQuery';
 import { Calendar, MapPin, QrCode, Ticket, LayoutDashboard, ScanLine, MoreHorizontal } from '@/components/icons';
-import { cn } from '@/lib/cn';
 import OrgTicketingView from '@/components/OrgTicketingView';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
@@ -250,54 +250,29 @@ export default function TicketsPage() {
         image="/images/pages/billetterie.jpg"
         imagePosition="center 22%"
       />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {isOrgRole ? (
-          <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1 w-fit" role="group" aria-label="Billetterie ou achats personnels">
-            <button
-              type="button"
-              onClick={() => selectTab('org')}
-              aria-pressed={activeTab === 'org'}
-              className={cn(
-                'inline-flex min-h-11 items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                activeTab === 'org'
-                  ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
-              <Ticket className="w-3.5 h-3.5" aria-hidden />
-              Organisation
-            </button>
-            <button
-              type="button"
-              onClick={() => selectTab('my')}
-              aria-pressed={activeTab === 'my'}
-              className={cn(
-                'inline-flex min-h-11 items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                activeTab === 'my'
-                  ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
-              <QrCode className="w-3.5 h-3.5" aria-hidden />
-              Mes billets
-              {tickets.length > 0 && (
-                <span className="rounded-full bg-surface-muted px-1.5 text-xs font-bold tabular-nums text-foreground">
-                  {tickets.length}
-                </span>
-              )}
-            </button>
-          </div>
-        ) : <span />}
-        {!isOrgRole || activeTab === 'my' ? (
+      {(() => {
+        const findEvent = (
           <Link href={agendaHref} className="inline-flex">
             <Button size="sm" variant="secondary" leftIcon={<Calendar className="w-4 h-4" />}>
               Trouver un événement
             </Button>
           </Link>
-        ) : null}
-      </div>
+        );
+        return isOrgRole ? (
+          <UnderlineTabs
+            value={activeTab}
+            onChange={selectTab}
+            ariaLabel="Billetterie ou achats personnels"
+            tabs={[
+              { id: 'org', label: 'Organisation', icon: Ticket },
+              { id: 'my', label: 'Mes billets', icon: QrCode, count: tickets.length },
+            ]}
+            action={activeTab === 'my' ? findEvent : null}
+          />
+        ) : (
+          <div className="flex justify-end">{findEvent}</div>
+        );
+      })()}
 
       {/* Vue billetterie organisation (propriétaire, manager, protocole) */}
       {isOrgRole && activeTab === 'org' ? (

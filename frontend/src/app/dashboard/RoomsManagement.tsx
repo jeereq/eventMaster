@@ -55,7 +55,6 @@ import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/Marke
 import LocationPickerMap from '@/components/LocationPickerMap';
 import CityLocationFields from '@/components/CityLocationFields';
 import { getQuotaLockMessage, getQuotaActionMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL, canPublishVenueCatalog } from '@/lib/planAccess';
-import PlanLimitCallout from '@/components/PlanLimitCallout';
 import {
   clearRoomLayoutDraft,
   readRoomLayoutDraft,
@@ -1745,10 +1744,6 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
       )}
       {success && !showWizard && !viewingRoom && !editingRoom && !listingRoom && !roomToDelete && (
         <Alert variant="success">{success}</Alert>
-      )}
-
-      {roomsAtLimit && (
-        <PlanLimitCallout kind="rooms" planQuota={planQuota} planName={planLabel} />
       )}
 
       {rooms.length > 0 && (() => {

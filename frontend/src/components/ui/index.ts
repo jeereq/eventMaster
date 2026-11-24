@@ -53,3 +53,5 @@ export { default as IdentifierInput, identifierValue } from './IdentifierInput';
 export type { IdentifierMode } from './IdentifierInput';
 export { default as OverflowMenu } from './OverflowMenu';
 export type { OverflowMenuItem } from './OverflowMenu';
+export { default as UnderlineTabs } from './UnderlineTabs';
+export type { UnderlineTab } from './UnderlineTabs';
