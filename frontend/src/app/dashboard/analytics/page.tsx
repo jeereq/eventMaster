@@ -3,19 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { 
- BarChart3, Calendar, Users, Utensils, Sparkles, 
- Loader2, AlertCircle, ChevronRight, CheckCircle, XCircle, 
- Clock, Download, FileSpreadsheet, RefreshCw, HelpCircle
-} from '@/components/icons';
+import { CheckCircle, XCircle, Clock, Download, Plus, RefreshCw } from '@/components/icons';
 import Link from 'next/link';
-import { PageHero, PageHeader, Alert, EmptyState, Button, SkeletonAnalyticsView, SkeletonStatsRow } from '@/components/ui';
-import WorkspaceStatsOverview, { type WorkspaceStats } from '@/components/WorkspaceStatsOverview';
+import { Alert, EmptyState, Button, Skeleton, SkeletonAnalyticsView } from '@/components/ui';
+import WorkspaceStatsOverview, { StatStrip, type StatMetric, type WorkspaceStats } from '@/components/WorkspaceStatsOverview';
 import VendorStatsView from '@/components/dashboard/VendorStatsView';
 import { getWorkspaceModules } from '@/lib/planAccess';
 import { cn } from '@/lib/cn';
 import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
-// skeletons imported below
 import {
  extractRsvpFieldsFromTemplateContent,
  supplementFieldsFromGuestPreferences,
@@ -62,6 +57,52 @@ interface InvitationItem {
  id: string;
  };
  templateId?: string;
+}
+
+const MEAL_OPTIONS = [
+ { value: 'none', label: 'Standard' },
+ { value: 'vegetarian', label: 'Végétarien' },
+ { value: 'vegan', label: 'Végétalien' },
+ { value: 'halal', label: 'Halal' },
+ { value: 'kosher', label: 'Casher' },
+] as const;
+
+function mealLabel(value?: string) {
+ if (!value || value === 'none') return 'Standard';
+ return MEAL_OPTIONS.find((o) => o.value === value)?.label ?? value;
+}
+
+const RSVP_META = {
+ ACCEPTED: { label: 'Confirmé', Icon: CheckCircle, iconClass: 'text-primary' },
+ DECLINED: { label: 'Décliné', Icon: XCircle, iconClass: 'text-danger' },
+ PENDING: { label: 'En attente', Icon: Clock, iconClass: 'text-festive-accent' },
+} as const;
+
+/** « 1 confirmé », « 2 confirmés » (0 et 1 au singulier). */
+function countLabel(n: number, singular: string, pluralForm = `${singular}s`) {
+ return `${n} ${n > 1 ? pluralForm : singular}`;
+}
+
+const pct = (n: number) => `${n} %`;
+
+/** Bloc de détail : titre en casse normale, puis une liste groupée à filets fins. */
+function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+ return (
+ <section className="min-w-0 space-y-3">
+ <h2 className="text-[15px] font-semibold text-foreground">{title}</h2>
+ <ul className="max-h-[360px] overflow-y-auto rounded-[var(--radius-card)] border border-border bg-surface divide-y divide-border">
+ {children}
+ </ul>
+ </section>
+ );
+}
+
+function ShareBar({ value }: { value: number }) {
+ return (
+ <div className="h-1 w-full overflow-hidden rounded-full bg-surface-muted">
+ <div style={{ width: `${value}%` }} className="h-full rounded-full bg-primary" />
+ </div>
+ );
 }
 
 function EventAnalyticsView() {
@@ -236,279 +277,244 @@ function EventAnalyticsView() {
  return <SkeletonAnalyticsView />;
  }
 
+ const toScanCount = Math.max(0, acceptedCount - checkedInCount);
+ const rsvpMetrics: StatMetric[] = [
+ { label: 'Invités totaux', value: totalGuests },
+ { label: 'Confirmés', value: acceptedCount, hint: acceptedCount > 0 ? pct(acceptedPct) : null },
+ { label: 'Déclinés', value: declinedCount, hint: declinedCount > 0 ? pct(declinedPct) : null },
+ { label: 'Taux de réponse', value: pct(responseRate), hint: pendingCount > 0 ? `En attente : ${pendingCount}` : null },
+ ];
+ const entryMetrics: StatMetric[] = [
+ { label: 'Entrées', value: checkedInCount, hint: checkedInCount > 0 ? pct(checkInPct) : null },
+ { label: 'Reste à scanner', value: toScanCount },
+ ];
+ const eventMetrics = protocolView ? [...entryMetrics, ...rsvpMetrics] : [...rsvpMetrics, ...entryMetrics];
+
+ const mealRows = MEAL_OPTIONS.map((option) => ({
+ label: option.label,
+ count: guests.filter((g) =>
+ g.rsvp === 'ACCEPTED' &&
+ (option.value === 'none'
+ ? !g.preferences?.specialMeal || g.preferences?.specialMeal === 'none'
+ : g.preferences?.specialMeal === option.value),
+ ).length,
+ })).filter((row) => row.count > 0);
+
+ const customFields = getCustomRsvpFields();
+ // Une seule catégorie reprendrait mot pour mot les chiffres de la bande : on ne l’affiche pas.
+ const showMeals = acceptedCount > 0 && mealRows.length > 0;
+ const showCategories = uniqueCategories.length > 1;
+ const showQuestions = customFields.length > 0;
+ const detailCount = [showMeals, showCategories, showQuestions].filter(Boolean).length;
+ const detailCols = detailCount === 3 ? 'lg:grid-cols-3' : detailCount === 2 ? 'lg:grid-cols-2' : '';
+
  return (
- <div className="space-y-8 w-full">
- <PageHero
- eyebrow="Analyses"
- title="Statistiques"
- subtitle="Suivez les invités, les réponses et les entrées de chaque événement."
- image="/images/pages/statistiques.jpg"
- />
- <PageHeader
- action={
- events.length > 0 ? (
+ <div className="space-y-10 w-full">
+ {events.length > 0 ? (
  <div className="flex items-center gap-2">
+ <label htmlFor="analytics-event" className="sr-only">Événement</label>
  <select
+ id="analytics-event"
  value={selectedEventId}
  onChange={(e) => setSelectedEventId(e.target.value)}
- className="px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground dark:text-foreground transition"
+ className="h-11 min-w-0 flex-1 sm:flex-none sm:max-w-md rounded-[var(--radius-button)] border border-border bg-surface pl-3.5 pr-9 text-[15px] font-semibold text-foreground transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
  >
  {events.map((e) => (
  <option key={e.id} value={e.id}>{e.title}</option>
  ))}
  </select>
  <Button
- variant="secondary"
+ variant="ghost"
  size="sm"
  onClick={handleRefresh}
  disabled={loadingStats || refreshing}
  title="Rafraîchir les données"
+ aria-label="Rafraîchir les données"
+ className="w-11 shrink-0 px-0"
  leftIcon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
  />
  </div>
- ) : undefined
- }
-/>
+ ) : null}
 
  {error && <Alert variant="error">{error}</Alert>}
 
- {workspace ? <WorkspaceStatsOverview stats={workspace} protocol={protocolView} /> : null}
-
  {events.length === 0 ? (
- <EmptyState illustration="events"
- icon={<Calendar className="w-7 h-7" />}
- title="Aucun événement disponible"
- description="Créez un événement pour voir les chiffres."
+ <EmptyState
+ illustration="events"
+ title="Aucun événement"
  action={
- <Link href="/dashboard/events">
- <Button leftIcon={<ChevronRight className="w-4 h-4" />}>Créer un événement</Button>
- </Link>
+ <Button href="/dashboard/events" leftIcon={<Plus className="w-4 h-4" />}>Créer un événement</Button>
  }
  />
  ) : loadingStats ? (
- <div className="space-y-8">
- <SkeletonStatsRow count={4} />
- <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5">
- <div className="h-48 rounded-xl bg-surface-muted animate-pulse" />
+ <div className="space-y-10" aria-busy="true">
+ <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px overflow-hidden rounded-[var(--radius-card)] border border-border bg-border">
+ {Array.from({ length: 6 }).map((_, i) => (
+ <div key={i} className="space-y-3 bg-surface px-4 py-4 sm:px-5">
+ <Skeleton className="h-3 w-20" />
+ <Skeleton className="h-6 w-12" />
  </div>
+ ))}
  </div>
+ <Skeleton className="h-48 w-full rounded-[var(--radius-card)]" />
+ </div>
+ ) : guests.length === 0 ? (
+ <EmptyState illustration="guests" title="Aucun invité pour cet événement" />
  ) : (
- <div className="space-y-8">
- <div>
- <h2 className="text-sm font-bold text-muted mb-4">
- {protocolView ? 'Accueil' : 'Réponse à l’invitation'} — {selectedEvent?.title || 'événement'}
- </h2>
- {/* Quick Stats Cards */}
- <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
- <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
- <span className="text-xs font-bold text-muted block">Invités Totaux</span>
- <div className="flex items-baseline justify-between mt-3">
- <span className="text-3xl font-black text-foreground dark:text-foreground">{totalGuests}</span>
- </div>
- </div>
+ <div className="space-y-10">
+ <StatStrip metrics={eventMetrics} />
 
- <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
- <span className="text-xs font-bold text-muted block">Confirmés</span>
- <div className="flex items-baseline justify-between mt-3">
- <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{acceptedCount}</span>
- <span className="text-xs bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md font-bold">{acceptedPct}%</span>
- </div>
- </div>
-
- <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
- <span className="text-xs font-bold text-muted block">Déclinés</span>
- <div className="flex items-baseline justify-between mt-3">
- <span className="text-3xl font-black text-rose-600 dark:text-rose-400">{declinedCount}</span>
- <span className="text-xs bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 px-2 py-0.5 rounded-md font-bold">{declinedPct}%</span>
- </div>
- </div>
-
- <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
- <span className="text-xs font-bold text-muted block">Taux de Réponse</span>
- <div className="flex items-baseline justify-between mt-3">
- <span className="text-3xl font-black text-primary dark:text-primary">{responseRate}%</span>
- <span className="text-xs bg-primary/10 dark:bg-primary/10 text-primary dark:text-primary px-2 py-0.5 rounded-md font-bold">En attente: {pendingCount}</span>
- </div>
- </div>
- </div>
-
- <div className="grid grid-cols-2 gap-4 sm:gap-6 mt-4">
- <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
- <span className="text-xs font-bold text-muted block">Entrées</span>
- <div className="flex items-baseline justify-between mt-3">
- <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{checkedInCount}</span>
- <span className="text-xs bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md font-bold">{checkInPct}%</span>
- </div>
- </div>
- <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
- <span className="text-xs font-bold text-muted block">Reste à scanner</span>
- <div className="flex items-baseline justify-between mt-3">
- <span className="text-3xl font-black text-amber-600 dark:text-amber-400">{Math.max(0, acceptedCount - checkedInCount)}</span>
- <span className="text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-md font-bold">Attendus: {acceptedCount}</span>
- </div>
- </div>
- </div>
- </div>
-
- {/* Detailed Stats Grid */}
- <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
- {/* Diet/Menu Stats */}
- <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 shadow-xs space-y-4">
- <h3 className="text-sm font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
- <Utensils className="w-4 h-4 text-primary" />
- Régimes Alimentaires (Présents)
- </h3>
- <div className="space-y-3.5">
- {[
- { label: 'Standard', count: guests.filter(g => g.rsvp === 'ACCEPTED' && (!g.preferences?.specialMeal || g.preferences?.specialMeal === 'none')).length },
- { label: 'Végétarien', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'vegetarian').length },
- { label: 'Végétalien (Vegan)', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'vegan').length },
- { label: 'Halal', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'halal').length },
- { label: 'Casher', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'kosher').length },
- ].map(item => {
- const pct = acceptedCount > 0 ? Math.round((item.count / acceptedCount) * 100) : 0;
+ {detailCount > 0 ? (
+ <div className={`grid grid-cols-1 gap-10 lg:gap-6 ${detailCols}`}>
+ {showMeals ? (
+ <DetailSection title="Régimes des confirmés">
+ {mealRows.map((item) => {
+ const share = acceptedCount > 0 ? Math.round((item.count / acceptedCount) * 100) : 0;
  return (
- <div key={item.label} className="space-y-1">
- <div className="flex justify-between text-xs font-bold text-foreground dark:text-foreground">
- <span>{item.label}</span>
- <span>{item.count} <span className="text-muted dark:text-muted font-normal">({pct}%)</span></span>
+ <li key={item.label} className="space-y-2 px-4 py-3">
+ <div className="flex items-baseline justify-between gap-3 text-sm">
+ <span className="text-foreground">{item.label}</span>
+ <span className="shrink-0 tabular-nums font-medium text-foreground">
+ {item.count} <span className="font-normal text-muted">· {pct(share)}</span>
+ </span>
  </div>
- <div className="w-full bg-surface-muted dark:bg-surface-muted rounded-full h-1.5 overflow-hidden">
- <div style={{ width: `${pct}%` }} className="bg-primary h-full rounded-full" />
- </div>
- </div>
+ <ShareBar value={share} />
+ </li>
  );
  })}
- </div>
- </div>
+ </DetailSection>
+ ) : null}
 
- {/* Category Stats */}
- <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 shadow-xs space-y-4">
- <h3 className="text-sm font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
- <Users className="w-4 h-4 text-primary" />
- Participation par Catégorie
- </h3>
- <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
- {uniqueCategories.map(cat => {
- const catGuests = guests.filter(g => (g.category || 'Général') === cat);
+ {showCategories ? (
+ <DetailSection title="Participation par catégorie">
+ {uniqueCategories.map((cat) => {
+ const catGuests = guests.filter((g) => (g.category || 'Général') === cat);
  const total = catGuests.length;
- const accepted = catGuests.filter(g => g.rsvp === 'ACCEPTED').length;
- const declined = catGuests.filter(g => g.rsvp === 'DECLINED').length;
- const pending = catGuests.filter(g => g.rsvp === 'PENDING').length;
+ const accepted = catGuests.filter((g) => g.rsvp === 'ACCEPTED').length;
+ const declined = catGuests.filter((g) => g.rsvp === 'DECLINED').length;
+ const pending = catGuests.filter((g) => g.rsvp === 'PENDING').length;
+ const parts = [
+ accepted > 0 ? countLabel(accepted, 'confirmé') : null,
+ declined > 0 ? countLabel(declined, 'décliné') : null,
+ pending > 0 ? `${pending} en attente` : null,
+ ].filter(Boolean);
  return (
- <div key={cat} className="space-y-1.5 border-b border-border-subtle dark:border-border/60 pb-3 last:border-0 last:pb-0">
- <div className="text-xs font-bold text-foreground dark:text-foreground flex justify-between">
- <span>{cat}</span>
- <span className="text-muted dark:text-muted">Total: {total}</span>
+ <li key={cat} className="px-4 py-3">
+ <div className="flex items-baseline justify-between gap-3 text-sm">
+ <span className="min-w-0 break-words font-medium text-foreground">{cat}</span>
+ <span className="shrink-0 tabular-nums text-muted">{countLabel(total, 'invité')}</span>
  </div>
- <div className="grid grid-cols-3 gap-1 text-xs text-center font-bold">
- <div className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 py-1 rounded">Confirmés : {accepted}</div>
- <div className="bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 py-1 rounded">Déclinés : {declined}</div>
- <div className="bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 py-1 rounded">En attente : {pending}</div>
- </div>
- </div>
+ {parts.length > 0 ? (
+ <p className="mt-1 text-xs tabular-nums text-muted">{parts.join(' · ')}</p>
+ ) : null}
+ </li>
  );
  })}
- </div>
- </div>
+ </DetailSection>
+ ) : null}
 
- {/* Custom Questions Stats */}
- <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 shadow-xs space-y-4">
- <h3 className="text-sm font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
- <Sparkles className="w-4 h-4 text-primary" />
- Questions Personnalisées (Présents)
- </h3>
- <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
- {getCustomRsvpFields().length === 0 ? (
- <div className="text-center py-12 text-xs text-muted dark:text-muted italic">
- Aucune question personnalisée définie pour cet événement.
- </div>
- ) : (
- getCustomRsvpFields().map(field => {
+ {showQuestions ? (
+ <DetailSection title="Questions personnalisées">
+ {customFields.map((field) => {
  const answers = guests
- .filter(g => g.rsvp === 'ACCEPTED' && getCustomFieldValue(g.preferences, field) !== undefined)
- .map(g => getCustomFieldValue(g.preferences, field)!);
- 
+ .filter((g) => g.rsvp === 'ACCEPTED' && getCustomFieldValue(g.preferences, field) !== undefined)
+ .map((g) => getCustomFieldValue(g.preferences, field)!);
+
  const totalAnswers = answers.length;
+ const heading = (
+ <p className="break-words text-sm font-medium text-foreground" title={field.analyticsKey}>
+ {field.label}
+ </p>
+ );
+ const noAnswer = <p className="text-xs text-muted">Aucune réponse</p>;
 
  if (isBooleanFieldType(field.type)) {
- const yesCount = answers.filter(a => a === true).length;
+ const yesCount = answers.filter((a) => a === true).length;
  const noCount = totalAnswers - yesCount;
  const yesPct = totalAnswers > 0 ? Math.round((yesCount / totalAnswers) * 100) : 0;
  return (
- <div key={field.id} className="space-y-1.5 border-b border-border-subtle dark:border-border pb-3 last:border-0 last:pb-0">
- <div className="text-xs font-bold text-foreground dark:text-foreground">{field.label}</div>
- <div className="text-xs text-muted font-mono">{field.analyticsKey}</div>
- <div className="flex justify-between text-xs font-semibold text-muted dark:text-muted">
- <span>Oui : {yesCount} ({yesPct}%)</span>
+ <li key={field.id} className="space-y-2 px-4 py-3">
+ {heading}
+ {totalAnswers === 0 ? noAnswer : (
+ <>
+ <div className="flex justify-between gap-3 text-xs tabular-nums text-muted">
+ <span>Oui : {yesCount} · {pct(yesPct)}</span>
  <span>Non : {noCount}</span>
  </div>
- <div className="w-full bg-surface-muted dark:bg-surface-muted rounded-full h-1.5 overflow-hidden">
- <div style={{ width: `${yesPct}%` }} className="bg-primary h-full rounded-full" />
- </div>
- </div>
+ <ShareBar value={yesPct} />
+ </>
+ )}
+ </li>
  );
  }
 
  if (isNumericFieldType(field.type)) {
- const numericAnswers = answers.map(a => Number(a)).filter(n => Number.isFinite(n));
- const avg = numericAnswers.length > 0
- ? (numericAnswers.reduce((s, n) => s + n, 0) / numericAnswers.length).toFixed(1)
- : '—';
- const min = numericAnswers.length > 0 ? Math.min(...numericAnswers) : '—';
- const max = numericAnswers.length > 0 ? Math.max(...numericAnswers) : '—';
+ const numericAnswers = answers.map((a) => Number(a)).filter((n) => Number.isFinite(n));
+ if (numericAnswers.length === 0) {
  return (
- <div key={field.id} className="space-y-1.5 border-b border-border-subtle dark:border-border pb-3 last:border-0 last:pb-0">
- <div className="text-xs font-bold text-foreground dark:text-foreground">{field.label}</div>
- <div className="text-xs text-muted font-mono">{field.analyticsKey}</div>
- <div className="grid grid-cols-3 gap-2 text-xs font-semibold text-muted dark:text-muted">
+ <li key={field.id} className="space-y-2 px-4 py-3">
+ {heading}
+ {noAnswer}
+ </li>
+ );
+ }
+ const avg = (numericAnswers.reduce((s, n) => s + n, 0) / numericAnswers.length).toFixed(1);
+ const min = Math.min(...numericAnswers);
+ const max = Math.max(...numericAnswers);
+ return (
+ <li key={field.id} className="space-y-2 px-4 py-3">
+ {heading}
+ <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-muted">
  <span>Moy. : {avg}</span>
  <span>Min : {min}</span>
  <span>Max : {max}</span>
- </div>
- <div className="text-xs text-muted">{totalAnswers} réponse(s)</div>
- </div>
+ <span>{countLabel(totalAnswers, 'réponse')}</span>
+ </p>
+ </li>
  );
  }
 
  {
  const counts: Record<string, number> = {};
- answers.forEach(ans => {
+ answers.forEach((ans) => {
  const strVal = ans === null || ans === undefined ? 'Non renseigné' : formatCustomFieldValueForDisplay(ans);
  counts[strVal] = (counts[strVal] || 0) + 1;
  });
 
  return (
- <div key={field.id} className="space-y-1.5 border-b border-border-subtle dark:border-border pb-3 last:border-0 last:pb-0">
- <div className="text-xs font-bold text-foreground dark:text-foreground">{field.label}</div>
- <div className="text-[9px] text-muted font-mono">{field.analyticsKey}</div>
- <div className="space-y-1 max-h-24 overflow-y-auto">
+ <li key={field.id} className="space-y-2 px-4 py-3">
+ {heading}
+ {totalAnswers === 0 ? noAnswer : (
+ <ul className="space-y-1">
  {Object.entries(counts).map(([val, count]) => {
- const pct = totalAnswers > 0 ? Math.round((count / totalAnswers) * 100) : 0;
+ const share = totalAnswers > 0 ? Math.round((count / totalAnswers) * 100) : 0;
  return (
- <div key={val} className="flex items-center justify-between text-xs text-muted dark:text-muted">
- <span className="truncate max-w-[150px] font-semibold">{val}</span>
- <span>{count} ({pct}%)</span>
- </div>
+ <li key={val} className="flex items-baseline justify-between gap-3 text-xs">
+ <span className="min-w-0 break-words text-foreground">{val}</span>
+ <span className="shrink-0 tabular-nums text-muted">{count} · {pct(share)}</span>
+ </li>
  );
  })}
- </div>
- </div>
+ </ul>
+ )}
+ </li>
  );
  }
- })
- )}
+ })}
+ </DetailSection>
+ ) : null}
  </div>
- </div>
- </div>
+ ) : null}
 
- {/* Recent Responses & Export Actions */}
- <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 shadow-xs space-y-6">
- <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border-subtle dark:border-border pb-4">
- <h3 className="text-lg font-bold text-foreground dark:text-foreground">Liste des Réponses & Préférences</h3>
-
- {guests.length > 0 && (
- canExportReports ? (
+ <section className="space-y-3">
+ <div className="flex flex-wrap items-center justify-between gap-3">
+ <h2 className="text-[15px] font-semibold text-foreground">
+ Réponses
+ {guests.length > 10 ? (
+ <span className="ml-2 font-normal tabular-nums text-muted">10 sur {guests.length}</span>
+ ) : null}
+ </h2>
+ {canExportReports ? (
  <Button
  type="button"
  size="sm"
@@ -519,84 +525,77 @@ function EventAnalyticsView() {
  Exporter en CSV
  </Button>
  ) : (
- <div className="text-right space-y-1">
- <button
- type="button"
- disabled
- className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-surface-muted text-muted font-bold rounded-xl text-xs cursor-not-allowed"
+ <div className="flex items-center gap-3">
+ <Link
+ href="/dashboard/billing"
+ className="text-xs font-medium text-muted underline underline-offset-2 hover:text-foreground"
  >
- <Download className="w-4 h-4" />
+ Réservé Enterprise
+ </Link>
+ <Button
+ type="button"
+ size="sm"
+ variant="secondary"
+ disabled
+ leftIcon={<Download className="w-4 h-4" />}
+ >
  Exporter en CSV
- </button>
- <p className="text-xs text-amber-700">
- Export réservé Enterprise.{' '}
- <Link href="/dashboard/billing" className="font-bold underline">Voir les forfaits</Link>
- </p>
+ </Button>
  </div>
- )
  )}
  </div>
 
- {guests.length === 0 ? (
- <div className="text-center py-8 text-muted italic text-sm">
- Aucun invité enregistré pour cet événement.
- </div>
- ) : (
- <div className="overflow-x-auto">
- <table className="w-full text-left border-collapse text-xs">
+ <div className="overflow-x-auto rounded-[var(--radius-card)] border border-border bg-surface">
+ <table className="w-full min-w-[640px] border-collapse text-left text-[13px]">
  <thead>
- <tr className="border-b border-border-subtle dark:border-border text-muted font-bold ">
- <th className="py-3 px-4">Invité</th>
- <th className="py-3 px-4">Catégorie</th>
- <th className="py-3 px-4">Statut de réponse</th>
- <th className="py-3 px-4">Régime</th>
- <th className="py-3 px-4">Allergies</th>
- <th className="py-3 px-4">Notes</th>
+ <tr className="border-b border-border text-xs text-muted">
+ <th className="px-4 py-2.5 font-medium">Invité</th>
+ <th className="px-4 py-2.5 font-medium">Catégorie</th>
+ <th className="px-4 py-2.5 font-medium">Statut de réponse</th>
+ <th className="px-4 py-2.5 font-medium">Régime</th>
+ <th className="px-4 py-2.5 font-medium">Allergies</th>
+ <th className="px-4 py-2.5 font-medium">Notes</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-border dark:divide-border font-medium text-foreground dark:text-foreground">
- {guests.slice(0, 10).map((g) => (
- <tr key={g.id} className="hover:bg-surface-muted/50 dark:hover:bg-surface-muted/30 transition">
- <td className="py-3.5 px-4 font-bold text-foreground dark:text-foreground">
- {g.firstName} {g.lastName}
- <span className="block text-xs text-muted font-normal">{g.email}</span>
+ <tbody className="divide-y divide-border text-foreground">
+ {guests.slice(0, 10).map((g) => {
+ const rsvp = RSVP_META[g.rsvp] ?? RSVP_META.PENDING;
+ return (
+ <tr key={g.id} className="transition-colors hover:bg-surface-muted/50">
+ <td className="px-4 py-3">
+ <span className="block font-medium">{g.firstName} {g.lastName}</span>
+ {g.email ? <span className="block text-xs text-muted">{g.email}</span> : null}
  </td>
- <td className="py-3.5 px-4">{g.category || 'Général'}</td>
- <td className="py-3.5 px-4">
- <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
- g.rsvp === 'ACCEPTED' ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400' :
- g.rsvp === 'DECLINED' ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400' :
- 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400'
- }`}>
- {g.rsvp === 'ACCEPTED' ? <CheckCircle className="w-3 h-3" /> :
- g.rsvp === 'DECLINED' ? <XCircle className="w-3 h-3" /> :
- <Clock className="w-3 h-3" />}
- {g.rsvp === 'ACCEPTED' ? 'Confirmé' :
- g.rsvp === 'DECLINED' ? 'Décliné' :
- 'En attente'}
+ <td className="px-4 py-3">{g.category || 'Général'}</td>
+ <td className="px-4 py-3">
+ <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+ <rsvp.Icon className={`w-3.5 h-3.5 ${rsvp.iconClass}`} aria-hidden />
+ {rsvp.label}
  </span>
  </td>
- <td className="py-3.5 px-4 capitalize">{g.preferences?.specialMeal || 'Standard'}</td>
- <td className="py-3.5 px-4 text-muted dark:text-muted truncate max-w-[120px]" title={g.preferences?.allergies}>
- {g.preferences?.allergies || 'Aucune'}
+ <td className="px-4 py-3 capitalize">{mealLabel(g.preferences?.specialMeal)}</td>
+ <td className="px-4 py-3 max-w-[160px] truncate text-muted" title={g.preferences?.allergies}>
+ {g.preferences?.allergies || ''}
  </td>
- <td className="py-3.5 px-4 text-muted dark:text-muted truncate max-w-[150px]" title={g.preferences?.notes}>
- {g.preferences?.notes || '-'}
+ <td className="px-4 py-3 max-w-[200px] truncate text-muted" title={g.preferences?.notes}>
+ {g.preferences?.notes || ''}
  </td>
  </tr>
- ))}
+ );
+ })}
  </tbody>
  </table>
- {guests.length > 10 && (
- <p className="text-xs text-muted dark:text-muted text-center mt-4">
- Affichage des 10 premières réponses. Utilisez l'export CSV pour obtenir la liste complète.
- </p>
- )}
+ </div>
+ </section>
  </div>
  )}
- </div>
- </div>
- )}
+
+ {workspace && events.length > 1 ? (
+ <section aria-labelledby="analytics-all-events" className="space-y-4">
+ <h2 id="analytics-all-events" className="text-lg font-semibold text-foreground">Tous les événements</h2>
+ <WorkspaceStatsOverview stats={workspace} protocol={protocolView} />
+ </section>
+ ) : null}
  </div>
  );
 }

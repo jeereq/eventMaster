@@ -1,19 +1,108 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import { BEVERAGE_KINDS, BEVERAGE_KIND_LABELS, BEVERAGE_SALE_UNITS, BEVERAGE_SALE_UNIT_LABELS, type BeverageBrandRow, type BeverageKind, type BeverageSaleUnit, type DrinkOrderLine } from '@/lib/beverageBrands';
-import type { BudgetSimulationScope } from '@/lib/budgetSimulation';
+import { BUDGET_SCOPE_OPTIONS, type BudgetSimulationScope } from '@/lib/budgetSimulation';
 import { SERVICE_CATEGORY_LABELS, SERVICE_RENTAL_CATEGORIES, SERVICE_TRADE_CATEGORIES, type ServiceCategory } from '@/lib/marketplace';
 
-const CHIP =
-  'inline-flex items-center justify-center min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+/** Pastille de choix du simulateur : claire au repos, teintée une fois choisie. */
+export const CHOICE_CHIP =
+  'inline-flex items-center justify-center gap-1 max-w-full min-h-11 sm:min-h-9 px-3 rounded-full border text-[13px] font-medium text-center transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
-function chipTone(active: boolean) {
+export function choiceChipTone(active: boolean) {
   return active
-    ? 'bg-primary-solid text-primary-foreground border-primary-solid'
-    : 'border-border text-muted hover:text-foreground';
+    ? 'border-primary/50 bg-primary/10 text-primary'
+    : 'border-border text-foreground hover:bg-surface-muted';
+}
+
+/** Libellé court posé au-dessus d’un groupe de pastilles. */
+export const GROUP_LABEL = 'text-xs font-semibold text-muted';
+
+/**
+ * Ce que la simulation chiffre : onglets soulignés, plus discrets que le sélecteur de méthode au-dessus.
+ * `inactive` retire le soulignement quand une autre vue (historique, exemples) occupe le panneau.
+ */
+export function BudgetScopeTabs({
+  value,
+  onChange,
+  inactive = false,
+  bordered = true,
+  action,
+  className,
+}: {
+  value: BudgetSimulationScope;
+  onChange: (next: BudgetSimulationScope) => void;
+  inactive?: boolean;
+  bordered?: boolean;
+  action?: React.ReactNode;
+  className?: string;
+}) {
+  const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const count = BUDGET_SCOPE_OPTIONS.length;
+
+  const onKeyDown = (event: React.KeyboardEvent, index: number) => {
+    let next = index;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (index + 1) % count;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (index - 1 + count) % count;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = count - 1;
+    else return;
+    event.preventDefault();
+    onChange(BUDGET_SCOPE_OPTIONS[next].id);
+    refs.current[next]?.focus();
+  };
+
+  return (
+    <div
+      className={cn(
+        'flex flex-col-reverse gap-1 xl:flex-row xl:items-end xl:justify-between xl:gap-4',
+        bordered && action && 'xl:border-b xl:border-border',
+        className,
+      )}
+    >
+      <div
+        role="radiogroup"
+        aria-label="À chiffrer"
+        className={cn(
+          'flex min-w-0 max-w-full gap-5 overflow-x-auto scrollbar-none',
+          bordered && 'border-b border-border',
+          bordered && action && 'xl:border-b-0 xl:-mb-px',
+        )}
+      >
+        {BUDGET_SCOPE_OPTIONS.map((option, index) => {
+          const selected = value === option.id;
+          const marked = selected && !inactive;
+          return (
+            <button
+              key={option.id}
+              ref={(node) => {
+                refs.current[index] = node;
+              }}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              title={option.hint}
+              onClick={() => onChange(option.id)}
+              onKeyDown={(event) => onKeyDown(event, index)}
+              className={cn(
+                'relative shrink-0 whitespace-nowrap min-h-11 text-sm transition-colors touch-manipulation rounded-t-sm',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40',
+                marked
+                  ? 'font-semibold text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary'
+                  : 'font-medium text-muted hover:text-foreground',
+              )}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+      {action ? <div className="flex flex-wrap items-center gap-1 xl:pb-1">{action}</div> : null}
+    </div>
+  );
 }
 
 export default function BudgetSimulationCriteria({
@@ -81,108 +170,40 @@ export default function BudgetSimulationCriteria({
     };
   }, []);
 
-  const selectionSummary = () => {
-    const parts: string[] = [];
-    if (showBrands && drinkMode === 'order') {
-      parts.push(orderLines.length
-        ? `${orderLines.length} ligne${orderLines.length > 1 ? 's' : ''} de commande`
-        : 'commande précise');
-    } else if (showBrands) {
-      if (selectedBrandIds.length) parts.push(`${selectedBrandIds.length} marque${selectedBrandIds.length > 1 ? 's' : ''}`);
-      if (selectedSaleUnits.length) parts.push(selectedSaleUnits.map((unit) => BEVERAGE_SALE_UNIT_LABELS[unit]).join(', '));
-    }
-    if (showServices && selectedCategories) {
-      const count = selectedCategories.filter((id) => SERVICE_TRADE_CATEGORIES.includes(id)).length;
-      if (count) parts.push(`${count} service${count > 1 ? 's' : ''}`);
-    }
-    if (showRentals && selectedCategories) {
-      const count = selectedCategories.filter((id) => SERVICE_RENTAL_CATEGORIES.includes(id)).length;
-      if (count) parts.push(`${count} location${count > 1 ? 's' : ''}`);
-    }
-    if (!parts.length) return 'Aucun filtre : la simulation suit le type d’événement.';
-    return `Sélection : ${parts.join(' · ')}.`;
-  };
-
   if (!showBrands && !showServices && !showRentals) return null;
 
-  const groups = [
-    showBrands ? 'marques' : '',
-    showBrands ? 'quantités' : '',
-    showServices ? 'services' : '',
-    showRentals ? 'locations' : '',
-  ].filter(Boolean);
-  const groupList = groups.length <= 1
-    ? groups[0] || ''
-    : `${groups.slice(0, -1).join(', ')} et ${groups[groups.length - 1]}`;
-
   return (
-    <div className="space-y-3 rounded-xl border border-border px-3 py-3">
-      <div className="space-y-1">
-        <p className="text-xs font-semibold text-muted">Critères</p>
-        <p className="text-xs text-muted leading-relaxed">
-          {showBrands && drinkMode === 'order'
-            ? 'Indiquez le nombre exact de casiers, bouteilles ou packs.'
-            : onToggleCategory
-              ? `Sans choix, la simulation suit le type d’événement. Un choix limite le pack à ces ${groupList}.`
-              : 'Sans choix, chaque famille prend la marque et le conditionnement les moins chers. Un choix ne chiffre que ces marques et ces quantités.'}
-        </p>
-        <p className="text-xs text-foreground leading-relaxed" aria-live="polite">{selectionSummary()}</p>
-      </div>
-
+    <div className="space-y-5">
       {showBrands ? (
-        <div className="space-y-1.5">
-          <p className="text-xs font-semibold text-foreground">Boissons</p>
-          <div role="group" aria-label="Façon de chiffrer les boissons" className="grid grid-cols-1 xl:grid-cols-2 gap-2">
-            <button
-              type="button"
-              aria-pressed={drinkMode === 'catalog'}
-              onClick={() => chooseDrinkMode('catalog')}
-              className={cn(
-                'text-left rounded-xl border px-3 py-2.5 min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                drinkMode === 'catalog'
-                  ? 'border-primary-solid bg-primary-solid text-primary-foreground'
-                  : 'border-border bg-surface text-foreground hover:border-primary/40',
-              )}
-            >
-              <span className="block text-sm font-semibold">Marques et quantités</span>
-              <span className={cn('block text-xs mt-0.5 leading-relaxed', drinkMode === 'catalog' ? 'text-primary-foreground' : 'text-muted')}>
-                {showServices || showRentals
-                  ? 'Selon les invités, plus les services et les locations.'
-                  : 'Selon les invités, au conditionnement choisi.'}
-              </span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={drinkMode === 'order'}
-              onClick={() => chooseDrinkMode('order')}
-              className={cn(
-                'text-left rounded-xl border px-3 py-2.5 min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                drinkMode === 'order'
-                  ? 'border-primary-solid bg-primary-solid text-primary-foreground'
-                  : 'border-border bg-surface text-foreground hover:border-primary/40',
-              )}
-            >
-              <span className="block text-sm font-semibold">Commande précise</span>
-              <span className={cn('block text-xs mt-0.5 leading-relaxed', drinkMode === 'order' ? 'text-primary-foreground' : 'text-muted')}>
-                Un nombre exact, par exemple 10 casiers de Tembo.
-              </span>
-            </button>
+        <CriteriaGroup label="Boissons">
+          <div role="group" aria-label="Façon de chiffrer les boissons" className={cn('inline-flex max-w-full', SEGMENTED_TRACK)}>
+            {([
+              ['catalog', 'Selon les invités'],
+              ['order', 'Commande précise'],
+            ] as const).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={drinkMode === mode}
+                onClick={() => chooseDrinkMode(mode)}
+                className={segmentedItem(drinkMode === mode, 'min-h-11 sm:min-h-8 px-3 text-[13px] whitespace-nowrap')}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-          <p className="text-xs text-muted leading-relaxed">Un seul mode est utilisé. Changer retire l’autre sélection.</p>
-        </div>
+        </CriteriaGroup>
       ) : null}
 
       {showBrands && drinkMode === 'catalog' ? (
-        <CriteriaGroup label="Marques" hint="Chaque marque cochée a sa ligne, avec une quantité adaptée aux invités.">
+        <CriteriaGroup label="Marques">
           <div aria-live="polite">
             {brandState === 'error' ? (
-              <p className="text-xs text-danger" role="alert">
-                Les marques ne sont pas joignables pour le moment. Sans marque, chaque famille prend la moins chère.
-              </p>
+              <p className="text-xs text-danger" role="alert">Marques indisponibles pour le moment.</p>
             ) : null}
             {brandState === 'loading' ? <p className="text-xs text-muted">Chargement des marques…</p> : null}
             {brandState === 'ready' && brands.length === 0 ? (
-              <p className="text-xs text-muted">Aucune marque publiée. Chaque famille prendra la moins chère.</p>
+              <p className="text-xs text-muted">Aucune marque publiée.</p>
             ) : null}
           </div>
           {BEVERAGE_KINDS.map((kind) => {
@@ -202,7 +223,7 @@ export default function BudgetSimulationCriteria({
       ) : null}
 
       {showBrands && drinkMode === 'catalog' ? (
-        <CriteriaGroup label="Quantités" hint="Un ou plusieurs conditionnements. La quantité suit les invités. S’il y en a plusieurs, le moins cher de ceux-là est retenu.">
+        <CriteriaGroup label="Quantités">
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quantités">
             {BEVERAGE_SALE_UNITS.map((unit) => {
               const active = selectedSaleUnits.includes(unit);
@@ -212,7 +233,7 @@ export default function BudgetSimulationCriteria({
                   type="button"
                   aria-pressed={active}
                   onClick={() => onToggleSaleUnit(unit)}
-                  className={cn(CHIP, chipTone(active))}
+                  className={cn(CHOICE_CHIP, choiceChipTone(active))}
                 >
                   {BEVERAGE_SALE_UNIT_LABELS[unit]}
                 </button>
@@ -227,7 +248,7 @@ export default function BudgetSimulationCriteria({
       ) : null}
 
       {drinkMode !== 'order' && showServices && onToggleCategory && selectedCategories ? (
-        <CriteriaGroup label="Services" hint="Traiteur, photo, DJ et les autres métiers.">
+        <CriteriaGroup label="Services">
           <ChoiceRow
             label="Services"
             ids={SERVICE_TRADE_CATEGORIES}
@@ -238,7 +259,7 @@ export default function BudgetSimulationCriteria({
       ) : null}
 
       {drinkMode !== 'order' && showRentals && onToggleCategory && selectedCategories ? (
-        <CriteriaGroup label="Locations" hint="Chaises, tentes, sono, véhicules et le reste du matériel.">
+        <CriteriaGroup label="Locations">
           <ChoiceRow
             label="Locations"
             ids={SERVICE_RENTAL_CATEGORIES}
@@ -253,17 +274,14 @@ export default function BudgetSimulationCriteria({
 
 function CriteriaGroup({
   label,
-  hint,
   children,
 }: {
   label: string;
-  hint: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-semibold text-foreground">{label}</p>
-      <p className="text-xs text-muted leading-relaxed">{hint}</p>
+    <div className="space-y-2">
+      <p className={GROUP_LABEL}>{label}</p>
       {children}
     </div>
   );
@@ -281,7 +299,7 @@ function BrandFamily({
   onToggleBrand: (id: string) => void;
 }) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <p className="text-xs text-muted">{BEVERAGE_KIND_LABELS[kind]}</p>
       <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Marques · ${BEVERAGE_KIND_LABELS[kind]}`}>
         {brands.map((brand) => {
@@ -292,7 +310,7 @@ function BrandFamily({
               type="button"
               aria-pressed={active}
               onClick={() => onToggleBrand(brand.id)}
-              className={cn(CHIP, chipTone(active))}
+              className={cn(CHOICE_CHIP, choiceChipTone(active))}
             >
               {brand.name}
             </button>
@@ -327,10 +345,10 @@ function DrinkOrderEditor({
   };
 
   return (
-    <CriteriaGroup label="Lignes" hint="Exemple : 10 casiers de Tembo, puis 5 casiers de Coca. Chaque ligne remplace le calcul par invité pour cette marque.">
+    <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2 items-end xl:grid-cols-[minmax(0,1fr)_auto_5.5rem_auto]">
         <label className="space-y-1 block col-span-2 xl:col-span-1">
-          <span className="text-xs font-semibold text-muted">Marque</span>
+          <span className={GROUP_LABEL}>Marque</span>
           <select className={field} value={brandId} disabled={disabled} onChange={(event) => setBrandId(event.target.value)} aria-label="Marque de la commande">
             <option value="">Choisir</option>
             {BEVERAGE_KINDS.map((kind) => {
@@ -345,29 +363,34 @@ function DrinkOrderEditor({
           </select>
         </label>
         <label className="space-y-1 block">
-          <span className="text-xs font-semibold text-muted">Conditionnement</span>
+          <span className={GROUP_LABEL}>Conditionnement</span>
           <select className={field} value={unitKind} onChange={(event) => setUnitKind(event.target.value as BeverageSaleUnit)} aria-label="Conditionnement">
             {BEVERAGE_SALE_UNITS.map((unit) => <option key={unit} value={unit}>{BEVERAGE_SALE_UNIT_LABELS[unit]}</option>)}
           </select>
         </label>
         <label className="space-y-1 block">
-          <span className="text-xs font-semibold text-muted">Nombre</span>
+          <span className={GROUP_LABEL}>Nombre</span>
           <input className={field} inputMode="numeric" min={1} max={500} value={packs} onChange={(event) => setPacks(event.target.value)} aria-label="Nombre de conditionnements" />
         </label>
-        <button type="button" onClick={add} disabled={disabled || !brandId} className="col-span-2 xl:col-span-1 min-h-11 px-3 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-semibold disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+        <button
+          type="button"
+          onClick={add}
+          disabled={disabled || !brandId}
+          className="col-span-2 xl:col-span-1 min-h-11 px-4 rounded-[var(--radius-button)] border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        >
           Ajouter
         </button>
       </div>
       {lines.length ? (
-        <ul className="space-y-1.5">
+        <ul className="divide-y divide-border border-y border-border">
           {lines.map((line) => {
             const brand = brands.find((item) => item.id === line.brandId);
             return (
               <li key={`${line.brandId}-${line.unitKind}`} className="flex items-center justify-between gap-2 min-h-11">
-                <span className="text-sm text-foreground">{brand?.name || 'Marque'} · {line.packs} × {BEVERAGE_SALE_UNIT_LABELS[line.unitKind].toLowerCase()}</span>
+                <span className="text-sm text-foreground tabular-nums">{brand?.name || 'Marque'} · {line.packs} × {BEVERAGE_SALE_UNIT_LABELS[line.unitKind].toLowerCase()}</span>
                 <button
                   type="button"
-                  className="min-h-11 px-2 text-xs font-semibold text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm"
+                  className="min-h-11 px-2 text-xs font-semibold text-muted hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm"
                   onClick={() => onChange(lines.filter((item) => !(item.brandId === line.brandId && item.unitKind === line.unitKind)))}
                 >
                   Retirer
@@ -377,7 +400,7 @@ function DrinkOrderEditor({
           })}
         </ul>
       ) : null}
-    </CriteriaGroup>
+    </div>
   );
 }
 
@@ -402,7 +425,7 @@ function ChoiceRow({
             type="button"
             aria-pressed={active}
             onClick={() => onToggle(id)}
-            className={cn(CHIP, chipTone(active))}
+            className={cn(CHOICE_CHIP, choiceChipTone(active))}
           >
             {SERVICE_CATEGORY_LABELS[id]}
           </button>
