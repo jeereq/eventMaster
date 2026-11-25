@@ -94,6 +94,7 @@ export function WorkspaceStatsOverview({
   stats,
   protocol,
   hideEventTotals,
+  hideUpcoming,
 }: {
   stats: WorkspaceStats;
   protocol?: boolean;
@@ -102,6 +103,8 @@ export function WorkspaceStatsOverview({
    * et les entrées (mêmes chiffres que la bande de l’événement) et on garde les tâches.
    */
   hideEventTotals?: boolean;
+  /** Masque la liste des prochains événements (page Statistiques). */
+  hideUpcoming?: boolean;
 }) {
   const isProtocol = stats.view === 'protocol' || protocol;
   const { events, guests, tasks } = stats;
@@ -157,7 +160,7 @@ export function WorkspaceStatsOverview({
     <div className="space-y-8">
       <StatStrip metrics={metrics} />
 
-      {stats.upcoming.length > 0 ? (
+      {!hideUpcoming && stats.upcoming.length > 0 ? (
         <section className="space-y-3">
           <h3 className="text-[15px] font-semibold text-foreground">
             {stats.upcoming.length > 1

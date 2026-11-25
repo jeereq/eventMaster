@@ -719,10 +719,8 @@ export default function ListingDetailLayout({
               )}
             >
               <div className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)]">
-                <div className="p-4 sm:p-5 space-y-1.5">
-                  <p className={cn('text-xs font-semibold text-primary lg:hidden', !(showCommerce || availability) && 'hidden')}>
-                    {listingKind === 'event' ? 'Billetterie & Inscription' : 'Demande & Réservation'}
-                  </p>
+                {/* Sous lg, la barre collée en bas montre déjà le prix : le bloc n’apparaît que sur grand écran. */}
+                <div className={cn('p-4 sm:p-5 space-y-1.5', showCommerce ? 'hidden lg:block' : undefined)}>
                   {priceBlock}
                   {relationStatus ? (
                     <div className="hidden lg:block pt-2 empty:hidden">{relationStatus}</div>
@@ -733,7 +731,8 @@ export default function ListingDetailLayout({
                   <div
                     id="listing-availability"
                     className={cn(
-                      'border-t border-border px-4 py-4 sm:px-5',
+                      'px-4 py-4 sm:px-5',
+                      showCommerce ? 'lg:border-t lg:border-border' : 'border-t border-border',
                       '[&>div]:border-0 [&>div]:rounded-none [&>div]:bg-transparent [&>div]:p-0',
                       embedded ? 'scroll-mt-[9.5rem] md:scroll-mt-24' : 'scroll-mt-24',
                     )}

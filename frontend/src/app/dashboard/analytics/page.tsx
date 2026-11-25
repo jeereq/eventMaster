@@ -277,6 +277,8 @@ function EventAnalyticsView() {
  return <SkeletonAnalyticsView />;
  }
 
+ // Les totaux de l’espace ne recoupent la bande de l’événement que s’ils portent sur ce seul événement.
+ const singleEvent = events.length === 1 && (workspace?.events.total ?? 0) <= 1;
  const toScanCount = Math.max(0, acceptedCount - checkedInCount);
  const rsvpMetrics: StatMetric[] = [
  { label: 'Invités totaux', value: totalGuests },
@@ -590,11 +592,16 @@ function EventAnalyticsView() {
  </div>
  )}
 
- {workspace && events.length > 1 ? (
+ {workspace && events.length > 0 ? (
+ singleEvent ? (
+ // Un seul événement : ses invités et entrées sont déjà dans la bande du haut ; restent les tâches.
+ <WorkspaceStatsOverview stats={workspace} protocol={protocolView} hideEventTotals hideUpcoming />
+ ) : (
  <section aria-labelledby="analytics-all-events" className="space-y-4">
  <h2 id="analytics-all-events" className="text-lg font-semibold text-foreground">Tous les événements</h2>
- <WorkspaceStatsOverview stats={workspace} protocol={protocolView} />
+ <WorkspaceStatsOverview stats={workspace} protocol={protocolView} hideUpcoming />
  </section>
+ )
  ) : null}
  </div>
  );

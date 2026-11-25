@@ -6187,13 +6187,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             Visite guidée · {tourCaption || 'entrée par la porte'}
           </div>
         </div>
-      ) : film ? null : presentationMode ? (
-        <div className="pointer-events-none absolute bottom-2 left-2">
-          <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
-            Présentation · la salle tourne toute seule
-          </div>
-        </div>
-      ) : qualitySettings.showHints ? (
+      ) : film || presentationMode ? null : qualitySettings.showHints ? (
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
           <div className="max-w-[min(26rem,55%)] rounded-md bg-foreground/85 px-2 py-1 text-xs font-medium text-background">
             {touchScreen
@@ -6214,21 +6208,9 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             </div>
           ) : null}
         </div>
-      ) : (
-        <div className="pointer-events-none absolute bottom-2 right-2">
-            <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
-            Vitrine 3D · {renderQualityLabelsSafe(qualitySettings.quality)}
-          </div>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 });
 
 export default memo(RoomWebGLViewer);
-
-function renderQualityLabelsSafe(q: RenderQuality) {
-  if (q === 'draft') return 'Brouillon';
-  if (q === 'showcase') return 'Vitrine';
-  return 'Standard';
-}

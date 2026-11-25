@@ -2850,23 +2850,7 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
             {viewingRoom.description && (
               <p className="text-sm text-muted leading-relaxed">{viewingRoom.description}</p>
             )}
-            <section className="space-y-2">
-              {canManage && (
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">Plan</h3>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const room = viewingRoom;
-                      setViewingRoom(null);
-                      openEditLayout(room);
-                    }}
-                    className="-mr-2 inline-flex items-center min-h-11 px-2 text-xs font-semibold text-primary rounded-[var(--radius-button)] hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                  >
-                    Ouvrir dans l’éditeur
-                  </button>
-                </div>
-              )}
+            <section aria-label="Plan de la salle">
               {/* Cadre dimensionné ici + `fill` : la scène remplit le cadre, sans consigne sous l’aperçu. */}
               <div className="relative w-full overflow-hidden rounded-2xl aspect-[16/10] min-h-[280px] max-h-[min(70dvh,560px)] sm:min-h-[360px] sm:max-h-none">
                 <div className="absolute inset-0">

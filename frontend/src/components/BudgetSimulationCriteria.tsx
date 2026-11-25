@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
-import { BEVERAGE_KINDS, BEVERAGE_KIND_LABELS, BEVERAGE_SALE_UNITS, BEVERAGE_SALE_UNIT_LABELS, type BeverageBrandRow, type BeverageKind, type BeverageSaleUnit, type DrinkOrderLine } from '@/lib/beverageBrands';
+import { BEVERAGE_KINDS, BEVERAGE_KIND_LABELS, BEVERAGE_SALE_UNITS, BEVERAGE_SALE_UNIT_LABELS, type BeverageBrandRow, type BeverageSaleUnit, type DrinkOrderLine } from '@/lib/beverageBrands';
 import { BUDGET_SCOPE_OPTIONS, type BudgetSimulationScope } from '@/lib/budgetSimulation';
 import { SERVICE_CATEGORY_LABELS, SERVICE_RENTAL_CATEGORIES, SERVICE_TRADE_CATEGORIES, type ServiceCategory } from '@/lib/marketplace';
 
@@ -58,11 +58,13 @@ export function BudgetScopeTabs({
   return (
     <div
       className={cn(
-        'flex flex-col-reverse gap-1 xl:flex-row xl:items-end xl:justify-between xl:gap-4',
+        // Actions d’abord dans le DOM : au-dessus des onglets sous xl, à droite au-delà (row-reverse).
+        'flex flex-col gap-1 xl:flex-row-reverse xl:items-end xl:justify-between xl:gap-4',
         bordered && action && 'xl:border-b xl:border-border',
         className,
       )}
     >
+      {action ? <div className="flex flex-wrap items-center gap-1 xl:pb-1">{action}</div> : null}
       <div
         role="radiogroup"
         aria-label="À chiffrer"
@@ -100,7 +102,6 @@ export function BudgetScopeTabs({
           );
         })}
       </div>
-      {action ? <div className="flex flex-wrap items-center gap-1 xl:pb-1">{action}</div> : null}
     </div>
   );
 }
@@ -196,7 +197,7 @@ export default function BudgetSimulationCriteria({
       ) : null}
 
       {showBrands && drinkMode === 'catalog' ? (
-        <CriteriaGroup label="Marques">
+        <div className="space-y-2">
           <div aria-live="polite">
             {brandState === 'error' ? (
               <p className="text-xs text-danger" role="alert">Marques indisponibles pour le moment.</p>
@@ -206,20 +207,18 @@ export default function BudgetSimulationCriteria({
               <p className="text-xs text-muted">Aucune marque publiée.</p>
             ) : null}
           </div>
-          {BEVERAGE_KINDS.map((kind) => {
-            const rows = brands.filter((brand) => brand.kind === kind);
-            if (!rows.length) return null;
-            return (
-              <BrandFamily
-                key={kind}
-                kind={kind}
-                brands={rows}
-                selectedBrandIds={selectedBrandIds}
-                onToggleBrand={onToggleBrand}
-              />
-            );
-          })}
-        </CriteriaGroup>
+          {brands.length > 0 ? (
+            <ChoicePicker
+              label="Marques"
+              selected={selectedBrandIds}
+              onToggle={onToggleBrand}
+              sections={BEVERAGE_KINDS.map((kind) => ({
+                title: BEVERAGE_KIND_LABELS[kind],
+                items: brands.filter((brand) => brand.kind === kind).map((brand) => ({ id: brand.id, label: brand.name })),
+              })).filter((section) => section.items.length > 0)}
+            />
+          ) : null}
+        </div>
       ) : null}
 
       {showBrands && drinkMode === 'catalog' ? (
@@ -248,25 +247,96 @@ export default function BudgetSimulationCriteria({
       ) : null}
 
       {drinkMode !== 'order' && showServices && onToggleCategory && selectedCategories ? (
-        <CriteriaGroup label="Services">
-          <ChoiceRow
-            label="Services"
-            ids={SERVICE_TRADE_CATEGORIES}
-            selected={selectedCategories}
-            onToggle={onToggleCategory}
-          />
-        </CriteriaGroup>
+        <ChoicePicker
+          label="Services"
+          selected={selectedCategories}
+          onToggle={onToggleCategory}
+          sections={[{ items: SERVICE_TRADE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] })) }]}
+        />
       ) : null}
 
       {drinkMode !== 'order' && showRentals && onToggleCategory && selectedCategories ? (
-        <CriteriaGroup label="Locations">
-          <ChoiceRow
-            label="Locations"
-            ids={SERVICE_RENTAL_CATEGORIES}
-            selected={selectedCategories}
-            onToggle={onToggleCategory}
-          />
-        </CriteriaGroup>
+        <ChoicePicker
+          label="Locations"
+          selected={selectedCategories}
+          onToggle={onToggleCategory}
+          sections={[{ items: SERVICE_RENTAL_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] })) }]}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Groupe de choix replié : seules les pastilles choisies restent visibles ;
+ * « Choisir » déplie la liste complète, « Terminé » la replie.
+ */
+function ChoicePicker<T extends string>({
+  label,
+  sections,
+  selected,
+  onToggle,
+}: {
+  label: string;
+  sections: Array<{ title?: string; items: Array<{ id: T; label: string }> }>;
+  selected: T[];
+  onToggle: (id: T) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const all = sections.flatMap((section) => section.items);
+  const chosen = all.filter((item) => selected.includes(item.id));
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3 min-h-11 sm:min-h-9">
+        <p className={GROUP_LABEL}>{label}</p>
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          className="min-h-11 sm:min-h-9 px-2 -mr-2 text-[13px] font-semibold text-primary rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        >
+          {open ? 'Terminé' : chosen.length ? 'Modifier' : 'Choisir'}
+        </button>
+      </div>
+      {!open && chosen.length ? (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={`${label} choisis`}>
+          {chosen.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed
+              onClick={() => onToggle(item.id)}
+              className={cn(CHOICE_CHIP, choiceChipTone(true))}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {open ? (
+        <div className="space-y-3 rounded-[var(--radius-card)] bg-surface-muted/60 p-3">
+          {sections.map((section, index) => (
+            <div key={section.title ?? index} className="space-y-1.5">
+              {section.title ? <p className="text-xs text-muted">{section.title}</p> : null}
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label={section.title ? `${label} · ${section.title}` : label}>
+                {section.items.map((item) => {
+                  const active = selected.includes(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => onToggle(item.id)}
+                      className={cn(CHOICE_CHIP, active ? choiceChipTone(true) : 'border-border bg-surface text-foreground hover:bg-surface-muted')}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : null}
     </div>
   );
@@ -283,40 +353,6 @@ function CriteriaGroup({
     <div className="space-y-2">
       <p className={GROUP_LABEL}>{label}</p>
       {children}
-    </div>
-  );
-}
-
-function BrandFamily({
-  kind,
-  brands,
-  selectedBrandIds,
-  onToggleBrand,
-}: {
-  kind: BeverageKind;
-  brands: BeverageBrandRow[];
-  selectedBrandIds: string[];
-  onToggleBrand: (id: string) => void;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <p className="text-xs text-muted">{BEVERAGE_KIND_LABELS[kind]}</p>
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Marques · ${BEVERAGE_KIND_LABELS[kind]}`}>
-        {brands.map((brand) => {
-          const active = selectedBrandIds.includes(brand.id);
-          return (
-            <button
-              key={brand.id}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onToggleBrand(brand.id)}
-              className={cn(CHOICE_CHIP, choiceChipTone(active))}
-            >
-              {brand.name}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -400,37 +436,6 @@ function DrinkOrderEditor({
           })}
         </ul>
       ) : null}
-    </div>
-  );
-}
-
-function ChoiceRow({
-  label,
-  ids,
-  selected,
-  onToggle,
-}: {
-  label: string;
-  ids: ServiceCategory[];
-  selected: ServiceCategory[];
-  onToggle: (id: ServiceCategory) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
-      {ids.map((id) => {
-        const active = selected.includes(id);
-        return (
-          <button
-            key={id}
-            type="button"
-            aria-pressed={active}
-            onClick={() => onToggle(id)}
-            className={cn(CHOICE_CHIP, choiceChipTone(active))}
-          >
-            {SERVICE_CATEGORY_LABELS[id]}
-          </button>
-        );
-      })}
     </div>
   );
 }
