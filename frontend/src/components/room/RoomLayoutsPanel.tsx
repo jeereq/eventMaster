@@ -1,33 +1,62 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Copy, Download, Eye, EyeOff, Pencil, RefreshCw, Trash2 } from '@/components/icons';
+import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, Layout, Pencil, RefreshCw, Star, Trash2 } from '@/components/icons';
 import { Alert, Button, ConfirmDialog } from '@/components/ui';
 import LayoutThumbnailCapture from '@/components/room/LayoutThumbnailCapture';
 import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import { uploadDataUrlImage } from '@/lib/cloudinaryUpload';
 import { moveId } from '@/lib/layoutOrder';
 import { formatLayoutFacts } from '@/lib/venueLayouts';
-import { venueLayoutsApi, type RoomLayoutRecord } from '@/lib/venueLayoutsApi';
+import {
+  MAIN_LAYOUT_ID,
+  venueLayoutsApi,
+  type MainLayoutSummary,
+  type MakeMainResult,
+  type RoomLayoutRecord,
+} from '@/lib/venueLayoutsApi';
 
 const MAX_NAME_LENGTH = 80;
 
-type PendingAction = { kind: 'load' | 'delete' | 'refresh'; layout: RoomLayoutRecord } | null;
+type PendingAction = { kind: 'main' | 'delete' | 'refresh'; layout: RoomLayoutRecord } | null;
+
+/** Disposition ouverte dans l'éditeur : la principale ou une disposition enregistrée. */
+export interface LayoutEditTarget {
+  id: string;
+  name: string;
+}
 
 interface Props {
   roomId: string;
   /** Plan en cours d'édition (y compris les modifications non enregistrées). */
   currentBlueprint: RoomLayoutBlueprint;
-  /** Remplace le plan de travail de l'éditeur par celui de la disposition choisie. */
-  onLoadBlueprint: (blueprint: RoomLayoutBlueprint) => void;
+  /** Disposition actuellement ouverte dans l'éditeur (`main` pour la principale). */
+  editingLayoutId: string;
+  /** Ouvre une disposition dans l'éditeur pour la modifier. */
+  onEditLayout: (target: LayoutEditTarget) => Promise<void> | void;
+  /** Termine les sauvegardes en cours avant de changer la disposition principale. */
+  onBeforeMainChange: () => Promise<void>;
+  /** La disposition principale vient de changer (nouveau plan de salle). */
+  onMainChanged: (result: MakeMainResult, chosenLayoutId: string) => void;
+  /** Le nom de la principale a changé : nouvelle version de la salle côté serveur. */
+  onMainRenamed: (name: string, roomUpdatedAt: string) => void;
 }
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
 }
 
-export default function RoomLayoutsPanel({ roomId, currentBlueprint, onLoadBlueprint }: Props) {
+export default function RoomLayoutsPanel({
+  roomId,
+  currentBlueprint,
+  editingLayoutId,
+  onEditLayout,
+  onBeforeMainChange,
+  onMainChanged,
+  onMainRenamed,
+}: Props) {
   const [layouts, setLayouts] = useState<RoomLayoutRecord[]>([]);
+  const [main, setMain] = useState<MainLayoutSummary | null>(null);
   const [maxLayouts, setMaxLayouts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +78,7 @@ export default function RoomLayoutsPanel({ roomId, currentBlueprint, onLoadBluep
       .then((res) => {
         if (cancelled) return;
         setLayouts(res.layouts);
+        setMain(res.main);
         setMaxLayouts(res.maxLayouts);
       })
       .catch((err) => {
@@ -106,7 +136,7 @@ export default function RoomLayoutsPanel({ roomId, currentBlueprint, onLoadBluep
     }
   };
 
-  const runOn = async (layout: RoomLayoutRecord, action: () => Promise<void>, fallback: string) => {
+  const runOn = async (layout: { id: string }, action: () => Promise<void>, fallback: string) => {
     setBusyId(layout.id);
     setError(null);
     try {
@@ -118,12 +148,25 @@ export default function RoomLayoutsPanel({ roomId, currentBlueprint, onLoadBluep
     }
   };
 
-  const commitRename = async (layout: RoomLayoutRecord) => {
+  const commitRename = async (layout: { id: string; name: string }) => {
     const name = renameValue.trim();
     setRenamingId(null);
     if (!name || name === layout.name) return;
+    if (layout.id === MAIN_LAYOUT_ID) {
+      await runOn(layout, async () => {
+        const updated = await venueLayoutsApi.renameMain(roomId, name);
+        setMain(updated);
+        onMainRenamed(updated.name, updated.roomUpdatedAt);
+      }, 'Impossible de renommer la disposition.');
+      return;
+    }
     await runOn(layout, async () => replaceLayout(await venueLayoutsApi.update(roomId, layout.id, { name })), 'Impossible de renommer la disposition.');
   };
+
+  const openInEditor = (target: LayoutEditTarget) =>
+    runOn(target, async () => {
+      await onEditLayout(target);
+    }, 'Impossible d’ouvrir la disposition.');
 
   const togglePublic = (layout: RoomLayoutRecord) =>
     runOn(
@@ -166,18 +209,28 @@ export default function RoomLayoutsPanel({ roomId, currentBlueprint, onLoadBluep
   const confirmPending = async () => {
     if (!pending) return;
     const { kind, layout } = pending;
-    if (kind === 'load') {
+    if (kind === 'main') {
       setPending(null);
-      setBusyId(layout.id);
-      setError(null);
-      try {
-        const full = await venueLayoutsApi.get(roomId, layout.id);
-        onLoadBlueprint(full.blueprint);
-      } catch (err) {
-        setError(errorMessage(err, 'Impossible de charger la disposition.'));
-      } finally {
-        setBusyId(null);
-      }
+      setThumbnailNotice(null);
+      await runOn(
+        layout,
+        async () => {
+          await onBeforeMainChange();
+          const result = await venueLayoutsApi.makeMain(roomId, layout.id);
+          setMain(result.main);
+          const replaced = result.replaced;
+          if (replaced) {
+            replaceLayout(replaced);
+            // La vignette de la ligne montre maintenant l'ancien plan principal.
+            const full = await venueLayoutsApi.get(roomId, replaced.id);
+            setCaptureJob({ layoutId: replaced.id, blueprint: full.blueprint });
+          } else {
+            setLayouts((prev) => prev.filter((item) => item.id !== layout.id));
+          }
+          onMainChanged(result, layout.id);
+        },
+        'Impossible de changer la disposition principale.',
+      );
       return;
     }
     if (kind === 'delete') {
@@ -208,11 +261,14 @@ export default function RoomLayoutsPanel({ roomId, currentBlueprint, onLoadBluep
   const pendingCopy = useMemo(() => {
     if (!pending) return null;
     const name = `« ${pending.layout.name} »`;
-    if (pending.kind === 'load') {
+    if (pending.kind === 'main') {
+      const current = main?.hasBlueprint ? `« ${main.name} »` : null;
       return {
-        title: 'Charger cette disposition ?',
-        description: `Le plan en cours d’édition sera remplacé par ${name}. Enregistrez d’abord vos modifications si vous voulez les garder.`,
-        confirmLabel: 'Charger dans l’éditeur',
+        title: 'Choisir comme disposition principale ?',
+        description: current
+          ? `${name} deviendra le plan de la salle : celui proposé par défaut pour vos événements et affiché en premier sur la fiche publique. ${current} reste dans la liste, à sa place.`
+          : `${name} deviendra le plan de la salle : celui proposé par défaut pour vos événements et affiché en premier sur la fiche publique.`,
+        confirmLabel: 'Choisir comme principale',
         tone: 'default' as const,
       };
     }
@@ -230,7 +286,7 @@ export default function RoomLayoutsPanel({ roomId, currentBlueprint, onLoadBluep
       confirmLabel: 'Supprimer',
       tone: 'danger' as const,
     };
-  }, [pending]);
+  }, [main, pending]);
 
   return (
     <section className="space-y-5" aria-labelledby="room-layouts-title">
@@ -240,7 +296,8 @@ export default function RoomLayoutsPanel({ roomId, currentBlueprint, onLoadBluep
         </h3>
         <p className="mt-1 text-sm text-muted">
           Enregistrez plusieurs agencements (conférence, banquet, cocktail…). Les visiteurs les parcourent en 3D sur la
-          fiche publique. Chaque disposition est une copie du plan : l’éditeur modifie toujours le plan principal.
+          fiche publique. La disposition principale est le plan de la salle, proposé par défaut pour vos événements.
+          Choisissez « Modifier » sur n’importe quelle disposition pour l’ouvrir dans l’éditeur.
         </p>
       </div>
 
@@ -280,6 +337,67 @@ export default function RoomLayoutsPanel({ roomId, currentBlueprint, onLoadBluep
       ) : null}
 
       <ul className="space-y-3">
+        {main ? (
+          <li className="flex flex-col gap-3 rounded-xl border border-primary/40 bg-primary/5 p-3 sm:flex-row sm:items-center">
+            <div className="flex h-20 w-32 shrink-0 items-center justify-center rounded-lg bg-surface-muted">
+              <Star className="h-6 w-6 text-primary" aria-hidden />
+            </div>
+            <div className="min-w-0 flex-1">
+              {renamingId === MAIN_LAYOUT_ID ? (
+                <input
+                  autoFocus
+                  type="text"
+                  aria-label="Nom de la disposition principale"
+                  value={renameValue}
+                  maxLength={MAX_NAME_LENGTH}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={() => void commitRename(main)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void commitRename(main);
+                    if (e.key === 'Escape') setRenamingId(null);
+                  }}
+                  className="min-h-[44px] w-full rounded-lg border border-border bg-surface px-3 text-sm"
+                />
+              ) : (
+                <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+                  <span className="truncate">{main.name}</span>
+                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">Principale</span>
+                  {editingLayoutId === MAIN_LAYOUT_ID ? (
+                    <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-muted">Ouverte dans l’éditeur</span>
+                  ) : null}
+                </p>
+              )}
+              <p className="mt-0.5 text-xs text-muted">
+                {[formatLayoutFacts(main).capacityLabel, formatLayoutFacts(main).areaLabel].filter(Boolean).join(' · ') || 'Capacité non calculée'}
+                {' · Plan de la salle, toujours visible sur la fiche publique'}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-1" role="group" aria-label={`Actions pour ${main.name}`}>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busyId === MAIN_LAYOUT_ID}
+                onClick={() => {
+                  setRenamingId(MAIN_LAYOUT_ID);
+                  setRenameValue(main.name);
+                }}
+                aria-label="Renommer"
+                title="Renommer"
+              >
+                <Pencil className="h-4 w-4" aria-hidden />
+              </Button>
+              <Button
+                size="sm"
+                variant={editingLayoutId === MAIN_LAYOUT_ID ? 'primary' : 'secondary'}
+                disabled={busyId === MAIN_LAYOUT_ID}
+                onClick={() => void openInEditor({ id: MAIN_LAYOUT_ID, name: main.name })}
+              >
+                <Layout className="h-4 w-4" aria-hidden />
+                Modifier
+              </Button>
+            </div>
+          </li>
+        ) : null}
         {layouts.map((layout, index) => {
           const facts = formatLayoutFacts(layout);
           const busy = busyId === layout.id;
@@ -310,7 +428,12 @@ export default function RoomLayoutsPanel({ roomId, currentBlueprint, onLoadBluep
                     className="min-h-[44px] w-full rounded-lg border border-border bg-surface px-3 text-sm"
                   />
                 ) : (
-                  <p className="truncate text-sm font-semibold text-foreground">{layout.name}</p>
+                  <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+                    <span className="truncate">{layout.name}</span>
+                    {editingLayoutId === layout.id ? (
+                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-muted">Ouverte dans l’éditeur</span>
+                    ) : null}
+                  </p>
                 )}
                 <p className="mt-0.5 text-xs text-muted">
                   {[facts.capacityLabel, facts.areaLabel].filter(Boolean).join(' · ') || 'Capacité non calculée'}
@@ -349,17 +472,28 @@ export default function RoomLayoutsPanel({ roomId, currentBlueprint, onLoadBluep
                 >
                   {layout.isPublic ? <Eye className="h-4 w-4" aria-hidden /> : <EyeOff className="h-4 w-4" aria-hidden />}
                 </Button>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => setPending({ kind: 'load', layout })} aria-label="Charger dans l’éditeur" title="Charger dans l’éditeur">
-                  <Download className="h-4 w-4" aria-hidden />
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => setPending({ kind: 'main', layout })} aria-label="Choisir comme disposition principale" title="Choisir comme disposition principale">
+                  <Star className="h-4 w-4" aria-hidden />
                 </Button>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => setPending({ kind: 'refresh', layout })} aria-label="Mettre à jour avec le plan actuel" title="Mettre à jour avec le plan actuel">
-                  <RefreshCw className="h-4 w-4" aria-hidden />
-                </Button>
+                {editingLayoutId !== layout.id ? (
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => setPending({ kind: 'refresh', layout })} aria-label="Remplacer par le plan ouvert dans l’éditeur" title="Remplacer par le plan ouvert dans l’éditeur">
+                    <RefreshCw className="h-4 w-4" aria-hidden />
+                  </Button>
+                ) : null}
                 <Button size="sm" variant="ghost" disabled={busy || quotaReached} onClick={() => void duplicate(layout)} aria-label="Dupliquer" title={quotaReached ? 'Limite atteinte' : 'Dupliquer'}>
                   <Copy className="h-4 w-4" aria-hidden />
                 </Button>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => setPending({ kind: 'delete', layout })} aria-label="Supprimer" title="Supprimer">
+                <Button size="sm" variant="ghost" disabled={busy || editingLayoutId === layout.id} onClick={() => setPending({ kind: 'delete', layout })} aria-label="Supprimer" title={editingLayoutId === layout.id ? 'Ouverte dans l’éditeur' : 'Supprimer'}>
                   <Trash2 className="h-4 w-4 text-danger" aria-hidden />
+                </Button>
+                <Button
+                  size="sm"
+                  variant={editingLayoutId === layout.id ? 'primary' : 'secondary'}
+                  disabled={busy}
+                  onClick={() => void openInEditor({ id: layout.id, name: layout.name })}
+                >
+                  <Layout className="h-4 w-4" aria-hidden />
+                  Modifier
                 </Button>
               </div>
             </li>

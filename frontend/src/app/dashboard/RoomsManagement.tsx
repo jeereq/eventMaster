@@ -63,7 +63,10 @@ import {
 } from '@/lib/roomLayoutDraft';
 import { prependLayoutAction, sanitizeLayoutActions } from '@/lib/layoutActionLog';
 import PlanCreationPath from '@/components/PlanCreationPath';
-import RoomLayoutsPanel from '@/components/room/RoomLayoutsPanel';
+import RoomLayoutsPanel, { type LayoutEditTarget } from '@/components/room/RoomLayoutsPanel';
+import LayoutThumbnailCapture from '@/components/room/LayoutThumbnailCapture';
+import { uploadDataUrlImage } from '@/lib/cloudinaryUpload';
+import { MAIN_LAYOUT_ID, MAIN_LAYOUT_NAME, venueLayoutsApi, type MakeMainResult, type RoomLayoutRecord } from '@/lib/venueLayoutsApi';
 import { LockedSectionCard } from '@/components/room/EditorLocks';
 import GuestDressCodePicker from '@/components/room/GuestDressCodePicker';
 import { DEFAULT_GUEST_SIMULATION, GUEST_FILL_CHOICES } from '@/lib/roomGuestSimulation';
@@ -156,6 +159,8 @@ interface RoomItem {
   location: string | null;
   roomType: RoomType;
   layoutBlueprint: RoomLayoutBlueprint | null;
+  /** Nom donné à la disposition principale (le plan de la salle). */
+  layoutName?: string | null;
   /** Date de dernière modification côté serveur (contrôle de version). */
   updatedAt?: string;
   staff: RoomStaffItem[];
@@ -436,6 +441,16 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
   const [editPane, setEditPane] = useState<'identite' | 'elements' | 'layouts' | 'publication'>('identite');
   const [editElementsReady, setEditElementsReady] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
+  /** Disposition ouverte dans l'éditeur : la principale (plan de la salle) ou une disposition enregistrée. */
+  const [editTarget, setEditTarget] = useState<LayoutEditTarget>({ id: MAIN_LAYOUT_ID, name: MAIN_LAYOUT_NAME });
+  const editTargetRef = useRef<LayoutEditTarget>({ id: MAIN_LAYOUT_ID, name: MAIN_LAYOUT_NAME });
+  /** Dispositions enregistrées, pour le sélecteur de l'éditeur. */
+  const [editLayoutChoices, setEditLayoutChoices] = useState<RoomLayoutRecord[]>([]);
+  const [switchingTarget, setSwitchingTarget] = useState(false);
+  /** Vignette à recalculer après modification d'une disposition enregistrée. */
+  const [thumbJob, setThumbJob] = useState<{ roomId: string; layoutId: string; blueprint: RoomLayoutBlueprint } | null>(null);
+  /** La disposition ouverte a été modifiée depuis son ouverture (sa vignette est à refaire). */
+  const targetTouchedRef = useRef(false);
   const [wizardDraftSavedAt, setWizardDraftSavedAt] = useState<string | null>(null);
   const [wizardDraftRestored, setWizardDraftRestored] = useState(false);
   const [editSaveStatus, setEditSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error' | 'conflict'>('idle');
@@ -795,6 +810,32 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
       if (editConflictRef.current || !editDirtyRef.current) return;
       const gen = editGenRef.current;
       setEditSaveStatus('saving');
+      const target = editTargetRef.current;
+      if (target.id !== MAIN_LAYOUT_ID) {
+        // Disposition enregistrée : son plan va dans la disposition, l'identité reste sur la salle.
+        try {
+          await venueLayoutsApi.update(roomId, target.id, { blueprint: snap.blueprint });
+          const updated: RoomItem = await api.put(`/rooms/${roomId}`, {
+            name: snap.meta.name.trim() || snap.room.name,
+            description: snap.meta.description.trim() || undefined,
+            floor: snap.meta.floor.trim() || undefined,
+            location: snap.meta.location.trim() || undefined,
+            expectedUpdatedAt: serverUpdatedAtRef.current ?? undefined,
+          });
+          if (editGenRef.current === gen) editDirtyRef.current = false;
+          setEditSaveStatus(editGenRef.current === gen ? 'saved' : 'saving');
+          setEditSavedAt(new Date().toISOString());
+          mergeServerRoom(roomId, updated);
+        } catch (err) {
+          if (isRoomConflictError(err)) {
+            openEditConflict(err);
+            return;
+          }
+          setEditSaveStatus('error');
+          setError((err as { message?: string }).message || 'Le dernier changement n’a pas pu être enregistré sur le serveur.');
+        }
+        return;
+      }
       try {
         const updated: RoomItem = await api.put(`/rooms/${roomId}`, {
           name: snap.meta.name.trim() || snap.room.name,
@@ -838,6 +879,9 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
     const localTimer = window.setTimeout(() => {
       const snap = editSnapshotRef.current;
       if (!snap.blueprint || !snap.room) return;
+      // Le brouillon local ne couvre que le plan de la salle : une disposition enregistrée
+      // est sauvegardée directement sur le serveur.
+      if (editTargetRef.current.id !== MAIN_LAYOUT_ID) return;
       void writeRoomLayoutDraft({
         tenantId,
         roomKey: roomId,
@@ -901,9 +945,151 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
   const markEditDirty = () => {
     editGenRef.current += 1;
     editDirtyRef.current = true;
+    targetTouchedRef.current = true;
+  };
+
+  const applyEditTarget = (target: LayoutEditTarget) => {
+    editTargetRef.current = target;
+    setEditTarget(target);
+    targetTouchedRef.current = false;
+  };
+
+  /** Si la disposition enregistrée ouverte a changé, sa vignette est recalculée en arrière-plan. */
+  const queueTargetThumbnail = (roomId: string) => {
+    const target = editTargetRef.current;
+    const blueprint = editSnapshotRef.current.blueprint;
+    if (target.id === MAIN_LAYOUT_ID || !targetTouchedRef.current || !blueprint) return;
+    setThumbJob({ roomId, layoutId: target.id, blueprint });
+  };
+
+  /** Termine les sauvegardes en attente ; `false` si un conflit bloque. */
+  const flushEditSave = async (): Promise<boolean> => {
+    const room = editSnapshotRef.current.room;
+    if (room && tenant?.id && editDirtyRef.current && !editConflictRef.current) {
+      void queueServerSave(room.id, tenant.id);
+    }
+    await saveChainRef.current;
+    return !editConflictRef.current;
+  };
+
+  const refreshEditLayoutChoices = useCallback(async (roomId: string) => {
+    try {
+      const res = await venueLayoutsApi.list(roomId);
+      if (editSnapshotRef.current.room?.id !== roomId) return;
+      setEditLayoutChoices(res.layouts);
+      if (editTargetRef.current.id === MAIN_LAYOUT_ID) {
+        const next = { id: MAIN_LAYOUT_ID, name: res.main.name };
+        editTargetRef.current = next;
+        setEditTarget(next);
+      }
+    } catch {
+      // Forfait sans dispositions ou réseau : le sélecteur reste sur la principale.
+    }
+  }, []);
+
+  // Les dispositions ont pu être créées, renommées ou supprimées dans l'onglet Dispositions.
+  const editingRoomId = editingRoom?.id;
+  useEffect(() => {
+    if (editPane !== 'elements' || !editingRoomId || !canCatalogPublish) return;
+    let cancelled = false;
+    venueLayoutsApi
+      .list(editingRoomId)
+      .then((res) => {
+        if (cancelled || editSnapshotRef.current.room?.id !== editingRoomId) return;
+        setEditLayoutChoices(res.layouts);
+        if (editTargetRef.current.id === MAIN_LAYOUT_ID) {
+          const next = { id: MAIN_LAYOUT_ID, name: res.main.name };
+          editTargetRef.current = next;
+          setEditTarget(next);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [editPane, editingRoomId, canCatalogPublish]);
+
+  /** Ouvre une disposition (principale ou enregistrée) dans l'éditeur. */
+  const switchEditTarget = async (target: LayoutEditTarget) => {
+    const room = editSnapshotRef.current.room;
+    if (!room) return;
+    if (target.id === editTargetRef.current.id) {
+      setEditElementsReady(true);
+      setEditPane('elements');
+      return;
+    }
+    setSwitchingTarget(true);
+    setError('');
+    try {
+      if (!(await flushEditSave())) {
+        throw new Error('Ce plan a été modifié ailleurs : choisissez la version à garder avant de changer de disposition.');
+      }
+      queueTargetThumbnail(room.id);
+      let blueprint: RoomLayoutBlueprint | null;
+      if (target.id === MAIN_LAYOUT_ID) {
+        blueprint = editSnapshotRef.current.room?.layoutBlueprint ?? null;
+      } else {
+        blueprint = (await venueLayoutsApi.get(room.id, target.id)).blueprint;
+      }
+      if (editSnapshotRef.current.room?.id !== room.id) return;
+      setEditBlueprint(blueprint
+        ? refreshBlueprintMetadata({ ...blueprint })
+        : refreshBlueprintMetadata(generateRoomBlueprint(room.roomType || 'SIMPLE')));
+      editGenRef.current += 1;
+      editDirtyRef.current = false;
+      applyEditTarget(target);
+      setEditSaveStatus('idle');
+      setEditSavedAt(null);
+      setEditElementsReady(true);
+      setEditPane('elements');
+    } finally {
+      setSwitchingTarget(false);
+    }
+  };
+
+  /** La disposition principale a changé depuis l'onglet Dispositions. */
+  const handleMainLayoutChanged = (result: MakeMainResult, chosenLayoutId: string) => {
+    const room = editSnapshotRef.current.room;
+    if (!room) return;
+    serverUpdatedAtRef.current = result.room.updatedAt;
+    mergeServerRoom(room.id, result.room as unknown as RoomItem);
+    const current = editTargetRef.current.id;
+    if (current === MAIN_LAYOUT_ID || current === chosenLayoutId) {
+      // L'éditeur suit la nouvelle principale (c'est le plan qu'on vient de choisir, ou celui qui l'a remplacé).
+      const bp = result.room.layoutBlueprint;
+      setEditBlueprint(bp
+        ? refreshBlueprintMetadata({ ...bp })
+        : refreshBlueprintMetadata(generateRoomBlueprint(room.roomType || 'SIMPLE')));
+      editGenRef.current += 1;
+      editDirtyRef.current = false;
+      applyEditTarget({ id: MAIN_LAYOUT_ID, name: result.main.name });
+    }
+    void refreshEditLayoutChoices(room.id);
+  };
+
+  const handleThumbCaptured = async (dataUrl: string) => {
+    const job = thumbJob;
+    setThumbJob(null);
+    if (!job) return;
+    try {
+      const uploaded = await uploadDataUrlImage(dataUrl);
+      await venueLayoutsApi.update(job.roomId, job.layoutId, { thumbnailUrl: uploaded.url });
+    } catch {
+      // La vignette n'est qu'un aperçu : la disposition elle-même est enregistrée.
+    }
   };
 
   const closeEditLayout = () => {
+    // Une disposition enregistrée n'a pas de brouillon local : on envoie tout de suite
+    // les derniers changements que la sauvegarde automatique n'a pas encore emportés.
+    const closingTarget = editTargetRef.current;
+    const closingSnap = editSnapshotRef.current;
+    if (closingTarget.id !== MAIN_LAYOUT_ID && closingSnap.room && closingSnap.blueprint) {
+      if (editDirtyRef.current && !editConflictRef.current) {
+        void venueLayoutsApi.update(closingSnap.room.id, closingTarget.id, { blueprint: closingSnap.blueprint }).catch(() => {});
+      }
+      queueTargetThumbnail(closingSnap.room.id);
+    }
     editSessionRef.current += 1;
     editConflictRef.current = false;
     setEditConflict(null);
@@ -914,6 +1100,8 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
     setEditElementsReady(false);
     setEditSaveStatus('idle');
     setEditListingDraft(createDefaultListingDraft());
+    setEditLayoutChoices([]);
+    applyEditTarget({ id: MAIN_LAYOUT_ID, name: MAIN_LAYOUT_NAME });
   };
 
   const updateParam = <K extends keyof LayoutParams>(key: K, value: LayoutParams[K]) => {
@@ -1077,14 +1265,20 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
         setError('Ce plan a été modifié ailleurs : choisissez la version à garder avant d’enregistrer.');
         return;
       }
+      const target = editTargetRef.current;
+      const editingSavedLayout = target.id !== MAIN_LAYOUT_ID;
       try {
+        if (editingSavedLayout) {
+          await venueLayoutsApi.update(editingRoom.id, target.id, { blueprint: updatedBlueprint });
+          queueTargetThumbnail(editingRoom.id);
+        }
         const updated: RoomItem = await api.put(`/rooms/${editingRoom.id}`, {
           name: editMeta.name.trim() || editingRoom.name,
           description: editMeta.description.trim() || undefined,
           floor: editMeta.floor.trim() || undefined,
           location: editMeta.location.trim() || undefined,
-          layoutBlueprint: updatedBlueprint,
-          roomType: editBlueprint.roomType,
+          // Une disposition enregistrée ne touche pas au plan de la salle.
+          ...(editingSavedLayout ? {} : { layoutBlueprint: updatedBlueprint, roomType: editBlueprint.roomType }),
           expectedUpdatedAt: serverUpdatedAtRef.current ?? undefined,
         });
         if (updated?.updatedAt) serverUpdatedAtRef.current = updated.updatedAt;
@@ -1120,7 +1314,11 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
         }
       }
 
-      setSuccess('Salle et configuration enregistrées avec succès.');
+      setSuccess(
+        editingSavedLayout
+          ? `Disposition « ${target.name} » et salle enregistrées avec succès.`
+          : 'Salle et configuration enregistrées avec succès.',
+      );
       await clearRoomLayoutDraft(tenant?.id, editingRoom.id);
       editDirtyRef.current = false;
       setEditSaveStatus('saved');
@@ -1194,6 +1392,10 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
     setEditPane('identite');
     setEditElementsReady(false);
     setEditingRoom(room);
+    editSnapshotRef.current = { ...editSnapshotRef.current, room };
+    applyEditTarget({ id: MAIN_LAYOUT_ID, name: room.layoutName?.trim() || MAIN_LAYOUT_NAME });
+    setEditLayoutChoices([]);
+    if (canCatalogPublish) void refreshEditLayoutChoices(room.id);
     setEditListingDraft(createListingDraftFromRoom(room));
     setEditMeta({
       name: room.name,
@@ -2901,6 +3103,15 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
         )}
       </Modal>
 
+      {thumbJob ? (
+        <LayoutThumbnailCapture
+          key={thumbJob.layoutId}
+          blueprint={thumbJob.blueprint}
+          onCaptured={(url) => void handleThumbCaptured(url)}
+          onFailed={() => setThumbJob(null)}
+        />
+      ) : null}
+
       <Modal
         open={Boolean(editingRoom && editBlueprint)}
         onClose={closeEditLayout}
@@ -3139,6 +3350,40 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
               className="space-y-3"
             >
             <p className="text-sm text-muted">Tables, murs, étages et décor — sans changer le nom de la salle.</p>
+            {canCatalogPublish && editLayoutChoices.length > 0 ? (
+              <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-muted/40 p-3 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1">
+                  <ParamSelect
+                    label="Disposition à modifier"
+                    value={editTarget.id}
+                    onChange={(id) => {
+                      if (switchingTarget) return;
+                      const name = id === MAIN_LAYOUT_ID
+                        ? (editingRoom?.layoutName?.trim() || MAIN_LAYOUT_NAME)
+                        : editLayoutChoices.find((layout) => layout.id === id)?.name;
+                      if (!name) return;
+                      void switchEditTarget({ id, name }).catch((err: unknown) => {
+                        setError((err as { message?: string })?.message || 'Impossible d’ouvrir la disposition.');
+                      });
+                    }}
+                  >
+                    <option value={MAIN_LAYOUT_ID}>
+                      ★ {editingRoom?.layoutName?.trim() || MAIN_LAYOUT_NAME} (principale)
+                    </option>
+                    {editLayoutChoices.map((layout) => (
+                      <option key={layout.id} value={layout.id}>{layout.name}</option>
+                    ))}
+                  </ParamSelect>
+                </div>
+                <p className="text-xs text-muted sm:max-w-[45%] sm:pb-2" aria-live="polite">
+                  {switchingTarget
+                    ? 'Ouverture de la disposition…'
+                    : editTarget.id === MAIN_LAYOUT_ID
+                      ? 'Vous modifiez le plan principal de la salle.'
+                      : `Vous modifiez « ${editTarget.name} ». Le plan principal de la salle n’est pas touché.`}
+                </p>
+              </div>
+            ) : null}
             {rooms.filter((room) => room.id !== editingRoom?.id && room.layoutBlueprint).length > 0 ? (
               <ParamSelect
                 label="Copier le style depuis une autre salle"
@@ -3203,11 +3448,18 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
                   <RoomLayoutsPanel
                     roomId={editingRoom.id}
                     currentBlueprint={editBlueprint}
-                    onLoadBlueprint={(blueprint) => {
-                      markEditDirty();
-                      setEditBlueprint(blueprint);
-                      setEditElementsReady(true);
-                      setEditPane('elements');
+                    editingLayoutId={editTarget.id}
+                    onEditLayout={switchEditTarget}
+                    onBeforeMainChange={async () => {
+                      if (!(await flushEditSave())) {
+                        throw new Error('Ce plan a été modifié ailleurs : choisissez la version à garder avant de changer la disposition principale.');
+                      }
+                    }}
+                    onMainChanged={handleMainLayoutChanged}
+                    onMainRenamed={(name, roomUpdatedAt) => {
+                      serverUpdatedAtRef.current = roomUpdatedAt;
+                      setEditingRoom((current) => (current ? { ...current, layoutName: name, updatedAt: roomUpdatedAt } : current));
+                      if (editTargetRef.current.id === MAIN_LAYOUT_ID) applyEditTarget({ id: MAIN_LAYOUT_ID, name });
                     }}
                   />
                 ) : null}

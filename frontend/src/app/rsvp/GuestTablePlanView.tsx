@@ -373,6 +373,7 @@ export default function GuestTablePlanView({
                 quality="showcase"
                 lightingPreset={previewLighting}
                 showMeta={false}
+                hostTopInset
                 selectedTableId={inspectedTableId || guestTableId}
                 selectedSeats={
                   guestTableId && typeof guestSeatIndex === 'number'
@@ -381,7 +382,7 @@ export default function GuestTablePlanView({
                 }
                 onSelectTable={(tableId) => setInspectedTableId(tableId)}
                 className={cn(
-                  opts.fill ? 'flex-1 min-h-[300px] h-full' : 'min-h-[300px] h-[360px] sm:h-[420px]',
+                  'w-full aspect-auto max-h-none', opts.fill ? 'flex-1 min-h-[300px] h-full' : 'min-h-[300px] h-[360px] sm:h-[420px]',
                   '[&_.em-floor-canvas]:min-h-[300px] [&_.em-floor-canvas]:rounded-xl',
                 )}
               />
@@ -451,21 +452,10 @@ export default function GuestTablePlanView({
                 </div>
               )}
 
-              {/* Bouton pour basculer en 2D */}
-              <div className="absolute bottom-3 right-3 z-20">
-                <button
-                  type="button"
-                  onClick={() => setPlanView('2d')}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-11 rounded-xl bg-surface/95 text-foreground border border-border text-xs font-semibold hover:bg-surface shadow-sm transition active:scale-95 touch-manipulation"
-                >
-                  <MapPin className="w-3.5 h-3.5 text-primary" />
-                  <span>Voir en 2D</span>
-                </button>
-              </div>
             </div>
 
             <p className="text-xs text-muted leading-relaxed shrink-0 px-1 flex items-center justify-between">
-              <span>Orbitez pour explorer la salle. Touchez une table pour voir ses détails ou revenez à votre place.</span>
+              <span>Glissez pour tourner, pincez pour zoomer, deux doigts (ou clic droit) pour vous déplacer. Touchez une table pour voir ses détails.</span>
               <button type="button" onClick={() => setPlanView('2d')} className="font-semibold text-primary hover:underline ml-2 shrink-0">
                 Voir en 2D →
               </button>

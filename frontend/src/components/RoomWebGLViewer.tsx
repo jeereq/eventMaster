@@ -284,6 +284,11 @@ interface RoomWebGLViewerProps {
   wallEditMode?: boolean;
   /** L’hôte pose ses propres boutons en haut à droite (éditeur) : la barre caméra leur laisse la place. */
   reserveTopRight?: boolean;
+  /**
+   * L’hôte superpose sa propre rangée en haut de la vue (boutons de la fiche salle, badge « Mon emplacement ») :
+   * la barre caméra et les panneaux qui en dépendent descendent sous cette rangée.
+   */
+  hostTopInset?: boolean;
   /** Bloque orbit / pan pour déplacer le mobilier sans changer la perspective. */
   lockOrbit?: boolean;
   /** Mode aperçu (marketplace / fiches) : pas de hints d’édition, orbit libre. */
@@ -3500,18 +3505,49 @@ function CinematicCameraController({
   /** Vitesse d’approche (plus bas = glissé plus lent, façon travelling de film). */
   speed?: number;
 }) {
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
   const animatingRef = useRef(false);
+  const elapsedRef = useRef(0);
+  const onArrivalRef = useRef(onArrival);
+  useEffect(() => {
+    onArrivalRef.current = onArrival;
+  }, [onArrival]);
 
   useEffect(() => {
     if (targetPose) {
       animatingRef.current = true;
+      elapsedRef.current = 0;
     }
   }, [targetPose]);
+
+  // Le visiteur reprend la main dès qu’il touche la vue : le travelling s’arrête là où il est,
+  // au lieu de ramener la caméra de force vers la perspective visée.
+  useEffect(() => {
+    const dom = gl.domElement;
+    const release = () => {
+      if (!animatingRef.current) return;
+      animatingRef.current = false;
+      setTimeout(() => onArrivalRef.current?.(), 0);
+    };
+    dom.addEventListener('pointerdown', release);
+    dom.addEventListener('wheel', release, { passive: true });
+    return () => {
+      dom.removeEventListener('pointerdown', release);
+      dom.removeEventListener('wheel', release);
+    };
+  }, [gl]);
 
   useFrame((_, delta) => {
     if (!animatingRef.current || !targetPose) return;
     const ctrl = (orbitControlsRef as { current?: any } | undefined)?.current;
+    // Pose hors des limites de l’orbite (trop bas, trop près) : elle ne serait jamais atteinte et la
+    // caméra resterait aimantée. Au-delà du temps d’un travelling, on rend la main.
+    elapsedRef.current += delta;
+    if (elapsedRef.current > Math.max(4, 12 / speed)) {
+      animatingRef.current = false;
+      setTimeout(() => onArrivalRef.current?.(), 0);
+      return;
+    }
     const t = Math.min(1, 1 - Math.exp(-delta * speed));
     camera.position.lerp(targetPose.pos, t);
     if (ctrl?.target) {
@@ -3528,7 +3564,7 @@ function CinematicCameraController({
       }
       animatingRef.current = false;
       setTimeout(() => {
-        onArrival?.();
+        onArrivalRef.current?.();
       }, 0);
     }
   });
@@ -4041,8 +4077,29 @@ function SceneContent({
   const viewportAspect = size.width > 0 && size.height > 0
     ? Math.round((size.width / size.height) * 20) / 20
     : 1.6;
+  // Dès que le visiteur oriente lui-même la vue, la salle cesse de tourner seule et n’est plus
+  // recadrée quand la hauteur de l’écran bouge (barre d’adresse du téléphone qui apparaît).
+  const [userTookControl, setUserTookControl] = useState(false);
+  const userTookControlRef = useRef(false);
+  const markUserControl = useCallback(() => {
+    if (userTookControlRef.current) return;
+    userTookControlRef.current = true;
+    setUserTookControl(true);
+  }, []);
+  const lastFramingRef = useRef<{ key: string; aspect: number } | null>(null);
   useEffect(() => {
     if (walkthroughActive) return;
+    const framingKey = [depthAmount, widthM, heightM, qualitySettings.fov, stackView, focusY, topStoryElev, wallHeightM, introFlyIn, dollhouseFraming, introView, introReplayKey].join('|');
+    const previousFraming = lastFramingRef.current;
+    lastFramingRef.current = { key: framingKey, aspect: viewportAspect };
+    if (
+      previousFraming
+      && previousFraming.key === framingKey
+      && previousFraming.aspect !== viewportAspect
+      && userTookControlRef.current
+    ) {
+      return;
+    }
     const isTopDown = depthAmount === 0;
     const tilt = (depthAmount / 100) * 55;
     const tiltRad = (tilt * Math.PI) / 180;
@@ -4131,6 +4188,29 @@ function SceneContent({
       }
     }
   }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM, viewportAspect, orbitControlsRef, introFlyIn, reduceMotion, dollhouseFraming, introView, introReplayKey]);
+
+  // Le déplacement latéral (deux doigts) reste libre mais la cible ne quitte pas les abords de la salle :
+  // on ne peut pas « perdre » la salle hors du cadre.
+  const clampOrbitTarget = useCallback((event?: { target?: unknown }) => {
+    const ctrl = event?.target as { target?: THREE.Vector3; object?: THREE.Camera } | undefined;
+    const target = ctrl?.target;
+    const orbitCamera = ctrl?.object;
+    if (!target || !orbitCamera) return;
+    const halfW = widthM / 2 + 2;
+    const halfD = heightM / 2 + 2;
+    const topY = focusY + wallHeightM + topStoryElev + 6;
+    const x = THREE.MathUtils.clamp(target.x, -halfW, halfW);
+    const y = THREE.MathUtils.clamp(target.y, -2, topY);
+    const z = THREE.MathUtils.clamp(target.z, -halfD, halfD);
+    const dx = x - target.x;
+    const dy = y - target.y;
+    const dz = z - target.z;
+    if (dx === 0 && dy === 0 && dz === 0) return;
+    target.set(x, y, z);
+    orbitCamera.position.x += dx;
+    orbitCamera.position.y += dy;
+    orbitCamera.position.z += dz;
+  }, [widthM, heightM, focusY, wallHeightM, topStoryElev]);
 
   const [dragSession, setDragSession] = React.useState<DragSession | null>(null);
 
@@ -4931,10 +5011,12 @@ function SceneContent({
         ref={orbitControlsRef as never}
         key={stackView ? `stack-${stories.length}-${focusY.toFixed(1)}` : 'floor'}
         enabled={!dragSession && !walkthroughActive && !avatarViewGuest}
-        enablePan={!wallEditMode && !lockOrbit && !dragSession && !presentationMode && !walkthroughActive}
+        enablePan={!wallEditMode && !lockOrbit && !dragSession && !walkthroughActive}
         enableRotate={(!wallEditMode && !lockOrbit && !dragSession && !walkthroughActive) || (presentationMode && !walkthroughActive)}
         enableZoom={!walkthroughActive}
-        autoRotate={presentationMode && !walkthroughActive && !avatarViewGuest && !reduceMotion && !filmActive && !introRunning && !introGlide}
+        onStart={markUserControl}
+        onChange={clampOrbitTarget}
+        autoRotate={presentationMode && !userTookControl && !walkthroughActive && !avatarViewGuest && !reduceMotion && !filmActive && !introRunning && !introGlide}
         autoRotateSpeed={0.55}
         maxPolarAngle={Math.PI / 2.05}
         minDistance={3}
@@ -4963,6 +5045,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   className,
   wallEditMode = false,
   reserveTopRight = false,
+  hostTopInset = false,
   lockOrbit = false,
   previewMode = false,
   renderQuality: renderQualityProp,
@@ -5567,7 +5650,8 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       {!walkthroughActive && !wallEditMode && !avatarActive && (
         <div
           className={cn(
-            'absolute top-2.5 left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 border border-border/70 shadow-sm max-w-[calc(100%-4.5rem)] overflow-x-auto no-scrollbar pointer-events-auto',
+            'absolute left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 border border-border/70 shadow-sm overflow-x-auto no-scrollbar pointer-events-auto',
+            hostTopInset ? 'top-[4.25rem] max-w-[calc(100%-1.25rem)]' : 'top-2.5 max-w-[calc(100%-4.5rem)]',
             // Assez large : une seule ligne à côté des boutons de l’éditeur ; sinon, juste en dessous.
             reserveTopRight && 'lg:@max-[62rem]:top-[3.6rem] @min-[62rem]:max-w-[calc(100%-18.5rem)]',
           )}
@@ -5762,7 +5846,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
 
       {filmMenuOpen && !film && !walkthroughActive && !wallEditMode ? (
         <div
-          className="absolute left-2.5 top-16 z-20 w-[min(17rem,calc(100%-1.25rem))] rounded-2xl border border-border/70 bg-background/95 p-2 shadow-lg dark:bg-surface-elevated/95 pointer-events-auto"
+          className={cn('absolute left-2.5 z-20 w-[min(17rem,calc(100%-1.25rem))] rounded-2xl', hostTopInset ? 'top-[7.25rem]' : 'top-16', 'border border-border/70 bg-background/95 p-2 shadow-lg dark:bg-surface-elevated/95 pointer-events-auto')}
           role="menu"
           aria-label="Film de la salle"
         >
@@ -5818,7 +5902,10 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       {/* Panneau « Espaces » : liste, survol = surlignage 3D, clic = la caméra s’envole vers l’espace. */}
       {spacesOpen && !walkthroughActive && !wallEditMode && spaces.length > 0 ? (
         <div
-          className="absolute inset-x-2.5 bottom-12 z-10 flex max-h-[46%] flex-col sm:inset-x-auto sm:right-2.5 sm:top-16 sm:max-h-none sm:w-72 overflow-hidden rounded-2xl border border-border/70 bg-background/90 shadow-lg dark:bg-surface-elevated/90 pointer-events-auto"
+          className={cn(
+            'absolute inset-x-2.5 bottom-12 z-10 flex max-h-[46%] flex-col sm:inset-x-auto sm:right-2.5 sm:max-h-none sm:w-72 overflow-hidden rounded-2xl border border-border/70 bg-background/90 shadow-lg dark:bg-surface-elevated/90 pointer-events-auto',
+            hostTopInset ? 'sm:top-[7.25rem]' : 'sm:top-16',
+          )}
           role="region"
           aria-label="Espaces de la salle"
         >
@@ -6023,7 +6110,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
               current={avatarViewer}
               stage={stageSpace}
               onPick={showAvatar}
-              className="absolute right-2.5 top-12 z-30 w-40 sm:top-2.5 sm:w-64"
+              className={cn('absolute right-2.5 z-30 w-40 sm:w-64', hostTopInset ? 'top-[4.25rem]' : 'top-12 sm:top-2.5')}
             />
           ) : null}
           <div className="pointer-events-none absolute top-2.5 left-2.5 right-2.5 z-10 flex justify-start">
@@ -6187,7 +6274,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             Visite guidée · {tourCaption || 'entrée par la porte'}
           </div>
         </div>
-      ) : film || presentationMode ? null : qualitySettings.showHints ? (
+      ) : film || previewMode || presentationMode ? null : qualitySettings.showHints ? (
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
           <div className="max-w-[min(26rem,55%)] rounded-md bg-foreground/85 px-2 py-1 text-xs font-medium text-background">
             {touchScreen

@@ -7,11 +7,14 @@ import { useHeadStylesheet } from '@/lib/headStylesheet';
 import { ImageIcon } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { templateImageStyleClass, templateImageStyleExtra } from '@/lib/templateImageStyle';
+import { hasTemplateImageEffects, type TemplateImageEffects } from '@/lib/templateImageEffects';
+import TemplateImage from '@/components/TemplateImage';
+import { templateElementWrapperStyle, type TemplateElementEffects } from '@/lib/templateElementStyle';
 
 const LANDING_PREVIEW_FONTS =
   'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Great+Vibes&family=Playfair+Display:wght@400;700&display=swap';
 
-interface PreviewElement {
+interface PreviewElement extends TemplateImageEffects, TemplateElementEffects {
   id?: string;
   type?: string;
   text?: string;
@@ -275,6 +278,13 @@ function renderElement(
     case 'image': {
       const imgHeight = compact ? '3.5rem' : el.imageHeight || '8rem';
       const imgWidth = compact ? '100%' : el.imageWidth || '100%';
+      if (!compact && el.imageUrl && hasTemplateImageEffects(el)) {
+        return (
+          <div className={`flex ${alignClass(el.align)} w-full my-1`}>
+            <TemplateImage el={{ ...el, imageHeight: imgHeight, imageWidth: imgWidth }} alt="" />
+          </div>
+        );
+      }
       return (
         <div className={`flex ${alignClass(el.align)} w-full my-1`}>
           <PreviewImage
@@ -517,8 +527,8 @@ export default function LandingInvitationPreview({
                       <div
                         key={el.id || i}
                         className={free ? '' : `${widthClass(el.width)} px-0.5`}
-                        style={
-                          free
+                        style={{
+                          ...(free
                             ? {
                                 position: 'absolute',
                                 left: `${el.xPct ?? 8}%`,
@@ -526,8 +536,9 @@ export default function LandingInvitationPreview({
                                 width: `${el.wPct ?? 84}%`,
                                 zIndex: el.zIndex ?? i + 1,
                               }
-                            : undefined
-                        }
+                            : {}),
+                          ...templateElementWrapperStyle(el, free),
+                        }}
                       >
                         {renderElement(el, isCompact, paletteAccent, '#ffffff', variableOverrides, showRawVariables, true)}
                       </div>
@@ -557,8 +568,8 @@ export default function LandingInvitationPreview({
                     <div
                       key={el.id || i}
                       className={free ? '' : `${widthClass(el.width)} px-0.5`}
-                      style={
-                        free
+                      style={{
+                        ...(free
                           ? {
                               position: 'absolute',
                               left: `${el.xPct ?? 8}%`,
@@ -566,8 +577,9 @@ export default function LandingInvitationPreview({
                               width: `${el.wPct ?? 84}%`,
                               zIndex: el.zIndex ?? i + 1,
                             }
-                          : undefined
-                      }
+                          : {}),
+                        ...templateElementWrapperStyle(el, free),
+                      }}
                     >
                       {renderElement(el, isCompact, paletteAccent, undefined, variableOverrides, showRawVariables, false)}
                     </div>

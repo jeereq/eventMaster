@@ -1,5 +1,6 @@
 export const TEMPLATE_IMAGE_STYLES = [
   { id: 'rounded', label: 'Arrondi' },
+  { id: 'plain', label: 'Sans cadre (PNG, illustration)' },
   { id: 'circle', label: 'Cercle' },
   { id: 'arch', label: 'Arche' },
   { id: 'arch-gold', label: 'Arche dorée' },
@@ -29,6 +30,8 @@ export function templateImageStyleClass(style?: string): string {
       return 'border-0 aspect-square';
     case 'gold-frame':
       return 'rounded-2xl border-4 border-amber-400/80 p-1 bg-surface shadow-lg';
+    case 'plain':
+      return 'rounded-none border-0';
     case 'magazine':
       return 'rounded-none border-0';
     case 'full-bleed':
