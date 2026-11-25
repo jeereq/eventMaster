@@ -100,16 +100,12 @@ function GroupHeading({ kind, count }: { kind: CatalogueDisplayKind; count: numb
 function GridCard({
   item,
   compact,
-  favorited,
-  onToggleFavorite,
   onNavigate,
   eager,
   actions,
 }: {
   item: CatalogueItem;
   compact?: boolean;
-  favorited?: boolean;
-  onToggleFavorite?: (item: CatalogueItem) => void;
   onNavigate?: (e: React.MouseEvent) => void;
   eager?: boolean;
   actions?: React.ReactNode;
@@ -121,11 +117,7 @@ function GridCard({
   ].filter(Boolean);
   return (
     <article className="group relative flex flex-col">
-      {onToggleFavorite && item.kind !== 'event' ? (
-        <div className="absolute top-2.5 right-2.5 z-10">
-          <FavoriteHeart active={Boolean(favorited)} onToggle={() => onToggleFavorite(item)} />
-        </div>
-      ) : distance ? (
+      {distance ? (
         <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-stage text-stage-foreground text-xs font-semibold px-2.5 py-0.5 border border-stage-foreground/20 shadow-xs">
           {distance}
         </span>
@@ -355,8 +347,6 @@ export default function CatalogueResults({
                   item={item}
                   compact={cols >= 5}
                   eager={groupIndex === 0 && index < 2}
-                  favorited={isFavorite?.(item)}
-                  onToggleFavorite={onToggleFavorite}
                   onNavigate={rememberListOnNavigate}
                   actions={renderActions?.(item)}
                 />
@@ -394,8 +384,6 @@ export default function CatalogueResults({
           item={item}
           compact={cols >= 5}
           eager={index < 2}
-          favorited={isFavorite?.(item)}
-          onToggleFavorite={onToggleFavorite}
           onNavigate={rememberListOnNavigate}
           actions={renderActions?.(item)}
         />

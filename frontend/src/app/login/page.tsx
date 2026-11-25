@@ -4,7 +4,6 @@ import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowUpRight } from '@/components/icons';
 import { AuthPhotoLayout } from '@/components/AuthPhotoLayout';
 import { Button, Alert, PasswordInput, IdentifierInput, identifierValue } from '@/components/ui';
 import type { IdentifierMode } from '@/components/ui';
@@ -93,15 +92,6 @@ function LoginPageContent() {
         isClientFlow
           ? 'Après connexion, vous revenez à la fiche.'
           : 'Vos invités, votre salle et vos billets vous attendent.'
-      }
-      photoAction={
-        <Link
-          href={registerHref}
-          className="inline-flex items-center gap-2 min-h-12 rounded-2xl bg-white px-5 text-sm font-semibold text-[#10291c] shadow-lg hover:bg-[#f1fbe6] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a6f04d]"
-        >
-          <ArrowUpRight className="w-4 h-4" aria-hidden />
-          Créer un compte gratuit
-        </Link>
       }
     >
         {error && <Alert variant="error" className="mb-5">{error}</Alert>}

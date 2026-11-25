@@ -28,7 +28,6 @@ import {
   AlertCircle,
   PartyPopper,
   Crown,
-  Zap,
   Sliders,
   X,
   Heart,
@@ -39,6 +38,7 @@ import {
 } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Button, ConfirmDialog, Input, Modal, PhoneInput, parseStoredPhone } from '@/components/ui';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import CityLocationFields from '@/components/CityLocationFields';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
@@ -131,6 +131,10 @@ const SELECT_CLASS =
 const TEXTAREA_CLASS =
   'w-full px-3.5 py-2.5 bg-surface dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition-all';
 
+/** Raccourci discret sous un champ (dates, durées). */
+const QUICK_CHIP_CLASS =
+  'inline-flex min-h-8 items-center rounded-full bg-surface-muted px-3 text-xs font-medium text-muted transition-colors hover:text-foreground touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+
 const SIMPLE_DRESS_PRESETS: Array<Exclude<DressCodePresetId, 'custom' | 'white_tie' | 'theme_color'>> = [
   'cocktail',
   'smart_casual',
@@ -200,9 +204,6 @@ export default function EventConfigForm({
   const editingId = initialEvent?.id ?? null;
   const [mode, setMode] = useState<EventConfigMode>(defaultMode);
   const [tab, setTab] = useState<EventConfigTab>('essentials');
-  /** Étapes ouvertes au moins une fois : une étape facultative n’est cochée qu’après visite. */
-  const [visitedTabs, setVisitedTabs] = useState<EventConfigTab[]>(['essentials']);
-  if (!visitedTabs.includes(tab)) setVisitedTabs([...visitedTabs, tab]);
   const [title, setTitle] = useState('');
   const [titleManual, setTitleManual] = useState(false);
   const [partnerFirst, setPartnerFirst] = useState('');
@@ -308,7 +309,6 @@ export default function EventConfigForm({
     setBaseline(null);
     setBaselineToken((n) => n + 1);
     setTab('essentials');
-    setVisitedTabs(['essentials']);
     setAccessSubTab('ticketing');
     setPendingTicketRisks(null);
     setTicketRiskConfirmed(false);
@@ -1124,19 +1124,6 @@ export default function EventConfigForm({
     }
   };
 
-  const isTabCompleted = (tabId: EventConfigTab) => {
-    if (tabId === 'essentials') return Boolean(title.trim() && date);
-    if (tabId === 'place') return Boolean(location.trim() && commune.trim() && neighborhood.trim());
-    if (tabId === 'access') {
-      if (!complete || !isPublic) return true;
-      if (!ticketing) return true;
-      if (ticketPricingMode === 'global') return Boolean(ticketPrice && Number(ticketPrice) > 0);
-      return pricingZones.some((zone) => zone.name.trim() && zone.priceFc > 0);
-    }
-    if (tabId === 'welcome') return true;
-    return false;
-  };
-
   const tabStatus = useMemo(() => {
     const essentialsDone = Boolean(title.trim() && date);
     const placeDone = Boolean(location.trim() && commune.trim() && neighborhood.trim());
@@ -1170,14 +1157,8 @@ export default function EventConfigForm({
     if (!date) return null;
     const d = new Date(date);
     if (Number.isNaN(d.getTime())) return null;
-    return d.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    // Seul le jour de la semaine est nouveau : la date et l’heure sont déjà dans le champ.
+    return d.toLocaleDateString('fr-FR', { weekday: 'long' });
   }, [date]);
 
   const durationPreview = useMemo(() => {
@@ -1186,12 +1167,12 @@ export default function EventConfigForm({
     const end = new Date(endsAt);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
     const diffMs = end.getTime() - start.getTime();
-    if (diffMs <= 0) return { error: true, text: "L'heure de fin doit être postérieure au début" };
+    if (diffMs <= 0) return { error: true, text: 'L’heure de fin doit être postérieure au début' };
     const diffHours = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10;
-    const endFormatted = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    // Seule la durée est nouvelle : l’heure de fin est déjà dans son champ.
     return {
       error: false,
-      text: `Durée prévue : ${diffHours}h (jusqu'à ${endFormatted})`,
+      text: `${diffHours.toLocaleString('fr-FR')} h`,
     };
   }, [date, endsAt]);
 
@@ -1226,12 +1207,9 @@ export default function EventConfigForm({
     onClose();
   };
 
-  const tabNeedsAttention = (id: EventConfigTab) => {
-    if (id === 'essentials') return !title.trim() || !date;
-    if (id === 'place') return !location.trim() || !commune.trim() || !neighborhood.trim();
-    if (id === 'access') return complete && isPublic && ticketing && ticketPricingMode === 'global' && !ticketPrice;
-    return false;
-  };
+  // Un seul bouton plein : « Créer » dès qu’il est utilisable (ou à la dernière étape), sinon « Suivant ».
+  const createIsPrimary =
+    Boolean(editingId) || !nextEventConfigTab(tab) || (tabStatus.allRequiredDone && !createDisabled);
 
   return (
     <>
@@ -1242,28 +1220,27 @@ export default function EventConfigForm({
       size="xl"
       footer={
         <div className="flex w-full flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={requestClose}>
+          <div className="flex min-w-0 items-center gap-3">
+            <Button type="button" variant="ghost" size="sm" onClick={requestClose}>
               Annuler
             </Button>
-            {tabStatus.allRequiredDone ? (
-              <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Champs obligatoires validés
-              </span>
-            ) : (
-              <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
-                <AlertCircle className="w-3.5 h-3.5" />
+            {!tabStatus.allRequiredDone && missingRequired.length > 0 && (
+              <span
+                className={cn(
+                  'min-w-0 text-xs',
+                  formError ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-muted',
+                )}
+              >
                 À compléter : {missingRequired.join(', ')}
               </span>
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {tab !== 'essentials' && (
               <Button
                 type="button"
-                variant="secondary"
+                variant="ghost"
                 size="sm"
                 leftIcon={<ArrowLeft className="w-4 h-4" />}
                 onClick={handlePrev}
@@ -1275,10 +1252,11 @@ export default function EventConfigForm({
             {tab !== 'welcome' && (
               <Button
                 type="button"
-                variant="secondary"
+                variant={createIsPrimary ? 'secondary' : 'primary'}
                 size="sm"
                 rightIcon={<ArrowRight className="w-4 h-4" />}
                 onClick={handleNext}
+                className="font-semibold"
               >
                 Suivant
               </Button>
@@ -1287,6 +1265,7 @@ export default function EventConfigForm({
             <Button
               type="submit"
               form="event-config-form"
+              variant={createIsPrimary ? 'primary' : 'secondary'}
               size="sm"
               loading={saving}
               disabled={!editingId && (createDisabled || !tabStatus.allRequiredDone)}
@@ -1299,8 +1278,7 @@ export default function EventConfigForm({
                       ? `À compléter : ${missingRequired.join(', ')}`
                       : undefined
               }
-              className="font-bold shadow-xs"
-              rightIcon={<Check className="w-4 h-4" />}
+              className="font-semibold"
             >
               {editingId ? 'Enregistrer les modifications' : 'Créer l’événement'}
             </Button>
@@ -1310,13 +1288,11 @@ export default function EventConfigForm({
     >
       <form id="event-config-form" onSubmit={handleFormSubmit} onKeyDown={handleFormKeyDown} className="space-y-4">
         {/* Étapes et mode */}
-        <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-border">
-          <div className="grid min-w-0 flex-1 basis-full grid-cols-2 gap-2 sm:basis-0 sm:grid-cols-4" role="tablist" aria-label="Étapes de configuration">
-            {EVENT_CONFIG_TABS.map((item, idx) => {
+        <div className="flex flex-col-reverse gap-3 border-b border-border sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex min-w-0 items-center" role="tablist" aria-label="Étapes de configuration">
+            {EVENT_CONFIG_TABS.map((item) => {
               const details = EVENT_CONFIG_TAB_DETAILS[item.id];
               const isCurrent = tab === item.id;
-              const isCompleted = isTabCompleted(item.id) && (item.id === 'essentials' || item.id === 'place' || visitedTabs.includes(item.id));
-              const hasAttention = tabNeedsAttention(item.id);
 
               return (
                 <button
@@ -1330,75 +1306,43 @@ export default function EventConfigForm({
                     setTab(item.id);
                   }}
                   className={cn(
-                    'px-3 py-2 rounded-xl border text-left transition flex items-center gap-2.5 min-h-11 touch-manipulation',
+                    'relative inline-flex min-h-11 shrink-0 items-center whitespace-nowrap px-3 text-sm transition-colors touch-manipulation sm:px-4',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40',
                     isCurrent
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary/25 shadow-xs'
-                      : 'border-border bg-surface hover:bg-surface-muted/60 text-muted'
+                      ? 'font-semibold text-foreground after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary sm:after:inset-x-4'
+                      : 'font-medium text-muted hover:text-foreground',
                   )}
                 >
-                  <div
-                    className={cn(
-                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors',
-                      isCompleted && !isCurrent
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                        : isCurrent
-                        ? 'bg-primary-solid text-primary-foreground shadow-2xs'
-                        : 'bg-surface-muted text-muted border border-border'
-                    )}
-                  >
-                    {isCompleted && !isCurrent ? (
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                    ) : (
-                      <span>{idx + 1}</span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1">
-                      <span className={cn('text-xs font-bold truncate', isCurrent ? 'text-foreground' : 'text-foreground/80')}>
-                        {details.label}
-                      </span>
-                      {hasAttention && !isCompleted && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Champ requis" />
-                      )}
-                    </div>
-                  </div>
+                  {details.label}
                 </button>
               );
             })}
           </div>
 
-            {/* Mode switch */}
-            <div className="inline-flex items-center rounded-xl bg-surface-muted p-1 border border-border shrink-0">
-              <button
-                type="button"
-                onClick={() => setMode('simple')}
-                className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation',
-                  !complete
-                    ? 'bg-surface text-foreground shadow-2xs font-bold ring-1 ring-border/50'
-                    : 'text-muted hover:text-foreground'
-                )}
-                title="Formulaire rapide : Titre, date et lieu en 30 secondes"
-              >
-                <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                <span>Mode Express</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('complete')}
-                className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation',
-                  complete
-                    ? 'bg-surface text-foreground shadow-2xs font-bold ring-1 ring-border/50'
-                    : 'text-muted hover:text-foreground'
-                )}
-                title="Formulaire complet : Billetterie, zones tarifaires 3D, staff et programme"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span>Mode Avancé</span>
-              </button>
-            </div>
-
+          <div
+            role="group"
+            aria-label="Mode du formulaire"
+            className={cn('inline-flex shrink-0 self-end sm:mb-2', SEGMENTED_TRACK)}
+          >
+            <button
+              type="button"
+              aria-pressed={!complete}
+              onClick={() => setMode('simple')}
+              className={segmentedItem(!complete, 'min-h-9 px-3 text-xs sm:min-h-8')}
+              title="Titre, date et lieu"
+            >
+              Express
+            </button>
+            <button
+              type="button"
+              aria-pressed={complete}
+              onClick={() => setMode('complete')}
+              className={segmentedItem(complete, 'min-h-9 px-3 text-xs sm:min-h-8')}
+              title="Billetterie, zones tarifaires, staff et programme"
+            >
+              Avancé
+            </button>
+          </div>
         </div>
 
         {(formError || saveError) && (
@@ -1412,195 +1356,164 @@ export default function EventConfigForm({
         )}
 
         {tab === 'essentials' && (
-          <section className="space-y-4">
-            {/* Sous-onglet 1 : Identité & Horaires (ou formulaire direct en mode express) */}
-            {(
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <span className="block text-xs font-semibold text-muted">Type d’événement</span>
-                  <div className="flex flex-wrap gap-2">
-                    {kinds.map((kind) => {
-                      const KindIcon = KIND_ICONS[kind] || Calendar;
-                      const isSelected = eventKind === kind;
-                      return (
-                        <button
-                          key={kind}
-                          type="button"
-                          onClick={() => applyKind(isSelected ? '' : kind)}
-                          className={cn(
-                            'inline-flex min-h-10 items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation',
-                            isSelected
-                              ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
-                              : 'bg-surface text-foreground/80 border-border hover:border-primary/40 hover:bg-surface-muted',
-                          )}
-                        >
-                          <KindIcon className={cn('w-3.5 h-3.5 shrink-0', isSelected ? 'text-primary-foreground' : 'text-primary')} />
-                          <span>{EVENT_KIND_LABELS[kind]}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {eventKind === 'WEDDING' && (
-                  <div className="rounded-2xl border border-rose-500/25 bg-rose-500/5 dark:bg-rose-950/20 p-3.5 space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-300">
-                      <Heart className="w-4 h-4 text-rose-500 shrink-0" />
-                      <span>Prénoms des futurs mariés (titre généré automatiquement)</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Input
-                        label="Prénom conjoint(e) 1"
-                        value={partnerFirst}
-                        onChange={(e) => applyPartner(e.target.value, partnerSecond)}
-                        placeholder="Claire"
-                      />
-                      <Input
-                        label="Prénom conjoint(e) 2"
-                        value={partnerSecond}
-                        onChange={(e) => applyPartner(partnerFirst, e.target.value)}
-                        placeholder="Alexandre"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <Input
-                  label="Titre de l'événement"
-                  value={title}
-                  onChange={(e) => {
-                    setTitleManual(true);
-                    setTitle(e.target.value);
-                  }}
-                  placeholder={eventKind === 'WEDDING' ? 'Mariage de Claire & Alexandre' : 'ex. Anniversaire de Léa'}
-                  required
-                />
-
-                <div className={cn('grid grid-cols-1 gap-3', complete ? 'sm:grid-cols-2' : '')}>
-                  <div className="space-y-1.5">
-                    <Input
-                      label="Date & heure de début"
-                      type="datetime-local"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      required
-                    />
-                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                      <button
-                        type="button"
-                        onClick={() => setDatePreset('this_saturday')}
-                        className="min-h-9 px-3 rounded-xl text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition touch-manipulation"
-                      >
-                        Ce samedi (18h)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDatePreset('next_saturday')}
-                        className="min-h-9 px-3 rounded-xl text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition touch-manipulation"
-                      >
-                        Samedi prochain
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDatePreset('in_month')}
-                        className="min-h-9 px-3 rounded-xl text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition touch-manipulation"
-                      >
-                        Dans 1 mois
-                      </button>
-                    </div>
-                  </div>
-
-                  {complete && (
-                    <div className="space-y-1.5">
-                      <Input
-                        label="Heure de fin (optionnel)"
-                        type="datetime-local"
-                        value={endsAt}
-                        onChange={(e) => setEndsAt(e.target.value)}
-                      />
-                      {date && (
-                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                          <span className="text-xs text-muted font-medium">Durée :</span>
-                          <button
-                            type="button"
-                            onClick={() => setEndsAtPreset(2)}
-                            className="min-h-9 px-3 rounded-xl text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition touch-manipulation"
-                          >
-                            +2h
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEndsAtPreset(4)}
-                            className="min-h-9 px-3 rounded-xl text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition touch-manipulation"
-                          >
-                            +4h
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEndsAtPreset(6, true)}
-                            className="min-h-9 px-3 rounded-xl text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition touch-manipulation"
-                          >
-                            Soirée (minuit)
-                          </button>
-                        </div>
+          <section className="space-y-5">
+            <div className="space-y-2">
+              <span id="event-config-kind-label" className="block text-xs font-semibold text-muted">
+                Type d’événement
+              </span>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby="event-config-kind-label">
+                {kinds.map((kind) => {
+                  const KindIcon = KIND_ICONS[kind] || Calendar;
+                  const isSelected = eventKind === kind;
+                  return (
+                    <button
+                      key={kind}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => applyKind(isSelected ? '' : kind)}
+                      className={cn(
+                        'inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors touch-manipulation',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                        isSelected
+                          ? 'bg-primary-solid text-primary-foreground'
+                          : 'bg-surface-muted text-foreground/80 hover:text-foreground',
                       )}
-                    </div>
-                  )}
-                </div>
+                    >
+                      <KindIcon
+                        className={cn('h-3.5 w-3.5 shrink-0', isSelected ? 'text-primary-foreground' : 'text-muted')}
+                      />
+                      <span>{EVENT_KIND_LABELS[kind]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-                {/* Aperçu lisible de la date & durée */}
-                {(formattedDatePreview || durationPreview) && (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {formattedDatePreview && (
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-muted border border-border text-xs text-foreground font-medium">
-                        <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span className="capitalize">{formattedDatePreview}</span>
-                      </div>
-                    )}
-                    {durationPreview && (
-                      <div
-                        className={cn(
-                          'flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium',
-                          durationPreview.error
-                            ? 'bg-rose-500/10 border-rose-500/25 text-rose-600 dark:text-rose-400'
-                            : 'bg-surface-muted border-border text-muted',
-                        )}
-                      >
-                        {durationPreview.error ? (
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                        ) : (
-                          <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
-                        )}
-                        <span>{durationPreview.text}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {!complete && (
-                  <div className="space-y-3">
-                    <Input
-                      label="Lieu"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="ex. Hôtel Fleuve Congo"
-                    />
-                    <CityLocationFields
-                      city={city}
-                      commune={commune}
-                      neighborhood={neighborhood}
-                      onChange={applyPlace}
-                      hint="Ville, commune et quartier — pour les invitations et le pin de rendez-vous."
-                    />
-                  </div>
-                )}
-
+            {eventKind === 'WEDDING' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label="Prénom conjoint(e) 1"
+                  value={partnerFirst}
+                  onChange={(e) => applyPartner(e.target.value, partnerSecond)}
+                  placeholder="Claire"
+                />
+                <Input
+                  label="Prénom conjoint(e) 2"
+                  value={partnerSecond}
+                  onChange={(e) => applyPartner(partnerFirst, e.target.value)}
+                  placeholder="Alexandre"
+                />
               </div>
             )}
 
-            {/* Sous-onglet 2 : Logistique, Client & Accès (mode complet uniquement) */}
+            <Input
+              label="Titre de l’événement"
+              value={title}
+              onChange={(e) => {
+                setTitleManual(true);
+                setTitle(e.target.value);
+              }}
+              placeholder={eventKind === 'WEDDING' ? 'Mariage de Claire & Alexandre' : 'ex. Anniversaire de Léa'}
+              required
+            />
+
+            <div className="space-y-2">
+              <div className={cn('grid grid-cols-1 gap-x-3 gap-y-5', complete ? 'sm:grid-cols-2' : '')}>
+                <div className="space-y-2">
+                  <Input
+                    label="Date & heure de début"
+                    type="datetime-local"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    required
+                  />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button type="button" onClick={() => setDatePreset('this_saturday')} className={QUICK_CHIP_CLASS}>
+                      Ce samedi (18h)
+                    </button>
+                    <button type="button" onClick={() => setDatePreset('next_saturday')} className={QUICK_CHIP_CLASS}>
+                      Samedi prochain
+                    </button>
+                    <button type="button" onClick={() => setDatePreset('in_month')} className={QUICK_CHIP_CLASS}>
+                      Dans 1 mois
+                    </button>
+                  </div>
+                </div>
+
+                {complete && (
+                  <div className="space-y-2">
+                    <Input
+                      label="Heure de fin (optionnel)"
+                      type="datetime-local"
+                      value={endsAt}
+                      onChange={(e) => setEndsAt(e.target.value)}
+                    />
+                    {date && (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-xs text-muted">Durée :</span>
+                        <button type="button" onClick={() => setEndsAtPreset(2)} className={QUICK_CHIP_CLASS}>
+                          +2h
+                        </button>
+                        <button type="button" onClick={() => setEndsAtPreset(4)} className={QUICK_CHIP_CLASS}>
+                          +4h
+                        </button>
+                        <button type="button" onClick={() => setEndsAtPreset(6, true)} className={QUICK_CHIP_CLASS}>
+                          Soirée (minuit)
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Aperçu lisible de la date & durée */}
+              {(formattedDatePreview || durationPreview) && (
+                <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                  {formattedDatePreview && (
+                    <span className="inline-flex items-center gap-1.5 text-muted">
+                      <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      <span className="inline-block first-letter:uppercase">{formattedDatePreview}</span>
+                    </span>
+                  )}
+                  {durationPreview && (
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1.5',
+                        durationPreview.error ? 'font-medium text-rose-600 dark:text-rose-400' : 'text-muted',
+                      )}
+                    >
+                      {durationPreview.error ? (
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      ) : (
+                        <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      )}
+                      <span>{durationPreview.text}</span>
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+
+            {!complete && (
+              <div className="space-y-3">
+                <Input
+                  label="Lieu"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="ex. Hôtel Fleuve Congo"
+                />
+                <CityLocationFields
+                  city={city}
+                  commune={commune}
+                  neighborhood={neighborhood}
+                  onChange={applyPlace}
+                  hint=""
+                />
+              </div>
+            )}
+
             {complete && (
-              <div className="space-y-4">
+              <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
                     label="Client / dossier"
@@ -1618,8 +1531,8 @@ export default function EventConfigForm({
                   />
                 </div>
 
-                <label className="block space-y-1.5 relative group">
-                  <div className="flex items-center justify-between">
+                <label className="block space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="block text-xs font-semibold text-muted">Description de l’événement</span>
                     <button
                       type="button"
@@ -1634,7 +1547,7 @@ export default function EventConfigForm({
                         setDescription(`Bienvenue à "${title}". ${hints[Math.floor(Math.random() * hints.length)]}`);
                       }}
                       disabled={!title.trim()}
-                      className="text-xs font-semibold text-primary hover:text-primary-hover disabled:opacity-40 transition-colors inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 touch-manipulation"
+                      className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-primary hover:text-primary-hover disabled:opacity-40 transition-colors touch-manipulation"
                       title="Suggérer un texte d'accueil chaleureux basé sur le titre"
                     >
                       <Sparkles className="w-3 h-3" /> Suggérer un texte
@@ -1649,38 +1562,31 @@ export default function EventConfigForm({
                   />
                 </label>
 
-                <div className="space-y-2 pt-1 border-t border-border">
-                  <h4 className="text-xs font-semibold text-muted">
-                    Visibilité &amp; Accès
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="space-y-2">
+                  <span id="event-config-visibility-label" className="block text-xs font-semibold text-muted">
+                    Visibilité
+                  </span>
+                  <div
+                    role="group"
+                    aria-labelledby="event-config-visibility-label"
+                    className={cn('grid grid-cols-2', SEGMENTED_TRACK)}
+                  >
                     <button
                       type="button"
+                      aria-pressed={!isPublic}
                       onClick={() => {
                         setIsPublic(false);
                         setTicketing(false);
                       }}
-                      className={cn(
-                        'p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 min-h-11',
-                        !isPublic
-                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-xs'
-                          : 'border-border bg-surface hover:bg-surface-muted'
-                      )}
+                      title="Sur invitation nominative"
+                      className={segmentedItem(!isPublic, 'inline-flex items-center justify-center gap-2')}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 font-bold text-xs text-foreground">
-                          <GlobeLock className="w-4 h-4 text-primary" />
-                          <span>Événement Privé</span>
-                        </div>
-                        {!isPublic && <Check className="w-4 h-4 text-primary" />}
-                      </div>
-                      <p className="text-xs text-muted leading-relaxed">
-                        Sur invitation nominative. Lien de réponse unique par convive, placement sur plan de table privé.
-                      </p>
+                      <GlobeLock className="h-4 w-4 shrink-0" aria-hidden />
+                      Privé
                     </button>
-
                     <button
                       type="button"
+                      aria-pressed={isPublic}
                       disabled={!canPublishEvents}
                       onClick={() => {
                         if (!canPublishEvents) return;
@@ -1690,32 +1596,21 @@ export default function EventConfigForm({
                         }
                         setIsPublic(true);
                       }}
-                      className={cn(
-                        'p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 min-h-11',
-                        !canPublishEvents
-                          ? 'border-border bg-surface-muted opacity-60 cursor-not-allowed'
-                          : isPublic
-                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-xs'
-                          : 'border-border bg-surface hover:bg-surface-muted'
+                      title="Fiche marketplace et billetterie"
+                      className={segmentedItem(
+                        isPublic,
+                        'inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-muted',
                       )}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 font-bold text-xs text-foreground">
-                          <Globe className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                          <span>Événement Public &amp; Billetterie</span>
-                        </div>
-                        {isPublic && <Check className="w-4 h-4 text-primary" />}
-                      </div>
-                      <p className="text-xs text-muted leading-relaxed">
-                        {canPublishEvents
-                          ? 'Fiche marketplace ouverte, billetterie multi-zones 3D, paiements Mobile Money & Carte.'
-                          : 'Réservé aux forfaits organisation. Les forfaits Particulier restent sur invitation.'}
-                      </p>
+                      <Globe className="h-4 w-4 shrink-0" aria-hidden />
+                      Public
                     </button>
                   </div>
+                  {!canPublishEvents && (
+                    <p className="text-xs text-muted">Public : forfaits organisation uniquement.</p>
+                  )}
                 </div>
-
-              </div>
+              </>
             )}
           </section>
         )}

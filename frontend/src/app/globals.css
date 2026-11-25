@@ -83,6 +83,11 @@ html:has(.em-site-header) {
   --radius-card: 1.5rem !important;
 }
 
+/* Champs pilule sur le site public : une zone de texte sur plusieurs lignes garde des coins arrondis, pas une pilule. */
+html:has(.em-site-header) textarea {
+  border-radius: 1.25rem;
+}
+
 html:has(.em-site-header) :is(.em-landing-heading, .font-display) {
   font-family: var(--font-serif), Georgia, serif;
   font-weight: 600;

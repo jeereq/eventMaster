@@ -74,7 +74,6 @@ export default function AvailabilityCalendar({
   const rangeMode = Boolean(onSelectRange) && !editable;
   const rangeStart = selectedDate || '';
   const rangeEnd = selectedEndDate || selectedDate || '';
-  const selectingSecond = Boolean(rangeMode && rangeStart && (!rangeEnd || rangeStart === rangeEnd));
 
   useEffect(() => {
     const focus = selectedEndDate || selectedDate;
@@ -168,118 +167,49 @@ export default function AvailabilityCalendar({
     return `${start} → ${end} · ${nights} j`;
   })();
 
+  const navButton = 'h-9 w-9 inline-flex items-center justify-center rounded-full text-foreground/70 hover:text-foreground hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50';
+  const bookedDot = bookedTone === 'emerald' ? 'bg-emerald-500' : 'bg-danger';
+  const legend = [
+    booked.size > 0 ? { dot: bookedDot, label: bookedLabel } : null,
+    pending.size > 0 ? { dot: 'bg-amber-500', label: pendingLabel } : null,
+    editable || blocked.size > 0 ? { dot: 'bg-festive-accent', label: blockedLabel } : null,
+  ].filter(Boolean) as Array<{ dot: string; label: string }>;
+
   return (
     <div
       className={cn(
-        'border border-border rounded-2xl bg-surface space-y-3',
-        compact ? 'p-3' : 'p-3 sm:p-4',
+        'border border-border rounded-[var(--radius-card)] bg-surface space-y-3',
+        compact ? 'p-3' : 'p-4 sm:p-5',
         className,
       )}
     >
-      {compact ? (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold first-letter:uppercase min-w-0">{title}</h2>
-            {!isCurrentMonth ? (
-              <button
-                type="button"
-                className="min-h-9 px-2 -mr-2 rounded-[var(--radius-button)] text-xs font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                onClick={goToday}
-              >
-                Aujourd’hui
-              </button>
-            ) : null}
-          </div>
-          <div className="flex items-center justify-between gap-2 rounded-[var(--radius-button)] bg-surface-muted/70 p-1">
-            <button
-              type="button"
-              className="min-h-9 min-w-9 inline-flex items-center justify-center rounded-[var(--radius-button)] text-muted hover:text-foreground hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-              onClick={goPrev}
-              aria-label="Mois précédent"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm font-semibold capitalize tabular-nums" aria-live="polite">{monthLabel}</span>
-            <button
-              type="button"
-              className="min-h-9 min-w-9 inline-flex items-center justify-center rounded-[var(--radius-button)] text-muted hover:text-foreground hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-              onClick={goNext}
-              aria-label="Mois suivant"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          {title ? <h2 className="text-base font-semibold text-foreground first-letter:uppercase">{title}</h2> : null}
+          <p className="text-sm text-muted capitalize tabular-nums" aria-live="polite">{monthLabel}</p>
         </div>
-      ) : (
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-semibold first-letter:uppercase min-w-0 text-sm">{title}</h2>
-        <div className="flex items-center gap-1 ml-auto">
-          <button
-            type="button"
-            className="min-h-11 px-2.5 rounded-[var(--radius-button)] border border-border text-xs font-semibold text-muted hover:text-foreground"
-            onClick={goToday}
-          >
-            Aujourd’hui
-          </button>
-          <button
-            type="button"
-            className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground"
-            onClick={goPrev}
-            aria-label="Mois précédent"
-          >
+        <div className="flex shrink-0 items-center gap-1">
+          {!isCurrentMonth ? (
+            <button
+              type="button"
+              className="h-9 px-3 rounded-full text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              onClick={goToday}
+            >
+              Aujourd’hui
+            </button>
+          ) : null}
+          <button type="button" className={navButton} onClick={goPrev} aria-label="Mois précédent">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-xs font-semibold text-center capitalize min-w-[7rem] sm:min-w-[8rem]">{monthLabel}</span>
-          <button
-            type="button"
-            className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground"
-            onClick={goNext}
-            aria-label="Mois suivant"
-          >
+          <button type="button" className={navButton} onClick={goNext} aria-label="Mois suivant">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
-      )}
 
-      {rangeMode ? (
-        <p className="text-xs text-muted leading-relaxed">
-          {selectingSecond
-            ? 'Choisissez le dernier jour, ou recliquez le même jour.'
-            : compact
-              ? 'Un jour, ou deux clics pour une période.'
-              : '1er clic = début · 2e clic = fin. Un seul jour suffit aussi.'}
-        </p>
-      ) : null}
-
-      {selectionLabel && (onSelectDate || onSelectRange) ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
-            {selectionLabel}
-          </span>
-          <button
-            type="button"
-            onClick={clearSelection}
-            className="text-xs font-semibold text-muted hover:text-foreground underline-offset-2 hover:underline min-h-11 px-1"
-          >
-            Effacer
-          </button>
-        </div>
-      ) : selectionLabel && !onSelectDate && !onSelectRange ? (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20 w-fit">
-          {selectionLabel}
-        </span>
-      ) : null}
-
-      {hint ? (
-        <p className="text-xs text-festive-accent bg-festive-accent/10 border border-festive-accent/20 rounded-[var(--radius-button)] px-2.5 py-1.5">
-          {hint}
-        </p>
-      ) : null}
-
-      <div className={cn('grid grid-cols-7 text-center', compact ? 'gap-x-1 gap-y-0.5' : 'gap-1')}>
+      <div className="grid grid-cols-7 gap-1.5 text-center">
         {WEEKDAYS.map((label) => (
-          <div key={label} className={cn('text-xs font-semibold text-muted', compact ? 'pb-1.5' : 'py-1')}>
+          <div key={label} className="pb-0.5 text-[11px] font-medium text-muted">
             {label}
           </div>
         ))}
@@ -293,6 +223,7 @@ export default function AvailabilityCalendar({
           const inRange = Boolean(rangeStart && rangeEnd && cell.key >= rangeStart && cell.key <= rangeEnd);
           const isEdge = cell.key === rangeStart || cell.key === rangeEnd;
           const isSelected = !rangeMode && selectedDate === cell.key;
+          const picked = isSelected || (rangeMode && isEdge);
           const selectable = Boolean(onSelectRange || onSelectDate);
           const occupied = isBooked || isBlocked || isPending;
           const clickable = !isPast && (
@@ -300,6 +231,7 @@ export default function AvailabilityCalendar({
               ? !isBooked && !isPending
               : selectable && (allowBookedSelection || !occupied)
           );
+          const dot = isBooked ? bookedDot : isPending ? 'bg-amber-500' : isBlocked ? 'bg-festive-accent' : null;
           return (
             <button
               key={cell.key}
@@ -307,66 +239,63 @@ export default function AvailabilityCalendar({
               disabled={!clickable && !occupied}
               onClick={() => handleDay(cell.key)}
               aria-current={isToday ? 'date' : undefined}
+              aria-pressed={selectable ? picked || (rangeMode && inRange) : undefined}
               className={cn(
-                'rounded-lg font-medium border relative tabular-nums',
-                compact ? 'h-10 sm:h-9 text-sm' : 'aspect-square min-h-9 sm:min-h-0 text-sm sm:text-xs',
-                isBooked && !isEdge && !isSelected && !inRange && (
-                  bookedTone === 'emerald'
-                    ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/35'
-                    : 'bg-danger/10 text-danger border-danger/30'
-                ),
-                isBooked && (isEdge || isSelected || inRange) && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
-                !isBooked && isPending && !isEdge && !isSelected && !inRange && 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/35',
-                !isBooked && isPending && (isEdge || isSelected || inRange) && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
-                !isBooked && !isPending && isBlocked && !isEdge && !isSelected && 'bg-festive-accent/10 text-festive-accent border-festive-accent/30',
-                isEdge && !occupied && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
-                inRange && !isEdge && !occupied && 'bg-primary/15 text-foreground border-primary/25',
-                isSelected && !occupied && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
-                !occupied && !inRange && !isSelected && !isPast && 'border-transparent hover:border-border hover:bg-surface-muted',
-                isPast && (compact ? 'text-muted/35 border-transparent font-normal' : 'text-muted/45 border-transparent'),
-                isToday && !isEdge && !isSelected && (compact ? 'ring-1 ring-primary/60 text-primary font-semibold' : 'ring-1 ring-primary/50'),
+                'relative h-11 w-full rounded-xl text-sm tabular-nums transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                picked
+                  ? 'bg-primary-solid text-primary-foreground font-semibold shadow-[var(--shadow-soft)]'
+                  : isPast
+                    ? 'text-muted/35 cursor-default'
+                    : rangeMode && inRange
+                      ? 'bg-primary/25 text-foreground font-semibold'
+                      : occupied
+                        ? 'bg-surface-muted/40 text-muted line-through decoration-muted/50'
+                        : 'bg-primary/15 text-primary font-semibold ring-1 ring-inset ring-primary/35',
+                !picked && !isPast && isToday && 'ring-2 ring-inset ring-primary text-primary font-bold',
+                !picked && clickable && !inRange && 'hover:bg-primary/25',
+                !picked && !clickable && !occupied && !isPast && 'cursor-default',
               )}
             >
               {cell.day}
+              {dot && !picked && !isPast ? (
+                <span aria-hidden className={cn('absolute bottom-1.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full', dot)} />
+              ) : null}
             </button>
           );
         })}
       </div>
 
-      <div className={cn('flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted', compact && 'pt-2.5 border-t border-border/70')}>
-        {!compact || booked.size > 0 ? (
-        <span className="inline-flex items-center gap-1.5">
-          <span className={cn(
-            'w-2.5 h-2.5 rounded-sm border',
-            bookedTone === 'emerald' ? 'bg-emerald-500/40 border-emerald-500/40' : 'bg-danger/40 border-danger/40',
-          )} />
-          {bookedLabel}
-        </span>
-        ) : null}
-        {pending.size > 0 ? (
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/40 border border-amber-500/40" />
-            {pendingLabel}
-          </span>
-        ) : null}
-        {!compact || editable || blocked.size > 0 ? (
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-festive-accent/40 border border-festive-accent/40" />
-            {blockedLabel}
-          </span>
-        ) : null}
-        <span className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm ring-1 ring-primary/50 bg-surface" />
-          Aujourd’hui
-        </span>
-        {(onSelectDate || onSelectRange) && (
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-primary" />
-            {rangeMode ? 'Période' : 'Choix'}
-          </span>
-        )}
-        {editable && <span>Cliquez un jour libre pour le bloquer.</span>}
-      </div>
+      {selectionLabel || hint ? (
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-border/70 pt-3 min-h-11">
+          {hint ? (
+            <p className="text-xs text-muted" role="status">{hint}</p>
+          ) : (
+            <p className="text-sm font-semibold text-foreground tabular-nums">{selectionLabel}</p>
+          )}
+          {selectionLabel && (onSelectDate || onSelectRange) ? (
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="min-h-9 px-2 -mr-2 rounded-full text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              Effacer
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {legend.length || editable ? (
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted">
+          {legend.map((item) => (
+            <span key={item.label} className="inline-flex items-center gap-1.5">
+              <span className={cn('h-1.5 w-1.5 rounded-full', item.dot)} />
+              {item.label}
+            </span>
+          ))}
+          {editable ? <span>Cliquez un jour libre pour le bloquer.</span> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

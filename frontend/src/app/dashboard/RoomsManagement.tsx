@@ -116,19 +116,25 @@ function getRoomFacts(room: RoomItem) {
   };
 }
 
-function RoomFactChip({ icon, children, tone = 'neutral' }: { icon: React.ReactNode; children: React.ReactNode; tone?: 'neutral' | 'primary' }) {
+/** Chiffres clés de la fiche d’une salle : les valeurs inconnues ne sont pas affichées. */
+function RoomDetailFacts({ room }: { room: RoomItem }) {
+  const facts = getRoomFacts(room);
+  const items = [
+    facts.seats ? { label: 'Capacité', value: `${facts.seats} places` } : null,
+    facts.dims ? { label: 'Dimensions', value: facts.dims } : null,
+    facts.surface ? { label: 'Surface', value: `${facts.surface} m²` } : null,
+    facts.pmr ? { label: 'Accès PMR', value: facts.pmrSeats > 0 ? `${facts.pmrSeats} places` : 'Oui' } : null,
+  ].filter((item): item is { label: string; value: string } => item !== null);
+  if (items.length === 0) return null;
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border tabular-nums',
-        tone === 'primary'
-          ? 'bg-primary/10 text-primary border-primary/20'
-          : 'bg-surface-muted text-foreground border-border',
-      )}
-    >
-      <span aria-hidden className={cn('[&>svg]:w-3.5 [&>svg]:h-3.5', tone === 'primary' ? 'text-primary' : 'text-muted')}>{icon}</span>
-      {children}
-    </span>
+    <dl className="flex flex-wrap gap-x-8 gap-y-3">
+      {items.map((item) => (
+        <div key={item.label}>
+          <dt className="text-xs text-muted">{item.label}</dt>
+          <dd className="mt-0.5 text-sm font-semibold text-foreground tabular-nums">{item.value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -2920,7 +2926,7 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
                 title={room.name}
                 layout={roomsViewMode}
                 icon={<Building2 className="w-4 h-4" />}
-                overlayMeta={[typeLabel, facts.seats ? `${facts.seats} places` : null].filter(Boolean).join(' · ')}
+                overlayMeta={isList ? [typeLabel, facts.seats ? `${facts.seats} places` : null].filter(Boolean).join(' · ') : typeLabel}
                 hideCta
                 onClick={() => setViewingRoom(room)}
                 cover={
@@ -2947,52 +2953,23 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
                 actions={actions}
               >
                 {isList ? null : (
-                  <>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <RoomFactChip icon={<Armchair />}>
-                        {facts.seats ? `${facts.seats} places` : 'Capacité à définir'}
-                      </RoomFactChip>
-                      {facts.surface ? (
-                        <RoomFactChip icon={<Maximize2 />}>{facts.surface} m²</RoomFactChip>
-                      ) : null}
-                      {facts.tables > 0 ? (
-                        <RoomFactChip icon={<LayoutGrid />}>
-                          {facts.tables} table{facts.tables > 1 ? 's' : ''}
-                        </RoomFactChip>
-                      ) : null}
-                      {facts.pmr ? (
-                        <RoomFactChip icon={<Accessibility />} tone="primary">
-                          PMR{facts.pmrSeats > 0 ? ` · ${facts.pmrSeats} pl.` : ''}
-                        </RoomFactChip>
-                      ) : null}
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60">
-                      <div className="min-w-0 flex items-center gap-2">
-                        {room.staff.length > 0 ? (
-                          <div className="flex -space-x-1.5 shrink-0" aria-hidden>
-                            {room.staff.slice(0, 3).map((s) => (
-                              <span
-                                key={s.id}
-                                className="w-7 h-7 rounded-full bg-primary/10 text-primary border-2 border-surface text-xs font-semibold flex items-center justify-center"
-                              >
-                                {(s.user.name || s.user.email).charAt(0).toUpperCase()}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <Users className="w-4 h-4 text-muted shrink-0" aria-hidden />
-                        )}
-                        <p className="text-xs text-muted truncate">
-                          {room.staff.length === 0
-                            ? 'Aucun staff assigné'
-                            : room.staff.length === 1
-                              ? `${room.staff[0].user.name || room.staff[0].user.email} · ${roleLabels[room.staff[0].staffRole]}`
-                              : `${room.staff.length} membres du staff`}
-                        </p>
-                      </div>
-                    </div>
-                  </>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted tabular-nums [&_svg]:w-3.5 [&_svg]:h-3.5 [&_svg]:shrink-0">
+                    {facts.seats ? (
+                      <span className="inline-flex items-center gap-1"><Armchair aria-hidden />{facts.seats} places</span>
+                    ) : null}
+                    {facts.surface ? (
+                      <span className="inline-flex items-center gap-1"><Maximize2 aria-hidden />{facts.surface} m²</span>
+                    ) : null}
+                    {facts.tables > 0 ? (
+                      <span className="inline-flex items-center gap-1"><LayoutGrid aria-hidden />{facts.tables}</span>
+                    ) : null}
+                    {facts.pmr ? (
+                      <span className="inline-flex items-center gap-1 text-primary"><Accessibility aria-hidden />PMR</span>
+                    ) : null}
+                    {room.staff.length > 0 ? (
+                      <span className="inline-flex items-center gap-1"><Users aria-hidden />{room.staff.length}</span>
+                    ) : null}
+                  </div>
                 )}
               </ProjectCard>
             );
@@ -3017,17 +2994,14 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
         description={viewingRoom ? [roomTypeLabels[viewingRoom.roomType || 'SIMPLE'], viewingRoom.floor, viewingRoom.location].filter(Boolean).join(' · ') : undefined}
         size="xl"
         footer={
-          <div className="flex flex-col sm:flex-row w-full justify-between items-center gap-2">
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="secondary" size="sm" onClick={() => setViewingRoom(null)}>
-                Fermer
-              </Button>
+          <div className="flex w-full flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
               {canManage && viewingRoom && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-danger hover:bg-danger/10"
+                  className="text-danger hover:text-danger hover:bg-danger/10"
                   leftIcon={<Trash2 className="w-4 h-4" />}
                   onClick={() => {
                     const room = viewingRoom;
@@ -3043,102 +3017,60 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
                   href={`/marketplace/salles/${viewingRoom.venueListing.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-11 px-3 py-1.5 rounded-[var(--radius-button)] border border-border text-xs font-semibold text-foreground hover:bg-surface-muted transition inline-flex items-center gap-1.5"
+                  className="min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
-                  <Globe className="w-3.5 h-3.5 text-primary" />
                   <span>Fiche publique</span>
-                  <ExternalLink className="w-3 h-3" />
+                  <ExternalLink className="w-3 h-3" aria-hidden />
                 </Link>
               )}
             </div>
-            {canManage && viewingRoom && (
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => {
-                  const room = viewingRoom;
-                  setViewingRoom(null);
-                  openEditLayout(room);
-                }}
-                leftIcon={<Edit3 className="w-4 h-4" />}
-              >
-                Modifier la salle
+            <div className="ml-auto flex items-center gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setViewingRoom(null)}>
+                Fermer
               </Button>
-            )}
+              {canManage && viewingRoom && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    const room = viewingRoom;
+                    setViewingRoom(null);
+                    openEditLayout(room);
+                  }}
+                  leftIcon={<Edit3 className="w-4 h-4" />}
+                >
+                  Modifier la salle
+                </Button>
+              )}
+            </div>
           </div>
         }
       >
         {viewingRoom && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
-              <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-xs font-semibold text-muted">Type</p>
-                <p className="font-semibold text-foreground">{roomTypeLabels[viewingRoom.roomType || 'SIMPLE']}</p>
-              </div>
-              <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-xs font-semibold text-muted">Capacité</p>
-                <p className="font-semibold text-foreground">
-                  {viewingRoom.layoutBlueprint?.metadata?.totalSeats || viewingRoom.capacity || '—'} places
-                </p>
-              </div>
-              <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-xs font-semibold text-muted">Dimensions & Surface</p>
-                <p className="font-semibold text-foreground">
-                  {viewingRoom.layoutBlueprint?.canvas
-                    ? `${viewingRoom.layoutBlueprint.canvas.widthM}×${viewingRoom.layoutBlueprint.canvas.heightM} m · ${viewingRoom.layoutBlueprint.canvas.widthM * viewingRoom.layoutBlueprint.canvas.heightM} m²`
-                    : '—'}
-                </p>
-              </div>
-              <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-xs font-semibold text-muted">Accessibilité PMR</p>
-                <p className="font-semibold text-foreground">
-                  {viewingRoom.layoutBlueprint?.metadata?.hasPmrAccess || (viewingRoom.layoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0 ? (
-                    <span className="text-primary font-bold flex items-center gap-1">
-                      <Accessibility className="w-3.5 h-3.5" aria-hidden /> {(viewingRoom.layoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0 ? `${viewingRoom.layoutBlueprint?.metadata?.totalPmrSeats} pl. PMR` : 'Conforme'}
-                    </span>
-                  ) : (
-                    <span className="text-muted">Standard</span>
-                  )}
-                </p>
-              </div>
-              <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-xs font-semibold text-muted">Staff</p>
-                <p className="font-semibold text-foreground">{viewingRoom.staff.length}</p>
-              </div>
-            </div>
+          <div className="space-y-6">
+            <RoomDetailFacts room={viewingRoom} />
             {viewingRoom.description && (
               <p className="text-sm text-muted leading-relaxed">{viewingRoom.description}</p>
             )}
-            <div className="border border-border rounded-[var(--radius-card)] p-3 sm:p-4 bg-surface space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Rendu & Plan de la salle</h3>
-                {canManage && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const room = viewingRoom;
-                      setViewingRoom(null);
-                      openEditLayout(room);
-                    }}
-                    className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Ouvrir dans l’éditeur</span>
-                  </button>
-                )}
+            <section aria-label="Plan de la salle">
+              {/* Cadre dimensionné ici + `fill` : la scène remplit le cadre, sans consigne sous l’aperçu. */}
+              <div className="relative w-full overflow-hidden rounded-2xl aspect-[16/10] min-h-[280px] max-h-[min(70dvh,560px)] sm:min-h-[360px] sm:max-h-none">
+                <div className="absolute inset-0">
+                  <RoomLayoutPreview
+                    blueprint={viewingRoom.layoutBlueprint}
+                    quality="showcase"
+                    showMeta={false}
+                    showDepthControls
+                    fill
+                    className="h-full w-full"
+                  />
+                </div>
               </div>
-              <RoomLayoutPreview
-                blueprint={viewingRoom.layoutBlueprint}
-                quality="showcase"
-                showDepthControls
-              />
-            </div>
+            </section>
             {(viewingRoom.staff.length > 0 || canManage) && (
-              <div className="space-y-1.5">
+              <section className="space-y-1">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold text-muted flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5" /> Staff
-                  </p>
+                  <h3 className="text-sm font-semibold text-foreground">Staff</h3>
                   {canManage && (
                     <button
                       type="button"
@@ -3147,22 +3079,25 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
                         setViewingRoom(null);
                         openStaffManager(room);
                       }}
-                      className="inline-flex items-center gap-1 min-h-11 px-2 text-xs font-semibold text-primary rounded-[var(--radius-button)] hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      className="-mr-2 inline-flex items-center min-h-11 px-2 text-xs font-semibold text-primary rounded-[var(--radius-button)] hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     >
-                      <UserPlus className="w-3.5 h-3.5" aria-hidden /> Gérer le staff
+                      Gérer le staff
                     </button>
                   )}
                 </div>
-                {viewingRoom.staff.length === 0 && (
-                  <p className="text-xs text-muted">Aucun membre assigné à cette salle.</p>
+                {viewingRoom.staff.length === 0 ? (
+                  <p className="text-sm text-muted">Aucun membre assigné</p>
+                ) : (
+                  <ul className="divide-y divide-border/60 border-y border-border/60">
+                    {viewingRoom.staff.map((s) => (
+                      <li key={s.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                        <span className="min-w-0 break-words font-medium text-foreground">{s.user.name || s.user.email}</span>
+                        <span className="shrink-0 text-xs text-muted">{roleLabels[s.staffRole]}</span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-                {viewingRoom.staff.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between text-xs bg-surface-muted rounded-[var(--radius-button)] px-2.5 py-1.5">
-                    <span className="font-medium text-foreground">{s.user.name || s.user.email}</span>
-                    <span className="text-xs font-semibold text-primary">{roleLabels[s.staffRole]}</span>
-                  </div>
-                ))}
-              </div>
+              </section>
             )}
           </div>
         )}

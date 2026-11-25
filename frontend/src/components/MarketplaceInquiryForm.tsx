@@ -238,7 +238,7 @@ export default function MarketplaceInquiryForm({
               rows={4}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className={cn(fieldClass, 'min-h-[6.5rem] py-2.5')}
+              className={cn(fieldClass, 'block min-h-[6.5rem] py-3 px-4 resize-y leading-relaxed')}
               placeholder="Besoins, style, contraintes, questions…"
             />
           </label>

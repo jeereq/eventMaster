@@ -233,9 +233,11 @@ function WebGLPreviewCanvas({
 function ThumbPreview({
   blueprint,
   className,
+  showBadge = true,
 }: {
   blueprint: RoomLayoutBlueprint;
   className?: string;
+  showBadge?: boolean;
 }) {
   return (
     <div
@@ -247,11 +249,11 @@ function ThumbPreview({
       aria-label="Aperçu 2D du plan de salle"
     >
       <RoomPlanTopView blueprint={blueprint} showLabels={false} />
-      <div className="absolute bottom-1 left-1 z-10 rounded bg-black/60 px-1.5 py-0.5 text-[8px] font-bold text-white/90 flex items-center gap-1 shadow-2xs">
+      {showBadge && <div className="absolute bottom-1 left-1 z-10 rounded bg-black/60 px-1.5 py-0.5 text-[8px] font-bold text-white/90 flex items-center gap-1 shadow-2xs">
         <span>{blueprint.metadata.totalSeats} pl.</span>
         <span>·</span>
         <span>{blueprint.canvas.widthM}×{blueprint.canvas.heightM}m</span>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -461,7 +463,7 @@ export default function RoomLayoutPreview({
       )}
 
       {quality === 'thumb' ? (
-        <ThumbPreview blueprint={blueprint} className={className} />
+        <ThumbPreview blueprint={blueprint} className={className} showBadge={showMeta !== false} />
       ) : (
         <div className={cn('relative overflow-hidden rounded-2xl border border-border/60 bg-stage', canvasClass, className)} data-guest-no-swipe>
           {expanded ? (
