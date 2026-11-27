@@ -827,6 +827,7 @@ function EventsPageInner() {
   const [dietFilter, setDietFilter] = useState<string>('ALL');
   const [checkinFilter, setCheckinFilter] = useState<'ALL' | 'in' | 'out'>('ALL');
   const [customFilters, setCustomFilters] = useState<Record<string, string>>({});
+  const [guestSort, setGuestSort] = useState<'name' | 'lastName' | 'rsvp' | 'category'>('name');
   const [selectedGuestDetails, setSelectedGuestDetails] = useState<GuestItem | null>(null);
 
   // Import guests
@@ -946,7 +947,7 @@ function EventsPageInner() {
 
   useEffect(() => {
     setGuestsListPage(1);
-  }, [searchQuery, rsvpFilter, categoryFilter, dietFilter, checkinFilter, customFilters]);
+  }, [searchQuery, rsvpFilter, categoryFilter, dietFilter, checkinFilter, customFilters, guestSort]);
 
   useEffect(() => {
     setEventsListPage(1);
@@ -1049,7 +1050,24 @@ function EventsPageInner() {
     return matchesSearch && matchesWhen && matchesVisibility && matchesEntry;
   }).sort(eventSort === 'name' ? compareEventsByTitle : eventSort === 'farthest' ? compareEventsFarthest : compareEventsByDate);
   const paginatedEventsList = usePaginateItems(filteredEventsList, eventsListPage, eventsPageSize);
-  const paginatedGuestsList = usePaginateItems(filteredGuests, guestsListPage, guestsPageSize);
+  const sortedFilteredGuests = useMemo(() => {
+    const rsvpOrder: Record<string, number> = { PENDING: 0, ACCEPTED: 1, DECLINED: 2 };
+    const byName = (a: GuestItem, b: GuestItem) =>
+      `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'fr', { sensitivity: 'base' });
+    const list = [...filteredGuests];
+    list.sort((a, b) => {
+      if (guestSort === 'lastName') {
+        return `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`, 'fr', { sensitivity: 'base' });
+      }
+      if (guestSort === 'rsvp') return (rsvpOrder[a.rsvp] ?? 0) - (rsvpOrder[b.rsvp] ?? 0) || byName(a, b);
+      if (guestSort === 'category') {
+        return (a.category || 'Général').localeCompare(b.category || 'Général', 'fr', { sensitivity: 'base' }) || byName(a, b);
+      }
+      return byName(a, b);
+    });
+    return list;
+  }, [filteredGuests, guestSort]);
+  const paginatedGuestsList = usePaginateItems(sortedFilteredGuests, guestsListPage, guestsPageSize);
 
   const isAllFilteredSelected = filteredGuests.length > 0 && filteredGuests.every(g => selectedGuestIds.includes(g.id));
 
@@ -2856,6 +2874,21 @@ Merci de confirmer votre présence :
                   {guests.length > 0 && (
                     <div className="space-y-2">
                       <div className="grid grid-cols-2 items-end gap-3 md:grid-cols-3 lg:grid-cols-4">
+                        <div className="space-y-1">
+                          <label htmlFor="guest-sort" className="text-xs font-semibold text-muted">Trier par</label>
+                          <select
+                            id="guest-sort"
+                            value={guestSort}
+                            onChange={(e) => setGuestSort(e.target.value as typeof guestSort)}
+                            className={GUEST_FILTER_CONTROL}
+                          >
+                            <option value="name">Prénom (A → Z)</option>
+                            <option value="lastName">Nom (A → Z)</option>
+                            <option value="rsvp">Sans réponse d’abord</option>
+                            <option value="category">Catégorie</option>
+                          </select>
+                        </div>
+
                           <div className="space-y-1">
                             <label htmlFor="guest-filter-category" className="text-xs font-semibold text-muted">Catégorie</label>
                             <select
@@ -2994,7 +3027,7 @@ Merci de confirmer votre présence :
                     <div className="rounded-[var(--radius-card)] border border-border bg-surface text-center py-16 px-6">
                       <Search className="w-12 h-12 text-muted mx-auto mb-4" />
                       <h3 className="font-semibold text-foreground">Aucun résultat</h3>
-                      <p className="text-sm text-muted mt-1 max-w-xs mx-auto">La recherche n'a retourné aucun profil correspondant.</p>
+                      <p className="text-sm text-muted mt-1 max-w-xs mx-auto">Aucun invité ne correspond à la recherche ou aux filtres choisis.</p>
                       <button
                         type="button"
                         onClick={resetGuestFilters}
@@ -3024,6 +3057,11 @@ Merci de confirmer votre présence :
                             <span className="text-primary font-medium">({selectedGuestIds.length})</span>
                           )}
                         </label>
+                        <p className="text-xs text-muted tabular-nums">
+                          {filteredGuests.length === guests.length
+                            ? `${guests.length} invité${guests.length > 1 ? 's' : ''}`
+                            : `${filteredGuests.length} sur ${guests.length} invités`}
+                        </p>
                       </div>
 
                       <div
