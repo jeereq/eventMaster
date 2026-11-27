@@ -21,6 +21,9 @@ import {
 } from '@/lib/roomGuestSimulation';
 import { SPEAKER_STYLES, SPEAKER_STYLE_SPECS, resolveSpeakerStyle, speakerStyleLabels, type SpeakerStyle } from '@/lib/roomMusic';
 import GuestDressCodePicker from '@/components/room/GuestDressCodePicker';
+import RowBlockPanel from '@/components/room/RowBlockPanel';
+import { rowBlockRows } from '@/lib/roomRowBlock';
+import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
 import GuestPortraitsModal, { preparePortraitPhoto } from '@/components/room/GuestPortraitsModal';
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
@@ -4036,6 +4039,11 @@ export default function RoomLayoutEditor({
     if (multiSelection) {
       const selTables = selection.filter((s) => s.kind === 'table').length;
       const selChairs = selection.filter((s) => s.kind === 'chair').length;
+      const selRows = selection.filter((s) => s.kind === 'row').length;
+      // Gradin entier sélectionné (clic sur un rang groupé) : réglages du bloc de rangées.
+      const blockSeedId = selection.length > 1 && selection.every((s) => s.kind === 'row') ? selection[0].id : null;
+      const blockIds = blockSeedId ? new Set(rowBlockRows(blueprint.furniture, blockSeedId).map((r) => r.id)) : null;
+      const showRowBlock = Boolean(blockSeedId && blockIds && selection.every((s) => blockIds.has(s.id)));
       const selScreens = selection.filter((s) => s.kind === 'fixture' && blueprint.fixtures.some((f) => f.id === s.id && f.kind === 'screen')).length;
       const selOtherFix = selection.filter((s) => s.kind === 'fixture' && !blueprint.fixtures.some((f) => f.id === s.id && f.kind === 'screen')).length;
       const selZones = selection.filter((s) => s.kind === 'zone').length;
@@ -4068,11 +4076,30 @@ export default function RoomLayoutEditor({
               </button>
             </div>
 
+            {showRowBlock && blockSeedId && (
+              <RowBlockPanel
+                blueprint={blueprint}
+                rowId={blockSeedId}
+                maxRows={caps.maxRows}
+                readOnly={readOnly || !caps.canAddRows}
+                onChange={(next, message, kind) => updateBlueprint(next, { message, kind: kind ?? 'edit' })}
+                onSelectRow={(id) => setSelection([{ kind: 'row', id }])}
+                onRowAdded={(id) => setSelection((prev) => [...prev, { kind: 'row', id }])}
+                onRowRemoved={(id) => setSelection((prev) => prev.filter((s) => s.id !== id))}
+                onLimit={(message) => log(message, 'info')}
+              />
+            )}
+
             {/* Badges récapitulatifs du lot */}
             <div className="flex flex-wrap gap-1.5 pt-0.5">
               {selTables > 0 && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
                   {selTables} table{selTables > 1 ? 's' : ''}
+                </span>
+              )}
+              {selRows > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+                  {selRows} rangée{selRows > 1 ? 's' : ''}
                 </span>
               )}
               {selChairs > 0 && (
@@ -8832,7 +8859,22 @@ export default function RoomLayoutEditor({
               min={2}
               max={60}
               value={selectedFurniture.seatCount}
-              onChange={(e) => updateFurniture(selectedFurniture.id, { seatCount: parseInt(e.target.value, 10) })}
+              onChange={(e) => {
+                // Champ vidé pendant la saisie : on attend un nombre plutôt que d’enregistrer NaN.
+                const n = parseInt(e.target.value, 10);
+                if (Number.isFinite(n)) updateFurniture(selectedFurniture.id, { seatCount: clampRowSeatCount(n) });
+              }}
+            />
+
+            <RowBlockPanel
+              key={selectedFurniture.groupId ?? selectedFurniture.id}
+              blueprint={blueprint}
+              rowId={selectedFurniture.id}
+              maxRows={caps.maxRows}
+              readOnly={readOnly || !caps.canAddRows}
+              onChange={(next, message, kind) => updateBlueprint(next, { message, kind: kind ?? 'edit' })}
+              onSelectRow={(id) => setSelection([{ kind: 'row', id }])}
+              onLimit={(message) => log(message, 'info')}
             />
 
             {typeof selected?.seatIndex === 'number' && (
@@ -8895,12 +8937,29 @@ export default function RoomLayoutEditor({
                     onChange={(e) => updateFurniture(selectedFurniture.id, { aisleSplit: e.target.checked }, 'Allée de passage')}
                     className="rounded border-border size-4"
                   />
-                  <span>{amphiStyle === 'cinemaStadium' ? 'Escaliers latéraux larges' : 'Allée centrale de passage'}</span>
+                  <span>Allée centrale de passage</span>
                 </label>
-                {selectedFurniture.aisleSplit && (
-                  <span className="text-xs text-muted">Largeur 14%</span>
-                )}
               </div>
+              {selectedFurniture.aisleSplit && (
+                <DecorRangeField
+                  label="Largeur de l’allée centrale"
+                  value={selectedFurniture.aisleWidthPct ?? 14}
+                  min={5}
+                  max={30}
+                  step={1}
+                  format={(v) => `${(0.07 + 0.55 * (0.55 + v / 20)).toFixed(2).replace('.', ',')} m de passage`}
+                  onChange={(v) => updateFurniture(selectedFurniture.id, { aisleWidthPct: v }, 'Largeur de l’allée centrale')}
+                />
+              )}
+              <DecorRangeField
+                label="Passage latéral (escaliers de chaque côté)"
+                value={selectedFurniture.sideAisleM ?? 0}
+                min={0}
+                max={2}
+                step={0.05}
+                format={(v) => (v > 0 ? `${v.toFixed(2).replace('.', ',')} m` : 'aucun')}
+                onChange={(v) => updateFurniture(selectedFurniture.id, { sideAisleM: v > 0 ? v : undefined }, 'Passage latéral')}
+              />
 
               <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/60">
                 <Input

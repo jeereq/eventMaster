@@ -20,6 +20,7 @@ import {
   type AlignBox,
   type AlignMode as SharedAlignMode,
 } from '@/lib/layoutAlignMath';
+import { tidyRowsColumn, type BlockRow } from '@/lib/roomRowBlock';
 import {
   enforceRealLayoutClearances,
   detectLayoutClearanceConflicts,
@@ -209,6 +210,17 @@ export function alignLayoutSelection(
   selection: LayoutSelectionItem[],
   mode: AlignMode,
 ): RoomLayoutBlueprint {
+  // Rangées de fauteuils : « en grille » les empile en une colonne (un rang par ligne,
+  // même axe, écart régulier) au lieu de les répartir en carré comme des tables.
+  if (mode === 'gridTidy' && selection.length > 1 && selection.every((s) => s.kind === 'row')) {
+    const ids = new Set(selection.map((s) => s.id));
+    const rows = blueprint.furniture.filter((f): f is Extract<typeof f, { kind: 'row' }> => f.kind === 'row' && ids.has(f.id));
+    const moves = tidyRowsColumn(rows as BlockRow[]);
+    return refreshBlueprintMetadata({
+      ...blueprint,
+      furniture: blueprint.furniture.map((f) => (moves.has(f.id) ? { ...f, ...moves.get(f.id) } : f)),
+    });
+  }
   const boxes = selection
     .map((s) => getSelectionBounds(blueprint, s))
     .filter((b): b is LayoutBounds => Boolean(b));
