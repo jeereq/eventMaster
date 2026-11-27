@@ -198,6 +198,11 @@ export const RAISED_PLATFORM_FIXTURE_KINDS = new Set<string>([
   'balcony',
 ]);
 
+/** Écrans accrochés au mur ou posés sur une table : ils ne bloquent pas le passage. */
+function isNonBlockingScreenKind(kind: string | undefined): boolean {
+  return kind === 'wallTv' || kind === 'tableMonitor' || kind === 'laptop' || kind === 'desktopPc';
+}
+
 const SOLID_FIXTURE_KINDS = new Set([
   'stage',
   'podium',
@@ -721,10 +726,7 @@ export function detectLayoutClearanceConflicts(
       SOLID_FIXTURE_KINDS.has(fx.kind) &&
       !(
         fx.kind === 'screen' &&
-        (fx.screenKind === 'wallTv' ||
-          fx.screenKind === 'tableMonitor' ||
-          fx.screenKind === 'laptop' ||
-          fx.screenKind === 'desktopPc')
+        isNonBlockingScreenKind(fx.screenKind)
       ),
   );
 
@@ -998,10 +1000,7 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
       SOLID_FIXTURE_KINDS.has(fx.kind) &&
       !(
         fx.kind === 'screen' &&
-        (fx.screenKind === 'wallTv' ||
-          fx.screenKind === 'tableMonitor' ||
-          fx.screenKind === 'laptop' ||
-          fx.screenKind === 'desktopPc')
+        isNonBlockingScreenKind(fx.screenKind)
       ),
     storyId: fx.storyId,
     };

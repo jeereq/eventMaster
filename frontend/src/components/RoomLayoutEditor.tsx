@@ -189,6 +189,9 @@ import {
   stageRigLabels,
   type StageRig,
   screenKindLabels,
+  screenKindDefaults,
+  screenKindDefaultRatio,
+  isTabletopScreenKind,
   screenRatioLabels,
   centerpieceStyleLabels,
   wallsFromRoomOutline,
@@ -2647,23 +2650,16 @@ export default function RoomLayoutEditor({
       return;
     }
     const base = createBlueprintFixture('screen', blueprint.canvas);
-    const sizeDefaults: Record<ScreenKind, { w: number; h: number; elev: number; tilt: number }> = {
-      stageLedWall: { w: 24, h: 6, elev: 0, tilt: 0 },
-      wallTv: { w: 10, h: 3, elev: 1.6, tilt: 4 },
-      tableMonitor: { w: 6, h: 4, elev: 0.76, tilt: 6 },
-      laptop: { w: 4, h: 3, elev: 0.76, tilt: 0 },
-      desktopPc: { w: 5, h: 4, elev: 0.76, tilt: 4 },
-      cinemaScreen: { w: 60, h: 3, elev: 1.2, tilt: 0 },
-    };
-    const def = sizeDefaults[screenKind];
-    const realSize = realFixtureFootprintPct('screen', blueprint.canvas, { screenKind }) ?? def;
+    const def = screenKindDefaults[screenKind];
+    const realSize = realFixtureFootprintPct('screen', blueprint.canvas, { screenKind }) ?? { w: 10, h: 3 };
     const fixture = placeFixtureWithClearance(blueprint, {
       ...base,
       screenKind,
       w: realSize.w,
       h: realSize.h,
-      screenElevationM: def.elev,
-      screenTiltDeg: def.tilt,
+      screenElevationM: def.elevationM,
+      screenTiltDeg: def.tiltDeg,
+      screenRatio: screenKindDefaultRatio[screenKind] ?? base.screenRatio,
       label: screenKindLabels[screenKind],
       storyId: resolveActiveStoryId(blueprint),
     });
@@ -6055,11 +6051,7 @@ export default function RoomLayoutEditor({
       const isStairs = selectedFixture.kind === 'stairs';
       const isBalcony = selectedFixture.kind === 'balcony';
       const isScreen = selectedFixture.kind === 'screen';
-      const isTabletopScreen = isScreen && (
-        selectedFixture.screenKind === 'tableMonitor' ||
-        selectedFixture.screenKind === 'laptop' ||
-        selectedFixture.screenKind === 'desktopPc'
-      );
+      const isTabletopScreen = isScreen && isTabletopScreenKind(selectedFixture.screenKind);
       const raisedSurface = (isInstrument || isBar || isScreen)
         ? resolveFurnitureSurfaceAt(
             blueprint,
@@ -7536,23 +7528,17 @@ export default function RoomLayoutEditor({
                     onChange={(e) => {
                       const nextKind = e.target.value as ScreenKind;
                       const surfElev = raisedSurface?.elevationM ?? 0.76;
-                      const sizeDefaults: Record<ScreenKind, { w: number; h: number; elev: number; tilt: number }> = {
-                        stageLedWall: { w: 24, h: 6, elev: 0, tilt: 0 },
-                        wallTv: { w: 10, h: 3, elev: 1.6, tilt: 4 },
-                        tableMonitor: { w: 6, h: 4, elev: surfElev, tilt: 6 },
-                        laptop: { w: 4, h: 3, elev: surfElev, tilt: 0 },
-                        desktopPc: { w: 5, h: 4, elev: surfElev, tilt: 4 },
-                        cinemaScreen: { w: 60, h: 3, elev: 1.2, tilt: 0 },
-                      };
-                      const def = sizeDefaults[nextKind];
+                      const def = screenKindDefaults[nextKind];
+                      const size = realFixtureFootprintPct('screen', blueprint.canvas, { screenKind: nextKind }) ?? { w: 10, h: 3 };
                       updateFixture(
                         selectedFixture.id,
                         {
                           screenKind: nextKind,
-                          w: def.w,
-                          h: def.h,
-                          screenElevationM: def.elev,
-                          screenTiltDeg: def.tilt,
+                          w: size.w,
+                          h: size.h,
+                          screenElevationM: def.tabletop ? surfElev : def.elevationM,
+                          screenTiltDeg: def.tiltDeg,
+                          screenRatio: screenKindDefaultRatio[nextKind] ?? (selectedFixture.screenRatio === '9:16' || selectedFixture.screenRatio === '1.43:1' ? '16:9' : selectedFixture.screenRatio),
                           label: nextOwnedLabel(
                             selectedFixture.label,
                             screenKindLabels[selectedFixture.screenKind ?? 'stageLedWall'],
@@ -7601,7 +7587,7 @@ export default function RoomLayoutEditor({
                       min={0}
                       max={4}
                       step={0.05}
-                      value={selectedFixture.screenElevationM ?? (selectedFixture.screenKind === 'wallTv' ? 1.6 : (raisedSurface?.elevationM ?? 0))}
+                      value={selectedFixture.screenElevationM ?? (isTabletopScreenKind(selectedFixture.screenKind) ? (raisedSurface?.elevationM ?? 0) : screenKindDefaults[selectedFixture.screenKind ?? 'stageLedWall'].elevationM)}
                       onChange={(e) =>
                         updateFixture(
                           selectedFixture.id,
@@ -10110,6 +10096,30 @@ export default function RoomLayoutEditor({
           </button>
           <button type="button" onClick={() => addScreenFixture('desktopPc')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Ordinateur fixe tout-en-un">
             PC Fixe
+          </button>
+          <button type="button" onClick={() => addScreenFixture('cinemaScreen')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Grand écran de cinéma cintré, cache et rideaux">
+            Écran cinéma
+          </button>
+          <button type="button" onClick={() => addScreenFixture('ledCurvedWall')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Mur LED incurvé posé au sol, pour une projection immersive">
+            LED incurvé
+          </button>
+          <button type="button" onClick={() => addScreenFixture('videoWall')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Mur d’images de 9 dalles à bords fins sur pied">
+            Mur d’images
+          </button>
+          <button type="button" onClick={() => addScreenFixture('motorizedScreen')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Toile qui descend du plafond et vidéoprojecteur suspendu">
+            Toile + projecteur
+          </button>
+          <button type="button" onClick={() => addScreenFixture('tripodScreen')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Écran de projection portable sur trépied">
+            Écran trépied
+          </button>
+          <button type="button" onClick={() => addScreenFixture('ledTotem')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Totem LED vertical pour l’accueil ou la signalétique">
+            Totem LED
+          </button>
+          <button type="button" onClick={() => addScreenFixture('tvCart')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Télévision sur pied à roulettes, déplaçable">
+            TV mobile
+          </button>
+          <button type="button" onClick={() => addScreenFixture('inflatableScreen')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Écran gonflable pour un cinéma en plein air">
+            Écran gonflable
           </button>
         </></Gate>
       </EditorToolGroup>

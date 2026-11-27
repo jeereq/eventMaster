@@ -317,6 +317,19 @@ interface FixtureRendererProps {
   deckStyle?: React.CSSProperties;
 }
 
+/** Étiquette courte des grands écrans sur le plan 2D. */
+const SCREEN_PLAN_TAGS: Partial<Record<NonNullable<RoomLayoutBlueprint['fixtures'][number]['screenKind']>, string>> = {
+  stageLedWall: 'Mur LED',
+  cinemaScreen: 'Écran cinéma',
+  ledCurvedWall: 'LED incurvé',
+  videoWall: 'Mur d’images',
+  motorizedScreen: 'Toile + projecteur',
+  tripodScreen: 'Écran trépied',
+  ledTotem: 'Totem',
+  tvCart: 'TV mobile',
+  inflatableScreen: 'Écran gonflable',
+};
+
 export default function FixtureRenderer({
   fixture,
   className = '',
@@ -480,7 +493,7 @@ export default function FixtureRenderer({
             </div>
             <div className="flex-1 flex flex-col items-center justify-center px-1 overflow-hidden">
               <span className="text-[7.5px] font-bold text-indigo-300 tracking-wider truncate uppercase">
-                MUR LED
+                {SCREEN_PLAN_TAGS[sKind] ?? 'Mur LED'}
               </span>
             </div>
             <div className="w-2.5 h-full bg-slate-800 border-l border-slate-600 flex flex-col justify-around py-0.5 shrink-0">

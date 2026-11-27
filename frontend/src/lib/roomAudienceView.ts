@@ -33,7 +33,10 @@ interface FixtureLike {
   heightM?: number;
 }
 
-const RATIO: Record<string, number> = { '16:9': 16 / 9, '21:9': 2.39, '32:9': 32 / 9, '9:16': 9 / 16 };
+const RATIO: Record<string, number> = { '16:9': 16 / 9, '21:9': 2.39, '32:9': 32 / 9, '9:16': 1.85, '1.43:1': 1.43 };
+
+/** Grands écrans regardés par toute la salle (même liste que `isAudienceScreenKind`). */
+const AUDIENCE_SCREENS = new Set(['stageLedWall', 'cinemaScreen', 'ledCurvedWall', 'videoWall', 'motorizedScreen', 'inflatableScreen']);
 
 function roomSize(bp: RoomLayoutBlueprint): { w: number; d: number } {
   const w = Number.isFinite(bp.canvas?.widthM) && (bp.canvas?.widthM ?? 0) > 0 ? bp.canvas.widthM : 20;
@@ -58,7 +61,8 @@ export function audienceFocus(bp: RoomLayoutBlueprint): { x: number; z: number; 
   const { w, d } = roomSize(bp);
   const toWorld = (xPct: number, yPct: number) => ({ x: (xPct / 100 - 0.5) * w, z: (yPct / 100 - 0.5) * d });
   const fixtures = (bp.fixtures ?? []) as unknown as FixtureLike[];
-  const screen = fixtures.find((f) => f.kind === 'screen' && (f.screenKind === 'cinemaScreen' || f.screenKind === 'stageLedWall' || !f.screenKind))
+  const screen = fixtures.find((f) => f.kind === 'screen' && f.screenKind === 'cinemaScreen')
+    ?? fixtures.find((f) => f.kind === 'screen' && (!f.screenKind || AUDIENCE_SCREENS.has(f.screenKind)))
     ?? fixtures.find((f) => f.kind === 'screen');
   if (screen) {
     const c = toWorld(screen.x + screen.w / 2, screen.y + screen.h / 2);
