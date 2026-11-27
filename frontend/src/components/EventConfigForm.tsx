@@ -1,5 +1,6 @@
 'use client';
 import { useMessagingChannels } from '@/hooks/useMessagingChannels';
+import Image from 'next/image';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -187,30 +188,48 @@ function EventKindPicker({
             aria-pressed={isSelected}
             onClick={() => onPick(kind)}
             className={cn(
-              'group relative flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[20px] border p-4 text-left transition-[transform,box-shadow,border-color] duration-150',
-              'hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-16px_rgba(16,24,40,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              'group relative flex min-h-[148px] flex-col justify-between overflow-hidden rounded-[20px] bg-surface-muted p-3 text-left transition-[transform,box-shadow] duration-150 sm:min-h-[164px]',
+              'hover:-translate-y-0.5 hover:shadow-[0_12px_30px_-16px_rgba(16,24,40,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2',
               'motion-reduce:transition-none motion-reduce:hover:translate-y-0',
-              isSelected ? 'border-transparent ring-2' : 'border-border',
+              isSelected && 'ring-2 ring-offset-2',
             )}
-            style={{
-              background: `linear-gradient(160deg, color-mix(in srgb, ${tint} 14%, var(--surface)) 0%, var(--surface) 75%)`,
-              ...(isSelected ? { ['--tw-ring-color' as string]: tint } : {}),
-            }}
+            style={isSelected ? { ['--tw-ring-color' as string]: tint } : undefined}
           >
+            <Image
+              src={kindPhotoUrl(kind)}
+              alt=""
+              fill
+              sizes="(min-width: 640px) 260px, 50vw"
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:group-hover:scale-100"
+            />
+            <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
             <span
               aria-hidden
-              className="inline-flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-150 group-hover:scale-105 motion-reduce:group-hover:scale-100"
-              style={{ background: `color-mix(in srgb, ${tint} 20%, var(--surface))`, color: tint }}
+              className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white shadow-sm"
+              style={{ color: tint }}
             >
-              <KindIcon className="h-6 w-6" />
+              <KindIcon className="h-[18px] w-[18px]" />
             </span>
-            <span className="text-[15px] font-semibold text-foreground">{EVENT_KIND_LABELS[kind]}</span>
+            <span className="relative text-[15px] font-semibold text-white drop-shadow-sm">{EVENT_KIND_LABELS[kind]}</span>
           </button>
         );
       })}
     </div>
   );
 }
+
+/** Photo de chaque type (Unsplash, licence libre ; identifiants vérifiés sur unsplash.com). */
+const KIND_PHOTOS: Record<EventKindId, string> = {
+  WEDDING: '1608009232260-9b527a5bb9bd',
+  BIRTHDAY: '1530103862676-de8c9debad1d',
+  BAPTISM: '1566516171511-1c411a59c8ba',
+  CORPORATE: '1542744173-8e7e53415bb0',
+  CONFERENCE: '1587825140708-dfaf72ae4b04',
+  GALA: '1536392706976-e486e2ba97af',
+  OTHER: '1492684223066-81342ee5ff30',
+};
+const kindPhotoUrl = (kind: EventKindId) =>
+  `https://images.unsplash.com/photo-${KIND_PHOTOS[kind]}?auto=format&fit=crop&w=640&h=420&q=75`;
 
 type RoomOption = {
   id: string;
