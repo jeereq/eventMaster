@@ -41,6 +41,7 @@ import {
   RoomWallSegment,
   RoomWallOpening,
   ensureBlueprintDefaults,
+  defaultRoomOutline,
   outlinePolygonPoints,
   resolveBlueprintWalls,
   resolveFurnitureSurfaceAt,
@@ -95,6 +96,16 @@ import {
 import { CatalogueInterstoryStairs } from '@/components/CatalogueStairs';
 import { CatalogueBalcony } from '@/components/CatalogueBalcony';
 import { CinemaScreenMesh } from '@/components/room/CinemaScreenMesh';
+import {
+  InflatableScreenMesh,
+  LedCurvedWallMesh,
+  LedTotemMesh,
+  MotorizedScreenMesh,
+  TripodScreenMesh,
+  TvCartMesh,
+  VideoWallMesh,
+} from '@/components/room/ScreenModelMeshes';
+import { screenThrowM as computeScreenThrowM } from '@/lib/roomScreenThrow';
 import {
   AmphitheaterRiser,
   AmphitheaterBankRails,
@@ -3008,6 +3019,7 @@ function FixtureMesh({
   screenPowered,
   screenFrameColor,
   screenContent,
+  screenThrowM,
   imageCrop,
   surfaceElevationM = 0,
   widthM,
@@ -3085,6 +3097,8 @@ function FixtureMesh({
   screenPowered?: boolean;
   screenFrameColor?: string;
   screenContent?: import('@/lib/roomLayoutUtils').ScreenContent;
+  /** Grand écran de cinéma : distance jusqu'au mur d'en face (cabine de projection). */
+  screenThrowM?: number;
   /** Recadrage de l'image personnalisée (écrans : zone affichée sur la dalle). */
   imageCrop?: import('@/lib/roomLayoutUtils').ImageCropRect;
   surfaceElevationM?: number;
@@ -3287,7 +3301,24 @@ function FixtureMesh({
             selected={selected}
             imageUrl={imageUrl}
             imageCrop={imageCrop}
+            throwM={screenThrowM}
+            ceilingM={ceilingM}
+            curtainColor={color}
           />
+        ) : screenKind === 'ledCurvedWall' ? (
+          <LedCurvedWallMesh w={w} ratio={screenRatio ?? '21:9'} elevationM={screenElevationM ?? 0.5} powered={screenPowered ?? true} selected={selected} imageUrl={imageUrl} imageCrop={imageCrop} />
+        ) : screenKind === 'videoWall' ? (
+          <VideoWallMesh w={w} elevationM={screenElevationM ?? 0.9} powered={screenPowered ?? true} selected={selected} imageUrl={imageUrl} imageCrop={imageCrop} />
+        ) : screenKind === 'motorizedScreen' ? (
+          <MotorizedScreenMesh w={w} ratio={screenRatio ?? '16:9'} elevationM={screenElevationM ?? 1} ceilingM={ceilingM} powered={screenPowered ?? true} selected={selected} imageUrl={imageUrl} imageCrop={imageCrop} />
+        ) : screenKind === 'tripodScreen' ? (
+          <TripodScreenMesh w={w} ratio={screenRatio ?? '16:9'} elevationM={screenElevationM ?? 0.9} powered={screenPowered ?? true} selected={selected} imageUrl={imageUrl} imageCrop={imageCrop} />
+        ) : screenKind === 'ledTotem' ? (
+          <LedTotemMesh w={w} elevationM={screenElevationM ?? 0.08} powered={screenPowered ?? true} selected={selected} imageUrl={imageUrl} imageCrop={imageCrop} />
+        ) : screenKind === 'tvCart' ? (
+          <TvCartMesh w={w} ratio={screenRatio ?? '16:9'} elevationM={screenElevationM ?? 1.05} powered={screenPowered ?? true} selected={selected} imageUrl={imageUrl} imageCrop={imageCrop} />
+        ) : screenKind === 'inflatableScreen' ? (
+          <InflatableScreenMesh w={w} d={d} ratio={screenRatio ?? '16:9'} elevationM={screenElevationM ?? 1.3} powered={screenPowered ?? true} selected={selected} imageUrl={imageUrl} imageCrop={imageCrop} />
         ) : screenKind === 'wallTv' ? (
           <WallTvMesh
             w={Math.max(0.8, w)}
@@ -4684,6 +4715,18 @@ function SceneContent({
             screenPowered={f.screenPowered}
             screenFrameColor={f.screenFrameColor}
             screenContent={f.screenContent}
+            screenThrowM={
+              f.kind === 'screen' && f.screenKind === 'cinemaScreen' && isBlueprintWallsVisible(blueprint.metadata)
+                ? computeScreenThrowM({
+                    cxPct: f.x + f.w / 2,
+                    cyPct: f.y + f.h / 2,
+                    rotationDeg: f.rotation ?? 0,
+                    outline: blueprint.roomOutline ?? defaultRoomOutline(),
+                    widthM,
+                    depthM: heightM,
+                  }) ?? undefined
+                : undefined
+            }
             imageCrop={f.imageCrop}
             surfaceElevationM={raisedSurface?.elevationM ?? 0}
             widthM={widthM}

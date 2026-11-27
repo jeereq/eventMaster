@@ -429,8 +429,8 @@ export type SelectionStylePatch = {
   scaleDelta?: number;
   rotation?: number;
   rotationDelta?: number;
-  screenKind?: 'stageLedWall' | 'wallTv' | 'tableMonitor' | 'laptop' | 'desktopPc';
-  screenRatio?: '16:9' | '21:9' | '9:16' | '32:9';
+  screenKind?: import('@/lib/roomLayoutUtils').ScreenKind;
+  screenRatio?: import('@/lib/roomLayoutUtils').ScreenRatio;
   screenElevationM?: number;
   screenPowered?: boolean;
 };

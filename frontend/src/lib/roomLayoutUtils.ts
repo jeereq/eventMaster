@@ -173,8 +173,21 @@ export type RoofStyle =
   | 'barrel'
   | 'sawtooth';
 
-export type ScreenKind = 'stageLedWall' | 'wallTv' | 'tableMonitor' | 'laptop' | 'desktopPc' | 'cinemaScreen';
-export type ScreenRatio = '16:9' | '21:9' | '9:16' | '32:9';
+export type ScreenKind =
+  | 'stageLedWall'
+  | 'wallTv'
+  | 'tableMonitor'
+  | 'laptop'
+  | 'desktopPc'
+  | 'cinemaScreen'
+  | 'ledCurvedWall'
+  | 'videoWall'
+  | 'motorizedScreen'
+  | 'tripodScreen'
+  | 'ledTotem'
+  | 'tvCart'
+  | 'inflatableScreen';
+export type ScreenRatio = '16:9' | '21:9' | '9:16' | '32:9' | '1.43:1';
 export type ScreenContent = 'presentation' | 'video' | 'matrix' | 'off' | 'glow';
 
 export const screenKindLabels: Record<ScreenKind, string> = {
@@ -184,6 +197,13 @@ export const screenKindLabels: Record<ScreenKind, string> = {
   laptop: 'Ordinateur portable (Laptop)',
   desktopPc: 'Ordinateur fixe (PC tout-en-un)',
   cinemaScreen: 'Grand écran de cinéma (toile tendue)',
+  ledCurvedWall: 'Mur LED incurvé (immersif)',
+  videoWall: 'Mur d’images 3 × 3 (dalles bord fin)',
+  motorizedScreen: 'Toile motorisée + vidéoprojecteur',
+  tripodScreen: 'Écran de projection sur trépied',
+  ledTotem: 'Totem LED vertical (affichage)',
+  tvCart: 'Télévision sur pied roulant',
+  inflatableScreen: 'Écran gonflable (cinéma plein air)',
 };
 
 export const screenRatioLabels: Record<ScreenRatio, string> = {
@@ -191,7 +211,69 @@ export const screenRatioLabels: Record<ScreenRatio, string> = {
   '21:9': 'Cinéma ultra-large (21:9)',
   '9:16': 'Portrait vertical / Totem (9:16)',
   '32:9': 'Double écran panoramique (32:9)',
+  '1.43:1': 'Grand format IMAX (1.43:1)',
 };
+
+/**
+ * Réglages par défaut à la pose d’un écran : hauteur du bas de l’image (m) et inclinaison (°).
+ * Les écrans de table prennent la hauteur du plateau sur lequel ils sont posés.
+ */
+export const screenKindDefaults: Record<ScreenKind, { elevationM: number; tiltDeg: number; tabletop?: boolean }> = {
+  stageLedWall: { elevationM: 0, tiltDeg: 0 },
+  wallTv: { elevationM: 1.6, tiltDeg: 4 },
+  tableMonitor: { elevationM: 0.76, tiltDeg: 6, tabletop: true },
+  laptop: { elevationM: 0.76, tiltDeg: 0, tabletop: true },
+  desktopPc: { elevationM: 0.76, tiltDeg: 4, tabletop: true },
+  cinemaScreen: { elevationM: 1.2, tiltDeg: 0 },
+  ledCurvedWall: { elevationM: 0.5, tiltDeg: 0 },
+  videoWall: { elevationM: 0.9, tiltDeg: 0 },
+  motorizedScreen: { elevationM: 1, tiltDeg: 0 },
+  tripodScreen: { elevationM: 0.9, tiltDeg: 0 },
+  ledTotem: { elevationM: 0.08, tiltDeg: 0 },
+  tvCart: { elevationM: 1.05, tiltDeg: 0 },
+  inflatableScreen: { elevationM: 1.3, tiltDeg: 0 },
+};
+
+/** Format d’image par défaut de chaque écran. */
+export const screenKindDefaultRatio: Partial<Record<ScreenKind, ScreenRatio>> = {
+  cinemaScreen: '21:9',
+  ledTotem: '9:16',
+};
+
+/** Largeur / hauteur de l’image pour un format donné (« 9:16 » d’un grand écran = format plat 1.85). */
+export function screenRatioAspect(ratio: ScreenRatio | string | undefined, fallback = 16 / 9): number {
+  switch (ratio) {
+    case '16:9': return 16 / 9;
+    case '21:9': return 21 / 9;
+    case '32:9': return 32 / 9;
+    case '9:16': return 9 / 16;
+    case '1.43:1': return 1.43;
+    default: return fallback;
+  }
+}
+
+/** Grands écrans que regarde toute une salle (vue du public, repère de la scène). */
+export function isAudienceScreenKind(kind: ScreenKind | undefined): boolean {
+  return (
+    !kind ||
+    kind === 'stageLedWall' ||
+    kind === 'cinemaScreen' ||
+    kind === 'ledCurvedWall' ||
+    kind === 'videoWall' ||
+    kind === 'motorizedScreen' ||
+    kind === 'inflatableScreen'
+  );
+}
+
+/** Écrans posés sur une table ou une régie (hauteur prise sur le plateau). */
+export function isTabletopScreenKind(kind: ScreenKind | undefined): boolean {
+  return Boolean(kind && screenKindDefaults[kind]?.tabletop);
+}
+
+/** Écrans fixés au mur ou posés sur un meuble : ils ne bloquent pas le passage. */
+export function isNonBlockingScreenKind(kind: ScreenKind | undefined): boolean {
+  return kind === 'wallTv' || isTabletopScreenKind(kind);
+}
 
 export type RoomFixtureKind =
   | 'stage'
@@ -3772,41 +3854,78 @@ function dressTemplate(templateId: string, blueprint: RoomLayoutBlueprint): Room
   return setting ? applyTemplateTableSetting(dressed, setting) : dressed;
 }
 
+/** Réglages d’une salle de cinéma en gradins « stadium ». */
+type CinemaRoomSpec = {
+  templateId: string;
+  canvas: { widthM: number; heightM: number };
+  rowCount: number;
+  seatsPerRow: number;
+  wallHeightM: number;
+  wallColor: string;
+  wallTexture: WallTextureStyle;
+  floorColor: string;
+  chairType?: ChairType;
+  chairStyle?: ChairStyle;
+  seatMaterial: SeatMaterial;
+  seatColor?: string;
+  /** Largeur maximale de la toile (m) ; réduite si la salle est plus étroite ou trop basse. */
+  screenWidthM: number;
+  screenRatio: ScreenRatio;
+  screenElevationM: number;
+  curtainColor: string;
+  /** Distance de la toile au premier rang et pas entre rangs (m). */
+  firstRowM?: number;
+  rowPitchM?: number;
+  screenLabel?: string;
+  lightingPreset?: RoomLayoutBlueprint['metadata']['lightingPreset'];
+  roofStyle?: RoofStyle;
+};
+
+/** Rapport largeur / hauteur d’image d’une toile de cinéma (le « 21:9 » est un scope 2.39). */
+const CINEMA_RATIO: Record<ScreenRatio, number> = { '16:9': 16 / 9, '21:9': 2.39, '32:9': 32 / 9, '9:16': 1.85, '1.43:1': 1.43 };
+
 /**
- * Salle de cinéma « stadium » (≈ 15 × 19 m utiles, 220 places) : gradins de 45 cm
- * pour que chaque rang voie au-dessus du précédent, deux escaliers latéraux,
- * écran scope 2.39:1 presque mur à mur, murs acoustiques sombres et entrée
- * latérale à l’avant de la salle, comme dans un multiplexe.
+ * Salle de cinéma en gradins : marches de 45 cm pour que chaque rang voie au-dessus du
+ * précédent, deux escaliers latéraux, toile presque mur à mur, murs sombres sans fenêtre,
+ * entrée latérale vers l’arrière et sortie de secours près de l’écran, comme en multiplexe.
  */
-function buildCinemaHallTemplate(rowCount = 11, seatsPerRow = 20): RoomLayoutBlueprint {
-  const canvas = { widthM: 17, heightM: 21 };
+function buildCinemaRoom(spec: CinemaRoomSpec): RoomLayoutBlueprint {
+  const { canvas } = spec;
   const outline = defaultRoomOutline('rectangle');
   const screenY = outline.y + 0.4;
   const rows = generateAmphitheaterRows({
     style: 'cinemaStadium',
-    tierCount: Math.max(3, Math.min(14, rowCount)),
-    seatsPerRow: Math.max(8, Math.min(30, seatsPerRow)),
-    chairType: 'THEATER',
-    chairStyle: 'cinema',
-    seatMaterial: 'leather',
+    tierCount: Math.max(2, Math.min(16, spec.rowCount)),
+    seatsPerRow: Math.max(4, Math.min(34, spec.seatsPerRow)),
+    chairType: spec.chairType ?? 'THEATER',
+    chairStyle: spec.chairStyle ?? 'cinema',
+    seatMaterial: spec.seatMaterial,
     focusY: screenY + 1,
     depthM: canvas.heightM,
-  });
-  const WALL = '#3d3542';
-  const walls = wallsFromRoomOutline(outline, { heightM: 8, texture: 'fluted', withEntrance: false }).map((wall, i) => ({
+    ...(spec.firstRowM ? { radiusStart: (spec.firstRowM / canvas.heightM) * 100 } : {}),
+    ...(spec.rowPitchM ? { radiusStep: (spec.rowPitchM / canvas.heightM) * 100 } : {}),
+  }).map((row) => (spec.seatColor ? { ...row, chairSeatColor: spec.seatColor } : row));
+  const walls = wallsFromRoomOutline(outline, { heightM: spec.wallHeightM, texture: spec.wallTexture, withEntrance: false }).map((wall, i) => ({
     ...wall,
-    color: WALL,
+    color: spec.wallColor,
     // Pas de fenêtres dans une salle obscure : une entrée et une sortie de secours près de l’écran.
     openings:
       i === 3 ? [createWallOpening('door', { t: 0.86, style: 'double' })]
         : i === 1 ? [createWallOpening('door', { t: 0.14, style: 'fireExit' })]
           : [],
   }));
-  const screenWidthM = Math.min(14, canvas.widthM * (outline.w / 100) - 1.6);
+  const innerWidthM = canvas.widthM * (outline.w / 100);
+  const ratio = CINEMA_RATIO[spec.screenRatio] ?? 2.39;
+  // La toile garde 1,6 m de dégagement sur les côtés et 1,2 m sous le plafond.
+  const screenWidthM = Math.min(
+    spec.screenWidthM,
+    innerWidthM - 1.6,
+    (spec.wallHeightM - spec.screenElevationM - 1.2) * ratio,
+  );
   const screenWPct = (screenWidthM / canvas.widthM) * 100;
   return refreshBlueprintMetadata({
     version: 1,
-    templateId: 'cinema-hall',
+    templateId: spec.templateId,
     roomType: 'AMPHITHEATER',
     canvas,
     roomOutline: outline,
@@ -3821,21 +3940,215 @@ function buildCinemaHallTemplate(rowCount = 11, seatsPerRow = 20): RoomLayoutBlu
         w: screenWPct,
         h: (0.6 / canvas.heightM) * 100,
         screenKind: 'cinemaScreen',
-        screenRatio: '21:9',
-        screenElevationM: 1.2,
-        label: 'Grand écran',
+        screenRatio: spec.screenRatio,
+        screenElevationM: spec.screenElevationM,
+        color: spec.curtainColor,
+        label: spec.screenLabel ?? 'Grand écran',
       },
     ],
     metadata: {
       totalSeats: rows.reduce((sum, row) => sum + row.seatCount, 0),
       floorType: 'moquette',
-      floorColor: '#4a4150',
-      wallPaintColor: WALL,
+      floorColor: spec.floorColor,
+      wallPaintColor: spec.wallColor,
       // Lumières de salle allumées (entracte) : la salle reste lisible en 3D.
-      lightingPreset: 'banquet',
-      showRoof: false,
+      lightingPreset: spec.lightingPreset ?? 'banquet',
+      showRoof: Boolean(spec.roofStyle),
+      ...(spec.roofStyle ? { roofStyle: spec.roofStyle } : {}),
       showChandeliers: false,
     },
+  });
+}
+
+/**
+ * Salle de cinéma « stadium » (≈ 15 × 19 m utiles, 220 places) : gradins de 45 cm,
+ * deux escaliers latéraux, écran scope 2.39:1 presque mur à mur, murs acoustiques
+ * sombres et cabine de projection au fond, comme dans un multiplexe.
+ */
+function buildCinemaHallTemplate(rowCount = 11, seatsPerRow = 20): RoomLayoutBlueprint {
+  return buildCinemaRoom({
+    templateId: 'cinema-hall',
+    canvas: { widthM: 17, heightM: 21 },
+    rowCount,
+    seatsPerRow,
+    wallHeightM: 8,
+    wallColor: '#3d3542',
+    wallTexture: 'fluted',
+    floorColor: '#4a4150',
+    seatMaterial: 'leather',
+    screenWidthM: 14,
+    screenRatio: '21:9',
+    screenElevationM: 1.2,
+    curtainColor: '#5b0f1a',
+  });
+}
+
+/**
+ * Salle grand format (≈ 23 × 25 m utiles, plus de 300 places) : toile 1.43:1 qui monte
+ * presque au plafond, murs noirs, fauteuils bleu nuit et gradins profonds.
+ */
+function buildCinemaImaxTemplate(rowCount = 13, seatsPerRow = 26): RoomLayoutBlueprint {
+  return buildCinemaRoom({
+    templateId: 'cinema-imax',
+    canvas: { widthM: 26, heightM: 28 },
+    rowCount,
+    seatsPerRow,
+    wallHeightM: 15,
+    wallColor: '#1c1d24',
+    wallTexture: 'fluted',
+    floorColor: '#272a36',
+    seatMaterial: 'velvet',
+    seatColor: '#1e3a8a',
+    screenWidthM: 19,
+    screenRatio: '1.43:1',
+    screenElevationM: 1,
+    curtainColor: '#0f0f14',
+    firstRowM: 7,
+    rowPitchM: 1.2,
+    screenLabel: 'Écran grand format',
+  });
+}
+
+/**
+ * Salle premium (≈ 13 × 13 m utiles, ~70 places) : rangs espacés de 1,5 m pour allonger
+ * les jambes, cuir caramel, boiseries noyer et rideaux bronze.
+ */
+function buildCinemaPremiumTemplate(rowCount = 6, seatsPerRow = 12): RoomLayoutBlueprint {
+  return buildCinemaRoom({
+    templateId: 'cinema-premium',
+    canvas: { widthM: 15, heightM: 15 },
+    rowCount,
+    seatsPerRow,
+    wallHeightM: 6,
+    wallColor: '#4a3426',
+    wallTexture: 'woodPanel',
+    floorColor: '#2b2420',
+    seatMaterial: 'leather',
+    seatColor: '#9a5b2e',
+    screenWidthM: 9.5,
+    screenRatio: '21:9',
+    screenElevationM: 1.1,
+    curtainColor: '#6b4f1d',
+    firstRowM: 4.4,
+    rowPitchM: 1.5,
+    screenLabel: 'Écran premium',
+    roofStyle: 'coffered',
+  });
+}
+
+/**
+ * Salle de projection privée (≈ 8 × 8 m utiles, une vingtaine de places) : trois rangs de
+ * fauteuils club en velours, murs tendus sombres, toile 16:9 et rideaux bleu nuit.
+ */
+function buildCinemaPrivateTemplate(rowCount = 3, seatsPerRow = 7): RoomLayoutBlueprint {
+  return buildCinemaRoom({
+    templateId: 'cinema-private',
+    canvas: { widthM: 9, heightM: 9 },
+    rowCount,
+    seatsPerRow,
+    wallHeightM: 4.2,
+    wallColor: '#262b36',
+    wallTexture: 'woodPanel',
+    floorColor: '#1f2433',
+    chairType: 'ARMCHAIR',
+    chairStyle: 'club',
+    seatMaterial: 'velvet',
+    seatColor: '#1e3a5f',
+    screenWidthM: 5.2,
+    screenRatio: '16:9',
+    screenElevationM: 0.7,
+    curtainColor: '#0f1f3d',
+    firstRowM: 3.4,
+    rowPitchM: 1.45,
+    screenLabel: 'Écran de projection',
+    lightingPreset: 'banquet',
+    roofStyle: 'coffered',
+  });
+}
+
+/**
+ * Cinéma en plein air (≈ 22 × 23 m de pelouse) : écran gonflable au fond, rangs de chaises
+ * pliantes légèrement cintrés face à l’écran, allée centrale, guirlandes, torches et
+ * chariot à pop-corn près de l’entrée. Ciel de crépuscule.
+ */
+function buildCinemaOutdoorTemplate(rowCount = 8, seatsPerRow = 14): RoomLayoutBlueprint {
+  const canvas = { widthM: 24, heightM: 26 };
+  const outline = defaultRoomOutline('rectangle');
+  const screenSize = realFixtureFootprintPct('screen', canvas, { screenKind: 'inflatableScreen' }) ?? { w: 37, h: 12 };
+  const screenY = outline.y + 2;
+  const focusY = screenY + screenSize.h / 2;
+  const rows = Math.max(3, Math.min(12, rowCount));
+  const seats = Math.max(6, Math.min(24, seatsPerRow));
+  const firstY = focusY + (7.5 / canvas.heightM) * 100;
+  const pitch = (1.25 / canvas.heightM) * 100;
+  const groupId = makeLayoutId('openair');
+  const furniture: RoomLayoutBlueprint['furniture'] = Array.from({ length: rows }, (_, i) => ({
+    id: makeLayoutId('row'),
+    kind: 'row' as const,
+    label: `Rangée ${String.fromCharCode(65 + i)}`,
+    rowName: `Rang ${String.fromCharCode(65 + i)}`,
+    seatCount: seats,
+    chairType: 'FOLDING' as const,
+    seatMaterial: 'wood' as const,
+    tier: 0,
+    x: 50,
+    y: Math.min(86, firstY + i * pitch),
+    curve: 0.05 + (i / Math.max(1, rows - 1)) * 0.06,
+    rotation: 0,
+    aisleSplit: true,
+    aisleWidthPct: 12,
+    elevationM: 0,
+    focusX: 50,
+    focusY,
+    showSeatNumbers: true,
+    groupId,
+  }));
+  const fixtures: BlueprintFixture[] = [
+    {
+      ...createBlueprintFixture('screen', canvas),
+      id: makeLayoutId('screen'),
+      x: 50 - screenSize.w / 2,
+      y: screenY,
+      w: screenSize.w,
+      h: screenSize.h,
+      screenKind: 'inflatableScreen',
+      screenRatio: '16:9',
+      screenElevationM: screenKindDefaults.inflatableScreen.elevationM,
+      label: 'Écran gonflable',
+    },
+    { ...createBlueprintFixture('stringLight'), id: makeLayoutId('stringLight'), x: 10, y: 30, w: 80, h: 58 },
+    {
+      ...createBlueprintFixture('bar'),
+      id: makeLayoutId('bar'),
+      x: 74,
+      y: 89,
+      w: (barStyleSizeM.cart.w / canvas.widthM) * 100,
+      h: (barStyleSizeM.cart.d / canvas.heightM) * 100,
+      rotation: 180,
+      label: 'Chariot à pop-corn',
+      barStyle: 'cart',
+    },
+  ];
+  const base = refreshBlueprintMetadata({
+    version: 1,
+    templateId: 'cinema-outdoor',
+    roomType: 'CONFERENCE',
+    canvas,
+    roomOutline: outline,
+    furniture,
+    fixtures,
+    metadata: { totalSeats: rows * seats },
+  });
+  return dressBlueprint(base, {
+    openAir: true,
+    metadata: { floorType: 'pelouseRayee', lightingPreset: 'dusk', outdoorSurroundings: 'park' },
+    landscape: [
+      ...landscapeRow('torch', [4, 30], [4, 92], 5),
+      ...landscapeRow('torch', [96, 30], [96, 92], 5),
+      ...cornerSpots('olive', 4).slice(0, 2),
+      { style: 'shrub', x: 10, y: 96 },
+      { style: 'shrub', x: 90, y: 4 },
+    ],
   });
 }
 
@@ -4671,10 +4984,41 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
         p?.chairType ?? 'THEATER',
         'cinema',
       );
+      // Une vraie toile de cinéma à la place de la scène, et des murs sans fenêtre.
+      const outline = defaultRoomOutline('rectangle');
+      const wallHeightM = 6.5;
+      // Toile scope 2.39:1 presque mur à mur, sans dépasser 1,2 m sous le plafond.
+      const screenWidthM = Math.min(13, bp.canvas.widthM * (outline.w / 100) - 3, (wallHeightM - 1.1 - 1.2) * 2.39);
+      const screenWPct = (screenWidthM / bp.canvas.widthM) * 100;
+      const walls = wallsFromRoomOutline(outline, { heightM: wallHeightM, texture: 'fluted', withEntrance: false }).map((wall, i) => ({
+        ...wall,
+        color: '#2a2230',
+        openings:
+          i === 2 ? [createWallOpening('door', { t: 0.5, style: 'double' })]
+            : i === 1 ? [createWallOpening('door', { t: 0.12, style: 'fireExit' })]
+              : [],
+      }));
       return refreshBlueprintMetadata({
         ...bp,
         templateId: 'chairs-cinema',
-        roomOutline: defaultRoomOutline('rectangle'),
+        roomOutline: outline,
+        walls,
+        fixtures: [
+          ...bp.fixtures.filter((f) => f.kind !== 'stage'),
+          {
+            ...createBlueprintFixture('screen'),
+            id: makeLayoutId('screen'),
+            x: 50 - screenWPct / 2,
+            y: outline.y + 0.4,
+            w: screenWPct,
+            h: (0.6 / bp.canvas.heightM) * 100,
+            screenKind: 'cinemaScreen',
+            screenRatio: '21:9',
+            screenElevationM: 1.1,
+            color: '#5b0f1a',
+            label: 'Grand écran',
+          },
+        ],
       });
     },
   },
@@ -5109,6 +5453,38 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     roomType: 'AMPHITHEATER',
     outlineShape: 'rectangle',
     build: (p) => buildCinemaHallTemplate(p?.rowCount, p?.seatsPerRow),
+  },
+  {
+    id: 'cinema-imax',
+    name: 'Cinéma grand format (IMAX)',
+    description: 'Toile 1.43:1 du sol au plafond, murs noirs et plus de 300 fauteuils bleu nuit',
+    roomType: 'AMPHITHEATER',
+    outlineShape: 'rectangle',
+    build: (p) => buildCinemaImaxTemplate(p?.rowCount, p?.seatsPerRow),
+  },
+  {
+    id: 'cinema-premium',
+    name: 'Cinéma premium (VIP)',
+    description: 'Rangs très espacés, cuir caramel, boiseries noyer et plafond à caissons',
+    roomType: 'AMPHITHEATER',
+    outlineShape: 'rectangle',
+    build: (p) => buildCinemaPremiumTemplate(p?.rowCount, p?.seatsPerRow),
+  },
+  {
+    id: 'cinema-private',
+    name: 'Salle de projection privée',
+    description: 'Trois rangs de fauteuils club en velours face à une toile 16:9',
+    roomType: 'AMPHITHEATER',
+    outlineShape: 'rectangle',
+    build: (p) => buildCinemaPrivateTemplate(p?.rowCount, p?.seatsPerRow),
+  },
+  {
+    id: 'cinema-outdoor',
+    name: 'Cinéma en plein air',
+    description: 'Écran gonflable, chaises pliantes sur pelouse, guirlandes et pop-corn',
+    roomType: 'CONFERENCE',
+    outlineShape: 'rectangle',
+    build: (p) => buildCinemaOutdoorTemplate(p?.rowCount, p?.seatsPerRow),
   },
   {
     id: 'empty-rectangle',
@@ -8259,6 +8635,13 @@ export const screenKindSizeM: Record<ScreenKind, { w: number; d: number }> = {
   laptop: { w: 0.4, d: 0.35 },
   desktopPc: { w: 0.6, d: 0.4 },
   cinemaScreen: { w: 10, d: 0.6 },
+  ledCurvedWall: { w: 8, d: 1.6 },
+  videoWall: { w: 3.7, d: 0.8 },
+  motorizedScreen: { w: 3.2, d: 0.3 },
+  tripodScreen: { w: 2.2, d: 0.9 },
+  ledTotem: { w: 0.7, d: 0.45 },
+  tvCart: { w: 1.5, d: 0.75 },
+  inflatableScreen: { w: 9, d: 3 },
 };
 
 /** Conserve un libellé perso ; n’écrase que s’il vaut encore le défaut précédent. */

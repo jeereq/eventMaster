@@ -4,7 +4,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyRoomTemplate, generateAmphitheaterRows } from './roomLayoutUtils.ts';
+import { applyRoomTemplate, generateAmphitheaterRows, resolveBlueprintWalls } from './roomLayoutUtils.ts';
 
 describe('salle de cinéma', () => {
   it('génère des gradins stadium : 45 cm de contremarche et 1,15 m de marche', () => {
@@ -35,5 +35,34 @@ describe('salle de cinéma', () => {
     const last = rows[rows.length - 1];
     assert.ok(last.y < 95, 'dernier rang avant le mur du fond');
     assert.ok(rows.every((r) => r.y > screen.y + screen.h), 'rangs derrière l’écran');
+  });
+
+  for (const id of ['cinema-hall', 'cinema-imax', 'cinema-premium', 'cinema-private', 'chairs-cinema']) {
+    it(`« ${id} » : vraie toile de cinéma qui tient sous le plafond, salle sans fenêtre`, () => {
+      const bp = applyRoomTemplate(id);
+      assert.ok(bp);
+      const screen = bp.fixtures.find((f) => f.kind === 'screen' && f.screenKind === 'cinemaScreen');
+      assert.ok(screen, 'toile de cinéma présente');
+      assert.ok(!bp.fixtures.some((f) => f.kind === 'stage'), 'plus de scène à la place de l’écran');
+      const walls = resolveBlueprintWalls(bp);
+      assert.ok(walls.every((w) => (w.openings ?? []).every((o) => o.kind !== 'window')), 'aucune fenêtre');
+      const ratio = screen.screenRatio === '1.43:1' ? 1.43 : screen.screenRatio === '16:9' ? 16 / 9 : 2.39;
+      const widthM = (screen.w / 100) * bp.canvas.widthM;
+      const top = (screen.screenElevationM ?? 1.2) + widthM / ratio;
+      const ceiling = Math.min(...walls.map((w) => w.heightM ?? 3));
+      assert.ok(top <= ceiling - 0.5, `haut de toile ${top.toFixed(2)} m sous ${ceiling} m`);
+      const rows = bp.furniture.filter((f) => f.kind === 'row');
+      assert.ok(rows.length >= 3);
+      assert.ok(rows.every((r) => r.y > screen.y + screen.h && r.y < 95), 'rangs entre l’écran et le mur du fond');
+    });
+  }
+
+  it('« Cinéma en plein air » : écran gonflable, chaises sur pelouse, sans murs', () => {
+    const bp = applyRoomTemplate('cinema-outdoor');
+    assert.ok(bp);
+    assert.ok(bp.fixtures.some((f) => f.kind === 'screen' && f.screenKind === 'inflatableScreen'));
+    assert.equal(bp.metadata.showWalls, false);
+    const rows = bp.furniture.filter((f) => f.kind === 'row');
+    assert.ok(rows.length >= 6 && rows.every((r) => r.kind === 'row' && r.chairType === 'FOLDING'));
   });
 });
