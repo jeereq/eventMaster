@@ -1,19 +1,15 @@
 'use client';
 
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check, MapPin, Lightbulb } from '@/components/icons';
+import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check, DollarSign, MapPin, Lightbulb } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import { LISTING_EVENT_TYPES, VENUE_AMENITIES, type ListingAmenityId, type ListingEventTypeId } from '@/lib/listingDetails';
 import { type ServiceCategory } from '@/lib/marketplace';
-import BudgetSimulationCriteria, {
-  BudgetScopeTabs,
-  CHOICE_CHIP as CHIP,
-  choiceChipTone as chipTone,
-} from '@/components/BudgetSimulationCriteria';
-import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
+import BudgetSimulationScopePicker from '@/components/BudgetSimulationScopePicker';
+import BudgetSimulationCriteria from '@/components/BudgetSimulationCriteria';
 import type { BudgetSimulationScope } from '@/lib/budgetSimulation';
 import { parseDrinkOrderLines, type BeverageSaleUnit, type DrinkOrderLine } from '@/lib/beverageBrands';
 import { communesForCity, neighborhoodsFor } from '@/lib/rdcCities';
@@ -71,9 +67,14 @@ const VENUE_PARAM_AMENITIES = VENUE_AMENITIES.filter((item) =>
 const FIELD_LABEL = 'text-xs font-semibold text-muted';
 const NATIVE_FIELD =
   'w-full min-h-11 rounded-[var(--radius-button)] border border-border bg-surface-muted dark:bg-background px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary';
-/** Bouton texte discret (historique, exemples, jetons) : pas de cadre, teinte au survol. */
-const QUIET_BUTTON =
-  'inline-flex items-center gap-1.5 min-h-11 xl:min-h-9 px-2.5 rounded-[var(--radius-button)] text-sm transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+const CHIP =
+  'inline-flex items-center justify-center min-h-11 px-4 rounded-xl text-sm font-medium border-[1.5px] transition whitespace-nowrap shrink-0 sm:shrink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+
+function chipTone(active: boolean) {
+  return active
+    ? 'border-primary-solid bg-[#e3f3ec] text-[#275a3d] dark:bg-primary/15 dark:text-primary'
+    : 'border-border bg-surface text-foreground hover:border-primary/50';
+}
 
 export type EventPrepAiDefaults = {
   eventType?: ListingEventTypeId;
@@ -129,6 +130,7 @@ export default function EventPrepAiSimulator({
   // Le brief est toujours déplié : plus de bouton pour le replier.
   const [open, setOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<StudioAiTabId>('create');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
   // Mobile : une question par écran, puis l’écran des formules.
   const [mobileStep, setMobileStep] = useState(0);
@@ -293,6 +295,9 @@ export default function EventPrepAiSimulator({
     setWantedDrinkLines(parseDrinkOrderLines(fromBrief.wantedDrinkLines || fromResult.wantedDrinkLines));
     const amenities = fromBrief.venueAmenities || fromResult.venueAmenities || [];
     setVenueAmenities(amenities.filter((id): id is ListingAmenityId => Boolean(id)));
+    if (cats.length || amenities.length) {
+      setAdvancedOpen(true);
+    }
   };
 
   const applyCached = (
@@ -627,7 +632,7 @@ export default function EventPrepAiSimulator({
     : [true, Boolean(city), Number(guestCount) > 0, Boolean(prompt.trim())];
   const briefDone = briefSteps.filter(Boolean).length;
   const placeLabel = [neighborhood, commune, city].filter(Boolean).join(', ');
-  const recapRows: Array<{ label: string; value: string; empty: boolean; optional?: boolean }> = [
+  const recapRows: Array<{ label: string; value: string; empty: boolean }> = [
     {
       label: 'Événement',
       value: LISTING_EVENT_TYPES.find((item) => item.id === eventType)?.label || 'À choisir',
@@ -639,56 +644,32 @@ export default function EventPrepAiSimulator({
     { label: 'Invités', value: Number(guestCount) > 0 ? guestCount : 'À choisir', empty: !(Number(guestCount) > 0) },
     {
       label: 'Date',
-      value: eventDate ? new Date(`${eventDate}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+      value: eventDate ? new Date(`${eventDate}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Facultatif',
       empty: !eventDate,
-      optional: true,
     },
     {
       label: 'Budget max',
-      value: budgetMaxUsdCalculated > 0 ? `${budgetMaxUsdCalculated.toLocaleString('fr-FR')} $` : '',
+      value: budgetMaxUsdCalculated > 0 ? `${budgetMaxUsdCalculated.toLocaleString('fr-FR')} $` : 'Facultatif',
       empty: !(budgetMaxUsdCalculated > 0),
-      optional: true,
     },
-  ].filter((row) => !(row.optional && row.empty));
-  // Ce qui manque encore au brief, en quelques mots ; rien quand il est prêt.
+  ];
   const briefHint = budgetScope === 'drinks'
-    ? (wantedDrinkLines.length > 0 || Number(guestCount) > 0
-      ? ''
-      : 'Indiquez le nombre d’invités ou une commande précise.')
+    ? (wantedDrinkLines.length > 0
+      ? 'La commande précise remplace le calcul par invité. Vous pouvez lancer.'
+      : Number(guestCount) > 0
+        ? 'Les quantités suivront les invités. Passez en commande précise seulement si vous voulez un nombre exact.'
+        : 'Indiquez les invités, ou ouvrez Affiner et choisissez Commande précise.')
     : !city.trim()
-      ? 'Choisissez une ville.'
+      ? 'Commencez par la ville : le catalogue local en dépend.'
       : budgetMaxFcCalculated <= 0
-        ? 'Indiquez un budget maximum.'
+        ? 'Indiquez un budget maximum pour situer les trois formules.'
         : Number(guestCount) > 0
-          ? ''
-          : 'Indiquez le nombre d’invités.';
-  const blockedHint = 'Plus de jetons disponibles.';
-  const footerHint = allowance.canSimulate || loading ? briefHint : blockedHint;
-  // Précisions actives, comptées sur le bouton « Affiner le calcul » quand il est replié.
-  const refineCount = wantedBrandIds.length
-    + wantedSaleUnits.length
-    + wantedDrinkLines.length
-    + wantedCategories.length
-    + (budgetScope !== 'drinks'
-      ? Number(Boolean(ambiance)) + Number(Boolean(moment)) + Number(Boolean(setting))
-        + Number(budgetMinFcCalculated > 0) + (includeVenue ? venueAmenities.length : 0)
-      : 0)
-    + Number(priceSource !== 'all' && !embedded);
+          ? 'Le brief est prêt. Affiner les marques ou les métiers reste facultatif.'
+          : 'Ajoutez le nombre d’invités pour dimensionner la salle, les chaises et les boissons.';
 
   const briefReady = budgetScope === 'drinks'
     ? Number(guestCount) > 0 || wantedDrinkLines.length > 0
     : Boolean(city.trim()) && budgetMaxFcCalculated > 0 && Number(guestCount) > 0;
-
-  const newSimulationButton = activeTab === 'history' && history.length > 0 ? (
-    <button
-      type="button"
-      onClick={() => setActiveTab('create')}
-      className={cn(QUIET_BUTTON, 'self-start sm:self-center font-semibold text-primary hover:bg-surface-muted')}
-    >
-      <PlusCircle className="w-3.5 h-3.5" aria-hidden />
-      <span>Nouvelle simulation</span>
-    </button>
-  ) : null;
 
   const errorAlert = error ? (
     <Alert variant="error">
@@ -715,17 +696,44 @@ export default function EventPrepAiSimulator({
       <section
         aria-label="Simulateur budget IA - Fonctionnalité à venir"
         className={cn(
-          'rounded-[var(--radius-card)] border border-border bg-surface px-6 py-10 space-y-4 text-center',
+          'rounded-[var(--radius-card)] border border-festive-accent/30 bg-surface p-6 sm:p-8 space-y-5 text-center shadow-xs',
           className,
         )}
       >
-        <Clock className="w-8 h-8 text-muted mx-auto" aria-hidden />
-        <h3 className="text-lg font-semibold text-foreground">
-          Simulateur de budget bientôt disponible
-        </h3>
-        <Button href="/marketplace" variant="primary" size="sm">
-          Explorer le catalogue
-        </Button>
+        <div className="w-14 h-14 rounded-2xl bg-festive-accent-soft text-festive-accent mx-auto flex items-center justify-center border border-festive-accent/30">
+          <Clock className="w-7 h-7" />
+        </div>
+
+        <div className="space-y-2 max-w-lg mx-auto">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-festive-accent-soft text-foreground border border-festive-accent/40">
+            <Sparkles className="w-3.5 h-3.5" />
+            Fonctionnalité à venir
+          </span>
+          <h3 className="text-lg font-bold text-foreground">
+            Simulateur de Budget & Formules IA
+          </h3>
+          <p className="text-xs sm:text-sm text-muted leading-relaxed">
+            Cette fonctionnalité d’estimation et de calcul automatique de formules budgétaires par intelligence artificielle est actuellement en cours de préparation et réservée pour un déploiement futur. Elle n’est pas utilisable pour le moment.
+          </p>
+        </div>
+
+        <div className="p-4 rounded-xl bg-surface-muted/60 border border-border max-w-md mx-auto text-left space-y-2">
+          <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <Wand2 className="w-3.5 h-3.5 text-primary-solid" />
+            Ce que proposera cette fonctionnalité prochainement :
+          </p>
+          <ul className="text-xs text-muted space-y-1.5 list-disc list-inside">
+            <li>Chiffrage instantané en 3 formules réelles (Éco, Équilibré, Confort)</li>
+            <li>Recommandation des salles et prestataires certifiés du catalogue</li>
+            <li>Devis personnalisables en Francs Congolais (CDF) et Dollars (USD)</li>
+          </ul>
+        </div>
+
+        <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+          <Button href="/marketplace" variant="primary" size="sm">
+            Explorer le catalogue de prestataires
+          </Button>
+        </div>
       </section>
     );
   }
@@ -743,9 +751,9 @@ export default function EventPrepAiSimulator({
         onBuy={() => setPurchaseModalOpen(true)}
       />
 
-      {/* Embarqué : onglets Composer / Historique / Exemples. Dashboard : « À chiffrer » souligné, actions discrètes à droite. */}
-      {embedded ? (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+      {/* ─── Barre d'onglets : Création / Historiques / Prompts ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+        {embedded ? (
           <StudioAiTabs
             value={activeTab}
             onChange={setActiveTab}
@@ -753,48 +761,50 @@ export default function EventPrepAiSimulator({
             idPrefix={tabsId}
             className="w-full sm:w-auto sm:min-w-[22rem]"
           />
-          {newSimulationButton}
+        ) : (
+          <div className="flex items-center gap-1">
+            {([
+              ['history', history.length > 0 ? `Historique · ${history.length}` : 'Historique'],
+              ['prompts', 'Exemples'],
+            ] as Array<[StudioAiTabId, string]>).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={activeTab === id}
+                onClick={() => setActiveTab(activeTab === id ? 'create' : id)}
+                className={cn(
+                  'min-h-10 px-3 rounded-[var(--radius-button)] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                  activeTab === id ? 'bg-surface-muted text-foreground font-semibold' : 'text-muted hover:text-foreground',
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!embedded && !allowance.unlimited && activeTab !== 'history' ? (
+          <AiTokenBuyButton
+            compact
+            variant={allowance.canSimulate ? 'secondary' : 'primary'}
+            onClick={() => setPurchaseModalOpen(true)}
+          />
+        ) : null}
+        {activeTab === 'history' && history.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+            {activeTab === 'history' && history.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setActiveTab('create')}
+                className="min-h-11 px-3 text-xs font-semibold text-primary-solid hover:underline inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-[var(--radius-button)]"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>Nouvelle simulation</span>
+              </button>
+            ) : null}
         </div>
-      ) : (
-        <BudgetScopeTabs
-          className="mb-5"
-          value={budgetScope}
-          inactive={activeTab !== 'create'}
-          onChange={(next) => {
-            applyBudgetScope(next);
-            setActiveTab('create');
-          }}
-          action={(
-            <>
-              {(['history', 'prompts'] as const).map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={activeTab === id}
-                  onClick={() => setActiveTab(activeTab === id ? 'create' : id)}
-                  className={cn(
-                    QUIET_BUTTON,
-                    activeTab === id ? 'bg-surface-muted text-foreground font-semibold' : 'font-medium text-muted hover:text-foreground',
-                  )}
-                >
-                  {id === 'history' ? 'Historique' : 'Exemples'}
-                  {id === 'history' && history.length > 0 ? (
-                    <span className="text-xs font-medium tabular-nums text-muted">{history.length}</span>
-                  ) : null}
-                </button>
-              ))}
-              {!allowance.unlimited && activeTab !== 'history' ? (
-                <AiTokenBuyButton
-                  compact
-                  onClick={() => setPurchaseModalOpen(true)}
-                  className="border-0 bg-transparent shadow-none px-2.5 xl:min-h-9 text-sm font-semibold text-primary hover:bg-surface-muted"
-                />
-              ) : null}
-              {newSimulationButton}
-            </>
-          )}
-        />
-      )}
+      ) : null}
+      </div>
 
       {activeTab === 'prompts' ? (
         <div
@@ -803,12 +813,15 @@ export default function EventPrepAiSimulator({
           aria-labelledby={embedded ? `${tabsId}-tab-prompts` : undefined}
           className="space-y-3 pt-1"
         >
-          <ul className="divide-y divide-border">
+          <p className="text-xs text-muted">
+            Un bouton préremplit le brief, le type d’événement et le budget. Ajustez ensuite ville et date.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {EVENT_PREP_PROMPT_MODELS.map((model) => {
               const selected = prompt.trim() === model.prompt.trim();
               return (
-                <li key={model.id}>
                 <button
+                  key={model.id}
                   type="button"
                   onClick={() => {
                     setCommune('');
@@ -822,27 +835,28 @@ export default function EventPrepAiSimulator({
                     setActiveTab('create');
                   }}
                   className={cn(
-                    'w-full text-left min-h-11 px-2 py-3 flex items-center gap-3 rounded-[var(--radius-button)] transition-colors',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40',
-                    selected ? 'bg-primary/5' : 'hover:bg-surface-muted/60',
+                    'text-left min-h-11 p-3 rounded-[var(--radius-card)] border transition',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                    selected
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border bg-surface hover:border-primary/40',
                   )}
                 >
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-baseline gap-x-2">
-                      <span className="text-sm font-semibold text-foreground">{model.title}</span>
-                      <span className="text-xs text-muted">{model.badge}</span>
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-foreground">{model.title}</span>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary-solid border border-primary/20 shrink-0">
+                      {model.badge}
                     </span>
-                    <span className="block text-xs text-muted mt-0.5 leading-snug">{model.summary}</span>
                   </span>
-                  <span className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-primary">
-                    {selected ? <Check className="w-3.5 h-3.5" aria-hidden /> : null}
+                  <span className="block text-xs text-muted mt-1 leading-snug">{model.summary}</span>
+                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary-solid">
+                    {selected ? <Check className="w-3.5 h-3.5" /> : null}
                     {selected ? 'Prérempli' : 'Préremplir'}
                   </span>
                 </button>
-                </li>
               );
             })}
-          </ul>
+          </div>
         </div>
       ) : activeTab === 'history' ? (
         <div
@@ -861,9 +875,16 @@ export default function EventPrepAiSimulator({
               }}
             />
           ) : (
-            <div className="py-10 px-4 text-center space-y-3">
-              <Clock className="w-6 h-6 text-muted mx-auto" aria-hidden />
-              <h4 className="text-sm font-semibold text-foreground">Aucune simulation pour le moment</h4>
+            <div className="py-10 px-4 text-center rounded-[var(--radius-card)] border border-dashed border-border bg-surface-muted/30 space-y-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 text-primary-solid flex items-center justify-center mx-auto">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-foreground">Aucun historique de simulation</h4>
+                <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">
+                  Toutes vos simulations passées s’enregistreront automatiquement ici pour vous permettre de réexaminer les packs proposés.
+                </p>
+              </div>
               <Button
                 size="sm"
                 variant="secondary"
@@ -902,7 +923,10 @@ export default function EventPrepAiSimulator({
         >
           {embedded ? (
             <div className="lg:hidden px-4 pt-4 pb-3 space-y-2">
-              <p className="text-sm text-muted tabular-nums">Question {wizardStep + 1} sur {wizardKeys.length}</p>
+              <div className="flex justify-between gap-2 text-sm text-muted tabular-nums">
+                <span>Question {wizardStep + 1} sur {wizardKeys.length}</span>
+                <span>{allowance.unlimited ? '' : `${AI_SIMULATION_TOKEN_COST} jeton · `}1 $ = {exchangeRate.toLocaleString('fr-FR')} FC</span>
+              </div>
               <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden" aria-hidden>
                 <span
                   className="block h-full rounded-full bg-primary-solid transition-[width] duration-300"
@@ -912,12 +936,19 @@ export default function EventPrepAiSimulator({
             </div>
           ) : null}
           {embedded ? (
-            <div className={cn('px-4 sm:px-6 pt-2 pb-4 space-y-3', wizardStep !== 0 && 'max-lg:hidden')}>
-              <BudgetScopeTabs value={budgetScope} onChange={applyBudgetScope} bordered={false} />
-              <PriceSourcePicker value={priceSource} onChange={setPriceSource} />
+            <div className={cn('px-4 sm:px-6 py-3.5', wizardStep !== 0 && 'max-lg:hidden')}>
+              <BudgetSimulationScopePicker compact value={budgetScope} onChange={applyBudgetScope} />
+              <div className="mt-3">
+                <PriceSourcePicker value={priceSource} onChange={setPriceSource} />
+              </div>
             </div>
           ) : null}
-          <BudgetFormGroup title={embedded ? 'Quel événement ?' : 'Votre événement'} flat={embedded} done={embedded} className={mobileHidden('type')}>
+          {!embedded ? (
+            <div className="[column-span:all]">
+              <BudgetSimulationScopePicker compact value={budgetScope} onChange={applyBudgetScope} />
+            </div>
+          ) : null}
+          <BudgetFormGroup step={1} title={embedded ? 'Quel événement ?' : 'Votre événement'} flat={embedded} done={embedded} className={mobileHidden('type')}>
             <div className="space-y-1.5">
               <p className={cn(FIELD_LABEL, embedded && 'sr-only')}>Type d’événement</p>
               {!embedded ? (
@@ -956,7 +987,7 @@ export default function EventPrepAiSimulator({
           </BudgetFormGroup>
 
           {budgetScope !== 'drinks' ? (
-          <BudgetFormGroup title={embedded ? 'Où ?' : 'Le lieu'} flat={embedded} done={Boolean(city)} className={mobileHidden('place')}>
+          <BudgetFormGroup step={2} title={embedded ? 'Où ?' : 'Le lieu'} flat={embedded} done={Boolean(city)} className={mobileHidden('place')}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <label className="space-y-1">
               <span className={FIELD_LABEL}>Ville</span>
@@ -1059,7 +1090,7 @@ export default function EventPrepAiSimulator({
             </div>
             <p
               id={`${tabsId}-place-hint`}
-              hidden={!geoError}
+              hidden={!embedded && !geoError && !origin}
               className={cn('sm:col-span-2 text-xs', geoError ? 'text-danger font-medium' : 'text-muted')}
               role={geoError ? 'alert' : undefined}
             >
@@ -1074,7 +1105,7 @@ export default function EventPrepAiSimulator({
           </BudgetFormGroup>
           ) : null}
 
-          <BudgetFormGroup title="Invités, date et budget" flat={embedded} done={Number(guestCount) > 0} className={mobileHidden('guests')}>
+          <BudgetFormGroup step={budgetScope === 'drinks' ? 2 : 3} title="Invités, date et budget" flat={embedded} done={Number(guestCount) > 0} className={mobileHidden('guests')}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <Input
@@ -1094,11 +1125,12 @@ export default function EventPrepAiSimulator({
                 <p id={`${tabsId}-guest-error`} className="text-xs text-danger font-medium" role="alert">
                   {guestError}
                 </p>
-              ) : budgetScope === 'drinks' && wantedDrinkLines.length === 0 ? (
-                <p className="text-xs text-muted">Obligatoire</p>
+              ) : budgetScope === 'drinks' ? (
+                <p className="text-xs text-muted">Obligatoire pour calculer les quantités.</p>
               ) : null}
               {embedded ? (
               <div className="flex flex-wrap gap-1.5 items-center" role="group" aria-label="Raccourcis nombre d'invités">
+                <span className="text-xs text-muted mr-0.5 font-medium">Rapide :</span>
                 {GUEST_PRESETS.map((count) => {
                   const active = guestCount === String(count);
                   return (
@@ -1107,7 +1139,12 @@ export default function EventPrepAiSimulator({
                       type="button"
                       aria-pressed={active}
                       onClick={() => setGuestCount(String(count))}
-                      className={cn(CHIP, 'min-w-11 tabular-nums', chipTone(active))}
+                      className={cn(
+                        'text-xs font-semibold px-3 min-h-11 min-w-11 rounded-full border transition cursor-pointer touch-manipulation inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                        active
+                          ? 'border-primary-solid bg-primary-solid text-primary-foreground'
+                          : 'border-border bg-surface-muted/50 text-foreground hover:border-primary/50 hover:bg-surface',
+                      )}
                     >
                       {count}
                     </button>
@@ -1126,56 +1163,75 @@ export default function EventPrepAiSimulator({
             </div>
             </div>
 
-            <div className="space-y-2">
+            {/* Bloc Budget Max intuitif */}
+            <div className="space-y-2.5 pt-1">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className={FIELD_LABEL}>Budget maximum</span>
+                <div className="space-y-0.5">
+                  <span className={FIELD_LABEL}>Budget maximum</span>
+                </div>
+
+                {/* Devise USD / CDF */}
                 <div
-                  className={cn('inline-flex', SEGMENTED_TRACK, 'gap-0.5 p-[3px]')}
+                  className="inline-flex rounded-lg p-0.5 bg-surface-muted border border-border text-xs"
                   role="group"
                   aria-label="Devise du budget"
                 >
-                  {([
-                    ['USD', '$ USD'],
-                    ['CDF', 'FC'],
-                  ] as const).map(([code, label]) => (
-                    <button
-                      key={code}
-                      type="button"
-                      aria-pressed={budgetCurrency === code}
-                      onClick={() => handleCurrencySwitch(code)}
-                      className={segmentedItem(budgetCurrency === code, 'min-h-11 sm:min-h-8 px-3 text-xs')}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    aria-pressed={budgetCurrency === 'USD'}
+                    onClick={() => handleCurrencySwitch('USD')}
+                    className={cn(
+                      'px-3 min-h-11 font-bold rounded-md text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      budgetCurrency === 'USD'
+                        ? 'bg-primary-solid text-primary-foreground'
+                        : 'text-muted hover:text-foreground',
+                    )}
+                  >
+                    $ USD
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={budgetCurrency === 'CDF'}
+                    onClick={() => handleCurrencySwitch('CDF')}
+                    className={cn(
+                      'px-3 min-h-11 font-bold rounded-md text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      budgetCurrency === 'CDF'
+                        ? 'bg-primary-solid text-primary-foreground'
+                        : 'text-muted hover:text-foreground',
+                    )}
+                  >
+                    FC (CDF)
+                  </button>
                 </div>
               </div>
 
-              <Input
-                label=""
-                type="number"
-                min={1}
-                value={budgetInputVal}
-                onChange={(e) => setBudgetInputVal(e.target.value)}
-                placeholder={budgetCurrency === 'USD' ? 'Ex. 2 500' : 'Ex. 7 000 000'}
-                aria-label={budgetCurrency === 'USD' ? 'Budget maximum en dollars' : 'Budget maximum en francs congolais'}
-              />
-              <p className="text-xs text-muted tabular-nums">
-                {budgetMaxFcCalculated > 0
-                  ? `Soit ${budgetCurrency === 'USD'
-                    ? `${budgetMaxFcCalculated.toLocaleString('fr-FR')} FC`
-                    : `${budgetMaxUsdCalculated.toLocaleString('fr-FR')} $`} · `
-                  : ''}
-                <span title="Taux de change appliqué">1 $ = {exchangeRate.toLocaleString('fr-FR')} FC</span>
-                {guestRatio
-                  ? ` · ~${guestRatio.perGuestUsd} $ par invité${embedded
-                    ? ` (${guestRatio.perGuestFc.toLocaleString('fr-FR')} FC)`
-                    : `, ${guestRatio.tone === 'emerald' ? 'grand confort' : guestRatio.tone === 'amber' ? 'budget serré' : 'équilibré'}`}`
-                  : ''}
-              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-start">
+                <Input
+                  label=""
+                  type="number"
+                  min={1}
+                  value={budgetInputVal}
+                  onChange={(e) => setBudgetInputVal(e.target.value)}
+                  placeholder={budgetCurrency === 'USD' ? 'Ex. 2 500' : 'Ex. 7 000 000'}
+                  aria-label={budgetCurrency === 'USD' ? 'Budget maximum en dollars' : 'Budget maximum en francs congolais'}
+                />
+                <div className="sm:self-center px-3 py-2 rounded-[var(--radius-card)] bg-surface-muted border border-border/80 text-xs text-muted flex items-center justify-between sm:justify-start gap-2">
+                  <span>Soit</span>
+                  <span className="font-extrabold text-primary-solid tabular-nums">
+                    {budgetCurrency === 'USD'
+                      ? (budgetMaxFcCalculated > 0 ? `${budgetMaxFcCalculated.toLocaleString('fr-FR')} FC` : '—')
+                      : (budgetMaxUsdCalculated > 0 ? `${budgetMaxUsdCalculated.toLocaleString('fr-FR')} $` : '—')}
+                  </span>
+                  <span className="tabular-nums" title="Taux de change appliqué">
+                    · 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
+                  </span>
+                </div>
+              </div>
 
+              {/* Presets rapides de budget */}
               {embedded ? (
-              <div className="flex flex-wrap gap-1.5 items-center" role="group" aria-label="Paliers de budget">
+              <div className="flex flex-wrap gap-1.5 items-center pt-0.5" role="group" aria-label="Paliers de budget">
+                <span className="text-xs text-muted mr-0.5 font-medium">Paliers suggérés :</span>
                 {(budgetCurrency === 'USD' ? BUDGET_PRESETS_USD : BUDGET_PRESETS_CDF).map((preset) => {
                   const active = budgetInputVal === String(preset);
                   const label = budgetCurrency === 'USD'
@@ -1187,7 +1243,12 @@ export default function EventPrepAiSimulator({
                       type="button"
                       aria-pressed={active}
                       onClick={() => setBudgetInputVal(String(preset))}
-                      className={cn(CHIP, 'tabular-nums', chipTone(active))}
+                      className={cn(
+                        'text-xs font-semibold px-3 min-h-11 rounded-full border transition cursor-pointer touch-manipulation inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                        active
+                          ? 'border-primary-solid bg-primary-solid text-primary-foreground'
+                          : 'border-border bg-surface-muted text-foreground hover:border-primary/50 hover:bg-surface',
+                      )}
                     >
                       {label}
                     </button>
@@ -1197,17 +1258,41 @@ export default function EventPrepAiSimulator({
               ) : null}
             </div>
 
-            {guestRatio && embedded ? (
-              <p className="text-xs text-muted leading-relaxed">{guestRatio.advice}</p>
+            {/* Ratio par invité en direct */}
+            {guestRatio && !embedded ? (
+              <p className="text-xs text-muted tabular-nums">
+                ~{guestRatio.perGuestUsd} $ par invité · {guestRatio.tone === 'emerald' ? 'grand confort' : guestRatio.tone === 'amber' ? 'budget serré' : 'équilibré'}
+              </p>
+            ) : guestRatio ? (
+              <div className="rounded-[var(--radius-card)] border border-primary/25 bg-primary/5 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-foreground">Ratio par convive :</span>
+                    <span className="text-sm font-extrabold text-primary-solid tabular-nums">
+                      ~{guestRatio.perGuestUsd} $ <span className="text-xs font-semibold text-muted">({guestRatio.perGuestFc.toLocaleString('fr-FR')} FC)</span>
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted leading-relaxed">
+                    {guestRatio.advice}
+                  </p>
+                </div>
+                <span className={cn(
+                  'inline-flex items-center text-xs font-bold px-2.5 min-h-11 rounded-full shrink-0 self-start sm:self-center',
+                  guestRatio.tone === 'amber'
+                    ? 'bg-festive-accent-soft text-foreground border border-festive-accent/40'
+                    : 'bg-primary/15 text-primary-solid border border-primary/30',
+                )}>
+                  {guestRatio.tone === 'emerald' ? 'Grand confort' : guestRatio.tone === 'amber' ? 'Budget serré' : 'Équilibré'}
+                </span>
+              </div>
             ) : null}
 
           </BudgetFormGroup>
 
           {budgetScope !== 'drinks' ? (
-          <BudgetFormGroup title="Vos envies" flat={embedded} done={Boolean(prompt.trim())} className={mobileHidden('wishes')}>
+          <BudgetFormGroup step={4} title="Vos envies" flat={embedded} done={Boolean(prompt.trim())} className={mobileHidden('wishes')}>
             {budgetScope === 'complete' ? (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-foreground" role="group" aria-label="Inclure">
-              <span className={FIELD_LABEL}>Inclure</span>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-foreground">
               <label className="inline-flex items-center gap-2 min-h-11">
                 <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeVenue} onChange={(e) => setIncludeVenue(e.target.checked)} />
                 Salle
@@ -1268,21 +1353,17 @@ export default function EventPrepAiSimulator({
           <button
             type="button"
             className={cn(
-              'inline-flex items-center gap-1.5 min-h-11 mb-2 text-sm font-semibold text-primary rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              'w-full min-h-11 px-3 py-2 mb-3 rounded-[var(--radius-card)] border border-border bg-surface text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
               embedded && 'lg:hidden',
             )}
             aria-expanded={refineOpen}
-            aria-controls={`${tabsId}-refine`}
             onClick={() => setRefineOpen((value) => !value)}
           >
-            Affiner le calcul
-            {refineCount > 0 && !refineOpen ? (
-              <span className="text-xs font-medium tabular-nums text-muted">
-                <span aria-hidden>{refineCount}</span>
-                <span className="sr-only">{`${refineCount} précision${refineCount > 1 ? 's' : ''} active${refineCount > 1 ? 's' : ''}`}</span>
-              </span>
-            ) : null}
-            <ChevronDown className={cn('w-4 h-4 transition', refineOpen && 'rotate-180')} aria-hidden />
+            <span className="flex items-center justify-between gap-2 text-sm font-semibold text-foreground">
+              {refineOpen ? 'Masquer les précisions' : 'Affiner le calcul'}
+              <ChevronDown className={cn('w-4 h-4 text-muted transition', refineOpen && 'rotate-180')} />
+            </span>
+            <span className="block text-xs text-muted mt-0.5">Marques, quantités, métiers, matériel, ambiance, source des prix</span>
           </button>
           {embedded ? (
             <div className="hidden lg:flex flex-col gap-4 mb-4">
@@ -1323,15 +1404,20 @@ export default function EventPrepAiSimulator({
                     onClick={() => setPurchaseModalOpen(true)}
                   />
                 )}
-                <p className={cn('text-sm text-muted text-center', !footerHint && 'sr-only')} aria-live="polite">
-                  {footerHint}
+                <p className="text-sm text-muted text-center" aria-live="polite">
+                  {allowance.canSimulate || loading
+                    ? briefHint
+                    : 'Plus de jetons : rechargez pour lancer une nouvelle simulation.'}
+                </p>
+                <p className="text-xs text-muted text-center tabular-nums">
+                  {allowance.unlimited ? '' : `${AI_SIMULATION_TOKEN_COST} jeton par calcul · `}1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
                 </p>
               </div>
               {examples}
             </div>
           ) : null}
-          <div id={`${tabsId}-refine`} className={cn('space-y-5', !refineOpen && (embedded ? 'max-lg:hidden' : 'hidden'))}>
-          {embedded ? <p className="hidden lg:block text-sm font-semibold text-foreground">Affiner le calcul</p> : null}
+          <div className={cn('space-y-3', !refineOpen && (embedded ? 'max-lg:hidden' : 'hidden'))}>
+          {embedded ? <p className="hidden lg:block text-xs font-semibold text-muted">Précisions facultatives</p> : null}
           {!embedded ? <PriceSourcePicker value={priceSource} onChange={setPriceSource} /> : null}
           <BudgetSimulationCriteria
             scope={budgetScope}
@@ -1349,8 +1435,20 @@ export default function EventPrepAiSimulator({
             onToggleCategory={(id) => setWantedCategories((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
           />
           {budgetScope !== 'drinks' ? (
-              <>
-                <div className="space-y-2">
+          <div className="rounded-[var(--radius-card)] border border-border">
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((value) => !value)}
+              aria-expanded={advancedOpen}
+              aria-controls={`${tabsId}-advanced`}
+              className="w-full flex items-center justify-between gap-2 min-h-11 px-3 py-2 text-left text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            >
+              Plus de paramètres
+              <ChevronDown className={cn('w-4 h-4 text-muted transition', advancedOpen && 'rotate-180')} />
+            </button>
+            {advancedOpen ? (
+              <div id={`${tabsId}-advanced`} className="px-3 pb-3 space-y-3 border-t border-border pt-3">
+                <div className="space-y-1.5">
                   <p className={FIELD_LABEL}>Ambiance</p>
                   <div className="flex flex-wrap gap-1.5" role="group" aria-label="Ambiance">
                     {AI_AMBIANCES.map((item) => (
@@ -1366,8 +1464,8 @@ export default function EventPrepAiSimulator({
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
                     <p className={FIELD_LABEL}>Moment</p>
                     <div className="flex flex-wrap gap-1.5" role="group" aria-label="Moment">
                       {AI_MOMENTS.map((item) => (
@@ -1383,7 +1481,7 @@ export default function EventPrepAiSimulator({
                       ))}
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <p className={FIELD_LABEL}>Lieu</p>
                     <div className="flex flex-wrap gap-1.5" role="group" aria-label="Cadre du lieu">
                       {AI_SETTINGS.map((item) => (
@@ -1407,18 +1505,20 @@ export default function EventPrepAiSimulator({
                     min={0}
                     value={budgetMinInputVal}
                     onChange={(e) => setBudgetMinInputVal(e.target.value)}
-                    placeholder={budgetCurrency === 'USD' ? 'Ex. 500' : 'Ex. 1 400 000'}
+                    placeholder={budgetCurrency === 'USD' ? 'Optionnel (ex: 500 $)' : 'Optionnel (ex: 1 400 000 FC)'}
                   />
                   {budgetMinFcCalculated > 0 ? (
-                    <p className="text-xs text-muted tabular-nums">
-                      Soit {budgetCurrency === 'USD'
-                        ? `${budgetMinFcCalculated.toLocaleString('fr-FR')} FC`
-                        : `${budgetMinUsdCalculated.toLocaleString('fr-FR')} $`}
+                    <p className="text-xs text-muted text-right px-0.5">
+                      {budgetCurrency === 'USD' ? (
+                        <>Calculé en francs : <span className="font-semibold text-primary-solid">{budgetMinFcCalculated.toLocaleString('fr-FR')} FC</span></>
+                      ) : (
+                        <>Calculé en dollars : <span className="font-semibold text-primary-solid">{budgetMinUsdCalculated.toLocaleString('fr-FR')} $</span></>
+                      )}
                     </p>
                   ) : null}
                 </div>
                 {includeVenue ? (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <p className={FIELD_LABEL}>Équipements salle</p>
                     <div className="flex flex-wrap gap-1.5" role="group" aria-label="Équipements salle">
                       {VENUE_PARAM_AMENITIES.map((item) => {
@@ -1440,7 +1540,9 @@ export default function EventPrepAiSimulator({
                     </div>
                   </div>
                 ) : null}
-              </>
+              </div>
+            ) : null}
+          </div>
           ) : null}
           </div>
         </aside>
@@ -1513,9 +1615,13 @@ export default function EventPrepAiSimulator({
                 </div>
               )}
               {wizardLast && !showMobileReview ? (
-                <p className={cn('mt-1.5 flex items-start justify-center gap-1.5 text-xs text-muted text-center', !footerHint && 'sr-only')} aria-live="polite">
-                  {footerHint ? <Lightbulb className="w-3.5 h-3.5 text-muted shrink-0 mt-px" aria-hidden /> : null}
-                  <span>{footerHint}</span>
+                <p className="mt-1.5 flex items-start justify-center gap-1.5 text-xs text-muted text-center" aria-live="polite">
+                  <Lightbulb className="w-3.5 h-3.5 text-primary-solid shrink-0 mt-px" aria-hidden />
+                  <span>
+                    {allowance.canSimulate || loading
+                      ? briefHint
+                      : 'Plus de jetons : rechargez pour lancer une nouvelle simulation.'}
+                  </span>
                 </p>
               ) : null}
             </div>
@@ -1560,12 +1666,8 @@ export default function EventPrepAiSimulator({
           {embedded ? (
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h2 className="font-display text-xl sm:text-2xl font-semibold text-foreground">Vos 3 formules</h2>
-            <span className="text-sm text-muted tabular-nums">
-              {[
-                [result.catalog.venues, 'salles'],
-                [result.catalog.trades, 'prestataires'],
-                [result.catalog.rentals, 'matériels'],
-              ].filter(([count]) => Number(count) > 0).map(([count, label]) => `${count} ${label}`).join(' · ')}
+            <span className="text-sm text-muted">
+              {result.catalog.venues} salles · {result.catalog.trades} prestataires · {result.catalog.rentals} matériels
             </span>
           </div>
           ) : null}
@@ -1616,7 +1718,7 @@ export default function EventPrepAiSimulator({
                     {`${pack.venue ? '1 salle' : 'Sans salle'} · ${pack.services.length} prestataire${pack.services.length > 1 ? 's' : ''}`}
                   </span>
                   {packLeftover != null ? (
-                    <span className={cn('text-xs', packLeftover >= 0 ? 'text-muted' : 'font-semibold text-amber-700 dark:text-amber-300')}>
+                    <span className={cn('text-xs font-semibold', packLeftover >= 0 ? 'text-primary-solid' : 'text-amber-700 dark:text-amber-300')}>
                       {packLeftover >= 0
                         ? `Reste ${formatFc(packLeftover)} sur le budget`
                         : `Dépasse le budget de ${formatFc(Math.abs(packLeftover))}`}
@@ -1628,6 +1730,10 @@ export default function EventPrepAiSimulator({
           </div>
           ) : null}
         </div>
+      ) : embedded && open && !loading ? (
+        <p className="mt-4 rounded-[18px] border-[1.5px] border-dashed border-border px-5 py-7 text-center text-sm text-muted">
+          Vos 3 formules s’afficheront ici après le calcul.
+        </p>
       ) : null}
         </div>
       )}
@@ -1675,17 +1781,16 @@ export default function EventPrepAiSimulator({
   );
 }
 
-/**
- * Bloc du formulaire. `flat` le pose dans la carte unique du studio, avec sa question et une coche une fois rempli ;
- * sinon (dashboard) le titre reste pour les lecteurs d’écran : les libellés des champs suffisent à l’écran.
- */
+/** Bloc numéroté du formulaire : guide la saisie étape par étape. `flat` le pose dans la carte unique du studio. */
 function BudgetFormGroup({
+  step,
   title,
   flat = false,
   done = false,
   className,
   children,
 }: {
+  step: number;
   title: string;
   flat?: boolean;
   done?: boolean;
@@ -1696,17 +1801,25 @@ function BudgetFormGroup({
     return (
       <fieldset className={cn('px-4 sm:px-6 py-5 space-y-3 min-w-0', className)}>
         <legend className="sr-only">{title}</legend>
-        <p aria-hidden className="flex items-center gap-2">
+        <p aria-hidden className="flex items-center gap-3">
+          <span
+            className={cn(
+              'w-7 h-7 rounded-full text-sm font-semibold inline-flex items-center justify-center shrink-0 transition-colors',
+              done ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-muted',
+            )}
+          >
+            {done ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : step}
+          </span>
           <span className="font-display text-lg font-semibold text-foreground">{title}</span>
-          {done ? <Check className="w-4 h-4 text-primary" strokeWidth={3} /> : null}
         </p>
-        <div className="space-y-3">{children}</div>
+        <div className="space-y-3 sm:pl-10">{children}</div>
       </fieldset>
     );
   }
   return (
-    <fieldset className={cn('space-y-3 min-w-0', className)}>
+    <fieldset className={cn('space-y-2.5 min-w-0', className)}>
       <legend className="sr-only">{title}</legend>
+      <p aria-hidden className="text-sm font-semibold text-foreground">{title}</p>
       {children}
     </fieldset>
   );

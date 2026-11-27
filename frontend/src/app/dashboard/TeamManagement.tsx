@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   Users, UserPlus, Trash2, Loader2, Crown, Mail, Phone, Pencil,
-  Shield, Briefcase, MessageSquare, Smartphone, TrendingUp, Copy, RefreshCw, ChevronDown,
+  Shield, Briefcase, Smartphone, TrendingUp, Copy, RefreshCw, ChevronDown, WhatsAppIcon,
 } from '@/components/icons';
 import {
   SkeletonGrid, ViewModeToggle, useViewMode, listStackClass,
@@ -491,7 +491,7 @@ export default function TeamManagement() {
                         : 'border-border text-muted hover:bg-surface-muted',
                     )}
                   >
-                    <MessageSquare className="w-4 h-4" /> WhatsApp
+                    <WhatsAppIcon className="w-4 h-4" /> WhatsApp
                   </button>
                 )}
                 {authOtpMethodOptions(authChannels).includes('SMS') && (

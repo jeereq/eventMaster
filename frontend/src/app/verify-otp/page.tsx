@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, Mail, MessageSquare, RefreshCw, ShieldCheck, Smartphone } from '@/components/icons';
+import { Loader2, Mail, RefreshCw, ShieldCheck, Smartphone, WhatsAppIcon } from '@/components/icons';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -156,7 +156,7 @@ function VerifyOtpForm() {
  <div className="text-center space-y-2 mb-6">
  <div className="inline-flex p-3 rounded-2xl bg-primary/10 text-primary">
  {verificationMethod === 'WHATSAPP' ? (
-   <MessageSquare className="w-8 h-8" />
+   <WhatsAppIcon className="w-8 h-8" />
  ) : verificationMethod === 'SMS' ? (
    <Smartphone className="w-8 h-8" />
  ) : (
@@ -213,7 +213,7 @@ function VerifyOtpForm() {
      ? [{ value: 'EMAIL' as const, label: 'E-mail', icon: <Mail className="w-3.5 h-3.5" /> }]
      : []),
    ...(authOtpMethodOptions(authChannels).includes('WHATSAPP')
-     ? [{ value: 'WHATSAPP' as const, label: 'WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" /> }]
+     ? [{ value: 'WHATSAPP' as const, label: 'WhatsApp', icon: <WhatsAppIcon className="w-3.5 h-3.5" /> }]
      : []),
    ...(authOtpMethodOptions(authChannels).includes('SMS')
      ? [{ value: 'SMS' as const, label: 'SMS', icon: <Smartphone className="w-3.5 h-3.5" /> }]

@@ -18,9 +18,9 @@ import {
   Armchair,
   ChevronDown,
   ChevronUp,
-  MessageCircle,
+  
   Heart,
-  SlidersHorizontal,
+  SlidersHorizontal, WhatsAppIcon,
 } from '@/components/icons';
 import { Button, StatusPill } from '@/components/ui';
 import { eventDashboardHref } from '@/lib/eventRoutes';
@@ -537,7 +537,7 @@ export default function OrgTicketingView({
                           rel="noopener noreferrer"
                           className="text-primary hover:underline inline-flex items-center gap-1 min-h-11"
                         >
-                          <MessageCircle className="w-3 h-3" />
+                          <WhatsAppIcon className="w-3.5 h-3.5" />
                           WhatsApp
                         </a>
                       )}

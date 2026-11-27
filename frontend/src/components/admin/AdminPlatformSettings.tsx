@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import {
-  Bell, Check, Globe, Loader2, Mail, MapPin, MessageCircle, MessageSquare, Percent, ShieldAlert, Volume2, Wallet, X, Heart, Sparkles, Wand2, Building2, Eye, EyeOff, Smartphone,
+  Bell, Check, Globe, Loader2, Mail, MapPin, MessageSquare, Percent, ShieldAlert, Volume2, Wallet, X, Heart, Sparkles, Wand2, Building2, Eye, EyeOff, Smartphone, WhatsAppIcon,
 } from '@/components/icons';
 import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -606,7 +606,7 @@ export default function AdminPlatformSettings({
 
               const otpChannelsList: Array<{ id: AuthOtpMethod; label: string; desc: string; icon: React.ReactNode }> = [
                 { id: 'EMAIL', label: 'E-mail', desc: 'Codes par SendGrid', icon: <Mail className="w-4 h-4" /> },
-                { id: 'WHATSAPP', label: 'WhatsApp', desc: 'Codes par UltraMsg', icon: <MessageCircle className="w-4 h-4" /> },
+                { id: 'WHATSAPP', label: 'WhatsApp', desc: 'Codes par UltraMsg', icon: <WhatsAppIcon className="w-4 h-4" /> },
                 { id: 'SMS', label: 'SMS', desc: 'Codes par Passerelle SMS', icon: <Smartphone className="w-4 h-4" /> },
               ];
 
@@ -642,7 +642,7 @@ export default function AdminPlatformSettings({
                           <div
                             className={cn(
                               'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5',
-                              active ? 'bg-primary text-white' : 'bg-surface-muted text-muted',
+                              active ? 'bg-primary text-white [&_svg]:fill-current' : 'bg-surface-muted text-muted',
                             )}
                           >
                             {ch.icon}
@@ -1470,7 +1470,7 @@ export default function AdminPlatformSettings({
                 icon: React.ReactNode;
               }> = [
                 { id: 'EMAIL', label: 'E-mail', desc: 'SendGrid (invitations, reçus, notifications)', icon: <Mail className="w-4 h-4" /> },
-                { id: 'WHATSAPP', label: 'WhatsApp', desc: 'UltraMsg (alertes, billets, rappels)', icon: <MessageCircle className="w-4 h-4" /> },
+                { id: 'WHATSAPP', label: 'WhatsApp', desc: 'UltraMsg (alertes, billets, rappels)', icon: <WhatsAppIcon className="w-4 h-4" /> },
                 { id: 'SMS', label: 'SMS', desc: 'Passerelle SMS (Dream Digital / Twilio / Custom)', icon: <Smartphone className="w-4 h-4" /> },
                 { id: 'PUSH', label: 'Push Mobile / Web', desc: 'Expo & PWA (notifications instantanées)', icon: <Bell className="w-4 h-4" /> },
               ];
@@ -1534,7 +1534,7 @@ export default function AdminPlatformSettings({
                           <div
                             className={cn(
                               'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5',
-                              active ? 'bg-primary text-white' : 'bg-surface-muted text-muted',
+                              active ? 'bg-primary text-white [&_svg]:fill-current' : 'bg-surface-muted text-muted',
                             )}
                           >
                             {ch.icon}
@@ -1591,7 +1591,7 @@ export default function AdminPlatformSettings({
             })()}
 
             <div className={sectionCardClass}>
-              <SectionTitle icon={MessageSquare}>WhatsApp (UltraMsg)</SectionTitle>
+              <SectionTitle icon={WhatsAppIcon}>WhatsApp (UltraMsg)</SectionTitle>
               <p className="text-xs text-muted -mt-2">
                 Requis pour OTP WhatsApp, invitations et rappels via WhatsApp.
               </p>

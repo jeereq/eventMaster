@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Undo, Redo, LayoutTemplate, MessageSquare, Tag, Bold, Italic, Strikethrough,
+  Undo, Redo, LayoutTemplate, Tag, Bold, Italic, Strikethrough,
   Eye, Edit3, Mail, Check, Sparkles, ArrowRight, RefreshCw, Shirt, AlertCircle,
-  Copy, CheckCircle2, Smartphone,
+  Copy, CheckCircle2, Smartphone, WhatsAppIcon,
 } from '@/components/icons';
 import { Button, Modal } from '@/components/ui';
 import InvitationMessagePreview from './InvitationMessagePreview';
@@ -670,7 +670,7 @@ export default function InvitationEditorModal({
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className={cn('p-2 rounded-lg', channelNeedsWhatsApp ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted')}>
-                      <MessageSquare className="w-4 h-4" aria-hidden />
+                      <WhatsAppIcon tone={channelNeedsWhatsApp ? 'current' : 'brand'} className="w-4 h-4" />
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-foreground">Canal WhatsApp</p>
@@ -897,7 +897,7 @@ export default function InvitationEditorModal({
                         : 'text-muted hover:text-foreground',
                     )}
                   >
-                    <MessageSquare className="w-3.5 h-3.5" aria-hidden />
+                    <WhatsAppIcon tone={activeChannelTab === 'whatsapp' ? 'current' : 'brand'} className="w-3.5 h-3.5" />
                     <span>Version WhatsApp</span>
                   </button>
                 </div>

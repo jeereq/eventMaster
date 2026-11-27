@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft } from '@/components/icons';
 import SiteBrandMark from '@/components/SiteBrandMark';
+import LandingLoopVideo from '@/components/landing/LandingLoopVideo';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { useMessagingChannels } from '@/hooks/useMessagingChannels';
@@ -21,6 +22,8 @@ interface AuthPhotoLayoutProps {
   cardSubtitle?: React.ReactNode;
   cardWidthClassName?: string;
   photo?: string;
+  /** Boucle muette à la place de la photo ; son image fixe (`poster`) s’affiche d’abord. */
+  video?: { src: string; poster: string };
   backHref?: string;
   backLabel?: string;
   /** Pastille d’action posée sur la photo (grand écran). */
@@ -117,6 +120,7 @@ export function AuthPhotoLayout({
   cardSubtitle,
   cardWidthClassName = 'lg:max-w-[460px]',
   photo = '/images/landing/hero-reception-soiree.webp',
+  video,
   backHref = '/',
   backLabel = 'Retour au site',
   photoAction,
@@ -129,13 +133,33 @@ export function AuthPhotoLayout({
   const roundBtn =
     'inline-flex items-center justify-center gap-2 min-h-11 min-w-11 px-3 rounded-2xl bg-white text-[#10291c] text-sm font-semibold shadow-lg hover:bg-[#f1fbe6] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a6f04d]';
 
+  const shades = (
+    <>
+      <span aria-hidden className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
+      <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 lg:hidden" />
+    </>
+  );
+
   return (
     <div className="relative min-h-screen bg-background text-foreground lg:bg-[#0d1a12]">
       {/* Photo : bandeau en haut sur mobile, plein écran sur grand écran */}
       <div className="relative h-[46vh] min-h-[320px] overflow-hidden lg:fixed lg:inset-0 lg:h-auto">
-        <Image src={photo} alt="" fill priority sizes="100vw" className="object-cover" />
-        <span aria-hidden className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
-        <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 lg:hidden" />
+        {video ? (
+          <LandingLoopVideo
+            src={video.src}
+            poster={video.poster}
+            alt=""
+            sizes="100vw"
+            priority
+            overlay={shades}
+            pauseClassName="top-4 right-4 sm:top-6 sm:right-6 lg:top-auto lg:right-auto lg:bottom-6 lg:left-14 xl:left-20"
+          />
+        ) : (
+          <>
+            <Image src={photo} alt="" fill priority sizes="100vw" className="object-cover" />
+            {shades}
+          </>
+        )}
         <Ribbons />
         <RibbonsMobile />
 
