@@ -3510,7 +3510,7 @@ Merci de confirmer votre présence :
         open={showEventModal}
         onClose={() => setShowEventModal(false)}
         initialEvent={eventFormTarget}
-        defaultMode={isB2cPlanId(tenant?.plan || '') ? 'simple' : 'complete'}
+        defaultMode="complete"
         rooms={orgRooms}
         loadingRooms={loadingRooms}
         templates={templates}

@@ -18,16 +18,17 @@ export default function MarketplacePublicNav({
   className?: string;
   /** Une ligne scrollable — carte / focus mobile. */
   dense?: boolean;
-  /** `tabs` : languettes du simulateur, à poser en bas d’un bandeau vert (`PublicPageHero tabs`). */
-  variant?: 'pill' | 'tabs';
+  /** `tabs` : languettes du simulateur, à poser en bas d’un bandeau vert (`PublicPageHero tabs`).
+   *  `rail` : une seule ligne défilante, posée sur la carte plein écran. */
+  variant?: 'pill' | 'tabs' | 'rail';
 }) {
   const railRef = useRef<HTMLElement | null>(null);
   const activeRef = useRef<HTMLAnchorElement | null>(null);
   useEffect(() => {
-    // Sur mobile la rangée défile : on garde la rubrique courante visible, sans bouger la page.
+    // La rangée défile quand elle manque de place : on garde la rubrique courante visible, sans bouger la page.
     const rail = railRef.current;
     const tab = activeRef.current;
-    if (variant !== 'tabs' || !rail || !tab) return;
+    if (variant === 'pill' || !rail || !tab) return;
     const overflowRight = tab.offsetLeft + tab.offsetWidth - (rail.scrollLeft + rail.clientWidth);
     if (overflowRight > 0) rail.scrollLeft += overflowRight + 16;
     else if (tab.offsetLeft < rail.scrollLeft) rail.scrollLeft = tab.offsetLeft;
@@ -62,6 +63,40 @@ export default function MarketplacePublicNav({
               <Icon aria-hidden className={cn('hidden sm:block w-4 h-4', selected ? 'text-primary-solid' : 'text-[#b0eed5]')} />
               <span className="xl:hidden">{item.short}</span>
               <span className="hidden xl:inline">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
+
+  if (variant === 'rail') {
+    return (
+      <nav
+        ref={railRef}
+        aria-label="Rubriques du marketplace"
+        className={cn(
+          'relative flex flex-nowrap gap-0.5 overflow-x-auto scrollbar-none p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted',
+          className,
+        )}
+      >
+        {items.map((item) => {
+          const Icon = item.icon;
+          const selected = active === item.id;
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              ref={selected ? activeRef : undefined}
+              aria-current={selected ? 'page' : undefined}
+              className={cn(
+                'inline-flex shrink-0 grow items-center justify-center gap-1.5 whitespace-nowrap min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40',
+                selected ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
+              )}
+            >
+              <Icon aria-hidden className="w-3.5 h-3.5" />
+              <span className="2xl:hidden">{item.short}</span>
+              <span className="hidden 2xl:inline">{item.label}</span>
             </Link>
           );
         })}

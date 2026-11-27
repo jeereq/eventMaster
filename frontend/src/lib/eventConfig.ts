@@ -29,17 +29,17 @@ export const EVENT_KINDS_PRO: EventKindId[] = [...EVENT_KIND_IDS];
 export type EventConfigTab = 'essentials' | 'place' | 'access' | 'welcome';
 
 export const EVENT_CONFIG_TAB_DETAILS: Record<EventConfigTab, { label: string; subtitle: string }> = {
-  essentials: { label: 'Essentiel', subtitle: 'Titre & Date' },
-  place: { label: 'Lieu', subtitle: 'Salle & Adresse' },
-  access: { label: 'Accès', subtitle: 'Billetterie & Confidentialité' },
-  welcome: { label: 'Accueil', subtitle: 'Dress code & Thème' },
+  essentials: { label: 'Événement', subtitle: 'Titre, date & visibilité' },
+  place: { label: 'Lieu', subtitle: 'Salle & adresse' },
+  access: { label: 'Billets & places', subtitle: 'Billetterie, sièges & dons' },
+  welcome: { label: 'Jour J', subtitle: 'Programme, contact, rappels & thème' },
 };
 
 export const EVENT_CONFIG_TABS: Array<{ id: EventConfigTab; label: string }> = [
-  { id: 'essentials', label: 'Essentiel' },
+  { id: 'essentials', label: 'Événement' },
   { id: 'place', label: 'Lieu' },
-  { id: 'access', label: 'Accès' },
-  { id: 'welcome', label: 'Accueil' },
+  { id: 'access', label: 'Billets & places' },
+  { id: 'welcome', label: 'Jour J' },
 ];
 
 export type EventConfigMode = 'simple' | 'complete';
