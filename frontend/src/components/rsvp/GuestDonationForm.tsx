@@ -21,6 +21,16 @@ import { api } from '@/lib/api';
 import { Button, Input, Alert } from '@/components/ui';
 import type { GuestDonationsConfig } from '@/app/rsvp/guestRsvpTypes';
 import PaymentPendingView, { type PaymentPendingStatus } from '@/components/PaymentPendingView';
+import DonationCurrencyToggle from '@/components/donations/DonationCurrencyToggle';
+import {
+  fcToUsd,
+  formatDonationAmount,
+  formatDonationTotals,
+  parseDonationInput,
+  resolveDonationOptions,
+  sanitizeDonationInput,
+  type DonationCurrency,
+} from '@/lib/donationCurrency';
 
 export interface GuestDonationFormProps {
   guestId: string;
@@ -41,13 +51,23 @@ export default function GuestDonationForm({
   onDonationSuccess,
   className,
 }: GuestDonationFormProps) {
-  const minAmount = donations.minAmountFc || 1000;
-  const suggestedList = donations.suggestedAmountsFc?.length
-    ? donations.suggestedAmountsFc
-    : [2500, 5000, 10000, 25000, 50000];
+  const [currency, setCurrency] = useState<DonationCurrency>('CDF');
+  const { min: minAmount, suggested: suggestedList } = resolveDonationOptions(donations, currency);
+  const rate = donations.usdExchangeRateCdf || 0;
+  const fmt = (amount: number) => formatDonationAmount(amount, currency);
 
   const [selectedAmount, setSelectedAmount] = useState<number>(suggestedList[0] || minAmount);
   const [customAmount, setCustomAmount] = useState<string>('');
+  const [confirmedCurrency, setConfirmedCurrency] = useState<DonationCurrency>('CDF');
+
+  const handleCurrencyChange = (next: DonationCurrency) => {
+    if (next === currency) return;
+    const opts = resolveDonationOptions(donations, next);
+    setCurrency(next);
+    setSelectedAmount(opts.suggested[0] || opts.min);
+    setCustomAmount('');
+    setError('');
+  };
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [donationNote, setDonationNote] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'mobile' | 'card'>('mobile');
@@ -61,12 +81,9 @@ export default function GuestDonationForm({
   const [confirmedAmount, setConfirmedAmount] = useState<number>(0);
 
   const effectiveAmount = useMemo(() => {
-    if (customAmount.trim()) {
-      const parsed = Number(customAmount.replace(/\D/g, ''));
-      return Number.isFinite(parsed) ? parsed : 0;
-    }
+    if (customAmount.trim()) return parseDonationInput(customAmount, currency);
     return selectedAmount;
-  }, [customAmount, selectedAmount]);
+  }, [customAmount, selectedAmount, currency]);
 
   const handleSelectSuggested = (amt: number) => {
     setSelectedAmount(amt);
@@ -75,8 +92,7 @@ export default function GuestDonationForm({
   };
 
   const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    setCustomAmount(raw);
+    setCustomAmount(sanitizeDonationInput(e.target.value, currency));
     setError('');
   };
 
@@ -85,7 +101,7 @@ export default function GuestDonationForm({
     setError('');
 
     if (effectiveAmount < minAmount) {
-      setError(`Le montant minimum est de ${formatFc(minAmount)}.`);
+      setError(`Le montant minimum est de ${fmt(minAmount)}.`);
       return;
     }
 
@@ -98,7 +114,8 @@ export default function GuestDonationForm({
 
     try {
       const res = await api.post(`/rsvp/${guestId}/donations`, {
-        amountFc: effectiveAmount,
+        currency,
+        amount: effectiveAmount,
         isAnonymous,
         donationNote: donationNote.trim() || undefined,
         paymentMethod,
@@ -106,10 +123,11 @@ export default function GuestDonationForm({
       });
 
       if (paymentMethod === 'card' && res.paymentUrl) {
-        window.location.href = res.paymentUrl;
+        window.location.assign(res.paymentUrl);
         return;
       }
 
+      setConfirmedCurrency(currency);
       if (res.orderId) {
         setPendingOrderId(res.orderId);
         setConfirmedAmount(effectiveAmount);
@@ -156,7 +174,7 @@ export default function GuestDonationForm({
             Merci infiniment pour votre don !
           </h3>
           <p className="text-sm text-rose-700 dark:text-rose-300 font-bold tabular-nums">
-            Contribution solidaire de {formatFc(confirmedAmount)}
+            Contribution solidaire de {formatDonationAmount(confirmedAmount, confirmedCurrency)}
           </p>
           <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed pt-1">
             Votre soutien est bien enregistré et apporte une aide précieuse aux organisateurs de la cause.
@@ -186,7 +204,7 @@ export default function GuestDonationForm({
         <PaymentPendingView
           method={paymentMethod}
           title="Validation de votre don solidaire"
-          description={`Une demande de débit de ${formatFc(confirmedAmount)} a été envoyée sur votre téléphone. Validez avec votre code PIN pour confirmer votre don.`}
+          description={`Une demande de débit de ${formatDonationAmount(confirmedAmount, confirmedCurrency)} a été envoyée sur votre téléphone. Validez avec votre code PIN pour confirmer votre don.`}
           onPoll={handlePollPayment}
           onPaid={() => {
             setDonationSuccess(true);
@@ -231,12 +249,13 @@ export default function GuestDonationForm({
         {/* Barre de progression si objectif fixé */}
         {donations.targetAmountFc && donations.targetAmountFc > 0 && (
           <div className="space-y-1 pt-1">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between gap-2 text-xs">
               <span className="font-bold text-foreground tabular-nums">
                 {formatFc(donations.collectedAmountFc)}
               </span>
-              <span className="text-muted tabular-nums">
+              <span className="text-muted tabular-nums text-right">
                 Objectif : {formatFc(donations.targetAmountFc)}
+                {rate > 0 ? ` (≈ ${formatDonationAmount(fcToUsd(donations.targetAmountFc, rate), 'USD')})` : ''}
               </span>
             </div>
             <div
@@ -252,11 +271,19 @@ export default function GuestDonationForm({
                 style={{ width: `${Math.min(100, Math.max(3, donations.progressPercent || 0))}%` }}
               />
             </div>
+            {donations.collectedByCurrency?.USD?.count ? (
+              <p className="text-xs text-muted">
+                Reçu : {formatDonationTotals(donations.collectedByCurrency)}
+                {' '}(les dollars sont comptés au taux du jour dans la jauge)
+              </p>
+            ) : null}
           </div>
         )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <DonationCurrencyToggle value={currency} onChange={handleCurrencyChange} rate={rate} />
+
         {/* Choix des montants suggérés */}
         <div className="space-y-1.5">
           <label className="block text-sm font-semibold text-foreground">
@@ -280,7 +307,7 @@ export default function GuestDonationForm({
                       : 'border-border bg-surface-muted/50 text-foreground hover:bg-surface-muted hover:border-border/80',
                   )}
                 >
-                  {formatFc(amt)}
+                  {fmt(amt)}
                 </button>
               );
             })}
@@ -290,15 +317,15 @@ export default function GuestDonationForm({
           <div className="relative pt-0.5">
             <Input
               type="text"
-              inputMode="numeric"
-              placeholder={`Autre montant libre (min. ${formatFc(minAmount)})`}
+              inputMode={currency === 'USD' ? 'decimal' : 'numeric'}
+              placeholder={`Autre montant libre (min. ${fmt(minAmount)})`}
               value={customAmount}
               onChange={handleCustomChange}
-              aria-label="Autre montant libre en Francs Congolais"
+              aria-label={currency === 'USD' ? 'Autre montant libre en dollars' : 'Autre montant libre en francs congolais'}
               className="h-11 pl-3 pr-12 text-xs font-semibold"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted pointer-events-none">
-              FC
+              {currency === 'USD' ? '$' : 'FC'}
             </span>
           </div>
         </div>
@@ -447,7 +474,7 @@ export default function GuestDonationForm({
         >
           {submitting
             ? 'Paiement en cours…'
-            : `Payer ${formatFc(effectiveAmount)} par ${paymentMethod === 'mobile' ? 'Mobile Money' : 'Carte'}`}
+            : `Payer ${fmt(effectiveAmount)} par ${paymentMethod === 'mobile' ? 'Mobile Money' : 'Carte'}`}
         </Button>
       </form>
     </div>

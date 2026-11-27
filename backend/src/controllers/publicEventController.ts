@@ -38,7 +38,14 @@ import {
   getPublicApiBaseUrl,
   isFlexPayCardConfigured,
 } from '../services/flexPayCardService';
-import { parseFlexPayChargeCurrency, resolveFlexPayCharge } from '../services/flexPayChargeCurrency';
+import { parseFlexPayChargeCurrency, resolveFlexPayCharge, resolveUsdExchangeRateCdf } from '../services/flexPayChargeCurrency';
+import {
+  donationCurrencyMeta,
+  emptyDonationCurrencyTotals,
+  resolveDonationAmount,
+  summarizeDonationCurrencies,
+  type DonationCurrencyTotals,
+} from '../services/donationCurrency';
 
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
 
@@ -105,7 +112,7 @@ function serializePublicEvent(
       createdAt: Date;
     }>;
   },
-  donationStats?: { collectedAmountFc: number; donorsCount: number },
+  donationStats?: { collectedAmountFc: number; donorsCount: number; collectedByCurrency?: DonationCurrencyTotals },
 ) {
   const remaining = ticketsRemaining(event);
   const pricingMode = normalizeTicketPricingMode(event.ticketPricingMode);
@@ -131,6 +138,8 @@ function serializePublicEvent(
           ...donationsConfig,
           collectedAmountFc: donationStats?.collectedAmountFc || 0,
           donorsCount: donationStats?.donorsCount || 0,
+          collectedByCurrency: donationStats?.collectedByCurrency || emptyDonationCurrencyTotals(),
+          usdExchangeRateCdf: resolveUsdExchangeRateCdf(loadPlatformSettings().usdExchangeRateCdf),
           allowedByPlatform: true,
         }
       : null;
@@ -309,21 +318,24 @@ export async function getPublicEvent(req: Request, res: Response) {
     });
     if (!event) return res.status(404).json({ error: 'Événement introuvable ou privé.' });
 
-    let donationStats: { collectedAmountFc: number; donorsCount: number } | undefined;
+    let donationStats:
+      | { collectedAmountFc: number; donorsCount: number; collectedByCurrency: DonationCurrencyTotals }
+      | undefined;
     const donationsConfig = extractEventDonationsConfig(event.eventPrep);
     if (donationsConfig?.enabled) {
-      const agg = await prisma.ticketOrder.aggregate({
+      const paid = await prisma.ticketOrder.findMany({
         where: {
           eventId: event.id,
           status: 'PAID',
           pricingZoneId: 'donation',
         },
-        _sum: { amountFc: true },
-        _count: { id: true },
+        select: { amountFc: true, selectedSeats: true },
       });
+      const collectedByCurrency = summarizeDonationCurrencies(paid);
       donationStats = {
-        collectedAmountFc: agg._sum.amountFc || 0,
-        donorsCount: agg._count.id || 0,
+        collectedAmountFc: collectedByCurrency.CDF.amountFc + collectedByCurrency.USD.amountFc,
+        donorsCount: paid.length,
+        collectedByCurrency,
       };
     }
 
@@ -435,14 +447,16 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
         return res.status(400).json({ error: 'Les donations ne sont pas activées sur cet événement.' });
       }
 
-      const rawAmount = Number(req.body?.amountFc || req.body?.donationAmountFc);
-      const minAmount = donationsConfig.minAmountFc || donationsAccess.minAmountFc || 1000;
-      if (!Number.isFinite(rawAmount) || rawAmount < minAmount) {
-        return res.status(400).json({
-          error: `Le montant minimum pour un don est de ${minAmount.toLocaleString('fr-FR')} FC.`,
-        });
+      const donation = resolveDonationAmount({
+        body: req.body,
+        minAmountFc: donationsConfig.minAmountFc || donationsAccess.minAmountFc || 1000,
+        minAmountUsd: donationsConfig.minAmountUsd,
+        usdExchangeRateCdf: loadPlatformSettings().usdExchangeRateCdf,
+      });
+      if (!donation.ok) {
+        return res.status(400).json({ error: donation.error });
       }
-      const amountFc = Math.round(rawAmount);
+      const amountFc = donation.amountFc;
       const isAnonymous = Boolean(req.body?.isAnonymous);
       const donationNote = typeof req.body?.donationNote === 'string' ? req.body.donationNote.trim().slice(0, 500) : null;
 
@@ -473,6 +487,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
             donationNote,
             originalBuyerName: buyerName,
             donorAttendancePass: donationsConfig.donorAttendancePass,
+            ...donationCurrencyMeta(donation),
           }),
         },
       });
@@ -490,11 +505,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
           await prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
           return res.status(400).json({ error: 'Numéro Mobile Money requis (243…).' });
         }
-        const charge = resolveFlexPayCharge(
-          amountFc,
-          parseFlexPayChargeCurrency(req.body?.currency, 'mobile'),
-          loadPlatformSettings().usdExchangeRateCdf,
-        );
+        const charge = { currency: donation.currency, amount: donation.amount };
         const apiBase = getPublicApiBaseUrl();
         const reference = buildFlexPayReference('dn', order.id);
         try {
@@ -528,8 +539,8 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
         }
       }
 
-      // flexpay_card
-      const charge = resolveFlexPayCharge(amountFc, 'USD', loadPlatformSettings().usdExchangeRateCdf);
+      // flexpay_card : débit dans la devise choisie par le donateur (FC ou $).
+      const charge = { currency: donation.currency, amount: donation.amount };
       const apiBase = getPublicApiBaseUrl();
       const reference = buildFlexPayReference('dn', order.id);
       try {

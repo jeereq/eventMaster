@@ -1,3 +1,5 @@
+import type { DonationCurrencyTotals } from '@/lib/donationCurrency';
+
 export type DonationAccessMode = 'all' | 'restricted';
 
 export interface DonationsAccess {
@@ -27,8 +29,16 @@ export interface EventDonationsConfig {
   minAmountFc: number;
   cause: string | null;
   suggestedAmountsFc: number[];
+  /** Don minimum en dollars. */
+  minAmountUsd?: number;
+  /** Montants suggérés en dollars. */
+  suggestedAmountsUsd?: number[];
   donorAttendancePass: boolean;
   collectedAmountFc?: number;
+  /** Dons payés, cumulés par devise. */
+  collectedByCurrency?: DonationCurrencyTotals;
+  /** Taux du jour (FC pour 1 $). */
+  usdExchangeRateCdf?: number;
   donorsCount?: number;
   allowedByPlatform?: boolean;
 }
@@ -39,6 +49,8 @@ export const DEFAULT_EVENT_DONATIONS_CONFIG: EventDonationsConfig = {
   minAmountFc: 1000,
   cause: null,
   suggestedAmountsFc: [2500, 5000, 10000, 25000, 50000, 100000],
+  minAmountUsd: 1,
+  suggestedAmountsUsd: [5, 10, 20, 50, 100],
   donorAttendancePass: true,
 };
 

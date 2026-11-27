@@ -1,3 +1,10 @@
+import {
+  DEFAULT_MIN_DONATION_USD,
+  DEFAULT_SUGGESTED_DONATIONS_USD,
+  sanitizeMinDonationUsd,
+  sanitizeSuggestedDonationsUsd,
+} from './donationCurrency.ts';
+
 export type DonationAccessMode = 'all' | 'restricted';
 
 export interface DonationsAccess {
@@ -98,6 +105,10 @@ export interface EventDonationsConfig {
   minAmountFc: number;
   cause: string | null;
   suggestedAmountsFc: number[];
+  /** Don minimum quand le donateur paie en dollars. */
+  minAmountUsd: number;
+  /** Montants suggérés en dollars. */
+  suggestedAmountsUsd: number[];
   donorAttendancePass: boolean;
 }
 
@@ -107,6 +118,8 @@ export const DEFAULT_EVENT_DONATIONS_CONFIG: EventDonationsConfig = {
   minAmountFc: 1000,
   cause: null,
   suggestedAmountsFc: [2500, 5000, 10000, 25000, 50000, 100000],
+  minAmountUsd: DEFAULT_MIN_DONATION_USD,
+  suggestedAmountsUsd: DEFAULT_SUGGESTED_DONATIONS_USD,
   donorAttendancePass: true,
 };
 
@@ -139,6 +152,9 @@ export function sanitizeEventDonationsConfig(
   const suggestedAmountsFc =
     validSuggested.length > 0 ? validSuggested : platformAccess.defaultSuggestedAmountsFc;
 
+  const minAmountUsd = sanitizeMinDonationUsd(src.minAmountUsd);
+  const suggestedAmountsUsd = sanitizeSuggestedDonationsUsd(src.suggestedAmountsUsd, minAmountUsd);
+
   const donorAttendancePass = src.donorAttendancePass !== false;
 
   return {
@@ -147,6 +163,8 @@ export function sanitizeEventDonationsConfig(
     minAmountFc,
     cause,
     suggestedAmountsFc,
+    minAmountUsd,
+    suggestedAmountsUsd,
     donorAttendancePass,
   };
 }

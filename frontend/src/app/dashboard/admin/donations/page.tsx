@@ -39,6 +39,7 @@ import {
   StatusPill,
 } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
+import { formatDonationTotals, formatUsdAmount } from '@/lib/donationCurrency';
 import { cn } from '@/lib/cn';
 import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import type { AdminDonationsReportResponse, EventDonationItem } from '@/lib/donationsReport';
@@ -184,6 +185,11 @@ export default function AdminDonationsPage() {
             <p className="text-xs text-muted">
               {summary.totalDonationsPaid} dons confirmés
             </p>
+            {summary.collectedByCurrency?.USD?.count ? (
+              <p className="text-xs font-semibold text-foreground tabular-nums">
+                Dont {formatDonationTotals(summary.collectedByCurrency)}
+              </p>
+            ) : null}
           </div>
 
           {/* En attente */}
@@ -593,8 +599,13 @@ export default function AdminDonationsPage() {
 
                       <div className="flex flex-col sm:items-end shrink-0">
                         <span className="text-base sm:text-lg font-black text-rose-700 dark:text-rose-300 tabular-nums">
-                          {formatFc(donation.amountFc)}
+                          {donation.currency === 'USD' && donation.amount != null
+                            ? formatUsdAmount(donation.amount)
+                            : formatFc(donation.amountFc)}
                         </span>
+                        {donation.currency === 'USD' && (
+                          <span className="text-xs text-muted tabular-nums">≈ {formatFc(donation.amountFc)}</span>
+                        )}
                       </div>
                     </div>
 
