@@ -153,6 +153,65 @@ const KIND_ICONS: Record<EventKindId, React.ComponentType<{ className?: string }
   OTHER: Calendar,
 };
 
+/** Teinte de chaque type d'événement (couleurs des graphiques, valables en clair et en sombre). */
+const KIND_TINTS: Record<EventKindId, string> = {
+  WEDDING: 'var(--chart-6)',
+  BIRTHDAY: 'var(--chart-5)',
+  BAPTISM: 'var(--chart-2)',
+  CORPORATE: 'var(--chart-4)',
+  CONFERENCE: 'var(--chart-1)',
+  GALA: 'var(--chart-3)',
+  OTHER: 'var(--muted)',
+};
+
+/** Première étape d'une création : une carte par type d'événement. */
+function EventKindPicker({
+  kinds,
+  selected,
+  onPick,
+}: {
+  kinds: EventKindId[];
+  selected: EventKindId | '';
+  onPick: (kind: EventKindId) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {kinds.map((kind) => {
+        const KindIcon = KIND_ICONS[kind] || Calendar;
+        const tint = KIND_TINTS[kind];
+        const isSelected = selected === kind;
+        return (
+          <button
+            key={kind}
+            type="button"
+            aria-pressed={isSelected}
+            onClick={() => onPick(kind)}
+            className={cn(
+              'group relative flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[20px] border p-4 text-left transition-[transform,box-shadow,border-color] duration-150',
+              'hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-16px_rgba(16,24,40,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              'motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+              isSelected ? 'border-transparent ring-2' : 'border-border',
+            )}
+            style={{
+              background: `linear-gradient(160deg, color-mix(in srgb, ${tint} 14%, var(--surface)) 0%, var(--surface) 75%)`,
+              ...(isSelected ? { ['--tw-ring-color' as string]: tint } : {}),
+            }}
+          >
+            <span
+              aria-hidden
+              className="inline-flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-150 group-hover:scale-105 motion-reduce:group-hover:scale-100"
+              style={{ background: `color-mix(in srgb, ${tint} 20%, var(--surface))`, color: tint }}
+            >
+              <KindIcon className="h-6 w-6" />
+            </span>
+            <span className="text-[15px] font-semibold text-foreground">{EVENT_KIND_LABELS[kind]}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 type RoomOption = {
   id: string;
   name: string;
@@ -216,6 +275,8 @@ export default function EventConfigForm({
   const [commune, setCommune] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
   const [eventKind, setEventKind] = useState<EventKindId | ''>('');
+  /** Première étape d'une création : choisir le type avant le formulaire. */
+  const [pickingKind, setPickingKind] = useState(false);
   const [clientName, setClientName] = useState('');
   const [estimatedGuests, setEstimatedGuests] = useState('');
   const [reminderFrequency, setReminderFrequency] = useState('NONE');
@@ -318,6 +379,7 @@ export default function EventConfigForm({
     setMode(defaultMode);
     setFormError('');
     setSearchError('');
+    setPickingKind(!initialEvent);
     if (!initialEvent) {
       setTitle('');
       setTitleManual(false);
@@ -1343,9 +1405,29 @@ export default function EventConfigForm({
       <Modal
       open={open}
       onClose={requestClose}
-      title={editingId ? `Modifier « ${initialEvent?.title || 'l’événement'} »` : 'Nouvel événement'}
+      title={
+        pickingKind
+          ? 'Quel événement préparez-vous ?'
+          : editingId
+            ? `Modifier « ${initialEvent?.title || 'l’événement'} »`
+            : 'Nouvel événement'
+      }
       size="xl"
       footer={
+        pickingKind ? (
+          <div className="flex w-full justify-between gap-3">
+            {/* Revenir au formulaire si un type est déjà choisi ; sinon, fermer la création. */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              leftIcon={editingId || eventKind ? <ArrowLeft className="w-4 h-4" /> : undefined}
+              onClick={editingId || eventKind ? () => setPickingKind(false) : requestClose}
+            >
+              {editingId || eventKind ? 'Retour' : 'Annuler'}
+            </Button>
+          </div>
+        ) : (
         <div className="flex w-full flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <Button type="button" variant="ghost" size="sm" onClick={requestClose}>
@@ -1411,8 +1493,20 @@ export default function EventConfigForm({
             </Button>
           </div>
         </div>
+        )
       }
     >
+      {pickingKind ? (
+        <EventKindPicker
+          kinds={kinds}
+          selected={eventKind}
+          onPick={(kind) => {
+            applyKind(kind);
+            setPickingKind(false);
+            setTab('essentials');
+          }}
+        />
+      ) : (
       <form id="event-config-form" onSubmit={handleFormSubmit} onKeyDown={handleFormKeyDown} className="space-y-4">
         {/* Étapes et mode */}
         <div className="flex flex-col-reverse gap-3 border-b border-border sm:flex-row sm:items-end sm:justify-between">
@@ -1484,36 +1578,28 @@ export default function EventConfigForm({
 
         {tab === 'essentials' && (
           <section className="space-y-5">
-            <div className="space-y-2">
-              <span id="event-config-kind-label" className="block text-xs font-semibold text-muted">
-                Type d’événement
-              </span>
-              <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby="event-config-kind-label">
-                {kinds.map((kind) => {
-                  const KindIcon = KIND_ICONS[kind] || Calendar;
-                  const isSelected = eventKind === kind;
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface-muted/40 py-2 pl-2 pr-1.5">
+              <span className="flex min-w-0 items-center gap-2.5">
+                {(() => {
+                  const KindIcon = eventKind ? KIND_ICONS[eventKind] : Calendar;
+                  const tint = eventKind ? KIND_TINTS[eventKind] : 'var(--muted)';
                   return (
-                    <button
-                      key={kind}
-                      type="button"
-                      aria-pressed={isSelected}
-                      onClick={() => applyKind(isSelected ? '' : kind)}
-                      className={cn(
-                        'inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors touch-manipulation',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                        isSelected
-                          ? 'bg-primary-solid text-primary-foreground'
-                          : 'bg-surface-muted text-foreground/80 hover:text-foreground',
-                      )}
+                    <span
+                      aria-hidden
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                      style={{ background: `color-mix(in srgb, ${tint} 16%, var(--surface))`, color: tint }}
                     >
-                      <KindIcon
-                        className={cn('h-3.5 w-3.5 shrink-0', isSelected ? 'text-primary-foreground' : 'text-muted')}
-                      />
-                      <span>{EVENT_KIND_LABELS[kind]}</span>
-                    </button>
+                      <KindIcon className="h-[18px] w-[18px]" />
+                    </span>
                   );
-                })}
-              </div>
+                })()}
+                <span className="truncate text-sm font-semibold text-foreground">
+                  {eventKind ? EVENT_KIND_LABELS[eventKind] : 'Type d’événement'}
+                </span>
+              </span>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setPickingKind(true)}>
+                {eventKind ? 'Changer' : 'Choisir'}
+              </Button>
             </div>
 
             {eventKind === 'WEDDING' && (
@@ -3024,6 +3110,7 @@ export default function EventConfigForm({
           </section>
         )}
       </form>
+      )}
     </Modal>
 
     <Modal
