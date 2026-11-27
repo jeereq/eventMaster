@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { WhatsAppIcon, InstagramIcon } from '@/components/icons';
 import { formatFc } from '@/config/landingPricing';
 import { goToListingInquire } from '@/lib/listingInquire';
 import {
@@ -185,16 +186,17 @@ export default function ListingPublicDetails({
       ? { href: contactHref('tel', details.contactPhone), label: details.contactPhone, external: false }
       : null,
     details.contactWhatsapp
-      ? { href: contactHref('whatsapp', details.contactWhatsapp), label: 'WhatsApp', external: true }
+      ? { href: contactHref('whatsapp', details.contactWhatsapp), label: 'WhatsApp', external: true, icon: <WhatsAppIcon className="w-4 h-4" /> }
       : null,
     details.instagram
       ? {
           href: contactHref('instagram', details.instagram),
           label: details.instagram.startsWith('@') ? details.instagram : `@${details.instagram}`,
           external: true,
+          icon: <InstagramIcon className="w-4 h-4" />,
         }
       : null,
-  ].filter(Boolean) as Array<{ href: string; label: string; external: boolean }>;
+  ].filter(Boolean) as Array<{ href: string; label: string; external: boolean; icon?: React.ReactNode }>;
 
   return (
     <div className="space-y-8">
@@ -249,8 +251,9 @@ export default function ListingPublicDetails({
                 key={item.href}
                 href={item.href}
                 {...(item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                className="inline-flex min-h-11 items-center rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm font-semibold text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="inline-flex min-h-11 items-center rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm font-semibold text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 gap-2"
               >
+                {item.icon}
                 {item.label}
               </a>
             ))}

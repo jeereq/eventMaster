@@ -2761,3 +2761,21 @@ body[data-em-ai-fab-muted] .em-ai-fab {
     animation: none;
   }
 }
+
+/* Couleurs des réponses dans les graphiques (palette validée daltonisme, clair et sombre). */
+:root {
+  --chart-1: #1e8a52;
+  --chart-2: #2a78d6;
+  --chart-3: #eb6834;
+  --chart-4: #6250d6;
+  --chart-5: #eda100;
+  --chart-6: #e87ba4;
+}
+.dark {
+  --chart-1: #25a062;
+  --chart-2: #3987e5;
+  --chart-3: #d95926;
+  --chart-4: #9085e9;
+  --chart-5: #c98500;
+  --chart-6: #d55181;
+}

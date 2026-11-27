@@ -49,7 +49,7 @@ import {
 } from '@/lib/marketplace';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
-import { Ban, Building2, Calendar, CalendarCheck, CalendarDays, CheckCircle2, ChevronDown, Coins, CreditCard, KeyRound, MessageCircle, MessageSquareQuote, Phone, Sparkles, Star, Store, XCircle } from '@/components/icons';
+import { Ban, Building2, Calendar, CalendarCheck, CalendarDays, CheckCircle2, ChevronDown, Coins, CreditCard, KeyRound, MessageSquareQuote, Phone, Sparkles, Star, Store, XCircle, WhatsAppIcon } from '@/components/icons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { useAuth } from '@/context/AuthContext';
 import { ReviewStars, ReviewStarsInput } from '@/components/marketplace/ReviewStars';
@@ -886,8 +886,7 @@ export default function MarketplaceBookingsPanel({
                           href={waUrl}
                           external
                           label="WhatsApp"
-                          icon={MessageCircle}
-                          iconClassName="text-emerald-600 dark:text-emerald-400"
+                          icon={WhatsAppIcon}
                         />
                       ) : null}
                       {item.vendorPhone && !isVendor ? (

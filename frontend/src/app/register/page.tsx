@@ -18,7 +18,7 @@ import {
   Store,
   ArrowRight,
   CheckCircle2,
-  Scale,
+  Scale, WhatsAppIcon,
 } from '@/components/icons';
 import { MethodToggle } from '@/components/AuthSplitLayout';
 import { AuthPhotoLayout } from '@/components/AuthPhotoLayout';
@@ -488,7 +488,7 @@ function RegisterPageContent() {
           <div className="text-center space-y-4 py-2">
             <div className="inline-flex items-center justify-center bg-primary/15 p-3.5 rounded-full text-primary">
               {verificationMethod === 'WHATSAPP' ? (
-                <MessageSquare className="w-8 h-8" aria-hidden />
+                <WhatsAppIcon className="w-8 h-8" />
               ) : verificationMethod === 'SMS' ? (
                 <Smartphone className="w-8 h-8" aria-hidden />
               ) : (
@@ -713,7 +713,7 @@ function RegisterPageContent() {
                       ? [{ value: 'EMAIL' as const, label: 'E-mail', icon: <Mail className="w-3.5 h-3.5" aria-hidden /> }]
                       : []),
                     ...(authOtpMethodOptions(authChannels).includes('WHATSAPP')
-                      ? [{ value: 'WHATSAPP' as const, label: 'WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" aria-hidden /> }]
+                      ? [{ value: 'WHATSAPP' as const, label: 'WhatsApp', icon: <WhatsAppIcon className="w-3.5 h-3.5" /> }]
                       : []),
                     ...(authOtpMethodOptions(authChannels).includes('SMS')
                       ? [{ value: 'SMS' as const, label: 'SMS', icon: <Smartphone className="w-3.5 h-3.5" aria-hidden /> }]

@@ -565,3 +565,6 @@ export const Truck = make(PhTruck, 'duotone', 'Truck');
 export const Undo = make(PhArrowArcLeft, 'bold', 'Undo');
 export const UploadCloud = make(PhCloudArrowUp, 'duotone', 'UploadCloud');
 export const UserRound = make(PhUserCircle, 'duotone', 'UserRound');
+
+// Logos des réseaux sociaux : dessins officiels, pas Phosphor.
+export * from './brands';

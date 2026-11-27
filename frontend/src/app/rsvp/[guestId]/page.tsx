@@ -17,7 +17,7 @@ import {
   Loader2, Image, Send, Heart, LayoutGrid, MessageCircle, MessageSquare,
   ChevronLeft, ChevronRight, X, ThumbsUp, Download, Navigation,
   QrCode, Maximize2, Printer, UserCog, UserPen, Pencil,
-  Ticket, Copy, Check, Users, Link2Off, HeartHandshake, RefreshCw, Repeat, CalendarHeart,
+  Ticket, Copy, Check, Users, Link2Off, HeartHandshake, RefreshCw, Repeat, CalendarHeart, WhatsAppIcon,
 } from '@/components/icons';
 import GuestDonationForm from '@/components/rsvp/GuestDonationForm';
 import GuestEventNotificationsCard from '@/components/rsvp/GuestEventNotificationsCard';
@@ -978,7 +978,7 @@ export default function RsvpPage() {
                                 aria-label={`Envoyer le pass de ${pass.firstName} par WhatsApp`}
                                 className={cn(iconBtn, '!text-primary')}
                               >
-                                <MessageCircle className="w-4 h-4" aria-hidden />
+                                <WhatsAppIcon className="w-4 h-4" />
                               </a>
                               )}
                               <button

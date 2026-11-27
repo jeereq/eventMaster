@@ -1,10 +1,11 @@
 'use client';
 
 import PriceSourcePicker from '@/components/PriceSourcePicker';
-import React, { useId, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ChevronDown, Loader2, Save, Sparkles } from '@/components/icons';
 import { Alert, Button, Input } from '@/components/ui';
-import BudgetSimulationCriteria, { BudgetScopeTabs, CHOICE_CHIP, choiceChipTone, GROUP_LABEL } from '@/components/BudgetSimulationCriteria';
+import BudgetSimulationScopePicker from '@/components/BudgetSimulationScopePicker';
+import BudgetSimulationCriteria from '@/components/BudgetSimulationCriteria';
 import { cn } from '@/lib/cn';
 import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import { formatFc } from '@/config/landingPricing';
@@ -58,7 +59,7 @@ function FieldSelect({
 }) {
   return (
     <label className="space-y-1.5">
-      <span className={cn('block', GROUP_LABEL)}>{label}</span>
+      <span className="block text-xs font-semibold text-muted">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -91,22 +92,22 @@ function SlotGroup({
   const optionalCount = all.filter((category) => slots[category] === 'optional').length;
   const visible = showAll ? all : suggested.length ? suggested : all;
   const summary = required.length
-    ? `${required.map((category) => SERVICE_CATEGORY_LABELS[category]).join(', ')}${optionalCount ? ` · ${optionalCount} si ça rentre` : ''}`
+    ? `${required.map((category) => SERVICE_CATEGORY_LABELS[category]).join(', ')}${optionalCount ? ` · si ça rentre : ${optionalCount}` : ''}`
     : optionalCount
-      ? `${optionalCount} si ça rentre`
+      ? `Si ça rentre : ${optionalCount}`
       : 'Aucun';
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-x-3 gap-y-1">
-      <p className={cn(GROUP_LABEL, 'w-28 shrink-0 sm:pt-3')}>{label}</p>
+    <div className="flex flex-col sm:flex-row gap-x-3 gap-y-2">
+      <p className="text-xs font-semibold text-muted w-28 shrink-0 sm:pt-2">{label}</p>
       <div className="min-w-0 flex-1 space-y-2">
-        <div className="flex items-center justify-between gap-3 min-h-11">
-          <p className="min-w-0 text-sm text-foreground">{summary}</p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="min-w-0 text-sm text-foreground sm:pt-1">{summary}</p>
           <button
             type="button"
             aria-expanded={open}
             onClick={() => setOpen((value) => !value)}
-            className="shrink-0 min-h-11 px-2 text-sm font-semibold text-primary rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="shrink-0 min-h-9 px-2 text-xs font-semibold text-primary rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             {open ? 'Fermer' : 'Modifier'}
           </button>
@@ -122,10 +123,10 @@ function SlotGroup({
                   onClick={() => onCycle(category)}
                   title={`${SLOT_HINT[priority]} · cliquer pour changer`}
                   className={cn(
-                    CHOICE_CHIP,
-                    priority === 'required' && choiceChipTone(true),
-                    priority === 'optional' && 'border-dashed border-primary/50 text-primary',
-                    priority === 'excluded' && 'border-border text-muted line-through decoration-muted/60 hover:bg-surface-muted',
+                    'px-2.5 py-1 rounded-full text-xs font-semibold border transition',
+                    priority === 'required' && 'bg-primary-solid text-primary-foreground border-primary-solid',
+                    priority === 'optional' && 'bg-primary/10 text-primary border-primary/40',
+                    priority === 'excluded' && 'bg-surface text-muted border-border line-through decoration-muted/70',
                   )}
                 >
                   {SERVICE_CATEGORY_LABELS[category]}
@@ -136,7 +137,7 @@ function SlotGroup({
             {suggested.length < all.length ? (
               <button
                 type="button"
-                className="min-h-11 sm:min-h-9 px-2 text-[13px] font-semibold text-primary rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="px-2 py-1 text-xs font-semibold text-primary"
                 onClick={() => setShowAll((value) => !value)}
               >
                 {showAll ? 'Moins' : 'Tous'}
@@ -173,7 +174,6 @@ export default function EventPlanBriefForm({
   const { site } = usePlatformSite();
   const marketplaceCities = enabledMarketplaceCities(site);
   const [advanced, setAdvanced] = useState(false);
-  const refineId = useId();
   const [briefName, setBriefName] = useState('');
   const [scopeError, setScopeError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -224,7 +224,8 @@ export default function EventPlanBriefForm({
 
   return (
     <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-5">
-      <BudgetScopeTabs
+      <BudgetSimulationScopePicker
+        compact
         value={scope}
         onChange={(budgetScope) => {
           setScopeError('');
@@ -320,7 +321,7 @@ export default function EventPlanBriefForm({
 
       {scope === 'complete' ? (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <p className={cn(GROUP_LABEL, 'w-28 shrink-0')}>Salle</p>
+        <p className="text-xs font-semibold text-muted w-28 shrink-0">Salle</p>
         <div className={cn('inline-flex', SEGMENTED_TRACK)} role="group" aria-label="Salle">
           {([
             ['yes', 'Obligatoire', 'Chaque pack contient une salle.'],
@@ -362,19 +363,18 @@ export default function EventPlanBriefForm({
       />
       ) : null}
 
-      <div className="border-t border-border pt-2 space-y-4">
+      <div className="rounded-xl border border-border">
         <button
           type="button"
           onClick={() => setAdvanced((value) => !value)}
           aria-expanded={advanced}
-          aria-controls={refineId}
-          className="inline-flex items-center gap-1.5 min-h-11 text-sm font-semibold text-primary rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="w-full flex items-center justify-between gap-2 min-h-11 px-3 py-2.5 text-sm font-semibold"
         >
           Affiner le calcul
-          <ChevronDown className={cn('w-4 h-4 transition', advanced && 'rotate-180')} aria-hidden />
+          <ChevronDown className={cn('w-4 h-4 text-muted transition', advanced && 'rotate-180')} />
         </button>
         {advanced ? (
-          <div id={refineId} className="space-y-5">
+          <div className="px-3 pb-4 space-y-4 border-t border-border pt-3">
             <PriceSourcePicker
               value={brief.priceSource || 'all'}
               onChange={(priceSource) => patch({ priceSource })}
@@ -429,13 +429,13 @@ export default function EventPlanBriefForm({
             <>
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <p className={GROUP_LABEL}>
+                <p className="text-xs font-semibold text-muted">
                   Répartition de {formatFc(spendable)}
                   {shareSum !== 100 ? ` · ${shareSum} % (ramené à 100 % au lancement)` : ''}
                 </p>
                 <button
                   type="button"
-                  className="min-h-11 sm:min-h-9 px-1 text-xs font-semibold text-primary rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  className="text-xs font-semibold text-primary"
                   onClick={() => patch({ shares: defaultShares(brief.eventType, brief.includeVenue, brief.slots) })}
                 >
                   Réinitialiser
@@ -444,7 +444,7 @@ export default function EventPlanBriefForm({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {rows.map((row) => (
                   <label key={row.key} className="space-y-1">
-                    <span className={cn('flex justify-between gap-2', GROUP_LABEL)}>
+                    <span className="flex justify-between gap-2 text-xs font-semibold text-muted">
                       <span>{row.label}</span>
                       <span className="tabular-nums">{row.pct} % · {formatFc(row.amountFc)}</span>
                     </span>
@@ -498,7 +498,7 @@ export default function EventPlanBriefForm({
               </FieldSelect>
             </div>
 
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Équipements de salle">
+            <div className="flex flex-wrap gap-1.5">
               {VENUE_AMENITIES.map((item) => {
                 const active = brief.venueAmenities.includes(item.id);
                 return (
@@ -511,7 +511,10 @@ export default function EventPlanBriefForm({
                         ? brief.venueAmenities.filter((id) => id !== item.id)
                         : [...brief.venueAmenities, item.id],
                     })}
-                    className={cn(CHOICE_CHIP, choiceChipTone(active))}
+                    className={cn(
+                      'px-2.5 py-1 rounded-full text-xs font-semibold border',
+                      active ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted hover:text-foreground',
+                    )}
                   >
                     {item.label}
                   </button>
@@ -519,9 +522,8 @@ export default function EventPlanBriefForm({
               })}
             </div>
 
-            <label className="flex items-center gap-2 min-h-11 text-sm text-foreground">
+            <label className="flex items-center gap-2 text-xs font-medium text-foreground">
               <input
-                className="size-4 accent-primary shrink-0"
                 type="checkbox"
                 checked={brief.distinctVenues}
                 onChange={(e) => patch({ distinctVenues: e.target.checked })}
@@ -540,16 +542,13 @@ export default function EventPlanBriefForm({
         <Button onClick={launch} disabled={planning} leftIcon={planning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}>
           {planning ? 'Recherche…' : 'Lancer la recherche'}
         </Button>
-        <div className="flex flex-1 min-w-[12rem] items-center gap-1 sm:justify-end">
-          <div className="min-w-0 flex-1 sm:max-w-[16rem]">
-            <Input
-              value={briefName}
-              onChange={(e) => setBriefName(e.target.value)}
-              placeholder="Nom du brief"
-              aria-label="Nom du brief"
-            />
-          </div>
-          <Button variant="ghost" loading={saving} onClick={() => void saveBrief()} leftIcon={<Save className="w-4 h-4" />}>
+        <div className="flex flex-1 min-w-[12rem] gap-2">
+          <Input
+            value={briefName}
+            onChange={(e) => setBriefName(e.target.value)}
+            placeholder="Nom du brief"
+          />
+          <Button variant="secondary" loading={saving} onClick={() => void saveBrief()} leftIcon={<Save className="w-4 h-4" />}>
             Sauver
           </Button>
         </div>
@@ -557,21 +556,21 @@ export default function EventPlanBriefForm({
 
       {briefs.length > 0 ? (
         <div className="space-y-2">
-          <p className={GROUP_LABEL}>Briefs enregistrés</p>
+          <p className="text-xs font-semibold text-muted">Briefs enregistrés</p>
           <ul className="flex flex-wrap gap-1.5">
             {briefs.map((item) => (
-              <li key={item.id} className="inline-flex max-w-full items-center rounded-full border border-border">
+              <li key={item.id} className="inline-flex items-center rounded-full border border-border bg-surface-muted">
                 <button
                   type="button"
                   onClick={() => onLoadBrief(item)}
-                  className="min-h-11 sm:min-h-9 min-w-0 text-left break-words pl-3 pr-1 text-[13px] font-medium text-foreground hover:text-primary rounded-l-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  className="px-2.5 py-1 text-xs font-semibold hover:text-primary"
                 >
                   {item.name}
                 </button>
                 <button
                   type="button"
                   onClick={() => void onDeleteBrief(item.id)}
-                  className="min-h-11 sm:min-h-9 px-2.5 text-sm text-muted hover:text-danger rounded-r-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  className="px-2 text-xs text-muted hover:text-rose-600"
                   aria-label={`Supprimer ${item.name}`}
                 >
                   ×

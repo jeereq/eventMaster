@@ -11,7 +11,7 @@ import type { LandingTemplate } from '@/config/landingTemplates';
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import { Button, Modal, Pagination, usePaginateItems, Skeleton, usePageSize } from '@/components/ui';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import { Sparkles, Eye, ArrowRight, CheckCircle2, Wand2, Mail, ScanLine, Clock, Heart } from '@/components/icons';
+import { Sparkles, Eye, ArrowRight, CheckCircle2, Wand2, ScanLine, Clock, Heart, WhatsAppIcon } from '@/components/icons';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
@@ -507,7 +507,7 @@ export default function ModelesPage() {
         description="Personnalisez vos faire-part et suivez vos réponses à l’invitation en temps réel."
         highlights={[
           { icon: Wand2, label: 'Studio IA' },
-          { icon: Mail, label: 'WhatsApp' },
+          { icon: WhatsAppIcon, label: 'WhatsApp' },
           { icon: Sparkles, label: 'Réponses en direct' },
           { icon: ScanLine, label: 'Pass QR' },
         ]}

@@ -32,7 +32,7 @@ import {
   VolumeX,
   X,
   ChevronDown,
-  ChevronUp,
+  ChevronUp, YouTubeIcon, SpotifyIcon,
 } from '@/components/icons';
 import {
   ARTIST_PLAYLISTS,
@@ -609,10 +609,12 @@ export default function RoomMusicPanel({
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 pl-11 text-xs">
                       <a href={p.youtubeChannelUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-muted underline-offset-2 hover:text-foreground hover:underline">
-                        YouTube <ExternalLink className="h-3 w-3" />
+                        <YouTubeIcon className="h-3.5 w-3.5" />
+                        YouTube
                       </a>
                       <a href={p.spotifyUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-muted underline-offset-2 hover:text-foreground hover:underline">
-                        Spotify <ExternalLink className="h-3 w-3" />
+                        <SpotifyIcon className="h-3.5 w-3.5" />
+                        Spotify
                       </a>
                       <a href={p.deezerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-muted underline-offset-2 hover:text-foreground hover:underline">
                         Deezer <ExternalLink className="h-3 w-3" />

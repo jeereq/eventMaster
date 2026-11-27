@@ -3,14 +3,25 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { CheckCircle, XCircle, Clock, Download, Plus, RefreshCw } from '@/components/icons';
+import { CheckCircle, CheckCircle2, XCircle, Clock, Download, Plus, RefreshCw, ScanLine, UserCheck, Wallet } from '@/components/icons';
 import Link from 'next/link';
 import { Alert, EmptyState, Button, Skeleton, SkeletonAnalyticsView } from '@/components/ui';
-import WorkspaceStatsOverview, { StatStrip, type StatMetric, type WorkspaceStats } from '@/components/WorkspaceStatsOverview';
+import WorkspaceStatsOverview, { type WorkspaceStats } from '@/components/WorkspaceStatsOverview';
+import { KpiCard } from '@/components/dashboard/KpiCard';
+import { CategoryTag } from '@/components/analytics/CategoryTag';
 import VendorStatsView from '@/components/dashboard/VendorStatsView';
 import { getWorkspaceModules } from '@/lib/planAccess';
 import { cn } from '@/lib/cn';
 import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
+import {
+ ChartCard,
+ RsvpDonut,
+ CategoryBars,
+ TimeColumns,
+ bucketArrivals,
+ bucketByDay,
+ AnswerBreakdown,
+} from '@/components/analytics/EventCharts';
 import {
  extractRsvpFieldsFromTemplateContent,
  supplementFieldsFromGuestPreferences,
@@ -43,6 +54,14 @@ interface GuestItem {
  notes?: string;
  customFields?: Record<string, any>;
  };
+}
+
+interface TicketOrderItem {
+ status: string;
+ quantity: number;
+ amountFc: number;
+ paidAt?: string | null;
+ createdAt: string;
 }
 
 interface TemplateItem {
@@ -86,22 +105,13 @@ function countLabel(n: number, singular: string, pluralForm = `${singular}s`) {
 const pct = (n: number) => `${n} %`;
 
 /** Bloc de détail : titre en casse normale, puis une liste groupée à filets fins. */
-function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+function DetailSection({ title, value, children }: { title: string; value?: React.ReactNode; children: React.ReactNode }) {
  return (
- <section className="min-w-0 space-y-3">
- <h2 className="text-[15px] font-semibold text-foreground">{title}</h2>
- <ul className="max-h-[360px] overflow-y-auto rounded-[var(--radius-card)] border border-border bg-surface divide-y divide-border">
+ <ChartCard title={title} value={value}>
+ <ul className="-my-3 grid grid-cols-1 gap-x-10 md:grid-cols-2 [&>li]:border-t [&>li]:border-border [&>li:first-child]:border-t-0 md:[&>li:nth-child(2)]:border-t-0">
  {children}
  </ul>
- </section>
- );
-}
-
-function ShareBar({ value }: { value: number }) {
- return (
- <div className="h-1 w-full overflow-hidden rounded-full bg-surface-muted">
- <div style={{ width: `${value}%` }} className="h-full rounded-full bg-primary" />
- </div>
+ </ChartCard>
  );
 }
 
@@ -115,6 +125,7 @@ function EventAnalyticsView() {
  const [guests, setGuests] = useState<GuestItem[]>([]);
  const [templates, setTemplates] = useState<TemplateItem[]>([]);
  const [invitations, setInvitations] = useState<InvitationItem[]>([]);
+ const [ticketOrders, setTicketOrders] = useState<TicketOrderItem[]>([]);
  
  const [loadingEvents, setLoadingEvents] = useState(true);
  const [loadingStats, setLoadingStats] = useState(false);
@@ -147,10 +158,11 @@ function EventAnalyticsView() {
  setLoadingStats(true);
  setError('');
  try {
- const [guestsResult, templatesResult, invitesResult] = await Promise.allSettled([
+ const [guestsResult, templatesResult, invitesResult, ordersResult] = await Promise.allSettled([
  api.get(`/events/${eventId}/guests`),
  api.get('/templates'),
  api.get(`/events/${eventId}/invitations`),
+ api.get(`/events/${eventId}/ticket-orders`),
  ]);
 
  if (guestsResult.status === 'rejected') {
@@ -160,6 +172,10 @@ function EventAnalyticsView() {
  setGuests(guestsResult.value);
  setTemplates(templatesResult.status === 'fulfilled' ? templatesResult.value : []);
  setInvitations(invitesResult.status === 'fulfilled' ? invitesResult.value : []);
+ // Billetterie absente ou non autorisée : pas de graphique des ventes, sans erreur.
+ setTicketOrders(
+ ordersResult.status === 'fulfilled' && Array.isArray(ordersResult.value?.orders) ? ordersResult.value.orders : [],
+ );
 
  if (templatesResult.status === 'rejected' || invitesResult.status === 'rejected') {
  console.warn('Partial analytics load:', {
@@ -206,8 +222,6 @@ function EventAnalyticsView() {
  const declinedCount = guests.filter(g => g.rsvp === 'DECLINED').length;
  const pendingCount = guests.filter(g => g.rsvp === 'PENDING').length;
 
- const acceptedPct = totalGuests > 0 ? Math.round((acceptedCount / totalGuests) * 100) : 0;
- const declinedPct = totalGuests > 0 ? Math.round((declinedCount / totalGuests) * 100) : 0;
  const responseRate = totalGuests > 0 ? Math.round(((acceptedCount + declinedCount) / totalGuests) * 100) : 0;
  const checkedInCount = guests.filter((g) => Boolean(g.checkedInAt)).length;
  const checkInPct = acceptedCount > 0 ? Math.round((checkedInCount / acceptedCount) * 100) : 0;
@@ -280,18 +294,6 @@ function EventAnalyticsView() {
  // Les totaux de l’espace ne recoupent la bande de l’événement que s’ils portent sur ce seul événement.
  const singleEvent = events.length === 1 && (workspace?.events.total ?? 0) <= 1;
  const toScanCount = Math.max(0, acceptedCount - checkedInCount);
- const rsvpMetrics: StatMetric[] = [
- { label: 'Invités totaux', value: totalGuests },
- { label: 'Confirmés', value: acceptedCount, hint: acceptedCount > 0 ? pct(acceptedPct) : null },
- { label: 'Déclinés', value: declinedCount, hint: declinedCount > 0 ? pct(declinedPct) : null },
- { label: 'Taux de réponse', value: pct(responseRate), hint: pendingCount > 0 ? `En attente : ${pendingCount}` : null },
- ];
- const entryMetrics: StatMetric[] = [
- { label: 'Entrées', value: checkedInCount, hint: checkedInCount > 0 ? pct(checkInPct) : null },
- { label: 'Reste à scanner', value: toScanCount },
- ];
- const eventMetrics = protocolView ? [...entryMetrics, ...rsvpMetrics] : [...rsvpMetrics, ...entryMetrics];
-
  const mealRows = MEAL_OPTIONS.map((option) => ({
  label: option.label,
  count: guests.filter((g) =>
@@ -303,23 +305,92 @@ function EventAnalyticsView() {
  })).filter((row) => row.count > 0);
 
  const customFields = getCustomRsvpFields();
+
+ const categoryRows = uniqueCategories
+ .map((cat) => {
+ const catGuests = guests.filter((g) => (g.category || 'Général') === cat);
+ return {
+ label: cat,
+ accepted: catGuests.filter((g) => g.rsvp === 'ACCEPTED').length,
+ pending: catGuests.filter((g) => g.rsvp === 'PENDING').length,
+ declined: catGuests.filter((g) => g.rsvp === 'DECLINED').length,
+ };
+ })
+ .sort((a, b) => b.accepted + b.pending + b.declined - (a.accepted + a.pending + a.declined));
+ const arrivalBuckets = bucketArrivals(
+ guests.filter((g) => g.checkedInAt).map((g) => new Date(g.checkedInAt as string)),
+ );
+ const paidOrders = ticketOrders.filter((o) => o.status === 'PAID');
+ const ticketsSold = paidOrders.reduce((sum, o) => sum + (o.quantity || 0), 0);
+ const ticketRevenue = paidOrders.reduce((sum, o) => sum + (o.amountFc || 0), 0);
+ const salesBuckets = bucketByDay(
+ paidOrders.map((o) => ({ at: new Date(o.paidAt || o.createdAt), value: o.quantity || 0 })),
+ );
+ const plural = (singular: string, pluralForm = `${singular}s`) => (n: number) => (n > 1 ? pluralForm : singular);
+
+ const pendingPct = totalGuests > 0 ? Math.round((pendingCount / totalGuests) * 100) : 0;
+ const rsvpKpis = [
+ <KpiCard
+ key="confirmed"
+ icon={<UserCheck className="w-[18px] h-[18px]" />}
+ label="Confirmés"
+ value={`${acceptedCount} / ${totalGuests}`}
+ hint={`${countLabel(declinedCount, 'décliné')}`}
+ />,
+ <KpiCard
+ key="pending"
+ icon={<Clock className="w-[18px] h-[18px]" />}
+ label="En attente"
+ value={String(pendingCount)}
+ hint={`${pct(pendingPct)} des invités`}
+ tone={pendingCount > 0 ? 'warning' : 'default'}
+ />,
+ <KpiCard
+ key="rate"
+ icon={<CheckCircle2 className="w-[18px] h-[18px]" />}
+ label="Taux de réponse"
+ value={pct(responseRate)}
+ hint={`${countLabel(acceptedCount + declinedCount, 'réponse')} sur ${totalGuests}`}
+ />,
+ ];
+ const entryKpi = (
+ <KpiCard
+ key="entries"
+ icon={<ScanLine className="w-[18px] h-[18px]" />}
+ label="Entrées"
+ value={String(checkedInCount)}
+ hint={acceptedCount > 0 ? `${pct(checkInPct)} des confirmés · ${toScanCount} à scanner` : undefined}
+ />
+ );
+ const ticketKpi = ticketOrders.length > 0 ? (
+ <KpiCard
+ key="tickets"
+ icon={<Wallet className="w-[18px] h-[18px]" />}
+ label="Billetterie"
+ value={`${new Intl.NumberFormat('fr-FR').format(ticketRevenue)} FC`}
+ hint={`${countLabel(ticketsSold, 'billet')} payé${ticketsSold > 1 ? 's' : ''}`}
+ className="col-span-2 xl:col-span-1"
+ />
+ ) : null;
+ const kpis = [...(protocolView ? [entryKpi, ...rsvpKpis] : [...rsvpKpis, entryKpi]), ticketKpi].filter(Boolean);
+
  // Une seule catégorie reprendrait mot pour mot les chiffres de la bande : on ne l’affiche pas.
  const showMeals = acceptedCount > 0 && mealRows.length > 0;
  const showCategories = uniqueCategories.length > 1;
  const showQuestions = customFields.length > 0;
- const detailCount = [showMeals, showCategories, showQuestions].filter(Boolean).length;
- const detailCols = detailCount === 3 ? 'lg:grid-cols-3' : detailCount === 2 ? 'lg:grid-cols-2' : '';
+ const detailCount = [showMeals, showQuestions].filter(Boolean).length;
 
  return (
  <div className="space-y-10 w-full">
  {events.length > 0 ? (
+ <section className="em-header-wash rounded-[26px] p-5 sm:p-7 space-y-6">
  <div className="flex items-center gap-2">
  <label htmlFor="analytics-event" className="sr-only">Événement</label>
  <select
  id="analytics-event"
  value={selectedEventId}
  onChange={(e) => setSelectedEventId(e.target.value)}
- className="h-11 min-w-0 flex-1 sm:flex-none sm:max-w-md rounded-[var(--radius-button)] border border-border bg-surface pl-3.5 pr-9 text-[15px] font-semibold text-foreground transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+ className="h-11 min-w-0 flex-1 sm:flex-none sm:max-w-md rounded-full border border-border bg-surface pl-4 pr-9 text-[15px] font-semibold text-foreground shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
  >
  {events.map((e) => (
  <option key={e.id} value={e.id}>{e.title}</option>
@@ -332,10 +403,26 @@ function EventAnalyticsView() {
  disabled={loadingStats || refreshing}
  title="Rafraîchir les données"
  aria-label="Rafraîchir les données"
- className="w-11 shrink-0 px-0"
+ className="w-11 shrink-0 rounded-full px-0"
  leftIcon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
  />
  </div>
+
+ {loadingStats ? (
+ <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4" aria-busy="true">
+ {Array.from({ length: 4 }).map((_, i) => (
+ <div key={i} className="space-y-4 rounded-[20px] bg-surface p-4 sm:p-5">
+ <Skeleton className="h-4 w-24" />
+ <Skeleton className="h-7 w-14" />
+ </div>
+ ))}
+ </div>
+ ) : guests.length > 0 ? (
+ <div className={cn('grid grid-cols-2 gap-3 sm:gap-4', ticketKpi ? 'xl:grid-cols-5' : 'xl:grid-cols-4')}>
+ {kpis}
+ </div>
+ ) : null}
+ </section>
  ) : null}
 
  {error && <Alert variant="error">{error}</Alert>}
@@ -349,75 +436,59 @@ function EventAnalyticsView() {
  }
  />
  ) : loadingStats ? (
- <div className="space-y-10" aria-busy="true">
- <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px overflow-hidden rounded-[var(--radius-card)] border border-border bg-border">
- {Array.from({ length: 6 }).map((_, i) => (
- <div key={i} className="space-y-3 bg-surface px-4 py-4 sm:px-5">
- <Skeleton className="h-3 w-20" />
- <Skeleton className="h-6 w-12" />
- </div>
- ))}
- </div>
- <Skeleton className="h-48 w-full rounded-[var(--radius-card)]" />
- </div>
+ <Skeleton className="h-48 w-full rounded-[var(--radius-card)]" aria-busy="true" />
  ) : guests.length === 0 ? (
  <EmptyState illustration="guests" title="Aucun invité pour cet événement" />
  ) : (
  <div className="space-y-10">
- <StatStrip metrics={eventMetrics} />
+
+ {(() => {
+ const cards = [
+ <ChartCard key="rsvp" title="Réponses" value={countLabel(totalGuests, 'invité')}>
+ <RsvpDonut counts={{ accepted: acceptedCount, pending: pendingCount, declined: declinedCount }} />
+ </ChartCard>,
+ showCategories ? (
+ <ChartCard key="cat" title="Par catégorie" value={countLabel(categoryRows.length, 'catégorie')}>
+ <CategoryBars rows={categoryRows} />
+ </ChartCard>
+ ) : null,
+ arrivalBuckets.length > 0 ? (
+ <ChartCard key="arrivals" title="Arrivées" value={countLabel(checkedInCount, 'entrée')}>
+ <TimeColumns buckets={arrivalBuckets} unit={plural('entrée')} />
+ </ChartCard>
+ ) : null,
+ salesBuckets.length > 0 ? (
+ <ChartCard
+ key="sales"
+ title="Billets vendus"
+ value={`${countLabel(ticketsSold, 'billet')} · ${new Intl.NumberFormat('fr-FR').format(ticketRevenue)} FC`}
+ >
+ <TimeColumns buckets={salesBuckets} unit={plural('billet')} />
+ </ChartCard>
+ ) : null,
+ ].filter(Boolean) as React.ReactElement[];
+ return (
+ <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+ {cards.map((card, i) =>
+ cards.length % 2 === 1 && i === cards.length - 1 && cards.length > 1
+ ? <div key={card.key} className="lg:col-span-2">{card}</div>
+ : card,
+ )}
+ </div>
+ );
+ })()}
 
  {detailCount > 0 ? (
- <div className={`grid grid-cols-1 gap-10 lg:gap-6 ${detailCols}`}>
+ <DetailSection title="Préférences des confirmés" value={countLabel(acceptedCount, 'confirmé')}>
  {showMeals ? (
- <DetailSection title="Régimes des confirmés">
- {mealRows.map((item) => {
- const share = acceptedCount > 0 ? Math.round((item.count / acceptedCount) * 100) : 0;
- return (
- <li key={item.label} className="space-y-2 px-4 py-3">
- <div className="flex items-baseline justify-between gap-3 text-sm">
- <span className="text-foreground">{item.label}</span>
- <span className="shrink-0 tabular-nums font-medium text-foreground">
- {item.count} <span className="font-normal text-muted">· {pct(share)}</span>
- </span>
- </div>
- <ShareBar value={share} />
+ <li className="space-y-2 py-3">
+ <p className="text-sm font-medium text-foreground">Régime</p>
+ <AnswerBreakdown items={mealRows} order={MEAL_OPTIONS.map((o) => o.label)} />
  </li>
- );
- })}
- </DetailSection>
- ) : null}
-
- {showCategories ? (
- <DetailSection title="Participation par catégorie">
- {uniqueCategories.map((cat) => {
- const catGuests = guests.filter((g) => (g.category || 'Général') === cat);
- const total = catGuests.length;
- const accepted = catGuests.filter((g) => g.rsvp === 'ACCEPTED').length;
- const declined = catGuests.filter((g) => g.rsvp === 'DECLINED').length;
- const pending = catGuests.filter((g) => g.rsvp === 'PENDING').length;
- const parts = [
- accepted > 0 ? countLabel(accepted, 'confirmé') : null,
- declined > 0 ? countLabel(declined, 'décliné') : null,
- pending > 0 ? `${pending} en attente` : null,
- ].filter(Boolean);
- return (
- <li key={cat} className="px-4 py-3">
- <div className="flex items-baseline justify-between gap-3 text-sm">
- <span className="min-w-0 break-words font-medium text-foreground">{cat}</span>
- <span className="shrink-0 tabular-nums text-muted">{countLabel(total, 'invité')}</span>
- </div>
- {parts.length > 0 ? (
- <p className="mt-1 text-xs tabular-nums text-muted">{parts.join(' · ')}</p>
- ) : null}
- </li>
- );
- })}
- </DetailSection>
  ) : null}
 
  {showQuestions ? (
- <DetailSection title="Questions personnalisées">
- {customFields.map((field) => {
+ customFields.map((field) => {
  const answers = guests
  .filter((g) => g.rsvp === 'ACCEPTED' && getCustomFieldValue(g.preferences, field) !== undefined)
  .map((g) => getCustomFieldValue(g.preferences, field)!);
@@ -433,18 +504,11 @@ function EventAnalyticsView() {
  if (isBooleanFieldType(field.type)) {
  const yesCount = answers.filter((a) => a === true).length;
  const noCount = totalAnswers - yesCount;
- const yesPct = totalAnswers > 0 ? Math.round((yesCount / totalAnswers) * 100) : 0;
  return (
- <li key={field.id} className="space-y-2 px-4 py-3">
+ <li key={field.id} className="space-y-2 py-3">
  {heading}
  {totalAnswers === 0 ? noAnswer : (
- <>
- <div className="flex justify-between gap-3 text-xs tabular-nums text-muted">
- <span>Oui : {yesCount} · {pct(yesPct)}</span>
- <span>Non : {noCount}</span>
- </div>
- <ShareBar value={yesPct} />
- </>
+ <AnswerBreakdown items={[{ label: 'Oui', count: yesCount }, { label: 'Non', count: noCount }]} order={['Oui', 'Non']} />
  )}
  </li>
  );
@@ -454,7 +518,7 @@ function EventAnalyticsView() {
  const numericAnswers = answers.map((a) => Number(a)).filter((n) => Number.isFinite(n));
  if (numericAnswers.length === 0) {
  return (
- <li key={field.id} className="space-y-2 px-4 py-3">
+ <li key={field.id} className="space-y-2 py-3">
  {heading}
  {noAnswer}
  </li>
@@ -464,7 +528,7 @@ function EventAnalyticsView() {
  const min = Math.min(...numericAnswers);
  const max = Math.max(...numericAnswers);
  return (
- <li key={field.id} className="space-y-2 px-4 py-3">
+ <li key={field.id} className="space-y-2 py-3">
  {heading}
  <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-muted">
  <span>Moy. : {avg}</span>
@@ -484,28 +548,17 @@ function EventAnalyticsView() {
  });
 
  return (
- <li key={field.id} className="space-y-2 px-4 py-3">
+ <li key={field.id} className="space-y-2 py-3">
  {heading}
  {totalAnswers === 0 ? noAnswer : (
- <ul className="space-y-1">
- {Object.entries(counts).map(([val, count]) => {
- const share = totalAnswers > 0 ? Math.round((count / totalAnswers) * 100) : 0;
- return (
- <li key={val} className="flex items-baseline justify-between gap-3 text-xs">
- <span className="min-w-0 break-words text-foreground">{val}</span>
- <span className="shrink-0 tabular-nums text-muted">{count} · {pct(share)}</span>
- </li>
- );
- })}
- </ul>
+ <AnswerBreakdown items={Object.entries(counts).map(([label, count]) => ({ label, count }))} />
  )}
  </li>
  );
  }
- })}
- </DetailSection>
+ })
  ) : null}
- </div>
+ </DetailSection>
  ) : null}
 
  <section className="space-y-3">
@@ -564,11 +617,8 @@ function EventAnalyticsView() {
  const rsvp = RSVP_META[g.rsvp] ?? RSVP_META.PENDING;
  return (
  <tr key={g.id} className="transition-colors hover:bg-surface-muted/50">
- <td className="px-4 py-3">
- <span className="block font-medium">{g.firstName} {g.lastName}</span>
- {g.email ? <span className="block text-xs text-muted">{g.email}</span> : null}
- </td>
- <td className="px-4 py-3">{g.category || 'Général'}</td>
+ <td className="px-4 py-3 font-medium">{g.firstName} {g.lastName}</td>
+ <td className="px-4 py-3"><CategoryTag label={g.category || 'Général'} /></td>
  <td className="px-4 py-3">
  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
  <rsvp.Icon className={`w-3.5 h-3.5 ${rsvp.iconClass}`} aria-hidden />

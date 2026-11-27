@@ -18,7 +18,7 @@ import {
 } from '@/config/contactReasons';
 import { cn } from '@/lib/cn';
 import {
-  Mail, Phone, MapPin, Send, MessageSquare, MessageCircle, CheckCircle2, Clock, ArrowRight,
+  Mail, Phone, MapPin, Send, MessageSquare, CheckCircle2, Clock, ArrowRight, WhatsAppIcon,
 } from '@/components/icons';
 
 export default function ContactPage() {
@@ -151,7 +151,7 @@ export default function ContactPage() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center justify-center gap-2 min-h-11 px-3 rounded-[var(--radius-button)] bg-[#128c7e] text-white text-sm font-semibold hover:bg-[#0f7569] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                       >
-                        <MessageCircle className="w-4 h-4" aria-hidden />
+                        <WhatsAppIcon tone="current" className="w-4 h-4" />
                         WhatsApp
                       </a>
                       <a

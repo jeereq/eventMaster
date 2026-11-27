@@ -3,7 +3,7 @@ import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bell, Loader2, Mail, MessageCircle, MessageSquare, Save, Smartphone } from '@/components/icons';
+import { Bell, Loader2, Mail, MessageSquare, Save, Smartphone, WhatsAppIcon } from '@/components/icons';
 import { api } from '@/lib/api';
 import { Alert, Button, Card, CardHeader } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -29,7 +29,7 @@ type PreferencesResponse = {
 
 const CHANNELS: Array<{ key: keyof ChannelPreference; label: string; icon: React.ReactNode }> = [
   { key: 'email', label: 'E-mail', icon: <Mail className="w-3.5 h-3.5" aria-hidden /> },
-  { key: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-3.5 h-3.5" aria-hidden /> },
+  { key: 'whatsapp', label: 'WhatsApp', icon: <WhatsAppIcon className="w-3.5 h-3.5" /> },
   { key: 'sms', label: 'SMS', icon: <MessageSquare className="w-3.5 h-3.5" aria-hidden /> },
   { key: 'push', label: 'Push', icon: <Smartphone className="w-3.5 h-3.5" aria-hidden /> },
 ];
@@ -190,7 +190,7 @@ export default function NotificationPreferencesCard() {
                             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                             'disabled:opacity-40 disabled:cursor-not-allowed',
                             checked
-                              ? 'bg-primary text-primary-foreground border-primary'
+                              ? 'bg-primary text-primary-foreground border-primary [&_svg]:fill-current'
                               : 'bg-surface text-foreground border-border hover:bg-card-hover',
                           )}
                         >

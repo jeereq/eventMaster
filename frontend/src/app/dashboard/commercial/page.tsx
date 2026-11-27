@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
- Building2, Loader2, PlusCircle, TrendingUp, Users, Wallet, Mail, MessageSquare, Smartphone, RefreshCw, AlertCircle, CheckCircle2,
+ Building2, Loader2, PlusCircle, TrendingUp, Users, Wallet, Mail, Smartphone, RefreshCw, AlertCircle, CheckCircle2, WhatsAppIcon,
 } from '@/components/icons';
 import { Button, SkeletonCommercialView, Pagination, usePaginateItems, PhoneInput, usePageSize } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
@@ -262,7 +262,7 @@ export default function CommercialDashboardPage() {
  )}
  {authOtpMethodOptions(authChannels).includes('WHATSAPP') && (
  <button type="button" onClick={() => setVerificationMethod('WHATSAPP')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${verificationMethod === 'WHATSAPP' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-border text-muted'}`}>
- <MessageSquare className="w-4 h-4" /> WhatsApp
+ <WhatsAppIcon className="w-4 h-4" /> WhatsApp
  </button>
  )}
  {authOtpMethodOptions(authChannels).includes('SMS') && (

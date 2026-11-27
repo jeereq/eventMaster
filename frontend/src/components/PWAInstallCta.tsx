@@ -8,7 +8,6 @@ import { isAndroidDevice, isIosDevice } from '@/lib/pwa';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import usePwaInstall from '@/hooks/usePwaInstall';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui';
 
 const HIDDEN_PREFIXES = ['/rsvp/', '/invite/', '/print'];
 const CHIP_DISMISS_KEY = 'em_pwa_install_chip_dismissed';
@@ -142,6 +141,71 @@ function InstallBadge({ busy, onClick }: { busy: boolean; onClick: () => void })
   );
 }
 
+const STORES = [
+  { key: 'ios', name: 'iPhone', Logo: ({ className }: { className?: string }) => <BrandSvg path={APPLE_PATH} className={className} /> },
+  { key: 'android', name: 'Android', Logo: PlayLogo },
+] as const;
+
+const ROTATE_MS = 2800;
+
+/**
+ * Badge d’en-tête : logo + « Installer sur » au-dessus du nom de la plateforme.
+ * Sur ordinateur, défile entre iPhone (Apple) et Android (Google Play) ;
+ * sur un téléphone, ne montre que sa plateforme. Sans défilement si l’utilisateur réduit les animations.
+ */
+function RotatingInstallBadge({ busy, onClick, label }: { busy: boolean; onClick: () => void; label: string }) {
+  const platform = useSyncExternalStore<Platform>(noopSubscribe, readPlatform, () => 'other');
+  const items = platform === 'ios' ? [STORES[0]] : platform === 'android' ? [STORES[1]] : STORES;
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (items.length < 2 || paused) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const id = window.setInterval(() => setIndex((i) => (i + 1) % items.length), ROTATE_MS);
+    return () => window.clearInterval(id);
+  }, [items.length, paused]);
+
+  const current = index % items.length;
+  // Le pourcentage porte sur la pile entière : une étape = 100 % / nombre d’éléments.
+  const slide = { transform: `translateY(-${(current * 100) / items.length}%)` };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      aria-label={label}
+      title="Installer l’application"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-border bg-surface px-3 text-left text-foreground transition-colors hover:bg-surface-muted disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:pr-4"
+    >
+      <span className="relative block h-5 w-5 shrink-0 overflow-hidden" aria-hidden>
+        <span className="flex flex-col transition-transform duration-500 ease-out motion-reduce:transition-none" style={slide}>
+          {items.map(({ key, Logo }) => (
+            <Logo key={key} className="block h-5 w-5 shrink-0" />
+          ))}
+        </span>
+      </span>
+      <span className="hidden flex-col leading-none sm:flex" aria-hidden>
+        <span className="text-[10px] text-muted">Installer sur</span>
+        <span className="relative mt-0.5 block h-4 overflow-hidden">
+          <span className="flex flex-col transition-transform duration-500 ease-out motion-reduce:transition-none" style={slide}>
+            {items.map(({ key, name }) => (
+              <span key={key} className="block h-4 text-[13px] font-semibold leading-4">
+                {name}
+              </span>
+            ))}
+          </span>
+        </span>
+      </span>
+    </button>
+  );
+}
+
 export default function PWAInstallCta({
   variant = 'header',
 }: {
@@ -214,19 +278,7 @@ export default function PWAInstallCta({
 
   return (
     <div className="relative">
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        loading={busy}
-        onClick={() => void install()}
-        leftIcon={<PlatformLogo className="w-4 h-4" />}
-        aria-label={`Installer ${site.platformName}`}
-        title="Installer l’application"
-        className="text-primary hover:bg-primary/10"
-      >
-        <span className="hidden sm:inline">Installer</span>
-      </Button>
+      <RotatingInstallBadge busy={busy} onClick={() => void install()} label={`Installer ${site.platformName}`} />
       {helpCopy ? (
         <InstallHelp
           copy={helpCopy}

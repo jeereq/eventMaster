@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Mail, MessageSquare, Smartphone } from '@/components/icons';
+import { Mail, Smartphone, WhatsAppIcon } from '@/components/icons';
 import Input from './Input';
 import PhoneInput from './PhoneInput';
 import { composeE164, DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
@@ -94,7 +94,7 @@ export default function IdentifierInput({
     ...allowedPhoneMethods.map((m) => ({
       key: m,
       label: m === 'WHATSAPP' ? 'WhatsApp' : 'SMS',
-      icon: m === 'WHATSAPP' ? MessageSquare : Smartphone,
+      icon: m === 'WHATSAPP' ? WhatsAppIcon : Smartphone,
     })),
   ];
   const activeChannel =
@@ -211,7 +211,7 @@ export default function IdentifierInput({
                       : 'border-border text-muted hover:text-foreground bg-surface',
                   )}
                 >
-                  <MessageSquare className="w-3.5 h-3.5" />
+                  <WhatsAppIcon className="w-3.5 h-3.5" />
                   WhatsApp
                 </button>
                 <button

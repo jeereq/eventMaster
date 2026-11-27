@@ -21,11 +21,16 @@ const DEV_LOGIN =
       }
     : { email: '', password: '' };
 
+const LOGIN_VIDEO = {
+  src: '/videos/landing/percussions.mp4',
+  poster: '/videos/landing/percussions.jpg',
+};
+
 export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <AuthPhotoLayout title="Heureux de vous revoir." description="" cardTitle="Connexion">
+        <AuthPhotoLayout title="Heureux de vous revoir." description="" cardTitle="Connexion" video={LOGIN_VIDEO}>
           <div className="h-96 rounded-2xl bg-surface-muted animate-pulse">
             <span className="sr-only">Chargement du formulaire de connexion</span>
           </div>
@@ -78,6 +83,7 @@ function LoginPageContent() {
 
   return (
     <AuthPhotoLayout
+      video={LOGIN_VIDEO}
       title={isClientFlow ? 'Vos billets et vos demandes.' : 'Heureux de vous revoir.'}
       cardTitle="Connexion"
       cardSubtitle={

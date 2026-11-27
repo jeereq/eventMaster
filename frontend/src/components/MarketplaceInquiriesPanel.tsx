@@ -51,7 +51,7 @@ import {
   Store,
   Wine,
   XCircle,
-  DoorClosed,
+  DoorClosed, WhatsAppIcon,
 } from '@/components/icons';
 
 const THREAD_POLL_MS = 4_000;
@@ -861,8 +861,7 @@ export default function MarketplaceInquiriesPanel({
                           href={waUrl}
                           external
                           label="WhatsApp"
-                          icon={MessageCircle}
-                          iconClassName="text-emerald-600 dark:text-emerald-400"
+                          icon={WhatsAppIcon}
                         />
                       ) : null}
                       {listingHref ? <DealIconLink href={listingHref} label="Voir la fiche" icon={Store} /> : null}
