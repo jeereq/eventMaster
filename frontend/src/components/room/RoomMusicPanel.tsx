@@ -146,6 +146,8 @@ function emitterSummary(emitters: MusicEmitter[]): string {
   const list = [...fixtures.values()];
   const speakers = list.filter((e) => e.kind === 'speaker').length;
   const parts: string[] = [];
+  const screens = list.filter((e) => e.kind === 'screen').length;
+  if (screens > 0) parts.push(screens > 1 ? `${screens} écrans` : 'l’écran');
   if (list.some((e) => e.kind === 'stage')) parts.push('la scène');
   if (list.some((e) => e.kind === 'dj')) parts.push('la régie DJ');
   if (speakers > 0) parts.push(`${speakers} enceinte${speakers > 1 ? 's' : ''}`);
