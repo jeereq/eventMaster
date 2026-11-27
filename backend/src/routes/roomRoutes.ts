@@ -34,6 +34,7 @@ import {
   deleteRoomLayout,
   duplicateRoomLayout,
   reorderRoomLayouts,
+  makeMainRoomLayout,
 } from '../controllers/venueLayoutController';
 import { upsertRoomListing } from '../controllers/marketplaceController';
 
@@ -70,5 +71,6 @@ router.get('/:roomId/layouts/:layoutId', getRoomLayout);
 router.patch('/:roomId/layouts/:layoutId', updateRoomLayout);
 router.delete('/:roomId/layouts/:layoutId', deleteRoomLayout);
 router.post('/:roomId/layouts/:layoutId/duplicate', duplicateRoomLayout);
+router.post('/:roomId/layouts/:layoutId/make-main', makeMainRoomLayout);
 
 export default router;

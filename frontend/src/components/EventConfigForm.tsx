@@ -1211,6 +1211,133 @@ export default function EventConfigForm({
   const createIsPrimary =
     Boolean(editingId) || !nextEventConfigTab(tab) || (tabStatus.allRequiredDone && !createDisabled);
 
+  /** Réglage des dons : proposé aux événements publics comme privés (les invités donnent depuis leur invitation). */
+  const donationsCard = (
+      <div className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
+        <div className="flex items-start justify-between gap-3">
+          <label className={cn('flex items-start gap-3', donationsAllowedByAdmin ? 'cursor-pointer' : 'opacity-70 cursor-not-allowed')}>
+            <input
+              type="checkbox"
+              checked={donationsEnabled}
+              disabled={!donationsAllowedByAdmin}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  requestEnableCollection('donations');
+                  return;
+                }
+                setDonationsEnabled(false);
+              }}
+              className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 mt-0.5"
+            />
+            <div>
+              <span className="inline-flex items-center gap-1.5 font-bold text-foreground text-sm">
+                <Heart className="w-4 h-4 text-rose-500 fill-rose-500/20" />
+                Collecte de dons à montant libre
+              </span>
+              <p className="text-xs text-muted mt-0.5">
+                Permet aux participants et donateurs d’effectuer un don financier solidaire libre en FC ou USD via Mobile Money et Carte bancaire.
+                En plus de l&apos;abonnement, EventMaster se réserve le droit de prélever une commission de{' '}
+                {COLLECTION_COMMISSION_MIN_PERCENT} à {COLLECTION_COMMISSION_MAX_PERCENT}&nbsp;% du
+                montant global collecté. L&apos;activation exige l&apos;acceptation des conditions en
+                vigueur.
+              </p>
+            </div>
+          </label>
+          <span
+            className={cn(
+              'text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
+              donationsAllowedByAdmin
+                ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                : 'text-amber-700 dark:text-amber-300 bg-amber-500/15',
+            )}
+          >
+            {donationsAllowedByAdmin ? 'Autorisé' : 'Restreint'}
+          </span>
+        </div>
+
+        {!donationsAllowedByAdmin && (
+          <div className="rounded-xl border border-border bg-surface p-3 text-xs text-foreground space-y-1 shadow-2xs">
+            <p className="font-semibold flex items-center gap-1.5 text-foreground">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden />
+              Option soumise à autorisation de l&apos;administrateur
+            </p>
+            <p className="text-xs leading-relaxed text-muted">
+              La collecte de dons à montant libre est actuellement restreinte par la politique du Super Admin pour votre organisation.
+              Contactez le support EventMaster pour demander l&apos;activation des donations pour vos événements.
+            </p>
+          </div>
+        )}
+
+        {donationsAllowedByAdmin && donationsEnabled && (
+          <div className="space-y-3.5 pt-2 border-t border-border">
+            <Input
+              label="Cause / Motif de la collecte"
+              value={donationCause}
+              onChange={(e) => setDonationCause(e.target.value)}
+              placeholder="ex. Soutien aux orphelinats de Kinshasa, levée de fonds pour bourses scolaires..."
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Objectif cible en FC (optionnel — affiche une jauge de collecte)"
+                type="number"
+                min={0}
+                value={donationTargetFc}
+                onChange={(e) => setDonationTargetFc(e.target.value)}
+                placeholder="ex. 10000000"
+              />
+              <Input
+                label="Montant minimum d'un don (FC)"
+                type="number"
+                min={100}
+                step={1}
+                value={donationMinAmountFc}
+                onChange={(e) => setDonationMinAmountFc(e.target.value)}
+                placeholder="1000"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted block">
+                Suggestions rapides de montants (FC, séparés par virgules)
+              </label>
+              <Input
+                value={donationSuggestedFc}
+                onChange={(e) => setDonationSuggestedFc(e.target.value)}
+                placeholder="2500, 5000, 10000, 25000, 50000, 100000"
+              />
+              <div className="flex flex-wrap gap-1 pt-0.5">
+                {donationSuggestedFc
+                  .split(/[,;\s]+/)
+                  .map((s) => Number(s.trim()))
+                  .filter((n) => Number.isFinite(n) && n > 0)
+                  .map((amt) => (
+                    <span key={amt} className="text-xs font-bold px-2 py-0.5 rounded-md bg-surface-muted text-foreground border border-border">
+                      {amt.toLocaleString('fr-FR')} FC
+                    </span>
+                  ))}
+              </div>
+            </div>
+
+            <label className="flex items-start gap-2.5 text-xs text-foreground cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={donorAttendancePass}
+                onChange={(e) => setDonorAttendancePass(e.target.checked)}
+                className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
+              />
+              <div>
+                <span className="font-semibold">Attribuer un pass invité « Donateur » avec badge QR</span>
+                <span className="block text-xs text-muted">
+                  Si activé, chaque donateur reçoit automatiquement un pass d’accès confirmé et son QR code pour assister à l’événement.
+                </span>
+              </div>
+            </label>
+          </div>
+        )}
+      </div>
+  );
+
   return (
     <>
       <Modal
@@ -2306,129 +2433,7 @@ export default function EventConfigForm({
                 {/* SOUS-ONGLET 3 : Dons libres */}
                 {accessSubTab === 'donations' && (
                   <div className="space-y-4">
-                    <div className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
-                      <div className="flex items-start justify-between gap-3">
-                        <label className={cn('flex items-start gap-3', donationsAllowedByAdmin ? 'cursor-pointer' : 'opacity-70 cursor-not-allowed')}>
-                          <input
-                            type="checkbox"
-                            checked={donationsEnabled}
-                            disabled={!donationsAllowedByAdmin}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                requestEnableCollection('donations');
-                                return;
-                              }
-                              setDonationsEnabled(false);
-                            }}
-                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 mt-0.5"
-                          />
-                          <div>
-                            <span className="inline-flex items-center gap-1.5 font-bold text-foreground text-sm">
-                              <Heart className="w-4 h-4 text-rose-500 fill-rose-500/20" />
-                              Collecte de dons à montant libre
-                            </span>
-                            <p className="text-xs text-muted mt-0.5">
-                              Permet aux participants et donateurs d’effectuer un don financier solidaire libre en FC ou USD via Mobile Money et Carte bancaire.
-                              En plus de l&apos;abonnement, EventMaster se réserve le droit de prélever une commission de{' '}
-                              {COLLECTION_COMMISSION_MIN_PERCENT} à {COLLECTION_COMMISSION_MAX_PERCENT}&nbsp;% du
-                              montant global collecté. L&apos;activation exige l&apos;acceptation des conditions en
-                              vigueur.
-                            </p>
-                          </div>
-                        </label>
-                        <span
-                          className={cn(
-                            'text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
-                            donationsAllowedByAdmin
-                              ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
-                              : 'text-amber-700 dark:text-amber-300 bg-amber-500/15',
-                          )}
-                        >
-                          {donationsAllowedByAdmin ? 'Autorisé' : 'Restreint'}
-                        </span>
-                      </div>
-
-                      {!donationsAllowedByAdmin && (
-                        <div className="rounded-xl border border-border bg-surface p-3 text-xs text-foreground space-y-1 shadow-2xs">
-                          <p className="font-semibold flex items-center gap-1.5 text-foreground">
-                            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden />
-                            Option soumise à autorisation de l&apos;administrateur
-                          </p>
-                          <p className="text-xs leading-relaxed text-muted">
-                            La collecte de dons à montant libre est actuellement restreinte par la politique du Super Admin pour votre organisation.
-                            Contactez le support EventMaster pour demander l&apos;activation des donations pour vos événements.
-                          </p>
-                        </div>
-                      )}
-
-                      {donationsAllowedByAdmin && donationsEnabled && (
-                        <div className="space-y-3.5 pt-2 border-t border-border">
-                          <Input
-                            label="Cause / Motif de la collecte"
-                            value={donationCause}
-                            onChange={(e) => setDonationCause(e.target.value)}
-                            placeholder="ex. Soutien aux orphelinats de Kinshasa, levée de fonds pour bourses scolaires..."
-                          />
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <Input
-                              label="Objectif cible en FC (optionnel — affiche une jauge de collecte)"
-                              type="number"
-                              min={0}
-                              value={donationTargetFc}
-                              onChange={(e) => setDonationTargetFc(e.target.value)}
-                              placeholder="ex. 10000000"
-                            />
-                            <Input
-                              label="Montant minimum d'un don (FC)"
-                              type="number"
-                              min={100}
-                              step={1}
-                              value={donationMinAmountFc}
-                              onChange={(e) => setDonationMinAmountFc(e.target.value)}
-                              placeholder="1000"
-                            />
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-muted block">
-                              Suggestions rapides de montants (FC, séparés par virgules)
-                            </label>
-                            <Input
-                              value={donationSuggestedFc}
-                              onChange={(e) => setDonationSuggestedFc(e.target.value)}
-                              placeholder="2500, 5000, 10000, 25000, 50000, 100000"
-                            />
-                            <div className="flex flex-wrap gap-1 pt-0.5">
-                              {donationSuggestedFc
-                                .split(/[,;\s]+/)
-                                .map((s) => Number(s.trim()))
-                                .filter((n) => Number.isFinite(n) && n > 0)
-                                .map((amt) => (
-                                  <span key={amt} className="text-xs font-bold px-2 py-0.5 rounded-md bg-surface-muted text-foreground border border-border">
-                                    {amt.toLocaleString('fr-FR')} FC
-                                  </span>
-                                ))}
-                            </div>
-                          </div>
-
-                          <label className="flex items-start gap-2.5 text-xs text-foreground cursor-pointer pt-1">
-                            <input
-                              type="checkbox"
-                              checked={donorAttendancePass}
-                              onChange={(e) => setDonorAttendancePass(e.target.checked)}
-                              className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
-                            />
-                            <div>
-                              <span className="font-semibold">Attribuer un pass invité « Donateur » avec badge QR</span>
-                              <span className="block text-xs text-muted">
-                                Si activé, chaque donateur reçoit automatiquement un pass d’accès confirmé et son QR code pour assister à l’événement.
-                              </span>
-                            </div>
-                          </label>
-                        </div>
-                      )}
-                    </div>
+                    {donationsCard}
 
                     <div className="pt-2 flex items-center justify-between">
                       <Button
@@ -2664,6 +2669,9 @@ export default function EventConfigForm({
                     Événement privé par défaut. Les rappels et le formulaire de réponse peuvent attendre.
                   </p>
                 )}
+
+                {/* Dons : aussi pour un événement privé, les invités donnent depuis leur page d'invitation. */}
+                {donationsCard}
 
                 {complete && (
                   <div className="space-y-2 p-3.5 rounded-2xl border border-border bg-surface">

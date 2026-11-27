@@ -23,7 +23,9 @@ import {
   collectInvitationFontFamilies,
   ensureHeadStylesheet,
 } from '@/lib/headStylesheet';
-import { templateImageStyleClass, templateImageStyleExtra } from '@/lib/templateImageStyle';
+import TemplateImage from '@/components/TemplateImage';
+import { templateElementWrapperStyle, type TemplateElementEffects } from '@/lib/templateElementStyle';
+import type { TemplateImageEffects } from '@/lib/templateImageEffects';
 
 function buildQrCodeUrl(guestId: string, size = 200): string {
   return getGuestQrImageUrl(guestId, size);
@@ -31,7 +33,7 @@ function buildQrCodeUrl(guestId: string, size = 200): string {
 
 const PRINT_FONTS_ID = 'em-invitation-print-google-fonts';
 
-type TemplateElement = {
+type TemplateElement = TemplateImageEffects & TemplateElementEffects & {
   id: string;
   type: string;
   text?: string;
@@ -96,6 +98,8 @@ export type GuestPrintDocumentData = {
     accent?: string;
     sidebar?: string;
   } | null;
+  /** Palette choisie dans la fiche de l’événement. */
+  eventThemeId?: string | null;
   organizationName?: string;
 };
 
@@ -164,6 +168,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
     },
     data.templateContent?.elements || [],
     data.branding,
+    data.eventThemeId,
   );
   const bgType = (global.bgType as string) || 'color';
   const bgColor = themed.background || (global.bgColor as string) || '#ffffff';
@@ -228,18 +233,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
     if (el.type === 'image' && el.imageUrl) {
       return (
         <div className={`flex ${alignFlex(el.align)}`}>
-          <img
-            src={el.imageUrl}
-            alt=""
-            className={templateImageStyleClass(el.imageStyle)}
-            style={{
-              width: el.imageWidth || '100%',
-              height: el.imageHeight || 'auto',
-              maxWidth: '100%',
-              objectFit: (el.imageObjectFit as React.CSSProperties['objectFit']) || 'cover',
-              ...templateImageStyleExtra(el.imageStyle),
-            }}
-          />
+          <TemplateImage el={el} alt="" />
         </div>
       );
     }
@@ -413,8 +407,8 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
                       <div
                         key={el.id}
                         className={isFree ? '' : widthClass(el.width)}
-                        style={
-                          isFree
+                        style={{
+                          ...(isFree
                             ? {
                                 position: 'absolute',
                                 left: `${el.xPct ?? 8}%`,
@@ -422,8 +416,9 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
                                 width: `${el.wPct ?? 84}%`,
                                 zIndex: el.zIndex ?? index + 1,
                               }
-                            : undefined
-                        }
+                            : {}),
+                          ...templateElementWrapperStyle(el, isFree),
+                        }}
                       >
                         {renderElement(el)}
                       </div>

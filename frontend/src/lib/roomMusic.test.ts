@@ -70,6 +70,36 @@ describe('sources de musique', () => {
   });
 });
 
+describe('musique sur l’écran', () => {
+  const ledWall = { id: 'led', kind: 'screen', screenKind: 'stageLedWall', x: 38, y: 2, w: 24, h: 4, heightM: 2.4 };
+  const tv = { id: 'tv', kind: 'screen', screenKind: 'wallTv', x: 90, y: 50, w: 6, h: 2 };
+  const laptop = { id: 'lp', kind: 'screen', screenKind: 'laptop', x: 50, y: 50, w: 2, h: 2 };
+  const off = { ...tv, id: 'off', screenPowered: false };
+
+  it('un grand écran joue à gauche et à droite de l’image, une télévision au centre', () => {
+    const all = listMusicEmitters(blueprint([ledWall, tv]));
+    const wall = all.screen.filter((e) => e.fixtureId === 'led');
+    const small = all.screen.filter((e) => e.fixtureId === 'tv');
+    assert.equal(wall.length, 2);
+    assert.ok(wall[0].x < 0 && wall[1].x > 0);
+    assert.ok(wall[0].y > 1 && wall[0].y < 2);
+    assert.equal(small.length, 1);
+    assert.ok(small[0].y > 1.6);
+  });
+
+  it('ignore les ordinateurs et les écrans éteints', () => {
+    assert.equal(listMusicEmitters(blueprint([laptop, off])).screen.length, 0);
+  });
+
+  it('« Automatique » joue sur l’écran plutôt que sur la scène ou la régie', () => {
+    assert.equal(resolveMusicSourceMode('auto', listMusicEmitters(blueprint([stage, dj, ledWall]))), 'screen');
+    // Des enceintes posées à la main restent prioritaires.
+    assert.equal(resolveMusicSourceMode('auto', listMusicEmitters(blueprint([ledWall, speakerA]))), 'speakers');
+    assert.deepEqual(availableMusicSourceModes(blueprint([stage, ledWall])), ['auto', 'screen', 'stage', 'all']);
+    assert.equal(activeMusicEmitters(blueprint([stage, ledWall]), 'screen').length, 2);
+  });
+});
+
 describe('volume selon la place', () => {
   const emitters = activeMusicEmitters(blueprint([speakerA]), 'speakers');
   it('plus fort près de l’enceinte, plus faible au loin', () => {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  mainLayoutName,
   MAX_LAYOUT_NAME_LENGTH,
   isBlueprintShape,
   isBlueprintTooLarge,
@@ -67,5 +68,18 @@ describe('ordre des dispositions', () => {
     assert.equal(normalizeLayoutOrder(['a', 'b', 'x'], ids), null);
     assert.equal(normalizeLayoutOrder(['a', 'b'], ids), null);
     assert.equal(normalizeLayoutOrder('abc', ids), null);
+  });
+});
+
+describe('mainLayoutName', () => {
+  it('garde le nom choisi pour la disposition principale', () => {
+    assert.equal(mainLayoutName('  Banquet  '), 'Banquet');
+    assert.equal(mainLayoutName('Banquet', true), 'Banquet');
+  });
+
+  it('utilise un nom par défaut selon la place de la disposition', () => {
+    assert.equal(mainLayoutName(null), 'Disposition principale');
+    assert.equal(mainLayoutName('   '), 'Disposition principale');
+    assert.equal(mainLayoutName(undefined, true), 'Ancienne disposition principale');
   });
 });

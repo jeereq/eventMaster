@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, BrickWall, Home, LayoutGrid, Maximize2, Minimize2, RotateCcw, ScanLine, ZoomIn, ZoomOut } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { useOverlayLayer } from '@/components/ui/Modal';
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -155,6 +156,8 @@ export function usePlanFullscreen() {
   const [expanded, setExpanded] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  /** Plein écran au-dessus du header, de la barre latérale et de la fenêtre d'où il a été ouvert. */
+  const zIndex = useOverlayLayer(expanded);
 
   useEffect(() => {
     if (!expanded) return;
@@ -213,6 +216,7 @@ export function usePlanFullscreen() {
     setExpanded,
     toggleExpanded: () => setExpanded((current) => !current),
     panelRef,
+    layerStyle: { zIndex } as React.CSSProperties,
   };
 }
 

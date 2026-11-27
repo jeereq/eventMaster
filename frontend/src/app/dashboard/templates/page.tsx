@@ -13,6 +13,15 @@ import { extractPaletteFromSource, type TemplatePalette } from '@/lib/imagePalet
 import { applyPaletteToElements, invitationColorThemes, ORG_BRAND_THEME_ID, buildOrgBrandInvitationTheme } from '@/lib/templateColorThemes';
 import { FONT_THEMES, applyFontThemeToElements, getFontTheme } from '@/lib/templateFontThemes';
 import { TEMPLATE_IMAGE_STYLES, templateImageStyleClass, templateImageStyleExtra, type TemplateImageStyleId } from '@/lib/templateImageStyle';
+import type { TemplateImageEffects } from '@/lib/templateImageEffects';
+import { scaleFontSize, snapAngle, templateElementWrapperStyle, type TemplateElementEffects } from '@/lib/templateElementStyle';
+import ElementArrangePanel, { type AlignTarget } from '@/components/templateEditor/ElementArrangePanel';
+import { TEMPLATE_ILLUSTRATIONS, illustrationDataUri } from '@/lib/templateIllustrations';
+import { layerPosition, nextTopZ, reorderLayer, type LayerAction } from '@/lib/templateLayers';
+import TemplateImage from '@/components/TemplateImage';
+import ImageEffectsPanel from '@/components/templateEditor/ImageEffectsPanel';
+import LayerControls from '@/components/templateEditor/LayerControls';
+import IllustrationPicker from '@/components/templateEditor/IllustrationPicker';
 import { editorialLayoutById, fillEditorialTokens, type EditorialLayoutId } from '@/lib/invitationEditorialLayouts';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
@@ -55,7 +64,7 @@ import {
  Columns, Eye, CheckSquare, Loader2, XCircle, X,
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
- Undo2, Redo2, History, Download, SlidersHorizontal, LayoutTemplate,
+ Undo2, Redo2, BringForward, SendBackward, Lock, Unlock, RotateCw, History, Download, SlidersHorizontal, LayoutTemplate,
  Calendar, MapPin, User, Users, MessageSquare, Layers, Move, Crown, ArrowRight,
  BookOpen, FolderHeart,
  MoreHorizontal,
@@ -134,7 +143,7 @@ interface TemplateItem {
  } | null;
 }
 
-interface CanvasElement {
+interface CanvasElement extends TemplateImageEffects, TemplateElementEffects {
  id: string;
  type: 'text' | 'image' | 'button' | 'rsvp-block' | 'curve' | 'triangle' | 'divider';
  text: string; // Used for text content, button text, image placeholder, shape labels
@@ -174,6 +183,15 @@ interface CanvasElement {
  yPct?: number;
  wPct?: number;
  zIndex?: number;
+ /** Illustration de la bibliothèque (SVG recoloré, stocké en data URI dans imageUrl). */
+ illustrationId?: string;
+ illustrationColor?: string;
+ illustrationColor2?: string;
+}
+
+/** Bloque ou rétablit la sélection de texte de la page pendant un glisser. */
+function setBodyUserSelect(value: string) {
+ document.body.style.userSelect = value;
 }
 
 const darkenColor = (hex: string, percent = 30) => {
@@ -509,6 +527,38 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
  const [freeDragId, setFreeDragId] = useState<string | null>(null);
  const freeCanvasRef = useRef<HTMLDivElement>(null);
+ /** Repères d’alignement affichés pendant un déplacement libre (en % du canevas). */
+ const [freeGuides, setFreeGuides] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
+ /** Valeur affichée sous l’élément pendant un redimensionnement ou une rotation. */
+ const [handleBadge, setHandleBadge] = useState<{ id: string; text: string } | null>(null);
+ /** Presse-papiers interne de l’éditeur (Ctrl + C / Ctrl + V). */
+ const elementClipboardRef = useRef<CanvasElement | null>(null);
+ /** Hauteur mesurée de l’élément sélectionné : ses poignées vivent dans un calque au-dessus de tout. */
+ const [selectedBoxH, setSelectedBoxH] = useState(0);
+ const canvasElementsRef = useRef(canvasElements);
+ useEffect(() => {
+ canvasElementsRef.current = canvasElements;
+ }, [canvasElements]);
+ useEffect(() => {
+ const canvas = freeCanvasRef.current;
+ const node =
+ layoutMode === 'free' && selectedElementId
+ ? canvas?.querySelector<HTMLElement>(`[data-free-el="${CSS.escape(selectedElementId)}"]`)
+ : null;
+ if (!node) {
+ setSelectedBoxH(0);
+ return;
+ }
+ const measure = () => setSelectedBoxH(node.offsetHeight);
+ measure();
+ const observer = new ResizeObserver(measure);
+ observer.observe(node);
+ return () => observer.disconnect();
+ }, [selectedElementId, layoutMode, canvasElements]);
+ const selectedFreeEl =
+ layoutMode === 'free' && selectedElementId ? canvasElements.find((item) => item.id === selectedElementId) : undefined;
+ const selectedOverlay =
+ selectedFreeEl && !selectedFreeEl.locked && selectedBoxH > 0 ? { el: selectedFreeEl, h: selectedBoxH } : null;
  const [importedWithOcr, setImportedWithOcr] = useState(false);
  const [generatedByAi, setGeneratedByAi] = useState(false);
  const [quickTextModalOpen, setQuickTextModalOpen] = useState(false);
@@ -876,10 +926,11 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  layoutMode === 'free'
  ? {
  positionMode: 'absolute' as const,
- xPct: 8,
- yPct: Math.min(80, 8 + canvasElements.length * 12),
- wPct: 84,
- zIndex: canvasElements.length + 1,
+ xPct: type === 'image' ? 16 : 8,
+ // Une image arrive dans la partie visible de la carte (elle déborderait sinon en bas).
+ yPct: type === 'image' ? 24 : Math.min(80, 8 + canvasElements.length * 12),
+ wPct: type === 'image' ? 68 : 84,
+ zIndex: nextTopZ(canvasElements),
  }
  : { positionMode: 'flow' as const };
  const newElement: CanvasElement = {
@@ -947,11 +998,11 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  setMobilePane('inspect');
  };
 
- const handleElementSelect = (id: string) => {
+ const handleElementSelect = (id: string, known?: CanvasElement) => {
  setSelectedElementId(id);
  setPropsAdvanced(false);
  setMobilePane('inspect');
- const el = canvasElements.find(e => e.id === id);
+ const el = known ?? canvasElements.find(e => e.id === id);
  if (el) {
  setElText(el.text);
  setElColor(el.color);
@@ -1006,6 +1057,8 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
 
  setCanvasElements(canvasElements.map(el => {
  if (el.id === selectedElementId) {
+ // Une nouvelle image remplace l’illustration : on ne la recolore plus.
+ if (field === 'imageUrl') return { ...el, imageUrl: value, illustrationId: undefined };
  return { ...el, [field]: value };
  }
  return el;
@@ -1013,6 +1066,78 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  };
 
  // Move element up in the list
+ /** Met à jour plusieurs champs de l’élément sélectionné ; recolore l’illustration si besoin. */
+ const updateSelectedElement = (patch: Partial<CanvasElement>) => {
+ if (!selectedElementId) return;
+ setCanvasElements((prev) =>
+ prev.map((el) => {
+ if (el.id !== selectedElementId) return el;
+ const next = { ...el, ...patch };
+ if (next.illustrationId && ('illustrationColor' in patch || 'illustrationColor2' in patch)) {
+ const uri = illustrationDataUri(next.illustrationId, next.illustrationColor, next.illustrationColor2);
+ if (uri) {
+ next.imageUrl = uri;
+ setElImageUrl(uri);
+ }
+ }
+ return next;
+ }),
+ );
+ };
+
+ /** Superposition : premier plan, avancer, reculer, arrière-plan. */
+ const handleLayerAction = (action: LayerAction, id = selectedElementId) => {
+ if (!id) return;
+ const next = reorderLayer(canvasElements, id, action);
+ if (next === canvasElements) return;
+ setCanvasElements(next);
+ const labels: Record<LayerAction, string> = {
+ front: 'Premier plan',
+ forward: 'Avancer d’un plan',
+ backward: 'Reculer d’un plan',
+ back: 'Arrière-plan',
+ };
+ recordStudioAction(labels[action], next);
+ };
+
+ /** Pose une illustration de la bibliothèque au premier plan, au centre de la carte. */
+ const addIllustration = (illustrationId: string) => {
+ const illu = TEMPLATE_ILLUSTRATIONS.find((i) => i.id === illustrationId);
+ const color = importedPalette?.accent || '#c5a059';
+ const imageUrl = illustrationDataUri(illustrationId, color);
+ if (!illu || !imageUrl) return;
+ const wPct = illu.aspect > 1.5 ? 56 : 34;
+ const newElement: CanvasElement = {
+ id: `illu-${Date.now()}`,
+ type: 'image',
+ text: illu.label,
+ color,
+ fontSize: '15px',
+ align: 'center',
+ width: 'full',
+ imageUrl,
+ imageWidth: '100%',
+ imageHeight: 'auto',
+ imageObjectFit: 'contain',
+ imageStyle: 'plain',
+ illustrationId,
+ illustrationColor: color,
+ ...(layoutMode === 'free'
+ ? {
+ positionMode: 'absolute' as const,
+ xPct: Math.round((100 - wPct) / 2),
+ yPct: 30,
+ wPct,
+ zIndex: nextTopZ(canvasElements),
+ }
+ : { positionMode: 'flow' as const }),
+ };
+ const nextElements = [...canvasElements, newElement];
+ setCanvasElements(nextElements);
+ recordStudioAction(`Illustration : ${illu.label}`, nextElements);
+ handleElementSelect(newElement.id, newElement);
+ };
+
  const handleMoveElementUp = (index: number, e: React.MouseEvent) => {
  e.stopPropagation();
  if (index === 0) return; // Already at the top
@@ -2348,28 +2473,265 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  setLayoutMode('flow');
  };
 
- const handleFreePointerDown = (elId: string, e: React.PointerEvent) => {
- if (layoutMode !== 'free') return;
- e.stopPropagation();
- handleElementSelect(elId);
- setFreeDragId(elId);
- (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+ /** Copie un élément juste à côté de l’original, au premier plan, et la sélectionne. */
+ const duplicateElement = (source: CanvasElement, offset = 4) => {
+ const isFree = layoutMode === 'free' || source.positionMode === 'absolute';
+ const clone: CanvasElement = {
+ ...JSON.parse(JSON.stringify(source)),
+ id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+ locked: false,
+ };
+ if (isFree) {
+ clone.xPct = Math.min(88, (source.xPct ?? 8) + offset);
+ clone.yPct = Math.min(88, (source.yPct ?? 8) + offset);
+ clone.zIndex = nextTopZ(canvasElements);
+ }
+ const next = [...canvasElements, clone];
+ setCanvasElements(next);
+ recordStudioAction('Duplication d’élément', next);
+ handleElementSelect(clone.id, clone);
  };
 
- const handleFreePointerMove = (e: React.PointerEvent) => {
- if (!freeDragId || !freeCanvasRef.current) return;
- const rect = freeCanvasRef.current.getBoundingClientRect();
- const rawX = ((e.clientX - rect.left) / rect.width) * 100;
- const rawY = ((e.clientY - rect.top) / rect.height) * 100;
- const snap = (v: number) => Math.round(v / 4) * 4;
- const xPct = Math.max(0, Math.min(92, snap(rawX)));
- const yPct = Math.max(0, Math.min(92, snap(rawY)));
+ const toggleElementLock = (id: string) => {
+ const next = canvasElements.map((el) => (el.id === id ? { ...el, locked: !el.locked } : el));
+ setCanvasElements(next);
+ recordStudioAction(next.find((el) => el.id === id)?.locked ? 'Verrouillage' : 'Déverrouillage', next);
+ };
+
+ /** Aligne l’élément sélectionné sur un bord ou le centre de la carte. */
+ const alignSelectedElement = (target: AlignTarget) => {
+ const canvas = freeCanvasRef.current;
+ if (!selectedElementId || !canvas) return;
+ const node = canvas.querySelector<HTMLElement>(`[data-free-el="${CSS.escape(selectedElementId)}"]`);
+ const rect = canvas.getBoundingClientRect();
+ if (!node || !rect.width || !rect.height) return;
+ const w = (node.offsetWidth / rect.width) * 100;
+ const h = (node.offsetHeight / rect.height) * 100;
+ const round = (v: number) => Math.round(Math.max(0, v) * 10) / 10;
+ const next = canvasElements.map((el) => {
+ if (el.id !== selectedElementId) return el;
+ const patch: Partial<CanvasElement> = { positionMode: 'absolute' };
+ if (target === 'left') patch.xPct = 0;
+ if (target === 'center') patch.xPct = round((100 - w) / 2);
+ if (target === 'right') patch.xPct = round(100 - w);
+ if (target === 'top') patch.yPct = 0;
+ if (target === 'middle') patch.yPct = round((100 - h) / 2);
+ if (target === 'bottom') patch.yPct = round(100 - h);
+ return { ...el, ...patch };
+ });
+ setCanvasElements(next);
+ recordStudioAction('Alignement', next);
+ };
+
+ /**
+  * Poignées de l’élément sélectionné : largeur (bord droit), taille proportionnelle
+  * (coin : image et police suivent) et rotation (aimantée tous les 45°, Maj = libre).
+  */
+ const startHandleDrag = (e: React.PointerEvent, elId: string, kind: 'width' | 'scale' | 'rotate') => {
+ if (e.button !== 0) return;
+ e.stopPropagation();
+ e.preventDefault();
+ const canvas = freeCanvasRef.current;
+ const el = canvasElementsRef.current.find((item) => item.id === elId);
+ const node = canvas?.querySelector<HTMLElement>(`[data-free-el="${CSS.escape(elId)}"]`);
+ if (!canvas || !el || !node) return;
+ const rect = canvas.getBoundingClientRect();
+ const box = node.getBoundingClientRect();
+ if (!rect.width) return;
+ const pointerId = e.pointerId;
+ const startX = e.clientX;
+ const startY = e.clientY;
+ const startW = el.wPct ?? 84;
+ const x = el.xPct ?? 8;
+ const maxW = Math.max(5, 100 - x);
+ const cx = box.left + box.width / 2;
+ const cy = box.top + box.height / 2;
+ const startAngle = (Math.atan2(startY - cy, startX - cx) * 180) / Math.PI;
+ const startRotation = el.rotation ?? 0;
+ const startHeightPx = /^(\d+(?:\.\d+)?)px$/.exec(el.imageHeight || '')?.[1];
+ let latest: Partial<CanvasElement> = {};
+ let frame = 0;
+ const previousUserSelect = document.body.style.userSelect;
+ setBodyUserSelect('none');
+
+ const apply = () => {
+ frame = 0;
+ const patch = latest;
+ setCanvasElements((prev) => prev.map((item) => (item.id === elId ? { ...item, ...patch } : item)));
+ };
+ const onMove = (ev: PointerEvent) => {
+ if (ev.pointerId !== pointerId) return;
+ ev.preventDefault();
+ if (kind === 'rotate') {
+ const angle = (Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180) / Math.PI;
+ const raw = startRotation + angle - startAngle;
+ const rotation = ev.shiftKey ? Math.round(((raw + 540) % 360) - 180) : snapAngle(raw);
+ latest = { rotation };
+ setHandleBadge({ id: elId, text: `${rotation}°` });
+ } else {
+ // Le déplacement est projeté dans le repère de l’élément pivoté.
+ const rad = ((el.rotation ?? 0) * Math.PI) / 180;
+ const dx = ev.clientX - startX;
+ const dy = ev.clientY - startY;
+ const along = dx * Math.cos(rad) + dy * Math.sin(rad);
+ const deltaPct = (along / rect.width) * 100;
+ const wPct = Math.round(Math.min(maxW, Math.max(5, startW + deltaPct)) * 10) / 10;
+ latest = { wPct, positionMode: 'absolute' };
+ if (kind === 'scale') {
+ const factor = wPct / startW;
+ if ((el.type === 'text' || el.type === 'button') && el.fontSize) latest.fontSize = scaleFontSize(el.fontSize, factor);
+ if (el.type === 'image' && startHeightPx) latest.imageHeight = `${Math.max(16, Math.round(parseFloat(startHeightPx) * factor))}px`;
+ if (el.type === 'triangle' && el.shapeSize) latest.shapeSize = scaleFontSize(el.shapeSize, factor);
+ }
+ setHandleBadge({ id: elId, text: latest.fontSize ? `${Math.round(wPct)} % · ${latest.fontSize}` : `${Math.round(wPct)} %` });
+ }
+ if (!frame) frame = window.requestAnimationFrame(apply);
+ };
+ const onUp = (ev: PointerEvent) => {
+ if (ev.pointerId !== pointerId) return;
+ window.removeEventListener('pointermove', onMove);
+ window.removeEventListener('pointerup', onUp);
+ window.removeEventListener('pointercancel', onUp);
+ if (frame) window.cancelAnimationFrame(frame);
+ setBodyUserSelect(previousUserSelect);
+ setHandleBadge(null);
+ if (!Object.keys(latest).length) return;
+ apply();
+ const patch = latest;
+ if (patch.fontSize) setElFontSize(patch.fontSize);
+ if (patch.imageHeight) setElImageHeight(patch.imageHeight);
+ if (patch.shapeSize) setElShapeSize(patch.shapeSize);
+ recordStudioAction(
+ kind === 'rotate' ? 'Rotation' : 'Redimensionnement',
+ canvasElementsRef.current.map((item) => (item.id === elId ? { ...item, ...patch } : item)),
+ );
+ };
+ window.addEventListener('pointermove', onMove, { passive: false });
+ window.addEventListener('pointerup', onUp);
+ window.addEventListener('pointercancel', onUp);
+ };
+
+ /** Déplacement libre : l’élément suit le pointeur depuis l’endroit où on l’a saisi,
+  *  reste entièrement dans la carte et s’aimante au centre et aux bords des autres éléments
+  *  (maintenir Alt pour un placement sans aimantation). */
+ const handleFreePointerDown = (elId: string, e: React.PointerEvent<HTMLDivElement>) => {
+ if (layoutMode !== 'free' || e.button !== 0) return;
+ const target = e.target as HTMLElement;
+ if (target.closest('button, input, textarea, select, label, a, [data-no-drag]')) return;
+ const canvas = freeCanvasRef.current;
+ const el = canvasElementsRef.current.find((item) => item.id === elId);
+ if (!canvas || !el) return;
+ e.stopPropagation();
+ handleElementSelect(elId);
+ if (el.locked) return;
+
+ const rect = canvas.getBoundingClientRect();
+ if (rect.width === 0 || rect.height === 0) return;
+ const toPct = (r: DOMRect) => ({
+ x1: ((r.left - rect.left) / rect.width) * 100,
+ y1: ((r.top - rect.top) / rect.height) * 100,
+ w: (r.width / rect.width) * 100,
+ h: (r.height / rect.height) * 100,
+ });
+ const own = toPct(e.currentTarget.getBoundingClientRect());
+ const others = Array.from(canvas.querySelectorAll<HTMLElement>('[data-free-el]'))
+ .filter((node) => node.dataset.freeEl !== elId)
+ .map((node) => toPct(node.getBoundingClientRect()));
+ const targetsX = [50, ...others.flatMap((o) => [o.x1, o.x1 + o.w / 2, o.x1 + o.w])];
+ const targetsY = [50, ...others.flatMap((o) => [o.y1, o.y1 + o.h / 2, o.y1 + o.h])];
+ const thresholdX = (6 / rect.width) * 100;
+ const thresholdY = (6 / rect.height) * 100;
+ const origX = el.xPct ?? 8;
+ const origY = el.yPct ?? 8;
+ const startX = e.clientX;
+ const startY = e.clientY;
+ const pointerId = e.pointerId;
+ let moved = false;
+ let frame = 0;
+ let last = { xPct: origX, yPct: origY };
+ const previousUserSelect = document.body.style.userSelect;
+
+ const snapAxis = (pos: number, size: number, targets: number[], threshold: number) => {
+ let best: { delta: number; line: number } | null = null;
+ for (const anchor of [pos, pos + size / 2, pos + size]) {
+ for (const t of targets) {
+ const delta = t - anchor;
+ if (Math.abs(delta) <= threshold && (!best || Math.abs(delta) < Math.abs(best.delta))) {
+ best = { delta, line: t };
+ }
+ }
+ }
+ return best;
+ };
+
+ const apply = () => {
+ frame = 0;
+ const { xPct, yPct } = last;
  setCanvasElements((prev) =>
- prev.map((el) => (el.id === freeDragId ? { ...el, xPct, yPct, positionMode: 'absolute' } : el)),
+ prev.map((item) => (item.id === elId ? { ...item, xPct, yPct, positionMode: 'absolute' } : item)),
  );
  };
 
- const handleFreePointerUp = () => setFreeDragId(null);
+ const onMove = (ev: PointerEvent) => {
+ if (ev.pointerId !== pointerId) return;
+ const dxPx = ev.clientX - startX;
+ const dyPx = ev.clientY - startY;
+ if (!moved) {
+ if (Math.hypot(dxPx, dyPx) < 4) return;
+ moved = true;
+ setBodyUserSelect('none');
+ window.getSelection()?.removeAllRanges();
+ setFreeDragId(elId);
+ }
+ ev.preventDefault();
+ const maxX = Math.max(0, 100 - own.w);
+ const maxY = Math.max(0, 100 - own.h);
+ let x = origX + (dxPx / rect.width) * 100;
+ let y = origY + (dyPx / rect.height) * 100;
+ const guides: { x: number[]; y: number[] } = { x: [], y: [] };
+ if (!ev.altKey) {
+ const sx = snapAxis(x, own.w, targetsX, thresholdX);
+ if (sx) {
+ x += sx.delta;
+ guides.x.push(sx.line);
+ }
+ const sy = snapAxis(y, own.h, targetsY, thresholdY);
+ if (sy) {
+ y += sy.delta;
+ guides.y.push(sy.line);
+ }
+ }
+ x = Math.min(maxX, Math.max(0, x));
+ y = Math.min(maxY, Math.max(0, y));
+ last = { xPct: Math.round(x * 10) / 10, yPct: Math.round(y * 10) / 10 };
+ setFreeGuides(guides);
+ if (!frame) frame = window.requestAnimationFrame(apply);
+ };
+
+ const onUp = (ev: PointerEvent) => {
+ if (ev.pointerId !== pointerId) return;
+ window.removeEventListener('pointermove', onMove);
+ window.removeEventListener('pointerup', onUp);
+ window.removeEventListener('pointercancel', onUp);
+ if (frame) window.cancelAnimationFrame(frame);
+ if (!moved) return;
+ apply();
+ setBodyUserSelect(previousUserSelect);
+ setFreeDragId(null);
+ setFreeGuides({ x: [], y: [] });
+ const { xPct, yPct } = last;
+ recordStudioAction(
+ 'Déplacement d’élément',
+ canvasElementsRef.current.map((item) =>
+ item.id === elId ? { ...item, xPct, yPct, positionMode: 'absolute' as const } : item,
+ ),
+ );
+ };
+
+ window.addEventListener('pointermove', onMove, { passive: false });
+ window.addEventListener('pointerup', onUp);
+ window.addEventListener('pointercancel', onUp);
+ };
 
  const previewIdentity = resolveInvitationIdentity({
  title: templateName,
@@ -2505,7 +2867,64 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
         }
         return;
       }
-      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      const isInput =
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable);
+      // Flèches : déplacer finement l’élément sélectionné en placement libre (Maj = plus grand pas).
+      const selectedEl = selectedElementId ? canvasElements.find((item) => item.id === selectedElementId) : undefined;
+      if (!isInput && selectedEl && !e.altKey) {
+        // Suppr / Retour arrière : supprimer ; Ctrl + D : dupliquer ; Ctrl + C / V : copier / coller.
+        if ((e.key === 'Delete' || e.key === 'Backspace') && !e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          handleDeleteElement(selectedEl.id);
+          return;
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
+          e.preventDefault();
+          duplicateElement(selectedEl);
+          return;
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c' && !window.getSelection()?.toString()) {
+          elementClipboardRef.current = JSON.parse(JSON.stringify(selectedEl));
+          return;
+        }
+      }
+      if (!isInput && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'v' && elementClipboardRef.current) {
+        e.preventDefault();
+        duplicateElement(elementClipboardRef.current, 6);
+        return;
+      }
+      if (
+        !isInput &&
+        layoutMode === 'free' &&
+        selectedElementId &&
+        !selectedEl?.locked &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)
+      ) {
+        e.preventDefault();
+        const step = e.shiftKey ? 2 : 0.5;
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        const node = freeCanvasRef.current?.querySelector<HTMLElement>(`[data-free-el="${CSS.escape(selectedElementId)}"]`);
+        const rect = freeCanvasRef.current?.getBoundingClientRect();
+        const box = node?.getBoundingClientRect();
+        const maxX = rect && box && rect.width ? Math.max(0, 100 - (box.width / rect.width) * 100) : 100;
+        const maxY = rect && box && rect.height ? Math.max(0, 100 - (box.height / rect.height) * 100) : 100;
+        setCanvasElements((prev) =>
+          prev.map((item) => {
+            if (item.id !== selectedElementId) return item;
+            const xPct = Math.round(Math.min(maxX, Math.max(0, (item.xPct ?? 8) + dx)) * 10) / 10;
+            const yPct = Math.round(Math.min(maxY, Math.max(0, (item.yPct ?? 8) + dy)) * 10) / 10;
+            return { ...item, xPct, yPct, positionMode: 'absolute' };
+          }),
+        );
+        return;
+      }
       if (!isInput && (e.metaKey || e.ctrlKey)) {
         if (e.key.toLowerCase() === 'z') {
           e.preventDefault();
@@ -2522,7 +2941,7 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editorOpen, selectedElementId, studioHistoryModalOpen, cropperOpen, studioHistoryIndex, studioHistory, aiComposeModalOpen, aiComposeBusy]);
+  }, [editorOpen, selectedElementId, studioHistoryModalOpen, cropperOpen, studioHistoryIndex, studioHistory, aiComposeModalOpen, aiComposeBusy, layoutMode, canvasElements]);
 
  useEffect(() => {
  if (!editorOpen) return;
@@ -3871,6 +4290,13 @@ const studioModelPhotos = useMemo(
               </div>
             </button>
           </div>
+          <div className="space-y-2 pt-1">
+            <h3 className="text-xs font-bold text-muted">Illustrations</h3>
+            <p className="text-[11px] text-muted leading-snug">
+              Posez-les sur vos photos : couleur, dégradé, forme et plan se règlent ensuite à droite.
+            </p>
+            <IllustrationPicker color={importedPalette?.accent || '#c5a059'} onPick={addIllustration} />
+          </div>
           <button
             type="button"
             onClick={() => setShowDecorTools((v) => !v)}
@@ -4400,7 +4826,7 @@ const studioModelPhotos = useMemo(
         mobilePane === 'canvas' ? 'max-lg:block' : 'max-lg:hidden',
       )}>
         {/* HUD status bar above canvas */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-2xl bg-surface border border-border/80 shadow-2xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 min-h-[52px] px-3.5 py-2 rounded-2xl bg-surface border border-border/80 shadow-2xs">
           <div className="flex items-center gap-2 min-w-0">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-muted text-foreground text-xs font-semibold tabular-nums">
               <Layout className="w-3.5 h-3.5 text-primary" />
@@ -4810,10 +5236,62 @@ const studioModelPhotos = useMemo(
  ? 'absolute inset-0 z-10 w-full h-full'
  : 'relative z-10 flex flex-wrap gap-y-4 -mx-2'
  }
- onPointerMove={handleFreePointerMove}
- onPointerUp={handleFreePointerUp}
- onPointerLeave={handleFreePointerUp}
  >
+ {layoutMode === 'free' && freeDragId && (
+ <div className="pointer-events-none absolute inset-0 z-[60]" aria-hidden>
+ {freeGuides.x.map((x) => (
+ <div key={`gx-${x}`} className="absolute top-0 bottom-0 w-px bg-rose-500/80" style={{ left: `${x}%` }} />
+ ))}
+ {freeGuides.y.map((y) => (
+ <div key={`gy-${y}`} className="absolute left-0 right-0 h-px bg-rose-500/80" style={{ top: `${y}%` }} />
+ ))}
+ </div>
+ )}
+ {selectedOverlay && (() => {
+ const el = selectedOverlay.el;
+ return (
+ <div
+ data-no-drag
+ className="absolute pointer-events-none z-[70]"
+ style={{
+ left: `${el.xPct ?? 8}%`,
+ top: `${el.yPct ?? 8}%`,
+ width: `${el.wPct ?? 84}%`,
+ height: selectedOverlay.h,
+ transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
+ }}
+ >
+ <span
+ data-no-drag
+ onPointerDown={(e) => startHandleDrag(e, el.id, 'width')}
+ className="absolute top-1/2 -right-2 -translate-y-1/2 w-3 h-8 rounded-full bg-surface border-2 border-primary shadow cursor-ew-resize z-30 touch-none pointer-events-auto"
+ title="Élargir ou rétrécir"
+ aria-hidden
+ />
+ <span
+ data-no-drag
+ onPointerDown={(e) => startHandleDrag(e, el.id, 'scale')}
+ className="absolute -bottom-2 -right-2 w-4 h-4 rounded-full bg-primary border-2 border-white shadow cursor-nwse-resize z-30 touch-none pointer-events-auto"
+ title={el.type === 'text' || el.type === 'button' ? 'Agrandir (texte compris)' : 'Agrandir en gardant les proportions'}
+ aria-hidden
+ />
+ <span
+ data-no-drag
+ onPointerDown={(e) => startHandleDrag(e, el.id, 'rotate')}
+ className="absolute left-1/2 -bottom-9 -translate-x-1/2 w-6 h-6 rounded-full bg-surface border-2 border-primary text-primary shadow flex items-center justify-center cursor-grab z-30 touch-none pointer-events-auto"
+ title="Faire pivoter (aimanté tous les 45°)"
+ aria-hidden
+ >
+ <RotateCw className="w-3 h-3" />
+ </span>
+ {handleBadge && handleBadge.id === el.id && (
+ <span className="absolute left-1/2 -bottom-16 -translate-x-1/2 px-2 py-0.5 rounded-md bg-foreground text-background text-[11px] font-bold tabular-nums whitespace-nowrap z-30 pointer-events-none">
+ {handleBadge.text}
+ </span>
+ )}
+ </div>
+ );
+ })()}
  {canvasElements.length === 0 ? (
             <div className="w-full text-center py-16 px-6 rounded-2xl border border-dashed border-border/80 bg-surface flex flex-col items-center justify-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-2xs">
@@ -4921,18 +5399,20 @@ const studioModelPhotos = useMemo(
  key={el.id}
  onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
  onPointerDown={(e) => isFree && handleFreePointerDown(el.id, e)}
- className={`${widthClass} group transition cursor-pointer relative ${isFree ? 'touch-none' : ''}`}
- style={
- isFree
+ data-free-el={isFree ? el.id : undefined}
+ className={`${widthClass} group transition relative ${isFree ? 'touch-none select-none' : ''} ${isFree && layoutMode === 'free' && !el.locked ? (freeDragId === el.id ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-pointer'}`}
+ style={{
+ ...(isFree
  ? {
- position: 'absolute',
+ position: 'absolute' as const,
  left: `${el.xPct ?? 8}%`,
  top: `${el.yPct ?? 8}%`,
  width: `${el.wPct ?? 84}%`,
  zIndex: el.zIndex ?? index + 1,
  }
- : undefined
- }
+ : {}),
+ ...templateElementWrapperStyle(el, isFree),
+ }}
  >
                     <div className={`${el.type === 'image' && isFree && !isSelected ? 'p-0' : 'p-2.5'} rounded-xl border transition ${isSelected ? 'border-primary bg-primary/5 shadow-xs ring-2 ring-primary/20' : 'border-dashed border-transparent hover:border-border/60'}`}>
  {/* Element Controls (Delete & Reorder) */}
@@ -4940,44 +5420,62 @@ const studioModelPhotos = useMemo(
                         isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                       }`}>
  {/* Move Up */}
- {index > 0 && (
+ {(layoutMode === 'free' ? isFree : index > 0) && (
  <button 
                             type="button"
- onClick={(e) => handleMoveElementUp(index, e)}
+ onClick={(e) => {
+ if (layoutMode === 'free') {
+ e.stopPropagation();
+ handleLayerAction('forward', el.id);
+ } else handleMoveElementUp(index, e);
+ }}
                             className="bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer"
- title="Déplacer vers le haut"
+ title={layoutMode === 'free' ? 'Avancer d’un plan (passer devant)' : 'Déplacer vers le haut'}
  >
-                            <ArrowUp className="w-3.5 h-3.5" />
+                            {layoutMode === 'free' ? <BringForward className="w-3.5 h-3.5" /> : <ArrowUp className="w-3.5 h-3.5" />}
  </button>
  )}
  {/* Move Down */}
- {index < canvasElements.length - 1 && (
+ {(layoutMode === 'free' ? isFree : index < canvasElements.length - 1) && (
  <button 
                             type="button"
- onClick={(e) => handleMoveElementDown(index, e)}
+ onClick={(e) => {
+ if (layoutMode === 'free') {
+ e.stopPropagation();
+ handleLayerAction('backward', el.id);
+ } else handleMoveElementDown(index, e);
+ }}
                             className="bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer"
- title="Déplacer vers le bas"
+ title={layoutMode === 'free' ? 'Reculer d’un plan (passer derrière)' : 'Déplacer vers le bas'}
  >
-                            <ArrowDown className="w-3.5 h-3.5" />
+                            {layoutMode === 'free' ? <SendBackward className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
  </button>
  )}
  <button
                           type="button"
  onClick={(e) => {
  e.stopPropagation();
- const clone = { ...el, id: `${Date.now()}` };
- if (isFree) {
- clone.xPct = Math.min(88, (el.xPct ?? 8) + 4);
- clone.yPct = Math.min(88, (el.yPct ?? 8) + 4);
- }
- setCanvasElements((prev) => [...prev, clone]);
- setSelectedElementId(clone.id);
+ duplicateElement(el);
  }}
                           className="bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer"
- title="Dupliquer"
+ title="Dupliquer (Ctrl + D)"
  >
                           <Copy className="w-3.5 h-3.5" />
  </button>
+ {isFree && layoutMode === 'free' && (
+ <button
+ type="button"
+ onClick={(e) => {
+ e.stopPropagation();
+ toggleElementLock(el.id);
+ }}
+ className={`border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer ${el.locked ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated'}`}
+ title={el.locked ? 'Déverrouiller (l’élément pourra bouger)' : 'Verrouiller (l’élément ne bougera plus)'}
+ aria-pressed={Boolean(el.locked)}
+ >
+ {el.locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+ </button>
+ )}
  {/* Delete */}
  <button 
                           type="button"
@@ -4991,22 +5489,10 @@ const studioModelPhotos = useMemo(
                           <Trash2 className="w-3.5 h-3.5" />
  </button>
  </div>
- {isFree && isSelected && (
- <input
- type="range"
- min={20}
- max={100}
- value={el.wPct ?? 84}
- onClick={(e) => e.stopPropagation()}
- onChange={(e) => {
- const wPct = Number(e.target.value);
- setCanvasElements((prev) =>
- prev.map((item) => (item.id === el.id ? { ...item, wPct, positionMode: 'absolute' } : item)),
- );
- }}
- className="absolute -bottom-3 left-2 right-2 h-1 accent-[var(--primary)] cursor-ew-resize z-20"
- title="Largeur (%)"
- />
+ {isFree && el.locked && layoutMode === 'free' && (
+ <span className="absolute -top-2.5 -left-2.5 w-5 h-5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center z-30 pointer-events-none" title="Verrouillé">
+ <Lock className="w-3 h-3" />
+ </span>
  )}
 
  {el.type === 'text' && (
@@ -5059,12 +5545,7 @@ const studioModelPhotos = useMemo(
  {el.type === 'image' && (
  <div className={`flex justify-${el.align === 'left' ? 'start' : el.align === 'right' ? 'end' : 'center'}`}>
  {el.imageUrl ? (
- <img 
- src={el.imageUrl} 
- alt="Invitation" 
- style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: el.imageObjectFit || 'cover', ...templateImageStyleExtra(el.imageStyle) }}
- className={templateImageStyleClass(el.imageStyle)}
- />
+ <TemplateImage el={el} draggable={false} />
  ) : (
  <label 
  style={{ width: el.imageWidth || '100%', height: el.imageHeight || '150px', ...templateImageStyleExtra(el.imageStyle) }}
@@ -5507,24 +5988,51 @@ const studioModelPhotos = useMemo(
  <label className="text-xs font-bold text-muted ">URL</label>
  <input 
  type="text"
- value={elImageUrl}
+ value={elImageUrl.startsWith('data:') ? '' : elImageUrl}
  onChange={(e) => handlePropertyChange('imageUrl', e.target.value)}
- placeholder="https://…"
+ placeholder={elImageUrl.startsWith('data:') ? 'Image intégrée à la carte' : 'https://…'}
  className="w-full px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
  />
  </div>
- {elImageUrl && (
+ {elImageUrl && !elImageUrl.startsWith('data:image/svg') && (
  <button
  type="button"
  onClick={() => handleOpenCropper('element')}
  className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition border border-primary/20"
  >
  <Crop className="w-3.5 h-3.5" />
- Recadrer
+ Couper l’image d’origine
  </button>
  )}
  </div>
  )}
+
+ {(() => {
+ const activeEl = canvasElements.find((e) => e.id === selectedElementId);
+ if (!activeEl || (activeEl.type === 'rsvp-block' && activeEl.rsvpPlacement === 'outside')) return null;
+ const { position, total } = layerPosition(canvasElements, activeEl.id);
+ return (
+ <>
+ {activeEl.type === 'image' && activeEl.imageUrl && (
+ <ImageEffectsPanel el={activeEl} onChange={updateSelectedElement} />
+ )}
+ <LayerControls
+ position={position}
+ total={total}
+ freeLayout={layoutMode === 'free'}
+ onAction={(action) => handleLayerAction(action)}
+ onEnableFreeLayout={convertToFreeLayout}
+ />
+ <ElementArrangePanel
+ el={activeEl}
+ freeLayout={layoutMode === 'free'}
+ onChange={updateSelectedElement}
+ onAlign={alignSelectedElement}
+ onToggleLock={() => toggleElementLock(activeEl.id)}
+ />
+ </>
+ );
+ })()}
 
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' && (
  <div className="space-y-2">

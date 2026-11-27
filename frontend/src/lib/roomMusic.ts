@@ -48,18 +48,19 @@ export function resolveSpeakerStyle(style: unknown): SpeakerStyle {
 /* Sources de son                                                       */
 /* ------------------------------------------------------------------ */
 
-/** D'où joue la musique : la sono de la scène, la régie DJ, les enceintes posées, ou tout à la fois. */
-export type MusicSourceMode = 'auto' | 'stage' | 'dj' | 'speakers' | 'all';
+/** D'où joue la musique : l'écran, la sono de la scène, la régie DJ, les enceintes posées, ou tout à la fois. */
+export type MusicSourceMode = 'auto' | 'screen' | 'stage' | 'dj' | 'speakers' | 'all';
 
 export const MUSIC_SOURCE_MODES: ReadonlyArray<{ id: MusicSourceMode; label: string; hint: string }> = [
-  { id: 'auto', label: 'Automatique', hint: 'Les enceintes posées, sinon la régie DJ, sinon la scène' },
+  { id: 'auto', label: 'Automatique', hint: 'Les enceintes posées, sinon l’écran, sinon la régie DJ, sinon la scène' },
+  { id: 'screen', label: 'Sur l’écran', hint: 'Le son sort de l’écran de la salle (mur LED, toile de cinéma, télévision)' },
   { id: 'stage', label: 'Sur la scène', hint: 'Sono de façade aux deux bords de la scène' },
   { id: 'dj', label: 'Régie DJ', hint: 'Les deux enceintes de la cabine DJ' },
   { id: 'speakers', label: 'Enceintes et baffles', hint: 'Les enceintes que vous avez posées dans la salle' },
-  { id: 'all', label: 'Toute la sono', hint: 'Scène, régie DJ et enceintes ensemble' },
+  { id: 'all', label: 'Toute la sono', hint: 'Écran, scène, régie DJ et enceintes ensemble' },
 ];
 
-export type MusicEmitterKind = 'stage' | 'dj' | 'speaker';
+export type MusicEmitterKind = 'screen' | 'stage' | 'dj' | 'speaker';
 
 /** Point d'où sort le son (un haut-parleur), en mètres dans le repère de la 3D. */
 export interface MusicEmitter {
@@ -79,6 +80,28 @@ export interface MusicSourceOptions {
 }
 
 type Fixture = RoomLayoutBlueprint['fixtures'][number];
+
+/** Écrans de poste (table, portable, PC) : trop petits pour sonoriser une salle. */
+const DESK_SCREENS = new Set(['tableMonitor', 'laptop', 'desktopPc']);
+
+/** Écran qui peut faire jouer la musique : mur LED, toile de cinéma, télévision… allumé. */
+export function isMusicScreen(f: Pick<Fixture, 'kind' | 'screenKind' | 'screenPowered'>): boolean {
+  return f.kind === 'screen' && f.screenPowered !== false && !DESK_SCREENS.has(f.screenKind ?? 'stageLedWall');
+}
+
+const RATIO_W_OVER_H: Record<string, number> = { '16:9': 16 / 9, '21:9': 21 / 9, '32:9': 32 / 9, '9:16': 9 / 16 };
+
+/** Hauteur (m) du milieu de l'image, là où l'on place le son de l'écran. */
+function screenCenterY(f: Fixture, wM: number): number {
+  const kind = f.screenKind ?? 'stageLedWall';
+  const ratio = RATIO_W_OVER_H[f.screenRatio ?? (kind === 'cinemaScreen' ? '21:9' : '16:9')] ?? 16 / 9;
+  const imageH = wM / ratio;
+  if (kind === 'cinemaScreen') return (f.screenElevationM ?? 1.2) + imageH / 2;
+  if (kind === 'wallTv') return (f.screenElevationM ?? 1.6) + imageH / 2;
+  // Mur LED : posé au sol sur son portique, image dans sa partie haute.
+  const h = Math.max(1.4, f.heightM ?? 2.4);
+  return (f.screenElevationM ?? 0) + h * 0.6;
+}
 
 function canvasOf(blueprint: RoomLayoutBlueprint) {
   const widthM = blueprint.canvas?.widthM > 0 ? blueprint.canvas.widthM : 20;
@@ -103,6 +126,16 @@ function emittersOf(f: Fixture, kind: MusicEmitterKind, widthM: number, depthM: 
   }
   const rot = ((f.rotation ?? 0) * Math.PI) / 180;
   const halfW = (f.w / 100) * widthM / 2;
+  if (kind === 'screen') {
+    // Comme au cinéma : le son sort de l'image. Grand écran = gauche et droite ; télévision = au centre.
+    const y = floorY + screenCenterY(f, halfW * 2);
+    const label = f.label || 'Écran';
+    if (halfW * 2 < 2.5) return [{ id: `${f.id}:0`, kind, fixtureId: f.id, label, x: cx, y, z: cz }];
+    return [-1, 1].map((side, i) => {
+      const [dx, dz] = rotateY(side * halfW * 0.7, 0, rot);
+      return { id: `${f.id}:${i}`, kind, fixtureId: f.id, label, x: cx + dx, y, z: cz + dz };
+    });
+  }
   // Scène : sono de façade aux deux bords ; régie : ses enceintes sur pied, de part et d'autre du meuble.
   const top = kind === 'stage' ? (f.heightM ?? 0.45) + 1.6 : 1.65;
   const offset = kind === 'stage' ? Math.max(0, halfW - 0.4) : Math.min(halfW * 2, 2.4) / 2 + 0.45;
@@ -124,22 +157,32 @@ function emittersOf(f: Fixture, kind: MusicEmitterKind, widthM: number, depthM: 
 export function listMusicEmitters(blueprint: RoomLayoutBlueprint, options: MusicSourceOptions = {}): Record<MusicEmitterKind, MusicEmitter[]> {
   const { widthM, depthM } = canvasOf(blueprint);
   const storyY = options.storyElevation ?? (() => 0);
-  const out: Record<MusicEmitterKind, MusicEmitter[]> = { stage: [], dj: [], speaker: [] };
+  const out: Record<MusicEmitterKind, MusicEmitter[]> = { screen: [], stage: [], dj: [], speaker: [] };
   for (const f of blueprint.fixtures ?? []) {
-    const kind: MusicEmitterKind | null = f.kind === 'speaker' ? 'speaker' : f.kind === 'djBooth' ? 'dj' : f.kind === 'stage' ? 'stage' : null;
+    const kind: MusicEmitterKind | null = f.kind === 'speaker'
+      ? 'speaker'
+      : f.kind === 'djBooth'
+        ? 'dj'
+        : f.kind === 'stage'
+          ? 'stage'
+          : isMusicScreen(f)
+            ? 'screen'
+            : null;
     if (!kind) continue;
     out[kind].push(...emittersOf(f, kind, widthM, depthM, storyY(f.storyId)));
   }
   return out;
 }
 
-/** Choix « Automatique » : les enceintes posées d'abord, puis la régie, puis la scène. */
+/** Choix « Automatique » : les enceintes posées d'abord, puis l'écran, puis la régie, puis la scène. */
 export function resolveMusicSourceMode(mode: MusicSourceMode, all: Record<MusicEmitterKind, MusicEmitter[]>): Exclude<MusicSourceMode, 'auto'> | null {
+  if (mode === 'screen') return all.screen.length > 0 ? 'screen' : null;
   if (mode === 'stage') return all.stage.length > 0 ? 'stage' : null;
   if (mode === 'dj') return all.dj.length > 0 ? 'dj' : null;
   if (mode === 'speakers') return all.speaker.length > 0 ? 'speakers' : null;
-  if (mode === 'all') return all.stage.length + all.dj.length + all.speaker.length > 0 ? 'all' : null;
+  if (mode === 'all') return all.screen.length + all.stage.length + all.dj.length + all.speaker.length > 0 ? 'all' : null;
   if (all.speaker.length > 0) return 'speakers';
+  if (all.screen.length > 0) return 'screen';
   if (all.dj.length > 0) return 'dj';
   if (all.stage.length > 0) return 'stage';
   return null;
@@ -149,10 +192,11 @@ export function resolveMusicSourceMode(mode: MusicSourceMode, all: Record<MusicE
 export function activeMusicEmitters(blueprint: RoomLayoutBlueprint, mode: MusicSourceMode, options: MusicSourceOptions = {}): MusicEmitter[] {
   const all = listMusicEmitters(blueprint, options);
   const resolved = resolveMusicSourceMode(mode, all);
+  if (resolved === 'screen') return all.screen;
   if (resolved === 'stage') return all.stage;
   if (resolved === 'dj') return all.dj;
   if (resolved === 'speakers') return all.speaker;
-  if (resolved === 'all') return [...all.stage, ...all.dj, ...all.speaker];
+  if (resolved === 'all') return [...all.screen, ...all.stage, ...all.dj, ...all.speaker];
   return [];
 }
 
@@ -160,6 +204,7 @@ export function activeMusicEmitters(blueprint: RoomLayoutBlueprint, mode: MusicS
 export function availableMusicSourceModes(blueprint: RoomLayoutBlueprint): MusicSourceMode[] {
   const all = listMusicEmitters(blueprint);
   const modes: MusicSourceMode[] = ['auto'];
+  if (all.screen.length > 0) modes.push('screen');
   if (all.stage.length > 0) modes.push('stage');
   if (all.dj.length > 0) modes.push('dj');
   if (all.speaker.length > 0) modes.push('speakers');

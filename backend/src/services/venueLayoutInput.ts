@@ -5,6 +5,14 @@ export const MAX_LAYOUT_BLUEPRINT_BYTES = 8 * 1024 * 1024;
 export const MAIN_LAYOUT_ID = 'main';
 export const MAIN_LAYOUT_NAME = 'Disposition principale';
 
+/** Nom affiché de la disposition principale ; `asSaved` sert quand elle redevient une disposition ordinaire. */
+export function mainLayoutName(layoutName: string | null | undefined, asSaved = false): string {
+  const trimmed = layoutName?.trim();
+  if (trimmed) return trimmed;
+  return asSaved ? 'Ancienne disposition principale' : MAIN_LAYOUT_NAME;
+}
+
+
 export function parseLayoutName(raw: unknown): string | null {
   if (typeof raw !== 'string') return null;
   const name = raw.trim().replace(/\s+/g, ' ');

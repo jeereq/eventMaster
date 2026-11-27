@@ -46,6 +46,7 @@ type GuestApiResponse = {
     date: string;
     location: string;
     guestGuidelines?: GuestGuidelines | null;
+    themeId?: string | null;
     invitations?: Array<{
       template?: {
         content?: GuestPrintDocumentData['templateContent'];
@@ -109,6 +110,7 @@ export default function GuestInvitationPrintPage() {
               : null,
           showQrCode: guest.rsvp === 'ACCEPTED',
           branding: guest.branding,
+          eventThemeId: guest.event.themeId ?? null,
           organizationName: guest.organizationName,
         });
       } catch (err: unknown) {

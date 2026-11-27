@@ -116,6 +116,10 @@ import {
   FlipVertical as PhFlipVertical,
   FloppyDisk as PhFloppyDisk,
   Flower as PhFlower,
+  ArrowLineUp as PhArrowLineUp,
+  ArrowLineDown as PhArrowLineDown,
+  StackPlus as PhStackPlus,
+  StackMinus as PhStackMinus,
   FolderSimpleStar as PhFolderSimpleStar,
   ForkKnife as PhForkKnife,
   Funnel as PhFunnel,
@@ -478,6 +482,10 @@ export const Film = make(PhFilmStrip, 'duotone', 'Film');
 export const FlipHorizontal2 = make(PhFlipHorizontal, 'bold', 'FlipHorizontal2');
 export const FlipVertical2 = make(PhFlipVertical, 'bold', 'FlipVertical2');
 export const Flower2 = make(PhFlower, 'duotone', 'Flower2');
+export const BringToFront = make(PhArrowLineUp, 'bold', 'BringToFront');
+export const SendToBack = make(PhArrowLineDown, 'bold', 'SendToBack');
+export const BringForward = make(PhStackPlus, 'bold', 'BringForward');
+export const SendBackward = make(PhStackMinus, 'bold', 'SendBackward');
 export const Gift = make(PhGift, 'duotone', 'Gift');
 export const Group = make(PhSelectionPlus, 'bold', 'Group');
 export const History = make(PhClockCounterClockwise, 'duotone', 'History');

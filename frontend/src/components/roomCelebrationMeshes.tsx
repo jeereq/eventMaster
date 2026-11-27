@@ -7,7 +7,9 @@ import { loadTiledTexture } from '@/lib/roomWebGLMaterials';
 import { withRepeat } from '@/lib/roomSurfaceFinish';
 import { bulbColor, bulbsAlongSpan, stringLightPlan, type StringLightLayout, type StringLightMount, type StringLightStyle } from '@/lib/roomStringLights';
 import { useScreenImageTexture } from '@/components/room/useScreenImage';
-import type { ImageCropRect } from '@/lib/roomLayoutUtils';
+import type { ImageCropRect, ScreenRatio } from '@/lib/roomLayoutUtils';
+import { screenRatioAspect } from '@/lib/roomLayoutUtils';
+import { useDefaultScreenPicture } from '@/components/room/screenPictures';
 
 const GOLD = '#c9a227';
 const CREAM = '#f5f0e8';
@@ -1002,7 +1004,10 @@ export function ScreenMesh({
   imageCrop?: ImageCropRect;
 }) {
   const h = Math.max(1.4, heightM);
-  const image = useScreenImageTexture(imageUrl, imageCrop, (w * 0.96) / (h * 0.94));
+  const picked = useScreenImageTexture(imageUrl, imageCrop, (w * 0.96) / (h * 0.94));
+  // Sans image choisie, le mur LED diffuse un visuel de scène plutôt qu'un aplat bleu.
+  const fallback = useDefaultScreenPicture('stage', (w * 0.96) / (h * 0.94));
+  const image = picked ?? fallback;
   const trussR = 0.024;
   const trussColor = selected ? '#c7d2fe' : '#94a3b8';
   const speakerH = Math.min(0.65, h * 0.45);
@@ -1128,7 +1133,7 @@ export function WallTvMesh({
   imageCrop,
 }: {
   w?: number;
-  ratio?: '16:9' | '21:9' | '9:16' | '32:9';
+  ratio?: ScreenRatio;
   tiltDeg?: number;
   elevationM?: number;
   selected?: boolean;
@@ -1138,9 +1143,11 @@ export function WallTvMesh({
   imageUrl?: string;
   imageCrop?: ImageCropRect;
 }) {
-  const aspect = ratio === '9:16' ? 9 / 16 : ratio === '21:9' ? 21 / 9 : ratio === '32:9' ? 32 / 9 : 16 / 9;
+  const aspect = screenRatioAspect(ratio);
   const h = w / aspect;
-  const image = useScreenImageTexture(imageUrl, imageCrop, aspect);
+  const picked = useScreenImageTexture(imageUrl, imageCrop, aspect);
+  const fallback = useDefaultScreenPicture('stage', aspect);
+  const image = picked ?? fallback;
   const tiltRad = (tiltDeg * Math.PI) / 180;
   const emissiveColor = powered ? '#1e3a8a' : '#020617';
   const emissiveInt = powered ? 0.65 : 0;
@@ -1165,8 +1172,8 @@ export function WallTvMesh({
           <boxGeometry args={[w, h, 0.024]} />
           <meshStandardMaterial color={selected ? '#3b82f6' : frameColor} roughness={0.4} metalness={0.7} />
         </mesh>
-        {/* Dalle écran OLED antireflet active */}
-        <mesh position={[0, 0, 0.002]}>
+        {/* Dalle écran OLED antireflet active (devant le cadre biseauté) */}
+        <mesh position={[0, 0, 0.0045]}>
           <planeGeometry args={[w * 0.985, h * 0.98]} />
           {powered && image ? (
             <meshStandardMaterial
@@ -1195,7 +1202,7 @@ export function WallTvMesh({
           <meshStandardMaterial color={frameColor} roughness={0.3} metalness={0.8} />
         </mesh>
         {/* Voyant LED de veille / sous tension discret */}
-        <mesh position={[w * 0.45, -h * 0.47, 0.004]}>
+        <mesh position={[w * 0.45, -h * 0.47, 0.006]}>
           <sphereGeometry args={[0.006, 8, 8]} />
           <meshStandardMaterial
             color={powered ? '#38bdf8' : '#ef4444'}
@@ -1225,12 +1232,12 @@ export function TableMonitorMesh({
   powered = true,
 }: {
   w?: number;
-  ratio?: '16:9' | '21:9' | '9:16' | '32:9';
+  ratio?: ScreenRatio;
   surfaceElevationM?: number;
   selected?: boolean;
   powered?: boolean;
 }) {
-  const aspect = ratio === '9:16' ? 9 / 16 : ratio === '21:9' ? 21 / 9 : ratio === '32:9' ? 32 / 9 : 16 / 9;
+  const aspect = screenRatioAspect(ratio);
   const h = w / aspect;
   const standH = 0.16;
 
