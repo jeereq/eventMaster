@@ -570,7 +570,7 @@ export function EventStage({
           // Escalier au centre de l’arrondi, face au public (repère non étiré).
           <group scale={[1, 1, Math.max(0.01, half) / d]} position={[0, 0, half]}>
             <group rotation={[0, -Math.PI / 2, 0]}>
-              <StageStairs height={height} width={Math.min(1.4, w * 0.25)} />
+              <StageStairs height={height} width={Math.min(1.4, w * 0.25)} material={material} skirtColor={deckUsesSkirt(material) ? skirtColor : undefined} selected={selected} />
             </group>
           </group>
         ) : null}
@@ -610,7 +610,7 @@ export function EventStage({
       </mesh>
       {withStairs ? (
         <group position={[w / 2, 0, d * 0.18]}>
-          <StageStairs height={height} width={Math.min(1.3, d * 0.4)} />
+          <StageStairs height={height} width={Math.min(1.3, d * 0.4)} material={material} skirtColor={deckUsesSkirt(material) ? skirtColor : undefined} selected={selected} />
         </group>
       ) : null}
       {/* Spots de scène */}

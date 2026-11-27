@@ -10,7 +10,9 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import type { StageRig } from '@/lib/roomLayoutUtils';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import type { StageRig, ZoneMaterial } from '@/lib/roomLayoutUtils';
+import { resolveDeckSurface } from '@/lib/roomWebGLMaterials';
 
 // ───────────────────────── textures ─────────────────────────
 
@@ -78,67 +80,250 @@ export function PleatedDrape({ width, height, color, foldM = 0.22, depth = 0.07,
   );
 }
 
+// Dimensions de l’escalier d’accès (m).
+const STAIR_TREAD = 0.3; // giron
+const STAIR_NOSE = 0.025; // débord du nez de marche sur la contremarche
+const STAIR_TREAD_T = 0.032; // épaisseur du plateau de marche
+const STAIR_CHEEK_T = 0.04; // épaisseur d’un limon
+const STAIR_CHEEK_ABOVE = 0.06; // hauteur du limon au-dessus de la ligne des nez
+const STAIR_RAIL_H = 0.9; // main courante au-dessus de la ligne des nez
+const STAIR_RAIL_R = 0.021; // rayon du tube de main courante (Ø 42 mm)
+
+/** Polyligne aux angles arrondis (rayon `r`) pour un tube de main courante. */
+function roundedPath(points: THREE.Vector3[], r: number): THREE.CurvePath<THREE.Vector3> {
+  const path = new THREE.CurvePath<THREE.Vector3>();
+  let cursor = points[0].clone();
+  for (let i = 1; i < points.length; i += 1) {
+    const p = points[i];
+    const next = points[i + 1];
+    if (!next) {
+      path.add(new THREE.LineCurve3(cursor, p.clone()));
+      break;
+    }
+    const inDir = new THREE.Vector3().subVectors(p, points[i - 1]);
+    const outDir = new THREE.Vector3().subVectors(next, p);
+    const k = Math.min(r, inDir.length() / 2, outDir.length() / 2);
+    const a = p.clone().addScaledVector(inDir.normalize(), -k);
+    const b = p.clone().addScaledVector(outDir.normalize(), k);
+    path.add(new THREE.LineCurve3(cursor, a));
+    path.add(new THREE.QuadraticBezierCurve3(a, p.clone(), b));
+    cursor = b;
+  }
+  return path;
+}
+
+/** Profil latéral (XY) d’un escalier montant vers −X : dents de scie, contremarches en retrait du nez. */
+function stairProfile(n: number, rise: number, inset: number, lift: number): THREE.Shape {
+  const run = n * STAIR_TREAD;
+  const sh = new THREE.Shape();
+  sh.moveTo(0, 0);
+  sh.lineTo(run - inset, 0);
+  for (let k = 0; k < n; k += 1) {
+    const front = run - k * STAIR_TREAD - inset;
+    const top = rise * (k + 1) - lift;
+    sh.lineTo(front, top);
+    sh.lineTo(k === n - 1 ? 0 : front - STAIR_TREAD, top);
+  }
+  sh.closePath();
+  return sh;
+}
+
+type StairGeometries = Record<'carcass' | 'cheeks' | 'treads' | 'nose' | 'grip' | 'led' | 'rail', THREE.BufferGeometry>;
+
+function buildStairGeometries(height: number, width: number): StairGeometries {
+  const n = Math.max(2, Math.round(height / 0.17));
+  const rise = height / n;
+  const run = n * STAIR_TREAD;
+  const inner = width - 2 * STAIR_CHEEK_T;
+  const merge = (parts: THREE.BufferGeometry[]) => {
+    const g = mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p))) ?? new THREE.BufferGeometry();
+    parts.forEach((p) => p.dispose());
+    return g;
+  };
+
+  // Caisson : contremarches pleines, en retrait du nez de marche, sous les plateaux.
+  const carcass = new THREE.ExtrudeGeometry(stairProfile(n, rise, STAIR_NOSE, STAIR_TREAD_T), { depth: inner, bevelEnabled: false });
+  carcass.translate(0, 0, -inner / 2);
+
+  // Limons : joues latérales fermées qui suivent la pente, chants légèrement arrondis.
+  const slopeY = (x: number) => rise + ((run - x) * rise) / STAIR_TREAD; // ligne des nez
+  const cheekShape = new THREE.Shape();
+  const bev = 0.006;
+  cheekShape.moveTo(0, 0);
+  cheekShape.lineTo(run, 0);
+  cheekShape.lineTo(run, slopeY(run) + STAIR_CHEEK_ABOVE - 0.02);
+  cheekShape.lineTo(STAIR_TREAD, slopeY(STAIR_TREAD) + STAIR_CHEEK_ABOVE - 0.02);
+  cheekShape.lineTo(0, height + STAIR_CHEEK_ABOVE - 0.02);
+  cheekShape.closePath();
+  const cheekParts = ([-1, 1] as const).map((s) => {
+    const g = new THREE.ExtrudeGeometry(cheekShape, {
+      depth: STAIR_CHEEK_T - 2 * bev,
+      bevelEnabled: true,
+      bevelThickness: bev,
+      bevelSize: bev,
+      bevelSegments: 2,
+      curveSegments: 1,
+    });
+    g.translate(0, 0, s < 0 ? -width / 2 + bev : width / 2 - STAIR_CHEEK_T + bev);
+    return g;
+  });
+
+  // Plateaux de marche à chants arrondis, débordant de STAIR_NOSE sur la contremarche.
+  const treadParts: THREE.BufferGeometry[] = [];
+  const noseParts: THREE.BufferGeometry[] = [];
+  const gripParts: THREE.BufferGeometry[] = [];
+  const ledParts: THREE.BufferGeometry[] = [];
+  for (let k = 0; k < n; k += 1) {
+    const top = rise * (k + 1);
+    const front = run - k * STAIR_TREAD;
+    const depth = k === n - 1 ? STAIR_TREAD : STAIR_TREAD + STAIR_NOSE;
+    const t = new RoundedBoxGeometry(depth, STAIR_TREAD_T, inner + 0.004, 2, 0.006);
+    t.translate(front - depth / 2, top - STAIR_TREAD_T / 2, 0);
+    treadParts.push(t);
+    // Nez aluminium en L : aile horizontale + retour vertical sur le chant.
+    const wing = new RoundedBoxGeometry(0.055, 0.006, inner, 1, 0.002);
+    wing.translate(front - 0.0275 + 0.002, top + 0.002, 0);
+    const lip = new RoundedBoxGeometry(0.006, 0.04, inner, 1, 0.002);
+    lip.translate(front + 0.002, top - 0.016, 0);
+    noseParts.push(wing, lip);
+    // Bande antidérapante caoutchouc incrustée dans l’aile.
+    const grip = new THREE.BoxGeometry(0.03, 0.002, inner - 0.05);
+    grip.translate(front - 0.03, top + 0.0055, 0);
+    gripParts.push(grip);
+    // Ruban LED de balisage sous le nez (lumière rasante sur la contremarche).
+    const led = new THREE.BoxGeometry(0.006, 0.008, inner - 0.04);
+    led.translate(front - STAIR_NOSE + 0.004, top - STAIR_TREAD_T - 0.006, 0);
+    ledParts.push(led);
+  }
+
+  // Mains courantes : tube Ø 42 mm prolongé en haut et en bas, retours arrondis, poteaux sur platines.
+  const railParts: THREE.BufferGeometry[] = [];
+  const postXs = [run - 0.12, STAIR_TREAD * 0.5];
+  if (run > 1.6) postXs.splice(1, 0, (run + STAIR_TREAD) / 2);
+  const cheekTop = (x: number) => (x >= STAIR_TREAD ? slopeY(x) : height) + STAIR_CHEEK_ABOVE - 0.02;
+  const railY = (x: number) => (x >= STAIR_TREAD ? slopeY(x) : height) + STAIR_RAIL_H;
+  for (const s of [-1, 1] as const) {
+    const z = s * (width / 2 - STAIR_CHEEK_T / 2);
+    const yb = slopeY(run) + STAIR_RAIL_H;
+    const yt = height + STAIR_RAIL_H;
+    const top = roundedPath(
+      [
+        new THREE.Vector3(run + 0.24, yb - 0.11, z),
+        new THREE.Vector3(run + 0.24, yb, z),
+        new THREE.Vector3(run, yb, z),
+        new THREE.Vector3(STAIR_TREAD, yt, z),
+        new THREE.Vector3(0.04, yt, z),
+        new THREE.Vector3(0.04, yt - 0.11, z),
+      ],
+      0.07,
+    );
+    railParts.push(new THREE.TubeGeometry(top, 96, STAIR_RAIL_R, 14, false));
+    // Lisse intermédiaire, à mi-hauteur entre limon et main courante.
+    const midH = STAIR_CHEEK_ABOVE + (STAIR_RAIL_H - STAIR_CHEEK_ABOVE) * 0.48;
+    const mx0 = postXs[0];
+    const mx1 = postXs[postXs.length - 1];
+    const mid = roundedPath(
+      [
+        new THREE.Vector3(mx0, slopeY(mx0) + midH, z),
+        new THREE.Vector3(STAIR_TREAD, slopeY(STAIR_TREAD) + midH, z),
+        new THREE.Vector3(mx1, height + midH, z),
+      ],
+      0.06,
+    );
+    railParts.push(new THREE.TubeGeometry(mid, 48, 0.011, 10, false));
+    for (const px of postXs) {
+      const y0 = cheekTop(px);
+      const y1 = railY(px);
+      const post = new THREE.CylinderGeometry(0.019, 0.019, y1 - y0, 14, 1);
+      post.translate(px, (y0 + y1) / 2, z);
+      const plate = new THREE.CylinderGeometry(0.038, 0.042, 0.012, 20, 1);
+      plate.translate(px, y0 + 0.006, z);
+      railParts.push(post, plate);
+    }
+    // Embouts sphériques aux extrémités des retours.
+    for (const [ex, ey] of [[run + 0.24, yb - 0.11], [0.04, yt - 0.11]] as const) {
+      const cap = new THREE.SphereGeometry(STAIR_RAIL_R, 14, 8);
+      cap.translate(ex, ey, z);
+      railParts.push(cap);
+    }
+  }
+
+  return {
+    carcass,
+    cheeks: merge(cheekParts),
+    treads: merge(treadParts),
+    nose: merge(noseParts),
+    grip: merge(gripParts),
+    led: merge(ledParts),
+    rail: merge(railParts),
+  };
+}
+
 /**
  * Escalier d’accès (marches de 17 cm environ) posé contre un flanc de la scène, montant vers −X
  * dans son repère : à placer avec une rotation selon le côté.
+ * Construction de scène réelle : limons fermés, plateaux de marche assortis au plancher de la scène
+ * débordant sur des contremarches en retrait, nez aluminium antidérapant, balisage LED et
+ * main courante tubulaire prolongée en haut et en bas.
  */
-export function StageStairs({ height, width = 1.1 }: { height: number; width?: number }) {
-  const n = Math.max(2, Math.round(height / 0.17));
-  const rise = height / n;
-  const tread = 0.3;
-  const run = n * tread;
+export function StageStairs({
+  height,
+  width = 1.1,
+  material,
+  skirtColor = '#1c1a19',
+  selected = false,
+}: {
+  height: number;
+  width?: number;
+  /** Matière du plancher de scène, reprise sur les plateaux de marche. */
+  material?: ZoneMaterial;
+  /** Teinte des contremarches et limons (jupe de scène). */
+  skirtColor?: string;
+  selected?: boolean;
+}) {
+  const geos = useMemo(() => buildStairGeometries(height, width), [height, width]);
+  useEffect(() => () => Object.values(geos).forEach((g) => g.dispose()), [geos]);
+  const surface = useMemo(() => resolveDeckSurface(material, STAIR_TREAD, width), [material, width]);
   const mats = useMemo(
     () => ({
-      tread: new THREE.MeshStandardMaterial({ color: '#1c1917', roughness: 0.8 }),
-      nose: new THREE.MeshStandardMaterial({ color: '#d4d4d8', metalness: 0.75, roughness: 0.3 }),
-      rail: new THREE.MeshStandardMaterial({ color: '#27272a', metalness: 0.7, roughness: 0.3 }),
+      riser: new THREE.MeshStandardMaterial({ color: skirtColor, roughness: 0.9, metalness: 0 }),
+      cheek: new THREE.MeshStandardMaterial({ color: '#242221', roughness: 0.55, metalness: 0.08 }),
+      nose: new THREE.MeshStandardMaterial({ color: '#c9ccd1', metalness: 0.85, roughness: 0.32 }),
+      grip: new THREE.MeshStandardMaterial({ color: '#2b2b2d', roughness: 0.95, metalness: 0 }),
+      led: new THREE.MeshStandardMaterial({ color: '#fff4dc', emissive: '#ffd89a', emissiveIntensity: 1.6, roughness: 0.4 }),
+      rail: new THREE.MeshStandardMaterial({ color: '#1f1f22', metalness: 0.6, roughness: 0.28 }),
     }),
-    [],
+    [skirtColor],
   );
   useEffect(() => () => Object.values(mats).forEach((m) => m.dispose()), [mats]);
-  const railY = 0.9;
-  const slope = Math.atan2(height, run);
-  const railLen = Math.hypot(run, height);
+  const tint = selected ? '#c7d2fe' : undefined;
   return (
     <group>
-      {Array.from({ length: n }).map((_, k) => {
-        // Marche k (0 = la plus basse) : bloc plein jusqu’au sol.
-        const top = rise * (k + 1);
-        const x = run - (k + 0.5) * tread;
-        return (
-          <group key={k}>
-            <mesh position={[x, top / 2, 0]} material={mats.tread} castShadow receiveShadow>
-              <boxGeometry args={[tread, top, width]} />
-            </mesh>
-            <mesh position={[x + tread / 2 - 0.02, top + 0.004, 0]} material={mats.nose}>
-              <boxGeometry args={[0.04, 0.01, width * 0.98]} />
-            </mesh>
-          </group>
-        );
-      })}
-      {([-1, 1] as const).map((s) => (
-        <group key={s} position={[0, 0, s * (width / 2 - 0.03)]}>
-          <mesh position={[run / 2, height / 2 + railY, 0]} rotation={[0, 0, slope]} material={mats.rail} castShadow>
-            <boxGeometry args={[railLen, 0.04, 0.04]} />
-          </mesh>
-          {[0.08, run - 0.08].map((px, i) => {
-            const base = i === 0 ? rise : height;
-            const top = height * (1 - px / run) + railY;
-            return (
-              <mesh key={i} position={[px, (base + top) / 2, 0]} material={mats.rail} castShadow>
-                <cylinderGeometry args={[0.02, 0.02, Math.max(0.1, top - base), 8]} />
-              </mesh>
-            );
-          })}
-        </group>
-      ))}
+      <mesh geometry={geos.carcass} material={mats.riser} castShadow receiveShadow />
+      <mesh geometry={geos.cheeks} material={mats.cheek} castShadow receiveShadow />
+      <mesh geometry={geos.treads} castShadow receiveShadow>
+        <meshStandardMaterial
+          color={tint ?? surface.color}
+          map={surface.map ?? undefined}
+          normalMap={surface.normalMap ?? undefined}
+          roughnessMap={surface.roughnessMap ?? undefined}
+          roughness={surface.roughness}
+          metalness={surface.metalness}
+        />
+      </mesh>
+      <mesh geometry={geos.nose} material={mats.nose} castShadow receiveShadow />
+      <mesh geometry={geos.grip} material={mats.grip} receiveShadow />
+      <mesh geometry={geos.led} material={mats.led} />
+      <mesh geometry={geos.rail} material={tint ? undefined : mats.rail} castShadow>
+        {tint ? <meshStandardMaterial color={tint} metalness={0.4} roughness={0.35} /> : null}
+      </mesh>
     </group>
   );
 }
 
 /** Longueur au sol de l’escalier d’accès pour une hauteur donnée (pour le placer). */
 export function stageStairsRun(height: number): number {
-  return Math.max(2, Math.round(height / 0.17)) * 0.3;
+  return Math.max(2, Math.round(height / 0.17)) * STAIR_TREAD;
 }
 
 // ───────────────────────── truss ─────────────────────────
