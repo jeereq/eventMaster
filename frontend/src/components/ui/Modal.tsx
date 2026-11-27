@@ -42,6 +42,31 @@ function emitModalStackChange() {
   stackListeners.forEach((listener) => listener());
 }
 
+/** Base des couches superposées (fenêtres, plein écran) : au-dessus du header, de la barre latérale et des menus. */
+export const OVERLAY_Z_BASE = 11000;
+
+/**
+ * Inscrit une couche plein écran dans la même pile que les fenêtres : ouverte depuis une fenêtre,
+ * elle passe au-dessus ; une fenêtre ouverte depuis le plein écran passe au-dessus d'elle.
+ * Retourne le z-index à appliquer à la couche.
+ */
+export function useOverlayLayer(active: boolean): number {
+  const [depth, setDepth] = useState(1);
+  useEffect(() => {
+    if (!active) return;
+    openModalCount += 1;
+    // La profondeur dépend de la pile globale au moment de l'ouverture (même logique que Modal).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDepth(openModalCount);
+    emitModalStackChange();
+    return () => {
+      openModalCount = Math.max(0, openModalCount - 1);
+      emitModalStackChange();
+    };
+  }, [active]);
+  return OVERLAY_Z_BASE + depth;
+}
+
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
@@ -200,7 +225,7 @@ export default function Modal({
   return createPortal(
     <div
       className={cn('fixed inset-0', containerClassName)}
-      style={{ zIndex: 11000 + stackDepth }}
+      style={{ zIndex: OVERLAY_Z_BASE + stackDepth }}
       inert={!isTop ? true : undefined}
       aria-hidden={!isTop || undefined}
     >

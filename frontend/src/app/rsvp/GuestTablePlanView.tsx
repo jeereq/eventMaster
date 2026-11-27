@@ -24,6 +24,7 @@ import type { TableSeatingSide, TableShape } from '@/lib/tablePlanUtils';
 import type { PricingZone } from '@/lib/ticketPricing';
 import type { SeatChairMeta, SeatRowMeta } from '@/lib/seatSelectionLayout';
 import type { GuestTicketPlacement } from '@/app/rsvp/guestRsvpTypes';
+import OverlayLayer from '@/components/ui/OverlayLayer';
 
 type GuestPlanView = PlanViewMode;
 
@@ -742,12 +743,12 @@ export default function GuestTablePlanView({
 
   if (isFullscreen) {
     return (
-      <div
+      <OverlayLayer
         role="dialog"
         aria-modal="true"
         aria-label="Plan de la salle en plein écran"
-        className="fixed inset-0 z-[80] bg-background flex flex-col p-2 sm:p-4"
-        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+        className="fixed inset-0 bg-background flex flex-col p-2 sm:p-4"
+        style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-center justify-between mb-2 shrink-0">
           <p className="text-sm font-semibold text-foreground truncate">Plan de la salle · {theme.name}</p>
@@ -760,7 +761,7 @@ export default function GuestTablePlanView({
           </button>
         </div>
         <div className="flex-1 min-h-0">{planSection({ fill: true })}</div>
-      </div>
+      </OverlayLayer>
     );
   }
 

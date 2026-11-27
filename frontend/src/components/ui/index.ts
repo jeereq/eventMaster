@@ -31,7 +31,8 @@ export {
 export { default as Input } from './Input';
 export { default as PasswordInput } from './PasswordInput';
 export { default as Alert } from './Alert';
-export { default as Modal, modalBackdropClass, modalPanelClass } from './Modal';
+export { default as Modal, modalBackdropClass, modalPanelClass, useOverlayLayer } from './Modal';
+export { default as OverlayLayer } from './OverlayLayer';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as PageHeader } from './PageHeader';
 export { default as PageHero } from './PageHero';

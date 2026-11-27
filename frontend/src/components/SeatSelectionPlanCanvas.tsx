@@ -152,7 +152,7 @@ export default function SeatSelectionPlanCanvas({
     fit,
   } = usePlanViewport({ logicalW: logical.w, logicalH: logical.h, maxZoom: rowMaxZoom });
   const [showWalls, setShowWalls] = useState(true);
-  const { expanded, setExpanded, panelRef } = usePlanFullscreen();
+  const { expanded, setExpanded, panelRef, layerStyle } = usePlanFullscreen();
 
   const theme = getRoomTheme(roomThemeId);
   const effectiveFloorType = (floorType as FloorType | undefined) ?? theme.defaultFloorType;
@@ -570,7 +570,8 @@ export default function SeatSelectionPlanCanvas({
         role="dialog"
         aria-modal="true"
         aria-label="Plan de salle en plein écran"
-        className="fixed inset-0 z-[250] flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] outline-none"
+        style={layerStyle}
+        className="fixed inset-0 flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] outline-none"
       >
         {viewer}
       </div>,

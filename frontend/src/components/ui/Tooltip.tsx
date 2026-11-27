@@ -122,7 +122,7 @@ export default function Tooltip({
  role="tooltip"
  style={{ top: coords.top, left: coords.left, transform }}
  className={cn(
- 'pointer-events-none fixed z-[10050]',
+ 'pointer-events-none fixed z-[12050]',
  'max-w-[15rem] rounded-md bg-foreground px-2.5 py-1.5',
  'text-xs font-medium text-background shadow-lg',
  'dark:bg-surface-muted dark:text-foreground dark:ring-1 dark:ring-border',

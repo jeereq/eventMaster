@@ -9,6 +9,7 @@ import {
 } from '@/components/icons';
 import { Button, ConfirmDialog } from '@/components/ui';
 import Modal from '@/components/ui/Modal';
+import OverlayLayer from '@/components/ui/OverlayLayer';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
@@ -1123,7 +1124,7 @@ export default function TablePlanner({
 
       {/* Modale Plein Écran 3D Immersive */}
       {is3DFullscreen && (
-        <div className="fixed inset-0 z-[9999] flex flex-col bg-foreground/95 p-3 sm:p-6 animate-in fade-in duration-200">
+        <OverlayLayer className="fixed inset-0 flex flex-col bg-foreground/95 p-3 sm:p-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between pb-3 border-b border-background/20 gap-3">
             <div className="flex items-center gap-2.5 text-background">
               <div className="bg-primary/20 text-primary p-2 rounded-xl">
@@ -1197,7 +1198,7 @@ export default function TablePlanner({
               </div>
             )}
           </div>
-        </div>
+        </OverlayLayer>
       )}
     </div>
   );
@@ -2260,7 +2261,7 @@ export default function TablePlanner({
 
  {/* Expanded fullscreen canvas */}
  {isExpanded && (
- <div className="fixed inset-0 z-[100] bg-background flex flex-col p-1.5 sm:p-4 md:p-6" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+ <OverlayLayer className="fixed inset-0 bg-background flex flex-col p-1.5 sm:p-4 md:p-6" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
  <div className="flex items-center justify-between gap-3 mb-2 sm:mb-4 shrink-0">
  <div className="min-w-0">
  <h3 className="text-sm sm:text-lg font-semibold text-foreground flex items-center gap-2">
@@ -2280,15 +2281,16 @@ export default function TablePlanner({
  </button>
             </div>
  </div>
- <div className="flex-1 min-h-0">
- {plannerView === '3d' ? render3DPreview('h-full min-h-0') : renderCanvas('h-full min-h-0')}
+ {/* Colonne flex : le plan 2D (hauteur `h-full`) remplit l'espace sous la barre au lieu de s'écraser à 0. */}
+ <div className="flex-1 min-h-0 flex flex-col">
+ {plannerView === '3d' ? render3DPreview('flex-1 h-full min-h-0') : renderCanvas('flex-1 min-h-0')}
  </div>
- </div>
+ </OverlayLayer>
  )}
 
  {/* Seat Assignment Dropdown Modal/Popover */}
  {selectedSeat && (
- <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+ <OverlayLayer className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
  <div className="bg-surface rounded-[var(--radius-card)] border border-border max-w-md w-full p-6 space-y-4 animate-scale-up">
  <div className="flex justify-between items-center pb-3 border-b border-border">
  <h3 className="font-semibold text-foreground text-base">
@@ -2376,12 +2378,12 @@ export default function TablePlanner({
  )}
  </div>
  </div>
- </div>
+ </OverlayLayer>
  )}
 
  {/* Add Table Modal */}
  {showAddModal && (
- <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+ <OverlayLayer className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
  <div className="bg-surface rounded-[var(--radius-card)] border border-border max-w-md w-full p-6 space-y-5 animate-scale-up">
  <div className="flex justify-between items-center pb-3 border-b border-border">
  <h3 className="font-semibold text-foreground text-base flex items-center gap-2">
@@ -2486,12 +2488,12 @@ export default function TablePlanner({
  </button>
  </div>
  </div>
- </div>
+ </OverlayLayer>
  )}
 
  {/* Edit Table Modal */}
  {editingTable && (
- <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+ <OverlayLayer className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
  <div className="bg-surface rounded-[var(--radius-card)] border border-border max-w-md w-full p-6 space-y-5 animate-scale-up">
  <div className="flex justify-between items-center pb-3 border-b border-border">
  <h3 className="font-semibold text-foreground text-base">
@@ -2640,7 +2642,7 @@ export default function TablePlanner({
  </button>
  </div>
  </div>
- </div>
+ </OverlayLayer>
  )}
 
       {/* Modal: Répartition intelligente des zones de billetterie */}
