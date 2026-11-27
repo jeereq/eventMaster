@@ -31,7 +31,7 @@ import {
   applyInvitationGuidelineVariables,
   formatGuestGuidelinesBlock,
 } from '@/lib/guestGuidelines';
-import { Button, ProjectCard, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, OverflowMenu, Modal, Input, Pagination, usePaginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, EmptyState, Alert, ConfirmDialog, UnderlineTabs } from '@/components/ui';
+import { Button, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, OverflowMenu, Modal, Input, Pagination, usePaginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, EmptyState, Alert, ConfirmDialog, UnderlineTabs } from '@/components/ui';
 import EventCard from '@/components/events/EventCard';
 import { EventsHero } from '@/components/events/EventsHeader';
 import { isOpenEventTask, type EventTaskItem } from '@/lib/eventTasks';
@@ -50,6 +50,7 @@ import {
   isPlanFeatureLocked,
 } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
+import { GuestListItem, GuestRsvpSummary, countGuestRsvp } from '@/components/guests/GuestListItem';
 import { eventDashboardHref, eventsListHref, isEventWorkspaceTab, type EventWorkspaceTab } from '@/lib/eventRoutes';
 import { isB2cPlanId, formatFc } from '@/config/landingPricing';
 import { formatEventPlace } from '@/lib/eventPlace';
@@ -820,6 +821,7 @@ function EventsPageInner() {
   const [checkinFilter, setCheckinFilter] = useState<'ALL' | 'in' | 'out'>('ALL');
   const [customFilters, setCustomFilters] = useState<Record<string, string>>({});
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [guestSort, setGuestSort] = useState<'name' | 'lastName' | 'rsvp' | 'category'>('name');
   const [selectedGuestDetails, setSelectedGuestDetails] = useState<GuestItem | null>(null);
 
   // Import guests
@@ -930,7 +932,7 @@ function EventsPageInner() {
 
   useEffect(() => {
     setGuestsListPage(1);
-  }, [searchQuery, rsvpFilter, categoryFilter, dietFilter, checkinFilter, customFilters]);
+  }, [searchQuery, rsvpFilter, categoryFilter, dietFilter, checkinFilter, customFilters, guestSort]);
 
   useEffect(() => {
     setEventsListPage(1);
@@ -1033,7 +1035,45 @@ function EventsPageInner() {
     return matchesSearch && matchesWhen && matchesVisibility && matchesEntry;
   }).sort(eventSort === 'name' ? compareEventsByTitle : eventSort === 'farthest' ? compareEventsFarthest : compareEventsByDate);
   const paginatedEventsList = usePaginateItems(filteredEventsList, eventsListPage, eventsPageSize);
-  const paginatedGuestsList = usePaginateItems(filteredGuests, guestsListPage, guestsPageSize);
+  const sortedFilteredGuests = useMemo(() => {
+    const rsvpOrder: Record<string, number> = { PENDING: 0, ACCEPTED: 1, DECLINED: 2 };
+    const byName = (a: GuestItem, b: GuestItem) =>
+      `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'fr', { sensitivity: 'base' });
+    const list = [...filteredGuests];
+    list.sort((a, b) => {
+      if (guestSort === 'lastName') {
+        return `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`, 'fr', { sensitivity: 'base' });
+      }
+      if (guestSort === 'rsvp') return (rsvpOrder[a.rsvp] ?? 0) - (rsvpOrder[b.rsvp] ?? 0) || byName(a, b);
+      if (guestSort === 'category') {
+        return (a.category || 'Général').localeCompare(b.category || 'Général', 'fr', { sensitivity: 'base' }) || byName(a, b);
+      }
+      return byName(a, b);
+    });
+    return list;
+  }, [filteredGuests, guestSort]);
+  const paginatedGuestsList = usePaginateItems(sortedFilteredGuests, guestsListPage, guestsPageSize);
+  const guestRsvpCounts = useMemo(() => countGuestRsvp(guests), [guests]);
+  const guestTableNames = useMemo(() => {
+    const map = new Map<string, string>();
+    const tables = (selectedEvent?.tablePlan as { tables?: Array<{ name?: string; seats?: Record<string, string | null> | null }> } | null | undefined)?.tables;
+    if (!Array.isArray(tables)) return map;
+    for (const table of tables) {
+      if (!table?.seats) continue;
+      for (const guestId of Object.values(table.seats)) {
+        if (guestId && !map.has(guestId)) map.set(guestId, table.name || 'Table');
+      }
+    }
+    return map;
+  }, [selectedEvent?.tablePlan]);
+  const resetGuestFilters = () => {
+    setSearchQuery('');
+    setRsvpFilter('ALL');
+    setCategoryFilter('ALL');
+    setDietFilter('ALL');
+    setCheckinFilter('ALL');
+    setCustomFilters({});
+  };
 
   const isAllFilteredSelected = filteredGuests.length > 0 && filteredGuests.every(g => selectedGuestIds.includes(g.id));
 
@@ -2792,14 +2832,14 @@ Merci de confirmer votre présence :
                     <PlanLimitCallout kind="guests" planQuota={planQuota} planName={planLabel} />
                   )}
 
-                  {(() => {
-                    const specialMealCount = guests.filter(g => g.preferences?.specialMeal && g.preferences.specialMeal !== 'none').length;
-                    return specialMealCount > 0 ? (
-                      <p className="text-sm text-muted tabular-nums">
-                        {specialMealCount} {specialMealCount > 1 ? 'régimes spéciaux' : 'régime spécial'}
-                      </p>
-                    ) : null;
-                  })()}
+                  {guests.length > 0 && (
+                    <GuestRsvpSummary
+                      counts={guestRsvpCounts}
+                      value={rsvpFilter}
+                      onChange={setRsvpFilter}
+                      specialMealCount={guests.filter(g => g.preferences?.specialMeal && g.preferences.specialMeal !== 'none').length}
+                    />
+                  )}
 
                   {/* Search & Filtering Controls */}
                   {guests.length > 0 && (
@@ -2810,23 +2850,23 @@ Merci de confirmer votre présence :
                             label="Rechercher un invité"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Nom ou e-mail"
+                            placeholder="Nom, e-mail, téléphone, catégorie…"
                             leftIcon={<Search className="w-4 h-4" />}
                           />
                         </div>
 
-                        <div className="w-full lg:w-44">
-                          <label htmlFor="guest-filter-rsvp" className="block text-xs font-semibold text-muted mb-1.5">Statut de réponse</label>
+                        <div className="w-full lg:w-48">
+                          <label htmlFor="guest-sort" className="block text-xs font-semibold text-muted mb-1.5">Trier par</label>
                           <select
-                            id="guest-filter-rsvp"
-                            value={rsvpFilter}
-                            onChange={(e) => setRsvpFilter(e.target.value as any)}
+                            id="guest-sort"
+                            value={guestSort}
+                            onChange={(e) => setGuestSort(e.target.value as typeof guestSort)}
                             className={GUEST_FILTER_CONTROL}
                           >
-                            <option value="ALL">Tous les statuts</option>
-                            <option value="ACCEPTED">Confirmés uniquement</option>
-                            <option value="DECLINED">Déclinés uniquement</option>
-                            <option value="PENDING">En attente uniquement</option>
+                            <option value="name">Prénom (A → Z)</option>
+                            <option value="lastName">Nom (A → Z)</option>
+                            <option value="rsvp">Réponse (en attente d’abord)</option>
+                            <option value="category">Catégorie</option>
                           </select>
                         </div>
 
@@ -2848,14 +2888,7 @@ Merci de confirmer votre présence :
                           {(searchQuery || rsvpFilter !== 'ALL' || categoryFilter !== 'ALL' || dietFilter !== 'ALL' || checkinFilter !== 'ALL' || Object.values(customFilters).some(v => v !== 'ALL' && v !== '')) && (
                             <button
                               type="button"
-                              onClick={() => {
-                                setSearchQuery('');
-                                setRsvpFilter('ALL');
-                                setCategoryFilter('ALL');
-                                setDietFilter('ALL');
-                                setCheckinFilter('ALL');
-                                setCustomFilters({});
-                              }}
+                              onClick={resetGuestFilters}
                               className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary transition bg-primary/10 hover:bg-primary/15 px-3 py-2 rounded-[var(--radius-button)]"
                             >
                               <RefreshCw className="w-3.5 h-3.5" />
@@ -3007,14 +3040,10 @@ Merci de confirmer votre présence :
                     <div className="rounded-[var(--radius-card)] border border-border bg-surface text-center py-16 px-6">
                       <Search className="w-12 h-12 text-muted mx-auto mb-4" />
                       <h3 className="font-semibold text-foreground">Aucun résultat</h3>
-                      <p className="text-sm text-muted mt-1 max-w-xs mx-auto">La recherche n'a retourné aucun profil correspondant.</p>
+                      <p className="text-sm text-muted mt-1 max-w-xs mx-auto">Aucun invité ne correspond à la recherche ou aux filtres choisis.</p>
                       <button
                         type="button"
-                        onClick={() => {
-                          setSearchQuery('');
-                          setRsvpFilter('ALL');
-                          setCategoryFilter('ALL');
-                        }}
+                        onClick={resetGuestFilters}
                         className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary transition bg-primary/10 hover:bg-primary/15 px-3 py-2 rounded-[var(--radius-button)]"
                       >
                         Effacer les filtres
@@ -3041,36 +3070,24 @@ Merci de confirmer votre présence :
                             <span className="text-primary font-medium">({selectedGuestIds.length})</span>
                           )}
                         </label>
+                        <p className="text-xs text-muted tabular-nums">
+                          {filteredGuests.length === guests.length
+                            ? `${guests.length} invité${guests.length > 1 ? 's' : ''}`
+                            : `${filteredGuests.length} sur ${guests.length} invités`}
+                        </p>
                       </div>
 
                       <div
-                        className={guestsViewMode === 'grid' ? guestsGridClass : listStackClass}
-                        style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 88px' }}
+                        className={
+                          guestsViewMode === 'grid'
+                            ? guestsGridClass
+                            : 'overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface divide-y divide-border shadow-[var(--shadow-soft)]'
+                        }
                       >
                         {paginatedGuestsList.map((g) => {
                           const isSelected = selectedGuestIds.includes(g.id);
-                          const rsvpTone = (g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber') as 'emerald' | 'rose' | 'amber';
-                          const rsvpLabel = g.rsvp === 'ACCEPTED' ? 'Confirmé' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
-                          const rsvpChip = <StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>;
-                          const categoryChip = <StatusPill tone="slate">{g.category || 'Général'}</StatusPill>;
-
-                          const inviteStatusNote =
-                            g.preferences?.invitationLastStatus === 'FAILED' ? (
-                              <span className="text-xs text-rose-600 dark:text-rose-400" title={g.preferences?.invitationLastError || 'Échec d’envoi'}>
-                                Envoi échoué
-                              </span>
-                            ) : g.preferences?.invitationLastStatus === 'SENT' && g.preferences?.invitationSentAt ? (
-                              <span className="text-xs text-primary">Invitation envoyée</span>
-                            ) : null;
-
-                          const prefsLine = g.preferences ? (
-                            [
-                              g.preferences.diet && `Régime: ${g.preferences.diet}`,
-                              g.preferences.allergies && `Allergies: ${g.preferences.allergies}`,
-                              g.preferences.plusOne !== undefined && `Accompagné: ${g.preferences.plusOne ? 'Oui' : 'Non'}`,
-                              g.preferences.notes && `Notes: ${g.preferences.notes}`,
-                            ].filter(Boolean).join(' · ') || null
-                          ) : null;
+                          const email = displayGuestEmail(g.email);
+                          const phone = g.phone || g.preferences?.phone || g.preferences?.telephone || null;
 
                           const toggleSelect = (checked: boolean) => {
                             if (checked) {
@@ -3087,7 +3104,7 @@ Merci de confirmer votre présence :
                                 onClick={() => handleEditGuestClick(g)}
                                 className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition touch-manipulation"
                                 title="Modifier l'invité"
-                                aria-label="Modifier l'invité"
+                                aria-label={`Modifier ${g.firstName} ${g.lastName}`}
                               >
                                 <Edit3 className="w-4 h-4" />
                               </button>
@@ -3105,66 +3122,19 @@ Merci de confirmer votre présence :
                           );
 
                           return (
-                            <div
+                            <GuestListItem
                               key={g.id}
-                              className={cn(
-                                'relative',
-                                isSelected && 'ring-2 ring-primary/25 rounded-[var(--radius-card)]',
-                              )}
-                            >
-                              <label
-                                className={cn(
-                                  'absolute z-10 flex items-center justify-center min-h-11 min-w-11',
-                                  guestsViewMode === 'grid'
-                                    ? 'top-1 right-1 rounded-lg'
-                                    : 'left-1 top-1/2 -translate-y-1/2 rounded-lg',
-                                )}
-                                onClick={(e) => e.stopPropagation()}
-                                onKeyDown={(e) => e.stopPropagation()}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={(e) => toggleSelect(e.target.checked)}
-                                  className="rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-primary h-4 w-4"
-                                  aria-label={`Sélectionner ${g.firstName} ${g.lastName}`}
-                                />
-                              </label>
-                              <ProjectCard
-                                id={g.id}
-                                title={`${g.firstName} ${g.lastName}`}
-                                layout={guestsViewMode}
-                                icon={<Users className="w-4 h-4" />}
-                                badge={rsvpChip}
-                                hideCta
-                                onClick={() => setSelectedGuestDetails(g)}
-                                meta={
-                                  guestsViewMode === 'list' ? (
-                                    <span className="truncate">{displayGuestEmail(g.email) || g.phone || (messaging.whatsapp ? 'WhatsApp / e-mail manquant' : 'Téléphone / e-mail manquant')}</span>
-                                  ) : (
-                                    <div className="space-y-1.5">
-                                      <p className="truncate text-xs">{displayGuestEmail(g.email) || g.phone || 'Sans e-mail'}</p>
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {categoryChip}
-                                      </div>
-                                    </div>
-                                  )
-                                }
-                                status={guestsViewMode === 'list' ? rsvpChip : undefined}
-                                aside={guestsViewMode === 'list' ? categoryChip : undefined}
-                                description={
-                                  <div className="space-y-0.5">
-                                    {inviteStatusNote}
-                                    {prefsLine ? (
-                                      <span className="line-clamp-2">{prefsLine}</span>
-                                    ) : guestsViewMode === 'grid' ? (
-                                      <span className="italic text-muted">Aucune préférence</span>
-                                    ) : null}
-                                  </div>
-                                }
-                                actions={actions}
-                              />
-                            </div>
+                              guest={g}
+                              layout={guestsViewMode}
+                              email={email}
+                              phone={phone}
+                              tableName={guestTableNames.get(g.id) || null}
+                              selected={isSelected}
+                              onToggleSelect={toggleSelect}
+                              onOpen={() => setSelectedGuestDetails(g)}
+                              actions={actions}
+                              missingContactLabel={messaging.whatsapp ? 'WhatsApp / e-mail manquant' : 'Téléphone / e-mail manquant'}
+                            />
                           );
                         })}
                       </div>
