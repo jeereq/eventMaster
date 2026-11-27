@@ -317,7 +317,7 @@ export default function RoomLayoutPreview({
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
   const [mounted, setMounted] = useState(false);
-  const { expanded, setExpanded, panelRef } = usePlanFullscreen();
+  const { expanded, setExpanded, panelRef, layerStyle } = usePlanFullscreen();
   const [localForce2d, setLocalForce2d] = useState(false);
   // Les réceptions à ciel ouvert (murs masqués dans le plan) s’ouvrent sans murs.
   const blueprintShowsWalls = rawBlueprint ? isBlueprintWallsVisible(rawBlueprint.metadata) : true;
@@ -545,7 +545,8 @@ export default function RoomLayoutPreview({
         <div
           ref={panelRef}
           tabIndex={-1}
-          className="fixed inset-0 z-[250] flex flex-col bg-stage text-stage-foreground outline-none"
+          style={layerStyle}
+          className="fixed inset-0 flex flex-col bg-stage text-stage-foreground outline-none"
           data-guest-no-swipe
           role="dialog"
           aria-modal="true"

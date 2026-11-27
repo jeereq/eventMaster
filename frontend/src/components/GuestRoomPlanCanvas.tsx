@@ -248,7 +248,7 @@ export default function GuestRoomPlanCanvas({
     focusOn,
     fit,
   } = usePlanViewport({ logicalW: L.w, logicalH: L.h, maxZoom: seatMaxZoom });
-  const { expanded, setExpanded, panelRef } = usePlanFullscreen();
+  const { expanded, setExpanded, panelRef, layerStyle } = usePlanFullscreen();
   const filling = fill || expanded;
   const [showWalls, setShowWalls] = useState(true);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
@@ -751,7 +751,8 @@ export default function GuestRoomPlanCanvas({
         role="dialog"
         aria-modal="true"
         aria-label="Plan de la salle en plein écran"
-        className="fixed inset-0 z-[250] flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] outline-none"
+        style={layerStyle}
+        className="fixed inset-0 flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] outline-none"
       >
         {viewer}
       </div>,

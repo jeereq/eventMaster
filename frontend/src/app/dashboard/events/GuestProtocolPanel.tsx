@@ -13,6 +13,7 @@ import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { cn } from '@/lib/cn';
 import QrCameraScanner, { QrCameraToggle } from '@/components/QrCameraScanner';
 import { eventDashboardHref } from '@/lib/eventRoutes';
+import OverlayLayer from '@/components/ui/OverlayLayer';
 
 interface ProtocolGuest {
   id: string;
@@ -184,11 +185,11 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
   }
 
   const kioskClasses = isKioskMode 
-    ? "fixed inset-0 z-[9999] bg-background/95 overflow-y-auto p-4 sm:p-8 flex flex-col xl:flex-row gap-6 animate-fade-in items-start" 
+    ? "fixed inset-0 bg-background/95 overflow-y-auto p-4 sm:p-8 flex flex-col xl:flex-row gap-6 animate-fade-in items-start" 
     : "space-y-5";
 
-  return (
-    <div className={kioskClasses}>
+  const content = (
+    <>
       {isKioskMode && (
         <button 
           onClick={() => setIsKioskMode(false)}
@@ -477,6 +478,10 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
         </div>
       </div>
       </div>
-    </div>
+    </>
   );
+
+  // Mode kiosque : rendu dans <body>, au-dessus du header et de la barre latérale.
+  if (isKioskMode) return <OverlayLayer className={kioskClasses}>{content}</OverlayLayer>;
+  return <div className={kioskClasses}>{content}</div>;
 }
