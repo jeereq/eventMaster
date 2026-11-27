@@ -4,14 +4,19 @@ import React, { Suspense, useEffect, useState, useMemo, useCallback, useRef } fr
 import { createPortal } from 'react-dom';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import EventDateTile from '@/components/events/EventDateTile';
+import StatFilters from '@/components/events/StatFilters';
+import { KpiCard } from '@/components/dashboard/KpiCard';
+import useIsMobile from '@/hooks/useIsMobile';
+import GuestRow from '@/components/events/GuestRow';
 import { useAuth } from '@/context/AuthContext';
 import {
   Calendar, MapPin, Users, PlusCircle, Trash2, Edit3,
   ChevronRight, ArrowLeft, Check, Upload, Mail, Send,
   Sparkles, CheckCircle2, XCircle, AlertCircle, Loader2,
-  Copy, Share2, Search, Filter, RefreshCw,
+  Copy, Share2, Search, RefreshCw,
   ClipboardList, Utensils, FileSpreadsheet, Download, LayoutGrid,
-  Building2, ScanLine, Shirt, MoreHorizontal, ExternalLink, ChevronDown, WhatsAppIcon, XBrandIcon, InstagramIcon, FacebookIcon,
+  Building2, ScanLine, Shirt, MoreHorizontal, ExternalLink, ChevronDown, WhatsAppIcon, XBrandIcon, InstagramIcon, FacebookIcon, Clock,
 } from '@/components/icons';
 import dynamic from 'next/dynamic';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
@@ -31,7 +36,7 @@ import {
   applyInvitationGuidelineVariables,
   formatGuestGuidelinesBlock,
 } from '@/lib/guestGuidelines';
-import { Button, ProjectCard, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, OverflowMenu, Modal, Input, Pagination, usePaginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, EmptyState, Alert, ConfirmDialog, UnderlineTabs } from '@/components/ui';
+import { Button, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, OverflowMenu, Modal, Input, Pagination, usePaginateItems, PhoneInput, usePageSize, coverFromPhotos, EmptyState, Alert, ConfirmDialog, UnderlineTabs } from '@/components/ui';
 import EventCard from '@/components/events/EventCard';
 import { EventsHero } from '@/components/events/EventsHeader';
 import { isOpenEventTask, type EventTaskItem } from '@/lib/eventTasks';
@@ -746,6 +751,9 @@ function EventsPageInner() {
     setGridColumns: setGuestsColumns,
     gridClassName: guestsGridClass,
   } = useViewMode('em-view-guests', 'list', 3);
+  const isSmallScreen = useIsMobile();
+  /** Sur téléphone, des lignes valent mieux que de grandes cartes empilées. */
+  const guestsAsCards = guestsViewMode === 'grid' && !isSmallScreen;
   const [eventsListPage, setEventsListPage] = useState(1);
   const [guestsListPage, setGuestsListPage] = useState(1);
   const [eventsPageSize, setEventsPageSize] = usePageSize('org-events', 8);
@@ -819,7 +827,6 @@ function EventsPageInner() {
   const [dietFilter, setDietFilter] = useState<string>('ALL');
   const [checkinFilter, setCheckinFilter] = useState<'ALL' | 'in' | 'out'>('ALL');
   const [customFilters, setCustomFilters] = useState<Record<string, string>>({});
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedGuestDetails, setSelectedGuestDetails] = useState<GuestItem | null>(null);
 
   // Import guests
@@ -927,6 +934,15 @@ function EventsPageInner() {
 
     return matchesSearch && matchesRsvp && matchesCategory && matchesDiet && matchesCustom && matchesCheckin;
   });
+
+  const resetGuestFilters = () => {
+    setSearchQuery('');
+    setRsvpFilter('ALL');
+    setCategoryFilter('ALL');
+    setDietFilter('ALL');
+    setCheckinFilter('ALL');
+    setCustomFilters({});
+  };
 
   useEffect(() => {
     setGuestsListPage(1);
@@ -1102,7 +1118,7 @@ function EventsPageInner() {
     if (guests.length > 0) {
       badges.guests = guests.length;
       const seatable = guests.filter((g) => g.rsvp !== 'DECLINED').length;
-      badges.tablePlan = `${countAssignedGuests(selectedEvent.tablePlan)}/${seatable}`;
+      badges.tablePlan = `${countAssignedGuests(selectedEvent.tablePlan, guests)}/${seatable}`;
     }
     if (ticketingRelevant && selectedEvent.ticketingEnabled) {
       badges.ticketing = `${selectedEvent.ticketsSold ?? 0}${selectedEvent.ticketsTotal ? `/${selectedEvent.ticketsTotal}` : ''}`;
@@ -2423,25 +2439,33 @@ Merci de confirmer votre présence :
             <ArrowLeft className="w-3.5 h-3.5" aria-hidden />
             {protocolDesk ? 'Tous les accueils' : 'Tous les événements'}
           </button>
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="space-y-2 min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight truncate">
-                {selectedEvent.title}
-              </h1>
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-                <span className="inline-flex items-center gap-1.5 min-w-0">
-                  <Calendar className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
-                  {new Date(selectedEvent.date).toLocaleDateString('fr-FR', {
-                    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                  })}
-                </span>
-                <span className="text-border" aria-hidden>·</span>
-                <span className="inline-flex items-center gap-1.5 min-w-0 truncate">
-                  <MapPin className="w-3.5 h-3.5 shrink-0 text-primary" aria-hidden />
+          {/* Un seul bloc : la date en pastille, le titre et le lieu, puis les actions. */}
+          <div className="flex flex-col gap-4 rounded-[26px] bg-surface p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-14px_rgba(16,24,40,0.18)] sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="flex min-w-0 flex-1 items-center gap-4">
+              <EventDateTile
+                key={selectedEvent.id}
+                date={selectedEvent.date}
+                photos={selectedEvent.photos}
+                kind={selectedEvent.eventKind}
+              />
+              <div className="min-w-0 flex-1 space-y-1">
+                <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight truncate">
+                  {selectedEvent.title}
+                </h1>
+                <p className="flex items-center gap-1.5 text-sm text-foreground/80">
+                  <Clock className="w-4 h-4 text-primary shrink-0" aria-hidden />
+                  <span className="truncate first-letter:uppercase">
+                    {new Date(selectedEvent.date).toLocaleDateString('fr-FR', {
+                      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                    })}
+                    {' à '}
+                    {new Date(selectedEvent.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </p>
+                <p className="flex items-center gap-1.5 text-sm text-muted">
+                  <MapPin className="w-4 h-4 text-primary shrink-0" aria-hidden />
                   <span className="truncate">{selectedEvent.placeLabel || formatEventPlace(selectedEvent) || selectedEvent.location}</span>
-                </span>
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
+                </p>
                 {selectedEvent.room && (
                   <StatusPill tone="slate" className="gap-1.5 max-w-[16rem] truncate">
                     <Building2 className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
@@ -2449,7 +2473,6 @@ Merci de confirmer votre présence :
                   </StatusPill>
                 )}
               </div>
-
             </div>
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0 w-full sm:w-auto">
               {protocolDesk && !isProtocolOnly ? (
@@ -2470,7 +2493,7 @@ Merci de confirmer votre présence :
                   variant="secondary"
                   onClick={() => handleEditEventClick(selectedEvent)}
                   leftIcon={<Edit3 className="w-4 h-4" />}
-                  className="flex-1 sm:flex-initial"
+                  className="flex-1 rounded-full px-5 sm:flex-initial"
                 >
                   Modifier
                 </Button>
@@ -2720,6 +2743,10 @@ Merci de confirmer votre présence :
                   guestCount={guests.length}
                   orgRooms={orgRooms}
                   currentRoomId={selectedEvent.roomId}
+                  eventKind={selectedEvent.eventKind}
+                  eventCommune={selectedEvent.commune}
+                  eventNeighborhood={selectedEvent.neighborhood}
+                  estimatedGuests={selectedEvent.estimatedGuests}
                   onSaved={(updated) => {
                     setSelectedEvent((prev) => (prev ? { ...prev, ...updated } : prev));
                     setEvents((prev) => prev.map((e) => (e.id === selectedEvent.id ? { ...e, ...updated } : e)));
@@ -2729,9 +2756,49 @@ Merci de confirmer votre présence :
 
               {/* Tab Content: Guests */}
               {deskTab === 'guests' && !protocolDesk && (
-                <div className="space-y-5">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-end gap-4">
-                    <div className="flex flex-wrap gap-2">
+                <div className="space-y-4">
+                  {guestsAtLimit && (
+                    <PlanLimitCallout kind="guests" planQuota={planQuota} planName={planLabel} />
+                  )}
+
+                  {guests.length > 0 && (
+                    <StatFilters
+                      label="Filtrer par réponse"
+                      value={rsvpFilter}
+                      onChange={setRsvpFilter}
+                      options={[
+                        { id: 'ALL', label: 'Invités', count: guests.length },
+                        { id: 'ACCEPTED', label: 'Confirmés', count: guests.filter((g) => g.rsvp === 'ACCEPTED').length },
+                        { id: 'PENDING', label: 'Sans réponse', count: guests.filter((g) => g.rsvp === 'PENDING').length },
+                        { id: 'DECLINED', label: 'Déclinés', count: guests.filter((g) => g.rsvp === 'DECLINED').length },
+                      ]}
+                    />
+                  )}
+
+                  <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+                    <div className="min-w-0 flex-1">
+                      {guests.length > 0 ? (
+                        <Input
+                          aria-label="Rechercher un invité"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Nom, e-mail ou téléphone"
+                          leftIcon={<Search className="w-4 h-4" />}
+                        />
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {guests.length > 0 ? (
+                        <ViewModeToggle
+                          storageKey="em-view-guests"
+                          value={guestsViewMode}
+                          onChange={setGuestsViewMode}
+                          columns={guestsColumns}
+                          onColumnsChange={setGuestsColumns}
+                          defaultMode="list"
+                          defaultColumns={3}
+                        />
+                      ) : null}
                       {selectedGuestIds.length > 0 && (
                         <Button
                           onClick={() => {
@@ -2743,140 +2810,52 @@ Merci de confirmer votre présence :
                             setBulkSelectedChannel(invitations[0]?.channel || 'EMAIL');
                             setShowBulkInviteModal(true);
                           }}
-                          size="sm"
                           variant="secondary"
                           leftIcon={<Send className="w-4 h-4" />}
+                          className="rounded-full px-5"
                         >
                           Inviter ({selectedGuestIds.length})
-                        </Button>
-                      )}
-                      <Button
-                        onClick={() => {
-                          if (guestsAtLimit) {
-                            setError(getQuotaActionMessage('guests', planQuota, planLabel));
-                            return;
-                          }
-                          setShowImportModal(true);
-                        }}
-                        disabled={guestsAtLimit}
-                        title={guestsQuotaMsg || undefined}
-                        size="sm"
-                        variant="secondary"
-                        leftIcon={<FileSpreadsheet className="w-4 h-4" />}
-                      >
-                        Importer
-                      </Button>
-                      {guests.length > 0 && (
-                        <Button
-                          onClick={handleExportGuests}
-                          size="sm"
-                          variant="secondary"
-                          title="Exporter tous les invités en fichier CSV"
-                          leftIcon={<Download className="w-4 h-4" />}
-                        >
-                          Exporter
                         </Button>
                       )}
                       <Button
                         onClick={openAddGuestModal}
                         disabled={guestsAtLimit}
                         title={guestsQuotaMsg || undefined}
-                        size="sm"
                         leftIcon={<PlusCircle className="w-4 h-4" />}
+                        className="rounded-full px-5"
                       >
                         Ajouter
                       </Button>
+                      <OverflowMenu
+                        align="right"
+                        triggerLabel="Autres actions sur la liste"
+                        triggerClassName="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border bg-surface text-foreground transition hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+                        items={[
+                          {
+                            id: 'import',
+                            label: 'Importer un fichier',
+                            icon: FileSpreadsheet,
+                            disabled: guestsAtLimit,
+                            onSelect: () => {
+                              if (guestsAtLimit) {
+                                setError(getQuotaActionMessage('guests', planQuota, planLabel));
+                                return;
+                              }
+                              setShowImportModal(true);
+                            },
+                          },
+                          ...(guests.length > 0
+                            ? [{ id: 'export', label: 'Exporter en CSV', icon: Download, onSelect: handleExportGuests }]
+                            : []),
+                        ]}
+                      />
                     </div>
                   </div>
-                  {guestsAtLimit && (
-                    <PlanLimitCallout kind="guests" planQuota={planQuota} planName={planLabel} />
-                  )}
 
-                  {(() => {
-                    const specialMealCount = guests.filter(g => g.preferences?.specialMeal && g.preferences.specialMeal !== 'none').length;
-                    return specialMealCount > 0 ? (
-                      <p className="text-sm text-muted tabular-nums">
-                        {specialMealCount} {specialMealCount > 1 ? 'régimes spéciaux' : 'régime spécial'}
-                      </p>
-                    ) : null;
-                  })()}
-
-                  {/* Search & Filtering Controls */}
                   {guests.length > 0 && (
-                    <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 sm:p-4 space-y-3">
-                      <div className="flex flex-col lg:flex-row gap-3 lg:items-end">
-                        <div className="w-full lg:flex-1 min-w-0">
-                          <Input
-                            label="Rechercher un invité"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Nom ou e-mail"
-                            leftIcon={<Search className="w-4 h-4" />}
-                          />
-                        </div>
-
-                        <div className="w-full lg:w-44">
-                          <label htmlFor="guest-filter-rsvp" className="block text-xs font-semibold text-muted mb-1.5">Statut de réponse</label>
-                          <select
-                            id="guest-filter-rsvp"
-                            value={rsvpFilter}
-                            onChange={(e) => setRsvpFilter(e.target.value as any)}
-                            className={GUEST_FILTER_CONTROL}
-                          >
-                            <option value="ALL">Tous les statuts</option>
-                            <option value="ACCEPTED">Confirmés uniquement</option>
-                            <option value="DECLINED">Déclinés uniquement</option>
-                            <option value="PENDING">En attente uniquement</option>
-                          </select>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                            className={cn(
-                              'px-3 py-2 min-h-11 rounded-[var(--radius-button)] text-xs font-semibold transition inline-flex items-center gap-1.5 border touch-manipulation',
-                              showAdvancedFilters
-                                ? 'bg-primary/10 border-primary/30 text-primary'
-                                : 'bg-surface-muted border-border text-muted hover:bg-surface-muted/80',
-                            )}
-                          >
-                            <Filter className="w-3.5 h-3.5" />
-                            Filtres avancés
-                          </button>
-
-                          {(searchQuery || rsvpFilter !== 'ALL' || categoryFilter !== 'ALL' || dietFilter !== 'ALL' || checkinFilter !== 'ALL' || Object.values(customFilters).some(v => v !== 'ALL' && v !== '')) && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSearchQuery('');
-                                setRsvpFilter('ALL');
-                                setCategoryFilter('ALL');
-                                setDietFilter('ALL');
-                                setCheckinFilter('ALL');
-                                setCustomFilters({});
-                              }}
-                              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary transition bg-primary/10 hover:bg-primary/15 px-3 py-2 rounded-[var(--radius-button)]"
-                            >
-                              <RefreshCw className="w-3.5 h-3.5" />
-                              Réinitialiser
-                            </button>
-                          )}
-
-                          <ViewModeToggle
-                            storageKey="em-view-guests"
-                            value={guestsViewMode}
-                            onChange={setGuestsViewMode}
-                            columns={guestsColumns}
-                            onColumnsChange={setGuestsColumns}
-                            defaultMode="list"
-                            defaultColumns={3}
-                          />
-                        </div>
-                      </div>
-
-                      {showAdvancedFilters && (
-                        <div className="pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 animate-fade-in">
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 items-end gap-3 md:grid-cols-3 lg:grid-cols-4">
                           <div className="space-y-1">
                             <label htmlFor="guest-filter-category" className="text-xs font-semibold text-muted">Catégorie</label>
                             <select
@@ -2893,7 +2872,7 @@ Merci de confirmer votre présence :
                           </div>
 
                           <div className="space-y-1">
-                            <label htmlFor="guest-filter-checkin" className="text-xs font-semibold text-muted">Entrée jour J</label>
+                            <label htmlFor="guest-filter-checkin" className="text-xs font-semibold text-muted">Arrivée le jour J</label>
                             <select
                               id="guest-filter-checkin"
                               value={checkinFilter}
@@ -2901,8 +2880,8 @@ Merci de confirmer votre présence :
                               className={GUEST_FILTER_CONTROL}
                             >
                               <option value="ALL">Tous</option>
-                              <option value="in">Entrés</option>
-                              <option value="out">Pas encore entrés</option>
+                              <option value="in">Arrivés</option>
+                              <option value="out">Pas encore arrivés</option>
                             </select>
                           </div>
 
@@ -2962,7 +2941,15 @@ Merci de confirmer votre présence :
                               </div>
                             );
                           })}
-                        </div>
+                      </div>
+                      {(searchQuery || rsvpFilter !== 'ALL' || categoryFilter !== 'ALL' || dietFilter !== 'ALL' || checkinFilter !== 'ALL' || Object.values(customFilters).some((v) => v !== 'ALL' && v !== '')) && (
+                        <button
+                          type="button"
+                          onClick={resetGuestFilters}
+                          className="inline-flex min-h-9 items-center text-sm font-semibold text-primary hover:underline underline-offset-2"
+                        >
+                          Réinitialiser
+                        </button>
                       )}
                     </div>
                   )}
@@ -3010,11 +2997,7 @@ Merci de confirmer votre présence :
                       <p className="text-sm text-muted mt-1 max-w-xs mx-auto">La recherche n'a retourné aucun profil correspondant.</p>
                       <button
                         type="button"
-                        onClick={() => {
-                          setSearchQuery('');
-                          setRsvpFilter('ALL');
-                          setCategoryFilter('ALL');
-                        }}
+                        onClick={resetGuestFilters}
                         className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary transition bg-primary/10 hover:bg-primary/15 px-3 py-2 rounded-[var(--radius-button)]"
                       >
                         Effacer les filtres
@@ -3044,127 +3027,61 @@ Merci de confirmer votre présence :
                       </div>
 
                       <div
-                        className={guestsViewMode === 'grid' ? guestsGridClass : listStackClass}
-                        style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 88px' }}
+                        className={guestsAsCards ? guestsGridClass : 'overflow-hidden rounded-[20px] bg-surface divide-y divide-border shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-14px_rgba(16,24,40,0.18)]'}
                       >
                         {paginatedGuestsList.map((g) => {
                           const isSelected = selectedGuestIds.includes(g.id);
+                          const name = `${g.firstName} ${g.lastName}`;
                           const rsvpTone = (g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber') as 'emerald' | 'rose' | 'amber';
-                          const rsvpLabel = g.rsvp === 'ACCEPTED' ? 'Confirmé' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
-                          const rsvpChip = <StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>;
-                          const categoryChip = <StatusPill tone="slate">{g.category || 'Général'}</StatusPill>;
-
-                          const inviteStatusNote =
+                          const rsvpLabel = g.rsvp === 'ACCEPTED' ? 'Confirmé' : g.rsvp === 'DECLINED' ? 'Décliné' : 'Sans réponse';
+                          const contact = displayGuestEmail(g.email) || g.preferences?.phone || g.preferences?.telephone || (g as { phone?: string }).phone;
+                          // Une seule remarque par ligne : d’abord ce qui bloque, puis ce qui informe.
+                          const note =
                             g.preferences?.invitationLastStatus === 'FAILED' ? (
-                              <span className="text-xs text-rose-600 dark:text-rose-400" title={g.preferences?.invitationLastError || 'Échec d’envoi'}>
+                              <span className="text-rose-600 dark:text-rose-400" title={g.preferences?.invitationLastError || 'Échec d’envoi'}>
                                 Envoi échoué
                               </span>
-                            ) : g.preferences?.invitationLastStatus === 'SENT' && g.preferences?.invitationSentAt ? (
-                              <span className="text-xs text-primary">Invitation envoyée</span>
+                            ) : !contact ? (
+                              <span className="text-amber-700 dark:text-amber-300">Sans contact</span>
+                            ) : g.preferences ? (
+                              [
+                                g.preferences.diet && `Régime : ${g.preferences.diet}`,
+                                g.preferences.allergies && !/^(aucune?s?|non|néant)\.?$/i.test(String(g.preferences.allergies).trim()) && `Allergies : ${g.preferences.allergies}`,
+                                g.preferences.plusOne ? 'Accompagné' : null,
+                                g.preferences.notes,
+                              ].filter(Boolean).join(' · ')
+                              || (g.preferences.invitationLastStatus === 'SENT' && g.preferences.invitationSentAt ? 'Invitation envoyée' : null)
                             ) : null;
 
-                          const prefsLine = g.preferences ? (
-                            [
-                              g.preferences.diet && `Régime: ${g.preferences.diet}`,
-                              g.preferences.allergies && `Allergies: ${g.preferences.allergies}`,
-                              g.preferences.plusOne !== undefined && `Accompagné: ${g.preferences.plusOne ? 'Oui' : 'Non'}`,
-                              g.preferences.notes && `Notes: ${g.preferences.notes}`,
-                            ].filter(Boolean).join(' · ') || null
-                          ) : null;
-
-                          const toggleSelect = (checked: boolean) => {
-                            if (checked) {
-                              setSelectedGuestIds([...selectedGuestIds, g.id]);
-                            } else {
-                              setSelectedGuestIds(selectedGuestIds.filter(id => id !== g.id));
-                            }
-                          };
-
-                          const actions = (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleEditGuestClick(g)}
-                                className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition touch-manipulation"
-                                title="Modifier l'invité"
-                                aria-label="Modifier l'invité"
-                              >
-                                <Edit3 className="w-4 h-4" />
-                              </button>
-                              <OverflowMenu
-                                align="right"
-                                triggerLabel={`Autres actions pour ${g.firstName} ${g.lastName}`}
-                                triggerClassName="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                                trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
-                                items={[
-                                  { id: 'share', label: 'Partager l’invitation', icon: Share2, onSelect: () => setSharingGuest(g) },
-                                  { id: 'delete', label: 'Supprimer', icon: Trash2, danger: true, onSelect: () => requestDeleteGuest(g.id) },
-                                ]}
-                              />
-                            </>
-                          );
-
                           return (
-                            <div
+                            <GuestRow
                               key={g.id}
-                              className={cn(
-                                'relative',
-                                isSelected && 'ring-2 ring-primary/25 rounded-[var(--radius-card)]',
-                              )}
-                            >
-                              <label
-                                className={cn(
-                                  'absolute z-10 flex items-center justify-center min-h-11 min-w-11',
-                                  guestsViewMode === 'grid'
-                                    ? 'top-1 right-1 rounded-lg'
-                                    : 'left-1 top-1/2 -translate-y-1/2 rounded-lg',
-                                )}
-                                onClick={(e) => e.stopPropagation()}
-                                onKeyDown={(e) => e.stopPropagation()}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={(e) => toggleSelect(e.target.checked)}
-                                  className="rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-primary h-4 w-4"
-                                  aria-label={`Sélectionner ${g.firstName} ${g.lastName}`}
+                              name={name}
+                              category={g.category || 'Général'}
+                              status={<StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>}
+                              note={note}
+                              layout={guestsAsCards ? 'grid' : 'list'}
+                              selected={isSelected}
+                              onSelect={(checked) => {
+                                setSelectedGuestIds(
+                                  checked ? [...selectedGuestIds, g.id] : selectedGuestIds.filter((id) => id !== g.id),
+                                );
+                              }}
+                              onOpen={() => setSelectedGuestDetails(g)}
+                              menu={
+                                <OverflowMenu
+                                  align="right"
+                                  triggerLabel={`Actions pour ${name}`}
+                                  triggerClassName="min-h-11 min-w-11 shrink-0 inline-flex items-center justify-center rounded-full text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                                  trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+                                  items={[
+                                    { id: 'edit', label: 'Modifier', icon: Edit3, onSelect: () => handleEditGuestClick(g) },
+                                    { id: 'share', label: 'Partager l’invitation', icon: Share2, onSelect: () => setSharingGuest(g) },
+                                    { id: 'delete', label: 'Supprimer', icon: Trash2, danger: true, separatorBefore: true, onSelect: () => requestDeleteGuest(g.id) },
+                                  ]}
                                 />
-                              </label>
-                              <ProjectCard
-                                id={g.id}
-                                title={`${g.firstName} ${g.lastName}`}
-                                layout={guestsViewMode}
-                                icon={<Users className="w-4 h-4" />}
-                                badge={rsvpChip}
-                                hideCta
-                                onClick={() => setSelectedGuestDetails(g)}
-                                meta={
-                                  guestsViewMode === 'list' ? (
-                                    <span className="truncate">{displayGuestEmail(g.email) || g.phone || (messaging.whatsapp ? 'WhatsApp / e-mail manquant' : 'Téléphone / e-mail manquant')}</span>
-                                  ) : (
-                                    <div className="space-y-1.5">
-                                      <p className="truncate text-xs">{displayGuestEmail(g.email) || g.phone || 'Sans e-mail'}</p>
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {categoryChip}
-                                      </div>
-                                    </div>
-                                  )
-                                }
-                                status={guestsViewMode === 'list' ? rsvpChip : undefined}
-                                aside={guestsViewMode === 'list' ? categoryChip : undefined}
-                                description={
-                                  <div className="space-y-0.5">
-                                    {inviteStatusNote}
-                                    {prefsLine ? (
-                                      <span className="line-clamp-2">{prefsLine}</span>
-                                    ) : guestsViewMode === 'grid' ? (
-                                      <span className="italic text-muted">Aucune préférence</span>
-                                    ) : null}
-                                  </div>
-                                }
-                                actions={actions}
-                              />
-                            </div>
+                              }
+                            />
                           );
                         })}
                       </div>
@@ -3198,89 +3115,110 @@ Merci de confirmer votre présence :
                       }
                     />
                   ) : (
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {invitations.map((invite) => (
-                        <Card key={invite.id} interactive className="flex flex-col justify-between gap-4">
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <StatusPill
-                                tone={
-                                  invite.channel === 'WHATSAPP' || invite.channel === 'SMS'
-                                    ? 'emerald'
-                                    : invite.channel === 'EMAIL_AND_WHATSAPP' || invite.channel === 'EMAIL_AND_SMS' || invite.channel === 'ALL_CHANNELS'
-                                      ? 'sky'
-                                      : 'primary'
-                                }
-                              >
-                                {getChannelLabel(effectiveInviteChannel(invite.channel))}
-                              </StatusPill>
-                              <span className="text-xs font-semibold text-muted truncate">
-                                {invite.template?.name || 'Sans modèle'}
-                              </span>
+                    <>
+                      {/* Où en sont les envois. */}
+                      <section aria-label="Suivi des envois" className="em-header-wash rounded-[26px] p-3 sm:p-5">
+                        <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+                          <KpiCard
+                            icon={<Send className="w-[18px] h-[18px]" />}
+                            label="Envoyées"
+                            value={`${guests.filter((g) => g.preferences?.invitationSentAt).length} / ${guests.length}`}
+                          />
+                          <KpiCard
+                            icon={<Mail className="w-[18px] h-[18px]" />}
+                            label="Échecs"
+                            value={String(guests.filter((g) => g.preferences?.invitationLastStatus === 'FAILED').length)}
+                            tone={guests.some((g) => g.preferences?.invitationLastStatus === 'FAILED') ? 'danger' : 'default'}
+                          />
+                          <KpiCard
+                            icon={<Users className="w-[18px] h-[18px]" />}
+                            label="Réponses"
+                            value={`${guests.filter((g) => g.rsvp !== 'PENDING').length} / ${guests.length}`}
+                          />
+                        </div>
+                      </section>
+
+                      <div className="flex justify-end">
+                        <Button variant="secondary" onClick={openNewInvitationModal} leftIcon={<PlusCircle className="w-4 h-4" />} className="rounded-full px-5">
+                          Nouvelle invitation
+                        </Button>
+                      </div>
+
+                      <div className={cn('grid grid-cols-1 gap-4', invitations.length > 1 && 'lg:grid-cols-2')}>
+                        {invitations.map((invite) => (
+                          <article key={invite.id} className="flex min-w-0 flex-col gap-4 rounded-[20px] bg-surface p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-14px_rgba(16,24,40,0.18)] sm:p-5">
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <StatusPill
+                                  tone={
+                                    invite.channel === 'WHATSAPP' || invite.channel === 'SMS'
+                                      ? 'emerald'
+                                      : invite.channel === 'EMAIL_AND_WHATSAPP' || invite.channel === 'EMAIL_AND_SMS' || invite.channel === 'ALL_CHANNELS'
+                                        ? 'sky'
+                                        : 'primary'
+                                  }
+                                >
+                                  {getChannelLabel(effectiveInviteChannel(invite.channel))}
+                                </StatusPill>
+                                <span className="text-[13px] text-muted truncate">
+                                  {invite.template?.name || 'Sans modèle'}
+                                </span>
+                              </div>
+                              <h3 className="text-[17px] font-semibold text-foreground tracking-tight line-clamp-2">{invite.subject}</h3>
+                              <p className="text-sm text-muted line-clamp-4 leading-relaxed whitespace-pre-line">
+                                {invite.body || invite.whatsappBody || 'Aucun message rédigé.'}
+                              </p>
                             </div>
-                            <h3 className="text-base font-semibold text-foreground tracking-tight line-clamp-1">{invite.subject}</h3>
-                            <p className="text-sm text-muted line-clamp-3 leading-relaxed whitespace-pre-line">
-                              {invite.body || invite.whatsappBody || 'Aucun message rédigé.'}
-                            </p>
-                          </div>
-                          <div className="flex gap-2 pt-3 border-t border-border">
-                            <Button
-                              className="flex-1"
-                              size="sm"
-                              variant="secondary"
-                              disabled={broadcastingInviteId !== null}
-                              loading={broadcastingInviteId === invite.id}
-                              leftIcon={broadcastingInviteId === invite.id ? undefined : <Send className="w-3.5 h-3.5" />}
-                              onClick={() => {
-                                setBroadcastWizardStep(1);
-                                setBroadcastConfirmInviteId(invite.id);
-                              }}
-                            >
-                              {broadcastingInviteId === invite.id ? 'Envoi en cours…' : 'Envoyer les invitations'}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditInvitationClick(invite)}
-                              disabled={broadcastingInviteId !== null}
-                              title="Modifier l'invitation"
-                              aria-label="Modifier l'invitation"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => requestDeleteInvitation(invite.id)}
-                              disabled={broadcastingInviteId !== null}
-                              title="Supprimer l'invitation"
-                              aria-label="Supprimer l'invitation"
-                              className="hover:text-danger"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
+                            <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-border pt-3">
+                              <Button
+                                disabled={broadcastingInviteId !== null}
+                                loading={broadcastingInviteId === invite.id}
+                                leftIcon={broadcastingInviteId === invite.id ? undefined : <Send className="w-4 h-4" />}
+                                className="flex-1 rounded-full px-5 sm:flex-none"
+                                onClick={() => {
+                                  setBroadcastWizardStep(1);
+                                  setBroadcastConfirmInviteId(invite.id);
+                                }}
+                              >
+                                {broadcastingInviteId === invite.id ? 'Envoi en cours…' : 'Envoyer'}
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                onClick={() => handleEditInvitationClick(invite)}
+                                disabled={broadcastingInviteId !== null}
+                                leftIcon={<Edit3 className="w-4 h-4" />}
+                                className="rounded-full px-4"
+                              >
+                                Modifier
+                              </Button>
+                              <div className="ml-auto">
+                                <OverflowMenu
+                                  align="right"
+                                  triggerLabel="Autres actions sur l’invitation"
+                                  triggerClassName="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-muted transition hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                                  trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+                                  items={[
+                                    { id: 'delete', label: 'Supprimer', icon: Trash2, danger: true, disabled: broadcastingInviteId !== null, onSelect: () => requestDeleteInvitation(invite.id) },
+                                  ]}
+                                />
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    </>
                   )}
 
-                  {invitations.length > 0 ? (
-                    <div>
-                      <Button variant="ghost" size="sm" onClick={openNewInvitationModal} leftIcon={<PlusCircle className="w-4 h-4" />}>
-                        Ajouter une autre invitation
-                      </Button>
-                    </div>
-                  ) : null}
-
-                  <details className="group rounded-[var(--radius-card)] border border-border bg-surface">
-                    <summary className="min-h-14 px-4 sm:px-5 flex items-center justify-between gap-3 cursor-pointer list-none rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 [&::-webkit-details-marker]:hidden">
+                  <details className="group rounded-[20px] bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-14px_rgba(16,24,40,0.18)]">
+                    <summary className="min-h-14 px-4 py-3 sm:px-5 flex items-center justify-between gap-3 cursor-pointer list-none rounded-[20px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 [&::-webkit-details-marker]:hidden">
                       <span className="min-w-0">
                         <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
                           <ClipboardList className="w-4 h-4 text-primary shrink-0" aria-hidden />
                           Formulaire de réponse
                         </span>
-                        <span className="block text-xs text-muted mt-0.5">Genre, allergies, boissons, menu</span>
+                        <span className="block truncate text-[13px] text-muted mt-0.5">
+                          {eventRsvpFields.map((field) => field.label).filter(Boolean).join(' · ')}
+                        </span>
                       </span>
                       <ChevronRight className="w-4 h-4 text-muted shrink-0 transition-transform group-open:rotate-90" aria-hidden />
                     </summary>
@@ -4678,7 +4616,7 @@ Merci de confirmer votre présence :
                     ? 'Confirmé'
                     : selectedGuestDetails.rsvp === 'DECLINED'
                       ? 'Décliné'
-                      : 'En attente'}
+                      : 'Sans réponse'}
                 </StatusPill>
               </div>
 

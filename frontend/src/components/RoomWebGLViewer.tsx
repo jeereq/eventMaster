@@ -5449,9 +5449,9 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     return allowMusicDancers ? { fill: 0, dancing: true } : null;
   }, [musicPlaying, hasDanceFloor, guestSimulationProp, allowMusicDancers]);
   const musicDanceNote = !hasDanceFloor
-    ? 'Ajoutez une piste de danse au plan pour voir les invités danser.'
+    ? 'Sans piste de danse au plan, personne ne danse.'
     : !guestSimulation
-      ? 'Les invités 3D ne sont pas inclus dans votre forfait : la piste reste vide.'
+      ? 'Invités 3D non inclus dans votre forfait.'
       : null;
   const handleMusicPlayback = useCallback((state: RoomMusicPlayback) => {
     setMusicPlayback((cur) => (cur.playing === state.playing && cur.bpm === state.bpm ? cur : state));
@@ -6048,8 +6048,9 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
           danceNote={musicDanceNote}
           className={cn(
             // Téléphone : en bas, sur la moitié de l'écran pour garder la piste visible ; ordinateur : à gauche.
-            'absolute inset-x-2.5 bottom-12 z-20 max-h-[55%] sm:inset-x-auto sm:bottom-auto sm:left-2.5 sm:w-[23rem]',
-            avatarActive ? 'sm:top-12 sm:max-h-[calc(100%-12rem)] max-sm:bottom-40' : 'sm:top-16 sm:max-h-[calc(100%-5.5rem)]',
+            'absolute inset-x-2.5 bottom-16 z-20 max-h-[55%] sm:inset-x-auto sm:bottom-auto sm:left-2.5 sm:w-[19rem]',
+            // Le panneau s'arrête au-dessus des boutons du bas (Murs, Sans toit, Plein écran).
+            avatarActive ? 'sm:top-12 sm:max-h-[calc(100%-12rem)] max-sm:bottom-40' : 'sm:top-16 sm:max-h-[calc(100%-8rem)]',
           )}
         />
       ) : null}

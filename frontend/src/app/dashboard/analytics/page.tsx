@@ -94,7 +94,7 @@ function mealLabel(value?: string) {
 const RSVP_META = {
  ACCEPTED: { label: 'Confirmé', Icon: CheckCircle, iconClass: 'text-primary' },
  DECLINED: { label: 'Décliné', Icon: XCircle, iconClass: 'text-danger' },
- PENDING: { label: 'En attente', Icon: Clock, iconClass: 'text-festive-accent' },
+ PENDING: { label: 'Sans réponse', Icon: Clock, iconClass: 'text-festive-accent' },
 } as const;
 
 /** « 1 confirmé », « 2 confirmés » (0 et 1 au singulier). */
@@ -224,7 +224,6 @@ function EventAnalyticsView() {
 
  const responseRate = totalGuests > 0 ? Math.round(((acceptedCount + declinedCount) / totalGuests) * 100) : 0;
  const checkedInCount = guests.filter((g) => Boolean(g.checkedInAt)).length;
- const checkInPct = acceptedCount > 0 ? Math.round((checkedInCount / acceptedCount) * 100) : 0;
 
  const uniqueCategories = Array.from(new Set(guests.map(g => g.category || 'Général')));
 
@@ -293,7 +292,6 @@ function EventAnalyticsView() {
 
  // Les totaux de l’espace ne recoupent la bande de l’événement que s’ils portent sur ce seul événement.
  const singleEvent = events.length === 1 && (workspace?.events.total ?? 0) <= 1;
- const toScanCount = Math.max(0, acceptedCount - checkedInCount);
  const mealRows = MEAL_OPTIONS.map((option) => ({
  label: option.label,
  count: guests.filter((g) =>
@@ -340,7 +338,7 @@ function EventAnalyticsView() {
  <KpiCard
  key="pending"
  icon={<Clock className="w-[18px] h-[18px]" />}
- label="En attente"
+ label="Sans réponse"
  value={String(pendingCount)}
  hint={`${pct(pendingPct)} des invités`}
  tone={pendingCount > 0 ? 'warning' : 'default'}
@@ -357,9 +355,9 @@ function EventAnalyticsView() {
  <KpiCard
  key="entries"
  icon={<ScanLine className="w-[18px] h-[18px]" />}
- label="Entrées"
+ label="Arrivés"
  value={String(checkedInCount)}
- hint={acceptedCount > 0 ? `${pct(checkInPct)} des confirmés · ${toScanCount} à scanner` : undefined}
+ hint={acceptedCount > 0 ? `sur ${countLabel(acceptedCount, 'confirmé')}` : undefined}
  />
  );
  const ticketKpi = ticketOrders.length > 0 ? (
@@ -453,8 +451,8 @@ function EventAnalyticsView() {
  </ChartCard>
  ) : null,
  arrivalBuckets.length > 0 ? (
- <ChartCard key="arrivals" title="Arrivées" value={countLabel(checkedInCount, 'entrée')}>
- <TimeColumns buckets={arrivalBuckets} unit={plural('entrée')} />
+ <ChartCard key="arrivals" title="Arrivées" value={countLabel(checkedInCount, 'arrivé')}>
+ <TimeColumns buckets={arrivalBuckets} unit={plural('arrivé')} />
  </ChartCard>
  ) : null,
  salesBuckets.length > 0 ? (

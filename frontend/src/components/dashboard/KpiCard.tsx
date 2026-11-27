@@ -38,7 +38,7 @@ export function KpiCard({
         >
           {icon}
         </span>
-        <span className="truncate" title={label}>
+        <span className="min-w-0 leading-tight line-clamp-2" title={label}>
           {label}
         </span>
       </p>

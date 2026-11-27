@@ -132,7 +132,7 @@ export function WorkspaceStatsOverview({
           hint: guests.accepted > 0 ? countLabel(guests.accepted, 'attendu') : null,
         },
         {
-          label: 'Entrées',
+          label: 'Arrivés',
           value: guests.checkedIn,
           hint: guests.accepted > 0 ? `${guests.checkInRate} %` : null,
         },
@@ -149,7 +149,7 @@ export function WorkspaceStatsOverview({
           hint: guests.accepted > 0 ? countLabel(guests.accepted, 'confirmé') : null,
         },
         {
-          label: 'Entrées',
+          label: 'Arrivés',
           value: `${guests.checkInRate} %`,
           hint: guests.checkedIn > 0 ? countLabel(guests.checkedIn, 'scanné') : null,
         },

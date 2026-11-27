@@ -2,12 +2,12 @@
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { 
- Plus, Trash2, Users, Check, Move, X, RefreshCw, Search,
+ Plus, Trash2, Users, Check, X, RefreshCw, Search,
   HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown, Download, PlusCircle, Save, Box,
-  Wand2, Paintbrush, Settings2, CheckCircle2, AlertCircle, Coins, Eye, Tag, SlidersHorizontal,
-  ZoomIn, ZoomOut, Columns, ShieldCheck, Grid, RotateCcw, Sun, Building2,
+  Wand2, Paintbrush, Settings2, CheckCircle2, AlertCircle, Coins, Eye, Tag,
+  ZoomIn, ZoomOut, ShieldCheck, Grid, RotateCcw, Sun, Building2, MoreHorizontal,
 } from '@/components/icons';
-import { Button, ConfirmDialog } from '@/components/ui';
+import { Button, ConfirmDialog, StatusPill } from '@/components/ui';
 import Modal from '@/components/ui/Modal';
 import OverlayLayer from '@/components/ui/OverlayLayer';
 import { formatFc } from '@/config/landingPricing';
@@ -44,6 +44,7 @@ import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
 import type { NeighborSharingPolicy } from '@/lib/eventConfig';
 import Link from 'next/link';
+import OverflowMenu from '@/components/ui/OverflowMenu';
 
 type PlannerView = PlanViewMode;
 
@@ -1743,7 +1744,7 @@ export default function TablePlanner({
  )}
                           title={
                             guest
-                              ? `${guest.firstName} ${guest.lastName}${guest.category ? ` · ${guest.category}` : ''} · ${guest.rsvp === 'ACCEPTED' ? 'Confirmé' : 'En attente'} (Cliquer pour gérer)`
+                              ? `${guest.firstName} ${guest.lastName}${guest.category ? ` · ${guest.category}` : ''} · ${guest.rsvp === 'ACCEPTED' ? 'Confirmé' : 'Sans réponse'} (Cliquer pour gérer)`
                               : `Siège ${index + 1} (libre) — Cliquer pour placer un invité`
                           }
  >
@@ -2015,175 +2016,83 @@ export default function TablePlanner({
  </div>
  )}
 
- {caps.level !== 'complete' ? (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-border bg-surface rounded-[var(--radius-card)] shadow-2xs">
- <div className="text-sm">
-            <p className="font-semibold text-foreground flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" aria-hidden /> Éditeur {caps.label} · {tables.length}/{caps.maxTables} tables
- </p>
-            <p className="text-xs text-muted mt-0.5">{caps.description}</p>
- </div>
-          <Link href="/dashboard/billing" className="text-xs font-semibold text-primary hover:underline shrink-0">
- Voir les forfaits →
- </Link>
- </div>
- ) : null}
-
- <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
- <div>
- <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
- <LayoutGrid className="w-5 h-5 text-primary" />
-            Plan de table
- </h2>
- <p className="text-muted text-sm mt-0.5">
-   {`${tables.length}/${caps.maxTables} tables · ${caps.label}${caps.canSnapGrid ? ' · grille' : ''}${caps.canRotate ? ' · rotation' : ''}`}
- </p>
- </div>
- <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground tabular-nums">
+            {assignedGuestIds.size} sur {placeableGuests.length} {placeableGuests.length > 1 ? 'invités placés' : 'invité placé'}
+          </h2>
+          <p className="text-[13px] text-muted tabular-nums">
+            {tables.length} {tables.length > 1 ? 'tables' : 'table'}
+            {caps.level !== 'complete' ? (
+              <>
+                {` sur ${caps.maxTables} · ${caps.label} · `}
+                <Link href="/dashboard/billing" className="font-semibold text-primary hover:underline">
+                  Voir les forfaits
+                </Link>
+              </>
+            ) : null}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <PlanViewToggle value={plannerView} onChange={setPlannerView} />
- <button
- onClick={() => {
- if (tables.length >= caps.maxTables) {
- alert(`Limite de ${caps.maxTables} tables atteinte (${caps.label}). Passez à un forfait supérieur.`);
- return;
- }
- setShowAddModal(true);
- }}
- className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-surface border border-border text-foreground hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-xs sm:text-sm transition"
- >
- <Plus className="w-4 h-4" />
- Ajouter une table
- </button>
- <button
- onClick={handleSavePlan}
- disabled={saving}
- className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover disabled:opacity-60 text-white font-medium rounded-[var(--radius-button)] text-sm transition"
- >
- {saving ? (
- <>
- <RefreshCw className="w-4 h-4 animate-spin" />
- Sauvegarde...
- </>
- ) : (
- <>
- <Check className="w-4 h-4" />
- Sauvegarder le plan
- </>
- )}
- </button>
- </div>
- </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (tables.length >= caps.maxTables) {
+                alert(`Limite de ${caps.maxTables} tables atteinte (${caps.label}). Passez à un forfait supérieur.`);
+                return;
+              }
+              setShowAddModal(true);
+            }}
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-border bg-surface px-4 text-sm font-semibold text-foreground transition hover:border-primary/40"
+          >
+            <Plus className="w-4 h-4" />
+            Ajouter une table
+          </button>
+          <button
+            type="button"
+            onClick={handleSavePlan}
+            disabled={saving}
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:opacity-60"
+          >
+            {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+          <OverflowMenu
+            align="right"
+            menuWidth={240}
+            triggerLabel="Réglages du plan"
+            triggerClassName="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border bg-surface text-foreground transition hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+            items={[
+              ...(plannerView === '2d' && (caps.canSnapGrid || caps.canAlign)
+                ? [{ id: 'grid', label: 'Ranger en grille', icon: LayoutGrid, disabled: tables.every((t) => t.locked), onSelect: handleLayoutGrid }]
+                : []),
+              ...(plannerView === '2d' && caps.canAlign
+                ? [{ id: 'circle', label: 'Ranger en cercle', icon: RotateCcw, disabled: tables.every((t) => t.locked), onSelect: handleLayoutCircle }]
+                : []),
+              ...(caps.canLock && tables.some((t) => t.locked)
+                ? [{ id: 'unlock', label: 'Tout déverrouiller', icon: Unlock, onSelect: () => setTables(tables.map((t) => ({ ...t, locked: false }))) }]
+                : []),
+              ...(assignedGuestIds.size > 0
+                ? [{ id: 'clear', label: 'Libérer les sièges', icon: X, danger: true, onSelect: handleClearAssignments }]
+                : []),
+              ...(['standard', 'comfort', 'expanded', 'screen'] as PlannerHeightPreset[]).map((key, index) => ({
+                id: `size-${key}`,
+                label: `Taille : ${HEIGHT_PRESET_CONFIG[key].label}`,
+                selected: heightPreset === key,
+                separatorBefore: index === 0,
+                onSelect: () => handleSetHeightPreset(key),
+              })),
+              { id: 'wide', label: 'Pleine largeur', selected: isPanoramic, separatorBefore: true, onSelect: handleTogglePanoramic },
+            ]}
+          />
+        </div>
+      </div>
 
  {/* Grid Layout for Planner — canvas first on mobile */}
       <div className={cn('flex flex-col gap-3 xl:gap-6', isPanoramic ? 'w-full' : 'xl:grid xl:grid-cols-4')}>
         <div className={cn('order-1 flex flex-col space-y-3', isPanoramic ? 'w-full' : 'xl:order-2 xl:col-span-3')}>
-          {/* Barre d'espace & dimensionnement du plan de salle */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5 p-2.5 bg-surface border border-border rounded-2xl shadow-2xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-muted flex items-center gap-1.5 mr-0.5">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
-                Taille du plan :
-              </span>
-              <div className="inline-flex items-center gap-1 p-0.5 bg-surface-muted rounded-xl border border-border">
-                {(['standard', 'comfort', 'expanded', 'screen'] as PlannerHeightPreset[]).map((pKey) => {
-                  const cfg = HEIGHT_PRESET_CONFIG[pKey];
-                  const isActive = heightPreset === pKey;
-                  return (
-                    <button
-                      key={pKey}
-                      type="button"
-                      onClick={() => handleSetHeightPreset(pKey)}
-                      className={cn(
-                        'px-2.5 py-1 min-h-[32px] rounded-lg text-xs font-bold transition-all touch-manipulation',
-                        isActive
-                          ? 'bg-surface text-foreground shadow-xs'
-                          : 'text-muted hover:text-foreground hover:bg-surface'
-                      )}
-                      title={`Hauteur du plan : ${cfg.label} (${cfg.px}px)`}
-                    >
-                      {cfg.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Mode Panoramique 100% largeur */}
-              <button
-                type="button"
-                onClick={handleTogglePanoramic}
-                className={cn(
-                  'inline-flex min-h-[36px] items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-semibold transition touch-manipulation',
-                  isPanoramic
-                    ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/30 font-bold'
-                    : 'border-border bg-surface text-muted hover:text-foreground hover:bg-surface-muted'
-                )}
-                title="Occuper toute la largeur de l'écran (100% largeur)"
-              >
-                <Columns className="w-3.5 h-3.5" />
-                <span>Panoramique (100%)</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 ml-auto">
-              <button
-                type="button"
-                onClick={() => setIsExpanded(true)}
-                className="inline-flex min-h-[36px] items-center gap-1.5 px-3 py-1 bg-surface-muted border border-border rounded-xl text-xs font-semibold text-primary hover:bg-primary/10 transition"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-                Plein écran
-              </button>
-            </div>
-          </div>
-
- {plannerView === '2d' ? (
- <div className="bg-surface border border-border rounded-[var(--radius-card)] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs text-muted font-medium flex flex-wrap items-center gap-1.5 sm:gap-2 overflow-x-auto">
- <Move className="w-3.5 h-3.5 text-muted shrink-0" />
- <span className="flex-1 min-w-[10rem] hidden sm:inline">Glissez les tables · déverrouillez pour déplacer un import · cliquez un siège pour placer un invité</span>
- <span className="flex-1 sm:hidden">Glissez · touchez un siège</span>
-              {tables.some((t) => Object.values(normalizeTableSeats(t.seats, t.capacity)).some(Boolean)) ? (
- <button
- type="button"
- onClick={handleClearAssignments}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 min-h-11 sm:min-h-[36px] bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs font-semibold text-foreground hover:bg-rose-500/10 hover:text-rose-600 transition"
- >
- Libérer les sièges
- </button>
- ) : null}
- {caps.canSnapGrid || caps.canAlign ? (
- <button
- type="button"
- onClick={handleLayoutGrid}
- disabled={tables.filter((t) => !t.locked).length === 0}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 min-h-11 sm:min-h-[36px] bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs font-semibold text-foreground hover:bg-primary/10 transition disabled:opacity-50"
- >
- <LayoutGrid className="w-3.5 h-3.5" />
- Grille
- </button>
- ) : null}
- {caps.canAlign ? (
- <button
- type="button"
- onClick={handleLayoutCircle}
- disabled={tables.filter((t) => !t.locked).length === 0}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 min-h-11 sm:min-h-[36px] bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs font-semibold text-foreground hover:bg-primary/10 transition disabled:opacity-50"
- >
- Cercle
- </button>
- ) : null}
- {tables.some((t) => t.locked) && caps.canLock && (
- <button
- type="button"
- onClick={() => setTables(tables.map((t) => ({ ...t, locked: false })))}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 min-h-11 sm:min-h-[36px] bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs font-semibold text-foreground hover:bg-primary/10 transition"
- >
- <Unlock className="w-3.5 h-3.5" />
- Tout déverrouiller
- </button>
- )}
- </div>
- ) : null}
-
           {!isExpanded && (plannerView === '3d' ? render3DPreview(currentHeightClass) : renderCanvas(currentHeightClass))}
  </div>
 
@@ -2240,11 +2149,13 @@ export default function TablePlanner({
         {filteredUnassignedGuests.map(g => (
         <div 
         key={g.id}
-        className="p-2.5 bg-surface border border-border/80 hover:border-primary/40 rounded-[var(--radius-button)] shadow-sm hover:shadow transition flex flex-col gap-1 cursor-grab"
+        className="p-2.5 bg-surface border border-border/80 rounded-xl flex flex-col gap-1"
         >
         <div className="flex items-start justify-between">
         <span className="font-semibold text-foreground text-xs leading-tight">{g.firstName} {g.lastName}</span>
-                        <span className="text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/25 px-1.5 py-0.5 rounded shrink-0">Confirmé</span>
+        <StatusPill tone={g.rsvp === 'ACCEPTED' ? 'emerald' : 'amber'} className="shrink-0">
+          {g.rsvp === 'ACCEPTED' ? 'Confirmé' : 'Sans réponse'}
+        </StatusPill>
         </div>
                       <div className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
         <span className="w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />

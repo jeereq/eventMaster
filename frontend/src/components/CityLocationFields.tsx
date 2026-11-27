@@ -13,7 +13,7 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { enabledMarketplaceCities, formatCityList } from '@/lib/platformCities';
 
 const SELECT_CLASS =
-  'w-full min-h-11 px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
+  'w-full min-h-11 px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition-opacity duration-300 disabled:opacity-55 motion-reduce:transition-none';
 
 export default function CityLocationFields({
   city,
@@ -23,6 +23,7 @@ export default function CityLocationFields({
   required = true,
   className,
   hint,
+  inline = false,
 }: {
   city: string;
   commune: string;
@@ -31,6 +32,8 @@ export default function CityLocationFields({
   required?: boolean;
   className?: string;
   hint?: string;
+  /** Sur grand écran, Ville, Commune et Quartier tiennent sur une même ligne, à largeur égale. */
+  inline?: boolean;
 }) {
   const { site } = usePlatformSite();
   const marketplaceCities = enabledMarketplaceCities(site);
@@ -42,7 +45,7 @@ export default function CityLocationFields({
     ?? `Marketplace limité à ${findRdcCity(cityName)?.name || formatCityList(marketplaceCities) || 'les villes actives'}. La carte se cadre sur la ville et la commune choisies.`;
 
   return (
-    <div className={cn('grid grid-cols-1 sm:grid-cols-2 gap-3', className)}>
+    <div className={cn('grid grid-cols-1 sm:grid-cols-2 gap-3', inline && 'md:grid-cols-3', className)}>
       <label>
         <span className="block text-xs font-medium text-muted mb-1.5">
           Ville{required ? <span className="text-danger"> *</span> : null}
@@ -79,7 +82,7 @@ export default function CityLocationFields({
           ))}
         </select>
       </label>
-      <label className="sm:col-span-2">
+      <label className={cn('sm:col-span-2', inline && 'md:col-span-1')}>
         <span className="block text-xs font-medium text-muted mb-1.5">
           Quartier{required ? <span className="text-danger"> *</span> : null}
         </span>
@@ -96,9 +99,11 @@ export default function CityLocationFields({
           ))}
         </select>
       </label>
-      <p className="sm:col-span-2 text-xs text-muted -mt-1">
-        {help}
-      </p>
+      {help ? (
+        <p className={cn('sm:col-span-2 text-xs text-muted -mt-1', inline && 'md:col-span-3')}>
+          {help}
+        </p>
+      ) : null}
     </div>
   );
 }

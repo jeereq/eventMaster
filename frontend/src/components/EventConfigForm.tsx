@@ -12,6 +12,7 @@ import {
   LayoutTemplate,
   Loader2,
   Search,
+  ExternalLink,
   Ticket,
   Sparkles,
   Check,
@@ -61,12 +62,12 @@ import {
 import { lightingPresetLabels, type LightingPreset } from '@/lib/roomRenderQuality';
 import { ensureBlueprintDefaults, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import dynamic from 'next/dynamic';
-import type { RoomPreviewQuality } from '@/components/RoomLayoutPreview';
 import type { TablePlanPreviewTable } from '@/lib/tablePlanPreviewBlueprint';
 import {
   EVENT_CONFIG_TABS,
   EVENT_CONFIG_TAB_DETAILS,
   EVENT_KIND_LABELS,
+  kindPhotoUrl,
   EVENT_KINDS_PRO,
   EVENT_KINDS_SIMPLE,
   firstInvalidEventConfigTab,
@@ -129,6 +130,9 @@ const PublicEventZoneStudio3D = dynamic(() => import('@/components/PublicEventZo
 
 const SELECT_CLASS =
   'w-full px-3.5 py-2.5 bg-surface dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all';
+
+/** Champ « Lieu » : même hauteur, arrondi et fond que les listes Ville / Commune / Quartier. */
+const PLACE_FIELD_CLASS = 'min-h-11 !rounded-xl !bg-surface-muted';
 
 const TEXTAREA_CLASS =
   'w-full px-3.5 py-2.5 bg-surface dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition-all';
@@ -223,7 +227,13 @@ function KindBanner({
   );
 }
 
-/** Choix de la salle en cartes : le plan de chaque salle est visible, « Lieu libre » reste à portée. */
+/** « Salle de réception démo » s’affiche « Voir la salle de réception » : un clic ouvre sa vue 3D. */
+function roomChoiceLabel(name: string) {
+  const clean = name.replace(/\s+d[ée]mo$/i, '').trim();
+  return /^salle\b/i.test(clean) ? `Voir la ${clean.charAt(0).toLowerCase()}${clean.slice(1)}` : `Voir ${clean}`;
+}
+
+/** Choix du lieu sur une ligne : la salle (vue 3D au clic), une autre adresse, ou la recherche au marketplace. */
 function RoomPicker({
   rooms,
   value,
@@ -237,38 +247,39 @@ function RoomPicker({
 }) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" aria-busy="true">
-        {[0, 1].map((i) => (
-          <div key={i} className="h-44 animate-pulse rounded-[20px] bg-surface-muted" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-busy="true">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-16 animate-pulse rounded-xl bg-surface-muted sm:h-28" />
         ))}
       </div>
     );
   }
-  const cardClass = (selected: boolean) =>
+  const optionClass = (selected: boolean) =>
     cn(
-      'group relative flex flex-col overflow-hidden rounded-[20px] border bg-surface text-left transition-[transform,box-shadow,border-color] duration-200 touch-manipulation',
-      'hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-16px_rgba(16,24,40,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-      'motion-reduce:transition-none motion-reduce:hover:translate-y-0',
-      selected ? 'border-primary ring-2 ring-primary/30' : 'border-border',
+      // Même bordure que les champs Ville / Commune : un trait fin et l’arrondi `rounded-xl`.
+      'group relative flex min-h-16 min-w-0 flex-row items-center justify-start gap-3 rounded-xl border px-3.5 py-2.5 text-left touch-manipulation',
+      'sm:min-h-28 sm:flex-col sm:justify-center sm:gap-2 sm:py-3 sm:text-center',
+      'transition-[border-color,background-color,box-shadow] duration-200 motion-reduce:transition-none',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2',
+      selected ? 'border-primary bg-primary/5 ring-2 ring-primary/25' : 'border-border bg-surface hover:bg-surface-muted',
     );
-  const checkMark = (
-    <span
-      aria-hidden
-      className="absolute right-2.5 top-2.5 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary-solid text-primary-foreground shadow-md"
-    >
-      <Check className="h-4 w-4" />
-    </span>
-  );
+  const visual =
+    'flex h-11 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 text-primary transition-transform duration-200 group-hover:-rotate-3 motion-reduce:group-hover:rotate-0 sm:h-12 sm:w-16';
+  const label = 'block max-w-full text-[13px] font-semibold leading-tight text-foreground';
+  const checkMark = (selected: boolean) =>
+    selected ? (
+      <span
+        aria-hidden
+        className="absolute right-2.5 top-2.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-solid text-primary-foreground"
+      >
+        <Check className="h-3 w-3" />
+      </span>
+    ) : null;
   return (
     <div
       role="group"
       aria-label="Salle de l’événement"
-      className={cn(
-        'grid grid-cols-1 gap-3',
-        // Une seule salle : elle prend les deux tiers, « Lieu libre » le reste.
-        rooms.length === 1 ? 'sm:grid-cols-3' : 'sm:grid-cols-2',
-        rooms.length > 3 && 'max-h-[460px] overflow-y-auto p-1',
-      )}
+      className={cn('grid grid-cols-1 gap-3 sm:grid-cols-3', rooms.length > 4 && 'max-h-[320px] overflow-y-auto p-1')}
     >
       {rooms.map((room) => {
         const selected = value === room.id;
@@ -278,39 +289,31 @@ function RoomPicker({
             : null;
         const seats = room.capacity || blueprint?.metadata.totalSeats || 0;
         const size = blueprint ? `${blueprint.canvas.widthM} × ${blueprint.canvas.heightM} m` : null;
-        const details = [seats ? `${seats} places` : null, size, room.floor, room.location].filter(Boolean).join(' · ');
+        const details = [seats ? `${seats} places` : null, size].filter(Boolean).join(' · ');
         return (
           <button
             key={room.id}
             type="button"
             aria-pressed={selected}
             onClick={() => onChange(room.id)}
-            className={cn(cardClass(selected), rooms.length === 1 && 'sm:col-span-2')}
+            className={optionClass(selected)}
           >
-            {selected ? checkMark : null}
-            <span
-              aria-hidden
-              className={cn(
-                'pointer-events-none block w-full overflow-hidden bg-surface-muted',
-                rooms.length === 1 ? 'h-48' : 'h-36',
-              )}
-            >
+            {checkMark(selected)}
+            <span aria-hidden className={cn(visual, 'pointer-events-none')}>
               {blueprint ? (
                 <RoomLayoutPreview
                   blueprint={blueprint}
                   quality="thumb"
                   showMeta={false}
-                  className="!space-y-0 !rounded-none !border-0 !bg-surface-muted h-full w-full transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:group-hover:scale-100"
+                  className="!space-y-0 !rounded-none !border-0 !bg-transparent h-full w-full"
                 />
               ) : (
-                <span className="flex h-full w-full items-center justify-center text-muted">
-                  <Building2 className="h-8 w-8" />
-                </span>
+                <Building2 className="h-5 w-5" />
               )}
             </span>
-            <span className="block min-w-0 px-3.5 py-3">
-              <span className="block truncate text-sm font-semibold text-foreground">{room.name}</span>
-              {details ? <span className="mt-0.5 block truncate text-xs text-muted">{details}</span> : null}
+            <span className="min-w-0 max-w-full">
+              <span className={label}>{roomChoiceLabel(room.name)}</span>
+              {details ? <span className="mt-0.5 block truncate text-[11px] text-muted">{details}</span> : null}
             </span>
           </button>
         );
@@ -319,17 +322,29 @@ function RoomPicker({
         type="button"
         aria-pressed={!value}
         onClick={() => onChange('')}
-        className={cn(cardClass(!value), 'min-h-[88px] items-center justify-center gap-2 border-dashed p-4 text-center')}
+        className={optionClass(!value)}
       >
-        {!value ? checkMark : null}
-        <span
-          aria-hidden
-          className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary"
-        >
-          <MapPin className="h-5 w-5" />
+        {checkMark(!value)}
+        <span aria-hidden className={visual}>
+          <MapPin className="h-6 w-6" />
         </span>
-        <span className="text-sm font-semibold text-foreground">Lieu libre</span>
+        <span className={label}>Autre adresse</span>
       </button>
+      {/* Nouvel onglet : le formulaire en cours reste ouvert. */}
+      <a
+        href="/marketplace/salles"
+        target="_blank"
+        rel="noopener noreferrer"
+        className={optionClass(false)}
+      >
+        <span aria-hidden className={visual}>
+          <Search className="h-6 w-6" />
+        </span>
+        <span className={cn(label, 'inline-flex items-center gap-1.5 sm:justify-center')}>
+          Trouver une salle
+          <ExternalLink aria-hidden className="h-3.5 w-3.5 shrink-0 text-muted" />
+        </span>
+      </a>
     </div>
   );
 }
@@ -387,19 +402,6 @@ function EventKindPicker({
     </div>
   );
 }
-
-/** Photo de chaque type (Unsplash, licence libre ; identifiants vérifiés sur unsplash.com). */
-const KIND_PHOTOS: Record<EventKindId, string> = {
-  WEDDING: '1608009232260-9b527a5bb9bd',
-  BIRTHDAY: '1530103862676-de8c9debad1d',
-  BAPTISM: '1566516171511-1c411a59c8ba',
-  CORPORATE: '1542744173-8e7e53415bb0',
-  CONFERENCE: '1587825140708-dfaf72ae4b04',
-  GALA: '1536392706976-e486e2ba97af',
-  OTHER: '1492684223066-81342ee5ff30',
-};
-const kindPhotoUrl = (kind: EventKindId) =>
-  `https://images.unsplash.com/photo-${KIND_PHOTOS[kind]}?auto=format&fit=crop&w=640&h=420&q=75`;
 
 type RoomOption = {
   id: string;
@@ -465,6 +467,8 @@ export default function EventConfigForm({
   const [eventKind, setEventKind] = useState<EventKindId | ''>('');
   /** Première étape d'une création : choisir le type avant le formulaire. */
   const [pickingKind, setPickingKind] = useState(false);
+  /** Vue 3D de la salle choisie, ouverte à la demande dans une fenêtre à part. */
+  const [roomViewerOpen, setRoomViewerOpen] = useState(false);
   const [clientName, setClientName] = useState('');
   const [estimatedGuests, setEstimatedGuests] = useState('');
   const [reminderFrequency, setReminderFrequency] = useState('NONE');
@@ -488,7 +492,6 @@ export default function EventConfigForm({
   );
   const [photos, setPhotos] = useState<string[]>([]);
   const [roomId, setRoomId] = useState('');
-  const [roomPreviewQuality, setRoomPreviewQuality] = useState<Exclude<RoomPreviewQuality, 'thumb'>>('standard');
   const [formTemplateId, setFormTemplateId] = useState('');
   const [openTablePlanAfterSave, setOpenTablePlanAfterSave] = useState(false);
   const [guestGuidelines, setGuestGuidelines] = useState<GuestGuidelines>(guidelinesFromEvent(null));
@@ -597,7 +600,6 @@ export default function EventConfigForm({
       setEventProgram(createEmptyProgram());
       setPhotos([]);
       setRoomId('');
-      setRoomPreviewQuality('standard');
       setFormTemplateId('');
       setOpenTablePlanAfterSave(false);
       setGuestGuidelines(guidelinesFromEvent(null));
@@ -860,7 +862,6 @@ export default function EventConfigForm({
 
   const applyRoom = (nextRoomId: string) => {
     setRoomId(nextRoomId);
-    setRoomPreviewQuality('standard');
     if (!nextRoomId) return;
     const room = rooms.find((item) => item.id === nextRoomId);
     if (!room) return;
@@ -2049,11 +2050,13 @@ export default function EventConfigForm({
               <FieldCard className="space-y-3">
                 <Input
                   label="Lieu"
+                  className={PLACE_FIELD_CLASS}
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="ex. Hôtel Fleuve Congo"
                 />
                 <CityLocationFields
+                  inline
                   city={city}
                   commune={commune}
                   neighborhood={neighborhood}
@@ -2176,94 +2179,28 @@ export default function EventConfigForm({
                 <div className="space-y-2.5">
                   <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
                     <Building2 className="w-3.5 h-3.5" />
-                    Salle (optionnel)
+                    Où se passe l’événement ?
                   </span>
-                  <RoomPicker rooms={rooms} value={roomId} loading={loadingRooms} onChange={applyRoom} />
-                  <p className="text-xs text-muted">
-                    {rooms.length === 0 ? (
-                      <>
-                        Créez des salles dans{' '}
-                        <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
-                          Salles
-                        </Link>
-                        , ou parcourez le marketplace.
-                      </>
-                    ) : null}{' '}
-                    <Link href="/marketplace/salles" className="font-semibold text-primary hover:underline">
-                      Trouver une salle
-                    </Link>
-                    {' · '}
-                    <Link href="/marketplace/prestataires" className="font-semibold text-primary hover:underline">
-                      Trouver un prestataire
-                    </Link>
-                  </p>
+                  <RoomPicker
+                    rooms={rooms}
+                    value={roomId}
+                    loading={loadingRooms}
+                    onChange={(id) => {
+                      applyRoom(id);
+                      const picked = rooms.find((room) => room.id === id);
+                      if (picked?.layoutBlueprint && typeof picked.layoutBlueprint === 'object') setRoomViewerOpen(true);
+                    }}
+                  />
+                  {rooms.length === 0 && !loadingRooms ? (
+                    <p className="text-xs text-muted">
+                      Créez des salles dans{' '}
+                      <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
+                        Salles
+                      </Link>
+                      .
+                    </p>
+                  ) : null}
                 </div>
-
-                {selectedRoom && (
-                  <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/30 p-3 sm:p-4 space-y-3">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-0.5 min-w-0">
-                        <h4 className="text-xs font-semibold text-foreground">Aperçu de la salle</h4>
-                        {selectedRoomBlueprint ? null : (
-                          <p className="text-xs text-muted leading-relaxed">
-                            Cette salle n’a pas encore de modèle. Créez-en un dans{' '}
-                            <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
-                              Salles
-                            </Link>
-                            .
-                          </p>
-                        )}
-                      </div>
-                      {selectedRoomBlueprint && (
-                        <div className="flex shrink-0 gap-1 rounded-full border border-border bg-surface p-0.5">
-                          {([
-                            { id: 'standard' as const, label: 'Rapide' },
-                            { id: 'showcase' as const, label: '3D showcase' },
-                          ]).map((opt) => (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => setRoomPreviewQuality(opt.id)}
-                              className={cn(
-                                'px-2.5 py-1 rounded-full text-xs font-semibold transition',
-                                roomPreviewQuality === opt.id
-                                  ? 'bg-foreground text-background'
-                                  : 'text-muted hover:text-foreground',
-                              )}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {selectedRoomBlueprint ? (
-                      <>
-                        <RoomLayoutPreview
-                          blueprint={selectedRoomBlueprint}
-                          quality={roomPreviewQuality}
-                          lightingPreset={roomPreviewLighting}
-                          showMeta
-                          className="[&_.em-floor-canvas]:rounded-xl"
-                        />
-                        <p className="text-xs text-muted leading-relaxed">
-                          <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
-                            Modifier le modèle
-                          </Link>
-                        </p>
-                      </>
-                    ) : (
-                      <div className="aspect-[4/3] rounded-xl border border-dashed border-border bg-surface flex flex-col items-center justify-center gap-2 text-center px-4">
-                        <LayoutGrid className="w-8 h-8 text-muted" />
-                        <p className="text-xs text-muted">
-                          Aucun plan disponible pour « {selectedRoom.name} ».
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
               </FieldCard>
             )}
 
@@ -2272,12 +2209,14 @@ export default function EventConfigForm({
               <FieldCard className="space-y-4">
                 <Input
                   label="Lieu / salle"
+                  className={PLACE_FIELD_CLASS}
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="ex. Hôtel Fleuve Congo"
                   required
                 />
                 <CityLocationFields
+                  inline
                   city={city}
                   commune={commune}
                   neighborhood={neighborhood}
@@ -2317,6 +2256,7 @@ export default function EventConfigForm({
                         variant="secondary"
                         onClick={() => void searchLocationOnMap()}
                         disabled={searchingLocation}
+                        className="!rounded-xl"
                         leftIcon={searchingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
                       >
                         Rechercher sur la carte
@@ -2961,6 +2901,33 @@ export default function EventConfigForm({
         )}
       </form>
       )}
+    </Modal>
+
+    <Modal
+      open={roomViewerOpen && Boolean(selectedRoomBlueprint)}
+      onClose={() => setRoomViewerOpen(false)}
+      title={selectedRoom?.name || 'Salle'}
+      size="xl"
+      footer={
+        <div className="flex w-full items-center justify-between gap-3">
+          <Link href="/dashboard/rooms" className="text-sm font-semibold text-primary hover:underline">
+            Modifier dans Salles
+          </Link>
+          <Button type="button" size="sm" onClick={() => setRoomViewerOpen(false)}>
+            Continuer
+          </Button>
+        </div>
+      }
+    >
+      {roomViewerOpen && selectedRoomBlueprint ? (
+        <RoomLayoutPreview
+          blueprint={selectedRoomBlueprint}
+          quality="standard"
+          lightingPreset={roomPreviewLighting}
+          showMeta={false}
+          className="[&_.em-floor-canvas]:rounded-xl"
+        />
+      ) : null}
     </Modal>
 
     <Modal

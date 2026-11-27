@@ -5,6 +5,7 @@ import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check, DollarSign, Map
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import { formatFc } from '@/config/landingPricing';
 import { LISTING_EVENT_TYPES, VENUE_AMENITIES, type ListingAmenityId, type ListingEventTypeId } from '@/lib/listingDetails';
 import { type ServiceCategory } from '@/lib/marketplace';
@@ -70,6 +71,11 @@ const NATIVE_FIELD =
 const CHIP =
   'inline-flex items-center justify-center min-h-11 px-4 rounded-xl text-sm font-medium border-[1.5px] transition whitespace-nowrap shrink-0 sm:shrink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
+const SHORT_FIELD =
+  'w-full min-h-11 rounded-xl border border-border bg-surface px-3 text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary';
+const SHORT_CHIP =
+  'inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+
 function chipTone(active: boolean) {
   return active
     ? 'border-primary-solid bg-[#e3f3ec] text-[#275a3d] dark:bg-primary/15 dark:text-primary'
@@ -88,6 +94,11 @@ export type EventPrepAiDefaults = {
   budgetMaxFc?: number;
   keepVenueSlug?: string;
   keepServiceSlugs?: string[];
+  neighborhood?: string;
+  /** Besoins cochés à l’ouverture (tous par défaut). */
+  includeVenue?: boolean;
+  includeTrades?: boolean;
+  includeRentals?: boolean;
 };
 
 const GUEST_PRESETS = [50, 100, 150, 250, 500];
@@ -107,6 +118,7 @@ export default function EventPrepAiSimulator({
   className,
   onAllowanceChange,
   examples,
+  short = false,
 }: {
   defaults?: EventPrepAiDefaults;
   applyLabel?: string;
@@ -121,6 +133,8 @@ export default function EventPrepAiSimulator({
   onAllowanceChange?: (allowance: AiAllowance) => void;
   /** Exemples de projets posés par la page : en haut sur mobile, dans la colonne de droite sur ordinateur. */
   examples?: React.ReactNode;
+  /** Version courte, pour la fenêtre d’un événement : le reste est rangé dans « Options ». */
+  short?: boolean;
 }) {
   const { user, access } = useAuth();
   const isLoggedIn = Boolean(user);
@@ -172,9 +186,9 @@ export default function EventPrepAiSimulator({
   const [wantedCategories, setWantedCategories] = useState<ServiceCategory[]>([]);
   const [venueAmenities, setVenueAmenities] = useState<ListingAmenityId[]>([]);
   const [keepVenue, setKeepVenue] = useState(Boolean(defaults?.keepVenueSlug));
-  const [includeVenue, setIncludeVenue] = useState(true);
-  const [includeTrades, setIncludeTrades] = useState(true);
-  const [includeRentals, setIncludeRentals] = useState(true);
+  const [includeVenue, setIncludeVenue] = useState(defaults?.includeVenue ?? true);
+  const [includeTrades, setIncludeTrades] = useState(defaults?.includeTrades ?? true);
+  const [includeRentals, setIncludeRentals] = useState(defaults?.includeRentals ?? true);
   const [budgetScope, setBudgetScope] = useState<BudgetSimulationScope>('complete');
   const [priceSource, setPriceSource] = useState<PriceSource>('all');
   const [wantedBrandIds, setWantedBrandIds] = useState<string[]>([]);
@@ -182,6 +196,12 @@ export default function EventPrepAiSimulator({
   const [wantedDrinkLines, setWantedDrinkLines] = useState<DrinkOrderLine[]>([]);
   const [guestError, setGuestError] = useState('');
   const completeFlags = useRef({ venue: true, trades: true, rentals: true });
+  // Version courte : formulaire ou historique, détails de l’événement, options.
+  const [shortHistory, setShortHistory] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  /** Budget de la simulation rouverte depuis l’historique (sinon celui du formulaire). */
+  const [historyBudgetFc, setHistoryBudgetFc] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cityError, setCityError] = useState('');
@@ -338,6 +358,7 @@ export default function EventPrepAiSimulator({
     if (seed.eventType) setEventType(seed.eventType);
     if (seed.city != null) setCity(seed.city);
     if (seed.commune != null) setCommune(seed.commune);
+    if (seed.neighborhood != null) setNeighborhood(seed.neighborhood);
     if (seed.guestCount && seed.guestCount > 0) setGuestCount(String(seed.guestCount));
     if (seed.budgetMaxUsd && seed.budgetMaxUsd > 0) {
       if (budgetCurrency === 'USD') {
@@ -472,6 +493,7 @@ export default function EventPrepAiSimulator({
     }
     setCityError('');
     setGuestError('');
+    setHistoryBudgetFc(null);
     const current = getAiSimulationAllowance();
     if (!current.canSimulate) {
       setPurchaseModalOpen(true);
@@ -735,6 +757,554 @@ export default function EventPrepAiSimulator({
           </Button>
         </div>
       </section>
+    );
+  }
+
+  const gpsControls = (
+    <>
+            <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center gap-2">
+              <button
+                type="button"
+                disabled={geoBusy}
+                aria-pressed={Boolean(origin)}
+                aria-busy={geoBusy || undefined}
+                aria-describedby={`${tabsId}-place-hint`}
+                onClick={() => {
+                  setGeoError('');
+                  if (!navigator.geolocation) {
+                    setGeoError('Cet appareil ne partage pas sa position.');
+                    return;
+                  }
+                  setGeoBusy(true);
+                  navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                      setOrigin({ lat: position.coords.latitude, lng: position.coords.longitude });
+                      setGeoBusy(false);
+                    },
+                    () => {
+                      setOrigin(null);
+                      setGeoError('Position refusée. Les prestataires restent classés par ville et commune.');
+                      setGeoBusy(false);
+                    },
+                    { enableHighAccuracy: true, timeout: 8000 },
+                  );
+                }}
+                className={cn(CHIP, 'w-full sm:w-auto whitespace-normal', chipTone(Boolean(origin)))}
+              >
+                <MapPin className="w-3.5 h-3.5 mr-1 shrink-0" aria-hidden />
+                {geoBusy ? 'Localisation…' : origin ? 'Position GPS utilisée' : 'Utiliser ma position GPS'}
+              </button>
+              {origin ? (
+                <button
+                  type="button"
+                  onClick={() => setOrigin(null)}
+                  className="min-h-11 px-2 text-xs font-semibold text-muted hover:text-foreground rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                >
+                  Retirer le GPS
+                </button>
+              ) : null}
+            </div>
+            <p
+              id={`${tabsId}-place-hint`}
+              hidden={!embedded && !geoError && !origin}
+              className={cn('sm:col-span-2 text-xs', geoError ? 'text-danger font-medium' : 'text-muted')}
+              role={geoError ? 'alert' : undefined}
+            >
+              {geoError
+                || (origin
+                  ? 'Les services et locations les plus proches passent devant.'
+                  : commune
+                    ? 'Le quartier et le GPS classent les prestataires et le matériel.'
+                    : 'Choisissez une commune pour afficher les quartiers. Le GPS classe aussi sans quartier.')}
+            </p>
+    </>
+  );
+
+  const refineControls = (
+    <>
+          <BudgetSimulationCriteria
+            scope={budgetScope}
+            selectedBrandIds={wantedBrandIds}
+            onToggleBrand={(id) => setWantedBrandIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
+            selectedSaleUnits={wantedSaleUnits}
+            onToggleSaleUnit={(unit) => setWantedSaleUnits((prev) => prev.includes(unit) ? prev.filter((item) => item !== unit) : [...prev, unit])}
+            orderLines={wantedDrinkLines}
+            onChangeOrderLines={setWantedDrinkLines}
+            onClearCatalog={() => {
+              setWantedBrandIds([]);
+              setWantedSaleUnits([]);
+            }}
+            selectedCategories={wantedCategories}
+            onToggleCategory={(id) => setWantedCategories((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
+          />
+          {budgetScope !== 'drinks' ? (
+          <div className="rounded-[var(--radius-card)] border border-border">
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((value) => !value)}
+              aria-expanded={advancedOpen}
+              aria-controls={`${tabsId}-advanced`}
+              className="w-full flex items-center justify-between gap-2 min-h-11 px-3 py-2 text-left text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            >
+              Plus de paramètres
+              <ChevronDown className={cn('w-4 h-4 text-muted transition', advancedOpen && 'rotate-180')} />
+            </button>
+            {advancedOpen ? (
+              <div id={`${tabsId}-advanced`} className="px-3 pb-3 space-y-3 border-t border-border pt-3">
+                <div className="space-y-1.5">
+                  <p className={FIELD_LABEL}>Ambiance</p>
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Ambiance">
+                    {AI_AMBIANCES.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        aria-pressed={ambiance === item.id}
+                        onClick={() => toggleChip(item.id, ambiance, setAmbiance)}
+                        className={cn(CHIP, chipTone(ambiance === item.id))}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <p className={FIELD_LABEL}>Moment</p>
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Moment">
+                      {AI_MOMENTS.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          aria-pressed={moment === item.id}
+                          onClick={() => toggleChip(item.id, moment, setMoment)}
+                          className={cn(CHIP, chipTone(moment === item.id))}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className={FIELD_LABEL}>Lieu</p>
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Cadre du lieu">
+                      {AI_SETTINGS.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          aria-pressed={setting === item.id}
+                          onClick={() => toggleChip(item.id, setting, setSetting)}
+                          className={cn(CHIP, chipTone(setting === item.id))}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Input
+                    label={budgetCurrency === 'USD' ? 'Budget minimum ($ USD)' : 'Budget minimum (FC CDF)'}
+                    type="number"
+                    min={0}
+                    value={budgetMinInputVal}
+                    onChange={(e) => setBudgetMinInputVal(e.target.value)}
+                    placeholder={budgetCurrency === 'USD' ? 'Optionnel (ex: 500 $)' : 'Optionnel (ex: 1 400 000 FC)'}
+                  />
+                  {budgetMinFcCalculated > 0 ? (
+                    <p className="text-xs text-muted text-right px-0.5">
+                      {budgetCurrency === 'USD' ? (
+                        <>Calculé en francs : <span className="font-semibold text-primary-solid">{budgetMinFcCalculated.toLocaleString('fr-FR')} FC</span></>
+                      ) : (
+                        <>Calculé en dollars : <span className="font-semibold text-primary-solid">{budgetMinUsdCalculated.toLocaleString('fr-FR')} $</span></>
+                      )}
+                    </p>
+                  ) : null}
+                </div>
+                {includeVenue ? (
+                  <div className="space-y-1.5">
+                    <p className={FIELD_LABEL}>Équipements salle</p>
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Équipements salle">
+                      {VENUE_PARAM_AMENITIES.map((item) => {
+                        const active = venueAmenities.includes(item.id);
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => setVenueAmenities((prev) =>
+                              prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id],
+                            )}
+                            className={cn(CHIP, chipTone(active))}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          ) : null}
+    </>
+  );
+
+  const loader = (
+      <AiBudgetFullscreenLoader
+        active={loading}
+        stageHint={
+          result?.packages.length
+            ? 'Actualisation des formules à partir du catalogue…'
+            : 'Recherche dans le catalogue, puis recommandation…'
+        }
+      />
+  );
+
+  const modals = (
+    <>
+      <AiSimulationPackModal
+        open={packModalOpen}
+        onClose={() => setPackModalOpen(false)}
+        result={result}
+        selectedId={selectedId}
+        onSelectPack={setSelectedId}
+        budgetMaxFc={historyBudgetFc ?? budgetValue}
+        eventDate={eventDate}
+        guestCount={guestCount ? Number(guestCount) : undefined}
+        isLoggedIn={isLoggedIn}
+        canCreateEvents={canCreateEvents}
+        saveBusy={saveBusy}
+        saveMessage={saveMessage}
+        onSavePack={onApply ? undefined : () => void saveSelectedPack()}
+        onBuyTokens={() => {
+          setPackModalOpen(false);
+          setPurchaseModalOpen(true);
+        }}
+        onApply={onApply ? (pack) => {
+          onApply(pack);
+          setPackModalOpen(false);
+        } : undefined}
+        applyLabel={applyLabel}
+        onApplyAll={onApplyAll ? (packs) => {
+          onApplyAll(packs);
+          setPackModalOpen(false);
+        } : undefined}
+        onOpenListing={onOpenListing}
+      />
+
+      <AiTokenPurchaseModal
+        open={purchaseModalOpen}
+        onClose={() => setPurchaseModalOpen(false)}
+        onSuccess={() => {
+          void syncDeviceAiTokensWithBackend(api).then(publishAllowance);
+        }}
+      />
+    </>
+  );
+
+  if (short) {
+    const complete = budgetScope === 'complete';
+    const nothingWanted = complete && !includeVenue && !includeTrades && !includeRentals;
+    const showDetails = editingEvent || Boolean(cityError || guestError) || (budgetScope !== 'drinks' && !city.trim());
+    const summary = [
+      LISTING_EVENT_TYPES.find((item) => item.id === eventType)?.label,
+      eventDate ? new Date(`${eventDate}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : null,
+      [commune, city].filter(Boolean).join(', ') || null,
+      Number(guestCount) > 0 ? `${guestCount} invité${Number(guestCount) > 1 ? 's' : ''}` : null,
+    ].filter(Boolean).join(' · ');
+    const needs = [
+      { label: 'Salle', checked: includeVenue, set: setIncludeVenue },
+      { label: 'Prestataires', checked: includeTrades, set: setIncludeTrades },
+      { label: 'Matériel', checked: includeRentals, set: setIncludeRentals },
+    ];
+    const proposeLabel = allowance.unlimited
+      ? 'Proposer'
+      : `Proposer · ${AI_SIMULATION_TOKEN_COST} jeton${AI_SIMULATION_TOKEN_COST > 1 ? 's' : ''}`;
+    const link =
+      'inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+
+    return (
+      <div className={cn('space-y-5', className)}>
+        {shortHistory ? (
+          <div className="space-y-3">
+            <button type="button" onClick={() => setShortHistory(false)} className={cn(link, '-ml-3')}>
+              Retour
+            </button>
+            {history.length > 0 ? (
+              <AiSimulationHistoryList
+                items={history}
+                activeId={activeHistoryId}
+                onOpen={(item) => {
+                  // La proposition passée s’ouvre sans écraser les informations de l’événement.
+                  const cached = historyItemToCache(item);
+                  setResult(cached.result);
+                  setSelectedId(cached.selectedId);
+                  setActiveHistoryId(item.id);
+                  setHistoryBudgetFc(Number(cached.brief.budgetMaxFc) || null);
+                  setSaveMessage('');
+                  setPackModalOpen(true);
+                }}
+              />
+            ) : (
+              <p className="text-sm text-muted">Aucune proposition pour l’instant.</p>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="rounded-2xl bg-surface-muted/60 p-3">
+              <div className="flex items-center gap-3">
+                <p className="min-w-0 flex-1 pl-1 text-sm font-medium">{summary}</p>
+                <button
+                  type="button"
+                  aria-expanded={showDetails}
+                  onClick={() => setEditingEvent((value) => !value)}
+                  className={cn(link, 'shrink-0')}
+                >
+                  {showDetails ? 'Fermer' : 'Modifier'}
+                </button>
+              </div>
+              {showDetails ? (
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label className="space-y-1">
+                    <span className={FIELD_LABEL}>Type d’événement</span>
+                    <select value={eventType} onChange={(e) => setEventType(e.target.value as ListingEventTypeId)} className={SHORT_FIELD}>
+                      {LISTING_EVENT_TYPES.map((item) => (
+                        <option key={item.id} value={item.id}>{item.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className={FIELD_LABEL}>Date</span>
+                    <input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} className={SHORT_FIELD} />
+                  </label>
+                  {budgetScope !== 'drinks' ? (
+                    <>
+                      <label className="space-y-1">
+                        <span className={FIELD_LABEL}>Ville</span>
+                        <select
+                          ref={citySelectRef}
+                          value={city}
+                          aria-invalid={cityError ? true : undefined}
+                          onChange={(e) => {
+                            setCity(e.target.value);
+                            setCommune('');
+                            setNeighborhood('');
+                            setCityError('');
+                          }}
+                          className={cn(SHORT_FIELD, cityError && 'border-danger/40')}
+                        >
+                          <option value="">Choisir une ville</option>
+                          {marketplaceCities.map((name) => (
+                            <option key={name} value={name}>{name}</option>
+                          ))}
+                        </select>
+                        {cityError ? <span role="alert" className="block text-xs font-medium text-danger">{cityError}</span> : null}
+                      </label>
+                      <label className="space-y-1">
+                        <span className={FIELD_LABEL}>Commune</span>
+                        <select
+                          value={commune}
+                          onChange={(e) => {
+                            setCommune(e.target.value);
+                            setNeighborhood('');
+                          }}
+                          className={SHORT_FIELD}
+                        >
+                          <option value="">Toutes</option>
+                          {communes.map((item) => (
+                            <option key={item.name} value={item.name}>{item.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="space-y-1">
+                        <span className={FIELD_LABEL}>Quartier</span>
+                        <select value={neighborhood} disabled={!commune} onChange={(e) => setNeighborhood(e.target.value)} className={cn(SHORT_FIELD, 'disabled:opacity-55')}>
+                          <option value="">Tous</option>
+                          {neighborhoods.map((name) => (
+                            <option key={name} value={name}>{name}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </>
+                  ) : null}
+                  <label className="space-y-1">
+                    <span className={FIELD_LABEL}>Invités</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={guestCount}
+                      onChange={(e) => {
+                        setGuestCount(e.target.value);
+                        setGuestError('');
+                      }}
+                      className={SHORT_FIELD}
+                    />
+                    {guestError ? <span role="alert" className="block text-xs font-medium text-danger">{guestError}</span> : null}
+                  </label>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor={`${tabsId}-short-budget`} className="block text-sm font-semibold">Budget maximum</label>
+              <div className="flex items-center gap-2">
+                <input
+                  id={`${tabsId}-short-budget`}
+                  inputMode="numeric"
+                  value={budgetInputVal}
+                  onChange={(e) => setBudgetInputVal(e.target.value)}
+                  placeholder={budgetCurrency === 'USD' ? 'Ex. 3 000' : 'Ex. 8 500 000'}
+                  className={cn(SHORT_FIELD, 'min-w-0 flex-1')}
+                />
+                <div role="group" aria-label="Devise" className={cn('inline-flex shrink-0', SEGMENTED_TRACK)}>
+                  {(['USD', 'CDF'] as const).map((currency) => (
+                    <button
+                      key={currency}
+                      type="button"
+                      aria-pressed={budgetCurrency === currency}
+                      onClick={() => handleCurrencySwitch(currency)}
+                      className={segmentedItem(budgetCurrency === currency)}
+                    >
+                      {currency === 'USD' ? '$' : 'FC'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {budgetMaxFcCalculated > 0 ? (
+                <p className="text-xs text-muted tabular-nums">
+                  {budgetCurrency === 'USD'
+                    ? `${budgetMaxFcCalculated.toLocaleString('fr-FR')} FC`
+                    : `${budgetMaxUsdCalculated.toLocaleString('fr-FR')} $`}
+                </p>
+              ) : null}
+            </div>
+
+            {complete ? (
+              <div className="space-y-1.5">
+                <p className="text-sm font-semibold">Il me faut</p>
+                <div role="group" aria-label="Il me faut" className="flex flex-wrap gap-2">
+                  {needs.map((need) => (
+                    <button
+                      key={need.label}
+                      type="button"
+                      aria-pressed={need.checked}
+                      onClick={() => need.set(!need.checked)}
+                      className={cn(SHORT_CHIP, need.checked ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-muted')}
+                    >
+                      {need.checked ? <Check className="w-4 h-4" /> : null}
+                      {need.label}
+                    </button>
+                  ))}
+                  {includeVenue && defaults?.keepVenueSlug ? (
+                    <button
+                      type="button"
+                      aria-pressed={keepVenue}
+                      onClick={() => setKeepVenue((value) => !value)}
+                      className={cn(SHORT_CHIP, keepVenue ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-muted')}
+                    >
+                      {keepVenue ? <Check className="w-4 h-4" /> : null}
+                      Garder ma salle
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            <label className="block space-y-1.5">
+              <span className="block text-sm font-semibold">Une précision ?</span>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={2}
+                placeholder="Facultatif : ambiance chic, DJ, habits…"
+                className={cn(SHORT_FIELD, 'resize-y py-2.5')}
+              />
+            </label>
+
+            <div className="border-t border-border pt-1">
+              <button
+                type="button"
+                aria-expanded={optionsOpen}
+                onClick={() => setOptionsOpen((value) => !value)}
+                className="flex min-h-11 w-full items-center justify-between gap-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                Options
+                <ChevronDown className={cn('w-4 h-4 text-muted transition', optionsOpen && 'rotate-180')} />
+              </button>
+              {optionsOpen ? (
+                <div className="space-y-3 pt-2">
+                  <BudgetSimulationScopePicker compact value={budgetScope} onChange={applyBudgetScope} />
+                  <PriceSourcePicker value={priceSource} onChange={setPriceSource} />
+                  {budgetScope !== 'drinks' ? <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{gpsControls}</div> : null}
+                  {refineControls}
+                  <label className="block space-y-1">
+                    <span className={FIELD_LABEL}>Partir d’un exemple</span>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const model = EVENT_PREP_PROMPT_MODELS.find((item) => item.id === e.target.value);
+                        if (!model) return;
+                        setCommune('');
+                        setNeighborhood('');
+                        applyDefaults({
+                          eventType: model.eventType,
+                          city: model.city,
+                          guestCount: model.guestCount,
+                          budgetMaxUsd: model.budgetMaxUsd,
+                          prompt: model.prompt,
+                        });
+                      }}
+                      className={SHORT_FIELD}
+                    >
+                      <option value="">Choisir</option>
+                      {EVENT_PREP_PROMPT_MODELS.map((model) => (
+                        <option key={model.id} value={model.id}>{model.title}</option>
+                      ))}
+                    </select>
+                  </label>
+                  {!allowance.unlimited && allowance.canSimulate ? (
+                    <AiTokenBuyButton compact variant="secondary" onClick={() => setPurchaseModalOpen(true)} />
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+
+            {errorAlert}
+            {result?.warnings?.[0] ? <Alert variant="warning">{result.warnings[0]}</Alert> : null}
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              {allowance.canSimulate || loading ? (
+                <Button
+                  type="button"
+                  onClick={() => void run()}
+                  loading={loading}
+                  disabled={nothingWanted}
+                  leftIcon={<Sparkles className="w-4 h-4" />}
+                  className="min-h-12 rounded-full px-6"
+                >
+                  {proposeLabel}
+                </Button>
+              ) : (
+                <AiTokenBuyButton variant="primary" size="md" className="min-h-12" onClick={() => setPurchaseModalOpen(true)} />
+              )}
+              <div className="flex flex-wrap items-center justify-center gap-1">
+                {result?.packages.length ? (
+                  <button type="button" onClick={() => setPackModalOpen(true)} className={link}>
+                    Voir la proposition
+                  </button>
+                ) : null}
+                <button type="button" onClick={() => setShortHistory(true)} className={link}>
+                  {history.length > 0 ? `Historique · ${history.length}` : 'Historique'}
+                </button>
+              </div>
+            </div>
+            {nothingWanted ? <p role="status" className="text-xs text-muted">Cochez au moins un besoin.</p> : null}
+          </>
+        )}
+        {loader}
+        {modals}
+      </div>
     );
   }
 
@@ -1046,61 +1616,7 @@ export default function EventPrepAiSimulator({
                 ))}
               </select>
             </label>
-            <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center gap-2">
-              <button
-                type="button"
-                disabled={geoBusy}
-                aria-pressed={Boolean(origin)}
-                aria-busy={geoBusy || undefined}
-                aria-describedby={`${tabsId}-place-hint`}
-                onClick={() => {
-                  setGeoError('');
-                  if (!navigator.geolocation) {
-                    setGeoError('Cet appareil ne partage pas sa position.');
-                    return;
-                  }
-                  setGeoBusy(true);
-                  navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                      setOrigin({ lat: position.coords.latitude, lng: position.coords.longitude });
-                      setGeoBusy(false);
-                    },
-                    () => {
-                      setOrigin(null);
-                      setGeoError('Position refusée. Les prestataires restent classés par ville et commune.');
-                      setGeoBusy(false);
-                    },
-                    { enableHighAccuracy: true, timeout: 8000 },
-                  );
-                }}
-                className={cn(CHIP, 'w-full sm:w-auto whitespace-normal', chipTone(Boolean(origin)))}
-              >
-                <MapPin className="w-3.5 h-3.5 mr-1 shrink-0" aria-hidden />
-                {geoBusy ? 'Localisation…' : origin ? 'Position GPS utilisée' : 'Utiliser ma position GPS'}
-              </button>
-              {origin ? (
-                <button
-                  type="button"
-                  onClick={() => setOrigin(null)}
-                  className="min-h-11 px-2 text-xs font-semibold text-muted hover:text-foreground rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  Retirer le GPS
-                </button>
-              ) : null}
-            </div>
-            <p
-              id={`${tabsId}-place-hint`}
-              hidden={!embedded && !geoError && !origin}
-              className={cn('sm:col-span-2 text-xs', geoError ? 'text-danger font-medium' : 'text-muted')}
-              role={geoError ? 'alert' : undefined}
-            >
-              {geoError
-                || (origin
-                  ? 'Les services et locations les plus proches passent devant.'
-                  : commune
-                    ? 'Le quartier et le GPS classent les prestataires et le matériel.'
-                    : 'Choisissez une commune pour afficher les quartiers. Le GPS classe aussi sans quartier.')}
-            </p>
+            {gpsControls}
             </div>
           </BudgetFormGroup>
           ) : null}
@@ -1419,131 +1935,7 @@ export default function EventPrepAiSimulator({
           <div className={cn('space-y-3', !refineOpen && (embedded ? 'max-lg:hidden' : 'hidden'))}>
           {embedded ? <p className="hidden lg:block text-xs font-semibold text-muted">Précisions facultatives</p> : null}
           {!embedded ? <PriceSourcePicker value={priceSource} onChange={setPriceSource} /> : null}
-          <BudgetSimulationCriteria
-            scope={budgetScope}
-            selectedBrandIds={wantedBrandIds}
-            onToggleBrand={(id) => setWantedBrandIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
-            selectedSaleUnits={wantedSaleUnits}
-            onToggleSaleUnit={(unit) => setWantedSaleUnits((prev) => prev.includes(unit) ? prev.filter((item) => item !== unit) : [...prev, unit])}
-            orderLines={wantedDrinkLines}
-            onChangeOrderLines={setWantedDrinkLines}
-            onClearCatalog={() => {
-              setWantedBrandIds([]);
-              setWantedSaleUnits([]);
-            }}
-            selectedCategories={wantedCategories}
-            onToggleCategory={(id) => setWantedCategories((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
-          />
-          {budgetScope !== 'drinks' ? (
-          <div className="rounded-[var(--radius-card)] border border-border">
-            <button
-              type="button"
-              onClick={() => setAdvancedOpen((value) => !value)}
-              aria-expanded={advancedOpen}
-              aria-controls={`${tabsId}-advanced`}
-              className="w-full flex items-center justify-between gap-2 min-h-11 px-3 py-2 text-left text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-            >
-              Plus de paramètres
-              <ChevronDown className={cn('w-4 h-4 text-muted transition', advancedOpen && 'rotate-180')} />
-            </button>
-            {advancedOpen ? (
-              <div id={`${tabsId}-advanced`} className="px-3 pb-3 space-y-3 border-t border-border pt-3">
-                <div className="space-y-1.5">
-                  <p className={FIELD_LABEL}>Ambiance</p>
-                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Ambiance">
-                    {AI_AMBIANCES.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        aria-pressed={ambiance === item.id}
-                        onClick={() => toggleChip(item.id, ambiance, setAmbiance)}
-                        className={cn(CHIP, chipTone(ambiance === item.id))}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <p className={FIELD_LABEL}>Moment</p>
-                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Moment">
-                      {AI_MOMENTS.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          aria-pressed={moment === item.id}
-                          onClick={() => toggleChip(item.id, moment, setMoment)}
-                          className={cn(CHIP, chipTone(moment === item.id))}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <p className={FIELD_LABEL}>Lieu</p>
-                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Cadre du lieu">
-                      {AI_SETTINGS.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          aria-pressed={setting === item.id}
-                          onClick={() => toggleChip(item.id, setting, setSetting)}
-                          className={cn(CHIP, chipTone(setting === item.id))}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Input
-                    label={budgetCurrency === 'USD' ? 'Budget minimum ($ USD)' : 'Budget minimum (FC CDF)'}
-                    type="number"
-                    min={0}
-                    value={budgetMinInputVal}
-                    onChange={(e) => setBudgetMinInputVal(e.target.value)}
-                    placeholder={budgetCurrency === 'USD' ? 'Optionnel (ex: 500 $)' : 'Optionnel (ex: 1 400 000 FC)'}
-                  />
-                  {budgetMinFcCalculated > 0 ? (
-                    <p className="text-xs text-muted text-right px-0.5">
-                      {budgetCurrency === 'USD' ? (
-                        <>Calculé en francs : <span className="font-semibold text-primary-solid">{budgetMinFcCalculated.toLocaleString('fr-FR')} FC</span></>
-                      ) : (
-                        <>Calculé en dollars : <span className="font-semibold text-primary-solid">{budgetMinUsdCalculated.toLocaleString('fr-FR')} $</span></>
-                      )}
-                    </p>
-                  ) : null}
-                </div>
-                {includeVenue ? (
-                  <div className="space-y-1.5">
-                    <p className={FIELD_LABEL}>Équipements salle</p>
-                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Équipements salle">
-                      {VENUE_PARAM_AMENITIES.map((item) => {
-                        const active = venueAmenities.includes(item.id);
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            aria-pressed={active}
-                            onClick={() => setVenueAmenities((prev) =>
-                              prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id],
-                            )}
-                            className={cn(CHIP, chipTone(active))}
-                          >
-                            {item.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-          ) : null}
+          {refineControls}
           </div>
         </aside>
 
@@ -1651,14 +2043,7 @@ export default function EventPrepAiSimulator({
 
       {error && !embedded ? errorAlert : null}
 
-      <AiBudgetFullscreenLoader
-        active={loading}
-        stageHint={
-          result?.packages.length
-            ? 'Actualisation des formules à partir du catalogue…'
-            : 'Recherche dans le catalogue, puis recommandation…'
-        }
-      />
+      {loader}
 
       {result?.packages.length ? (
         <div className={cn('space-y-4', embedded && 'pt-4')}>
@@ -1740,43 +2125,7 @@ export default function EventPrepAiSimulator({
 
       </div>
 
-      <AiSimulationPackModal
-        open={packModalOpen}
-        onClose={() => setPackModalOpen(false)}
-        result={result}
-        selectedId={selectedId}
-        onSelectPack={setSelectedId}
-        budgetMaxFc={budgetValue}
-        eventDate={eventDate}
-        guestCount={guestCount ? Number(guestCount) : undefined}
-        isLoggedIn={isLoggedIn}
-        canCreateEvents={canCreateEvents}
-        saveBusy={saveBusy}
-        saveMessage={saveMessage}
-        onSavePack={onApply ? undefined : () => void saveSelectedPack()}
-        onBuyTokens={() => {
-          setPackModalOpen(false);
-          setPurchaseModalOpen(true);
-        }}
-        onApply={onApply ? (pack) => {
-          onApply(pack);
-          setPackModalOpen(false);
-        } : undefined}
-        applyLabel={applyLabel}
-        onApplyAll={onApplyAll ? (packs) => {
-          onApplyAll(packs);
-          setPackModalOpen(false);
-        } : undefined}
-        onOpenListing={onOpenListing}
-      />
-
-      <AiTokenPurchaseModal
-        open={purchaseModalOpen}
-        onClose={() => setPurchaseModalOpen(false)}
-        onSuccess={() => {
-          void syncDeviceAiTokensWithBackend(api).then(publishAllowance);
-        }}
-      />
+      {modals}
     </section>
   );
 }
