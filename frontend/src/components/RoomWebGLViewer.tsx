@@ -68,6 +68,7 @@ import { resolveDepthAmount } from '@/lib/roomFloorUtils';
 import { ceilingChandelierCount } from '@/lib/roomCeilingUtils';
 import { wallArtHeightM } from '@/lib/roomWallArt';
 import { WallArtLayer } from '@/components/room/WallArtMeshes';
+import { PricingZoneSurface } from '@/components/room/PricingZoneMeshes';
 import { LedShowLights, type LedWallFace } from '@/components/room/LedShowMeshes';
 import { isLedShowOn, resolveLedShow } from '@/lib/roomLedShow';
 import { poolGroundHole, poolLocalToWorld, resolvePoolOptions, resolvePoolShape } from '@/lib/roomPoolDesign';
@@ -2487,8 +2488,14 @@ function ZoneMesh({
   dance,
   ceilingM = 3,
   plotBorder,
+  pricing,
+  showPricingLabel = true,
 }: {
   plotBorder?: import('@/lib/roomLayoutUtils').PlotBorderStyle;
+  /** Zone tarifaire de billetterie : voile coloré + étiquette « nom · prix ». */
+  pricing?: { name: string; priceFc: number; rows?: boolean; elevationM?: number };
+  /** Étiquette de prix visible même en aperçu (masquée en visite et vue depuis la place). */
+  showPricingLabel?: boolean;
   xPct: number;
   yPct: number;
   wPct: number;
@@ -2518,6 +2525,24 @@ function ZoneMesh({
   const rot = ((rotation ?? 0) * Math.PI) / 180;
   const isPlot = zoneKind === 'plot';
   const thickness = isPlot ? 0 : (mat.thicknessM ?? 0.03);
+
+  if (pricing) {
+    return (
+      <group position={[cx, 0, cz]} rotation={[0, rot, 0]}>
+        <PricingZoneSurface
+          w={w}
+          h={h}
+          color={color}
+          name={pricing.name}
+          priceFc={pricing.priceFc}
+          selected={selected}
+          showLabel={showPricingLabel}
+          rows={pricing.rows}
+          elevationM={pricing.elevationM}
+        />
+      </group>
+    );
+  }
 
   return (
     <group
@@ -3915,6 +3940,7 @@ function SceneContent({
   captureApiRef,
   presentationMode = false,
   hideLabels = false,
+  showPricingLabels = true,
   walkthroughActive = false,
   onWalkthroughProgress,
   onWalkthroughComplete,
@@ -3943,6 +3969,8 @@ function SceneContent({
   captureApiRef?: React.MutableRefObject<RoomWebGLCaptureApi | null>;
   presentationMode?: boolean;
   hideLabels?: boolean;
+  /** Étiquettes « nom · prix » des zones tarifaires (billetterie), visibles même en aperçu. */
+  showPricingLabels?: boolean;
   orbitControlsRef?: React.Ref<unknown>;
   reduceMotion?: boolean;
   cameraTargetPose?: TargetCameraPose | null;
@@ -4775,6 +4803,8 @@ function SceneContent({
               dance={item.zoneKind === 'dance' ? item : undefined}
               plotBorder={item.plotBorder}
               ceilingM={wallHeightM}
+              pricing={item.pricing}
+              showPricingLabel={showPricingLabels}
             />
             </group>
           );
@@ -6103,6 +6133,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             captureApiRef={captureApiRef}
             presentationMode={presentationMode}
             hideLabels={hideLabels || avatarActive || !qualitySettings.showHints}
+            showPricingLabels={!walkthroughActive && !avatarActive}
             walkthroughActive={walkthroughActive}
             reduceMotion={reduceMotion}
             onWalkthroughProgress={(label, progress) => {

@@ -21,6 +21,7 @@ import { centerpieceStyleColor, isCenterpieceStyle, resolveCouvertSpec } from '@
 import { planRotationScreenDeg } from '@/lib/tablePlanUtils';
 import { TABLE_DEFAULT_TEXTURE, TABLE_SURFACE_TEXTURES, resolveTableSurface } from '@/lib/roomTableSurface';
 import { zoneTopViewStyle } from '@/lib/roomZoneSurface';
+import { isLightHexColor } from '@/lib/ticketPricing';
 import {
   arcTablePath,
   topViewFreeChair,
@@ -251,11 +252,29 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
                 top: `${item.y}%`,
                 width: `${item.w}%`,
                 height: `${item.h}%`,
-                ...zoneTopViewStyle(item, (item.w / 100) * W, (item.h / 100) * H),
-                boxShadow: 'inset 0 0 0 1px rgba(15,23,42,0.18)',
+                ...(item.pricing
+                  ? {
+                      // Zone tarifaire : voile de la couleur de la zone, le sol reste visible.
+                      backgroundColor: `color-mix(in srgb, ${item.color ?? '#c4a35a'} 22%, transparent)`,
+                      outline: `2px solid ${item.color ?? '#c4a35a'}`,
+                      outlineOffset: '-2px',
+                      borderRadius: 6,
+                    }
+                  : {
+                      ...zoneTopViewStyle(item, (item.w / 100) * W, (item.h / 100) * H),
+                      boxShadow: 'inset 0 0 0 1px rgba(15,23,42,0.18)',
+                    }),
                 transform: item.rotation ? `rotate(${planRotationScreenDeg(item.rotation)}deg)` : undefined,
               }}
             >
+              {item.pricing && showLabels ? (
+                <span
+                  className="absolute left-1 top-1 max-w-[calc(100%-8px)] truncate rounded-full px-1.5 py-0.5 text-[10px] font-extrabold leading-none shadow-sm"
+                  style={{ backgroundColor: item.color ?? '#c4a35a', color: isLightHexColor(item.color) ? '#111827' : '#ffffff' }}
+                >
+                  {item.label}
+                </span>
+              ) : null}
               {item.zoneKind === 'plot' ? (
                 <span className="absolute inset-0 flex items-center justify-center text-xs font-extrabold text-foreground/80 leading-none truncate px-0.5">
                   {item.label}

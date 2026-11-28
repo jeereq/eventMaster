@@ -529,3 +529,72 @@ export const TICKETING_ZONE_PRESETS: TicketingZonePreset[] = [
   },
 ];
 
+
+export type PricingZoneRect = { x: number; y: number; w: number; h: number };
+
+/**
+ * Emprise d’une zone tarifaire sur le plan (en % de la salle) : celle enregistrée,
+ * sinon le rectangle qui englobe ses tables avec une marge pour les chaises.
+ * Partagée par le plan 2D et la vue 3D pour que les deux montrent la même zone.
+ */
+export function pricingZoneRect(
+  zone: Pick<PricingZone, 'id' | 'x' | 'y' | 'w' | 'h'>,
+  tables: Array<{
+    x: number;
+    y: number;
+    pricingZoneId?: string | null;
+    /** Emprise réelle (rangée de cinéma, gradins) : remplace la marge autour du centre. */
+    bounds?: { minX: number; maxX: number; minY: number; maxY: number } | null;
+  }>,
+): PricingZoneRect | null {
+  if (zone.x != null && zone.y != null && zone.w != null && zone.h != null) {
+    return { x: zone.x, y: zone.y, w: zone.w, h: zone.h };
+  }
+  const assigned = tables.filter((t) => t.pricingZoneId === zone.id);
+  if (assigned.length === 0) return null;
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const t of assigned) {
+    // Rangée : ses fauteuils + une petite marge ; table : marge pour les chaises autour.
+    const b = t.bounds ?? null;
+    minX = Math.min(minX, b ? b.minX - 1.5 : t.x - 8);
+    maxX = Math.max(maxX, b ? b.maxX + 1.5 : t.x + 8);
+    minY = Math.min(minY, b ? b.minY - 1.5 : t.y - 7);
+    maxY = Math.max(maxY, b ? b.maxY + 1.5 : t.y + 7);
+  }
+  minX = Math.max(1, minX);
+  maxX = Math.min(99, maxX);
+  minY = Math.max(1, minY);
+  maxY = Math.min(99, maxY);
+  return {
+    x: Math.round(minX * 10) / 10,
+    y: Math.round(minY * 10) / 10,
+    w: Math.round((maxX - minX) * 10) / 10,
+    h: Math.round((maxY - minY) * 10) / 10,
+  };
+}
+
+export type PricingZoneAvailability = {
+  zone: PricingZone;
+  total: number;
+  available: number;
+};
+
+/** Places libres / total par zone (billetterie), dans l’ordre des zones. */
+export function pricingZoneAvailability(
+  zones: PricingZone[],
+  seats: Array<{ pricingZoneId?: string | null; available: boolean }>,
+): PricingZoneAvailability[] {
+  return zones.map((zone) => {
+    let total = 0;
+    let available = 0;
+    for (const s of seats) {
+      if (s.pricingZoneId !== zone.id) continue;
+      total += 1;
+      if (s.available) available += 1;
+    }
+    return { zone, total, available };
+  });
+}

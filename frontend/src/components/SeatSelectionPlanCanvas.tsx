@@ -11,7 +11,7 @@ import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import { getSeatCoordinates, getTableVisualStyle, planRotationScreenDeg, type TableSeatingSide, type TableShape } from '@/lib/tablePlanUtils';
-import { PLAN_ROW_SEAT_WIDTH_M, planRowLabelPoints, planRowSeats, planRowShortLabel } from '@/lib/planRowSeats';
+import { PLAN_ROW_SEAT_WIDTH_M, planRowBoundsPct, planRowLabelPoints, planRowSeats, planRowShortLabel } from '@/lib/planRowSeats';
 import {
   checkoutPlanShape,
   isStandaloneChairPlan,
@@ -21,7 +21,7 @@ import {
 } from '@/lib/seatSelectionLayout';
 import { formatFc } from '@/config/landingPricing';
 import { Check } from '@/components/icons';
-import type { PricingZone } from '@/lib/ticketPricing';
+import { isLightHexColor, pricingZoneAvailability, pricingZoneRect, type PricingZone } from '@/lib/ticketPricing';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import type { RoomWallSegment } from '@/lib/roomLayoutUtils';
@@ -92,6 +92,10 @@ export interface SeatSelectionPlanCanvasProps {
    * avec « Continuer » pour revenir au formulaire sans chercher le bouton « Réduire ».
    */
   fullscreenSummary?: { count: number; totalFc: number };
+  /** Légende des zones (prix, places libres) au-dessus du plan. Par défaut : affichée. */
+  showLegend?: boolean;
+  /** Consigne au-dessus du plan, à la place de « Touchez un siège libre… ». */
+  instructions?: string;
 }
 
 type PlanTable = {
@@ -130,6 +134,8 @@ export default function SeatSelectionPlanCanvas({
   height = 360,
   className = '',
   fullscreenSummary,
+  showLegend = true,
+  instructions,
 }: SeatSelectionPlanCanvasProps) {
   // Le plan est dessiné à taille fixe (proportions réelles de la salle) puis ajusté au cadre :
   // sur un téléphone, la salle entière est visible au lieu de déborder de l’écran.
@@ -152,6 +158,8 @@ export default function SeatSelectionPlanCanvas({
     fit,
   } = usePlanViewport({ logicalW: logical.w, logicalH: logical.h, maxZoom: rowMaxZoom });
   const [showWalls, setShowWalls] = useState(true);
+  /** Zone mise en avant depuis la légende : les autres tables s’estompent. */
+  const [focusZoneId, setFocusZoneId] = useState<string | null>(null);
   const { expanded, setExpanded, panelRef, layerStyle } = usePlanFullscreen();
 
   const theme = getRoomTheme(roomThemeId);
@@ -200,6 +208,35 @@ export default function SeatSelectionPlanCanvas({
     return [...map.values()];
   }, [seats]);
 
+  // Rangées de cinéma / gradins : la zone couvre toute la largeur réelle des fauteuils.
+  const zoneTables = useMemo(
+    () =>
+      tables.map((t) => ({
+        x: t.x,
+        y: t.y,
+        pricingZoneId: t.pricingZoneId,
+        bounds:
+          isTheaterRowPlan(t.shape, t.rowMeta) && !isStandaloneChairPlan(t.chairMeta)
+            ? planRowBoundsPct(t, fixtures, canvasWidthM, canvasHeightM)
+            : null,
+      })),
+    [tables, fixtures, canvasWidthM, canvasHeightM],
+  );
+  const zoneRects = useMemo(
+    () =>
+      pricingZones
+        .map((zone) => {
+          const members = zoneTables.filter((t) => t.pricingZoneId === zone.id);
+          return { zone, rect: pricingZoneRect(zone, zoneTables), rows: members.length > 0 && members.every((t) => t.bounds) };
+        })
+        .filter((z): z is { zone: PricingZone; rect: NonNullable<typeof z.rect>; rows: boolean } => z.rect != null),
+    [pricingZones, zoneTables],
+  );
+  const zoneStats = useMemo(() => pricingZoneAvailability(pricingZones, seats), [pricingZones, seats]);
+  const activeFocusZoneId = focusZoneId && pricingZones.some((z) => z.id === focusZoneId) ? focusZoneId : null;
+  const colorOfZone = (zoneId?: string | null) =>
+    zoneId ? zoneColorById?.get(zoneId) ?? pricingZones.find((z) => z.id === zoneId)?.color : undefined;
+
   // De loin, les sièges sont trop petits pour le doigt : le premier toucher rapproche la table.
   const tableZoomFirst = zoom < 0.62;
   // Un fauteuil de rangée doit faire au moins ~22 px à l’écran pour être touché sans erreur.
@@ -221,11 +258,11 @@ export default function SeatSelectionPlanCanvas({
     <div className={cn('space-y-2', expanded && 'flex h-full min-h-0 flex-col p-3', className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="min-w-0 flex-1 text-xs text-muted" aria-live="polite">
-          {zoomFirst
+          {instructions ?? (zoomFirst
             ? hasRows
               ? 'Touchez un rang pour le rapprocher, puis choisissez un fauteuil libre'
               : 'Touchez une table pour la rapprocher, puis choisissez un siège libre'
-            : 'Touchez un siège libre sur le plan'}
+            : 'Touchez un siège libre sur le plan')}
         </p>
         <PlanSceneControls
           showWalls={showWalls}
@@ -238,14 +275,43 @@ export default function SeatSelectionPlanCanvas({
         />
       </div>
 
-      {showZonePricing && pricingZones.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {pricingZones.map((z) => (
-            <span key={z.id} className="inline-flex items-center gap-1 text-xs text-muted">
-              <span className="w-2.5 h-2.5 rounded-full border border-border" style={{ backgroundColor: z.color || '#c4a35a' }} />
-              {z.name} · {formatFc(z.priceFc)}
-            </span>
-          ))}
+      {showLegend && zoneStats.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Zones tarifaires">
+          {zoneStats.map(({ zone, total, available }) => {
+            const color = zone.color || '#c4a35a';
+            const active = activeFocusZoneId === zone.id;
+            return (
+              <button
+                key={zone.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setFocusZoneId(active ? null : zone.id)}
+                className={cn(
+                  'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border bg-surface px-2.5 py-1.5 text-left transition touch-manipulation',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  active ? 'shadow-sm' : 'border-border hover:bg-surface-muted',
+                  activeFocusZoneId && !active && 'opacity-60',
+                )}
+                style={active ? { borderColor: color, boxShadow: `0 0 0 2px ${color}55` } : undefined}
+                title={active ? 'Afficher toutes les zones' : `Mettre en avant la zone ${zone.name}`}
+              >
+                <span className="h-3 w-3 shrink-0 rounded-full border border-black/10" style={{ backgroundColor: color }} aria-hidden />
+                <span className="flex flex-col leading-tight">
+                  <span className="text-xs font-bold text-foreground">
+                    {zone.name}
+                    {showZonePricing && zone.priceFc > 0 ? (
+                      <span className="ml-1 font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatFc(zone.priceFc)}</span>
+                    ) : null}
+                  </span>
+                  {total > 0 ? (
+                    <span className="text-[11px] text-muted tabular-nums">
+                      {available === 0 ? 'Complet' : `${available} libre${available > 1 ? 's' : ''} sur ${total}`}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -293,41 +359,53 @@ export default function SeatSelectionPlanCanvas({
             showLabels={false}
           />
 
-          {pricingZones.map((zone) => {
-            let x = zone.x;
-            let y = zone.y;
-            let w = zone.w;
-            let h = zone.h;
-            if (x == null || y == null || w == null || h == null) {
-              const assigned = tables.filter((t) => t.pricingZoneId === zone.id);
-              if (assigned.length > 0) {
-                const xs = assigned.map((t) => t.x);
-                const ys = assigned.map((t) => t.y);
-                const minX = Math.max(2, Math.min(...xs) - 8);
-                const maxX = Math.min(98, Math.max(...xs) + 8);
-                const minY = Math.max(2, Math.min(...ys) - 7);
-                const maxY = Math.min(98, Math.max(...ys) + 7);
-                x = Math.round(minX);
-                y = Math.round(minY);
-                w = Math.round(maxX - minX);
-                h = Math.round(maxY - minY);
-              }
-            }
-            if (x == null || y == null || w == null || h == null) return null;
+          {zoneRects.map(({ zone, rect, rows }) => {
+            const color = zone.color || '#c4a35a';
+            const dimmed = activeFocusZoneId != null && activeFocusZoneId !== zone.id;
+            const focused = activeFocusZoneId === zone.id;
+            // Étiquette lisible quel que soit le zoom (le plan est réduit pour tenir dans l’écran).
+            const labelPx = Math.round(Math.min(22, Math.max(12, 12 / Math.max(0.3, zoom))));
+            const priceText = showZonePricing && zone.priceFc > 0 ? formatFc(zone.priceFc) : '';
+            const labelText = `${zone.name}${priceText ? ` · ${priceText}` : ''}`;
+            const placement = zoneLabelPlacement(rect, rows, zone.name, priceText, labelPx, logical.w);
             return (
               <div
                 key={zone.id}
-                className="absolute pointer-events-none z-[1] rounded-md border"
+                className="absolute pointer-events-none z-[1] rounded-lg transition-opacity"
                 style={{
-                  left: `${x}%`,
-                  top: `${y}%`,
-                  width: `${w}%`,
-                  height: `${h}%`,
-                  backgroundColor: zone.color ? `${zone.color}22` : 'rgba(196,163,90,0.12)',
-                  borderColor: zone.color ? `${zone.color}88` : 'rgba(196,163,90,0.35)',
+                  left: `${rect.x}%`,
+                  top: `${rect.y}%`,
+                  width: `${rect.w}%`,
+                  height: `${rect.h}%`,
+                  backgroundColor: `${color}${focused ? '40' : '29'}`,
+                  border: `2px ${focused ? 'solid' : 'dashed'} ${color}`,
+                  opacity: dimmed ? 0.35 : 1,
                 }}
                 title={zone.name}
-              />
+              >
+                <span
+                  className={cn(
+                    'absolute rounded-full font-extrabold leading-none shadow-sm',
+                    placement.vertical ? 'flex flex-col items-center gap-[0.3em] whitespace-nowrap' : 'truncate',
+                  )}
+                  style={{
+                    ...placement.style,
+                    backgroundColor: color,
+                    color: isLightHexColor(color) ? '#111827' : '#ffffff',
+                    fontSize: labelPx,
+                    padding: `${Math.round(labelPx * 0.3)}px ${Math.round(labelPx * 0.6)}px`,
+                  }}
+                >
+                  {placement.vertical && priceText ? (
+                    <>
+                      <span>{zone.name}</span>
+                      <span className="opacity-90">{priceText}</span>
+                    </>
+                  ) : (
+                    labelText
+                  )}
+                </span>
+              </div>
             );
           })}
 
@@ -362,7 +440,8 @@ export default function SeatSelectionPlanCanvas({
               (selectedSeats && selectedSeats.some((s) => s.tableId === table.id)) ||
               selected?.tableId === table.id;
             const isFocused = activeTableId === table.id;
-            const zoneColor = table.pricingZoneId ? zoneColorById?.get(table.pricingZoneId) : undefined;
+            const zoneColor = colorOfZone(table.pricingZoneId);
+            const outOfFocus = activeFocusZoneId != null && table.pricingZoneId !== activeFocusZoneId;
             const isRow = isTheaterRowPlan(table.shape, table.rowMeta);
             const isChair = isStandaloneChairPlan(table.chairMeta);
             if (isRow && !isChair) {
@@ -379,6 +458,7 @@ export default function SeatSelectionPlanCanvas({
                   zoneColor={zoneColor}
                   zoneColorById={zoneColorById}
                   showZonePricing={showZonePricing}
+                  dimmed={outOfFocus}
                   isSeatSelected={isSeatSelected}
                   getSeatBadge={getSeatBadge}
                   onFocusPoint={focusPoint}
@@ -396,11 +476,12 @@ export default function SeatSelectionPlanCanvas({
             return (
               <div
                 key={table.id}
-                className="absolute select-none"
+                className="absolute select-none transition-opacity"
                 style={{
                   left: `${table.x}%`,
                   top: `${table.y}%`,
                   transform: 'translate(-50%, -50%)',
+                  opacity: outOfFocus ? 0.3 : 1,
                 }}
               >
                 <div
@@ -433,11 +514,10 @@ export default function SeatSelectionPlanCanvas({
                     <div className="truncate max-w-[5.5rem] sm:max-w-[72px] font-semibold text-xs sm:text-xs">{table.name}</div>
                     {table.seats[0]?.pricingZoneName && (
                       <div
-                        className="text-[7.5px] px-1 py-0.2 rounded font-semibold truncate max-w-[68px] mx-auto mt-0.5 shadow-2xs"
+                        className="text-[9px] leading-none px-1.5 py-0.5 rounded-full font-bold truncate max-w-[72px] mx-auto mt-0.5 shadow-2xs"
                         style={{
-                          backgroundColor: zoneColor ? `${zoneColor}22` : 'rgba(0,0,0,0.08)',
-                          color: zoneColor || 'inherit',
-                          border: zoneColor ? `1px solid ${zoneColor}66` : undefined,
+                          backgroundColor: zoneColor || 'rgba(0,0,0,0.08)',
+                          color: zoneColor ? (isLightHexColor(zoneColor) ? '#111827' : '#ffffff') : 'inherit',
                         }}
                       >
                         {table.seats[0].pricingZoneName}
@@ -451,7 +531,7 @@ export default function SeatSelectionPlanCanvas({
                       : getSeatCoordinates(table.shape, table.capacity, seat.seatIndex, undefined, table.seatingSide);
                     const isSelected = isSeatSelected(seat.tableId, seat.seatIndex);
                     const badge = getSeatBadge(seat.tableId, seat.seatIndex);
-                    const seatZoneColor = seat.pricingZoneId ? zoneColorById?.get(seat.pricingZoneId) : zoneColor;
+                    const seatZoneColor = seat.pricingZoneId ? colorOfZone(seat.pricingZoneId) : zoneColor;
 
                     return (
                       <button
@@ -475,6 +555,9 @@ export default function SeatSelectionPlanCanvas({
                           top: `calc(50% + ${coords.y}px)`,
                           transform: 'translate(-50%, -50%)',
                           ...(seatZoneColor && !isSelected ? { borderColor: seatZoneColor, boxShadow: `0 0 0 1px ${seatZoneColor}55` } : {}),
+                          ...(seatZoneColor && seat.available && !isSelected
+                            ? { backgroundColor: `color-mix(in srgb, ${seatZoneColor} 22%, var(--surface))` }
+                            : {}),
                         }}
                         className={cn(
                           'absolute w-8 h-8 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center text-xs sm:text-[8px] font-bold transition z-20 touch-manipulation active:scale-95 before:content-[\'\'] before:absolute before:-inset-2.5 before:rounded-full',
@@ -583,6 +666,45 @@ export default function SeatSelectionPlanCanvas({
 }
 
 /**
+ * Où poser l’étiquette « nom · prix » d’une zone sans masquer de siège :
+ * - tables : au-dessus du cadre (il y a toujours une allée entre deux zones) ;
+ * - rangées de cinéma / gradins : les zones se touchent d’un rang à l’autre, donc sur le côté,
+ *   dans l’allée latérale (à gauche, sinon à droite), centrée sur la hauteur de la zone.
+ */
+function zoneLabelPlacement(
+  rect: { x: number; y: number; w: number; h: number },
+  rows: boolean,
+  name: string,
+  price: string,
+  labelPx: number,
+  planW: number,
+): { style: React.CSSProperties; vertical: boolean } {
+  if (rows) {
+    // Place disponible de chaque côté (en unités du plan), au-delà des lettres de rang.
+    const gap = 36;
+    const left = (rect.x / 100) * planW - gap - 4;
+    const right = ((100 - rect.x - rect.w) / 100) * planW - gap - 4;
+    const chars = name.length + (price ? price.length + 3 : 0);
+    const width = chars * labelPx * 0.58 + labelPx * 1.4;
+    const middle = { top: '50%', transform: 'translateY(-50%)', maxWidth: 'none' } as const;
+    if (left >= width) return { vertical: false, style: { right: `calc(100% + ${gap}px)`, ...middle } };
+    if (right >= width) return { vertical: false, style: { left: `calc(100% + ${gap}px)`, ...middle } };
+    // Allée trop étroite : étiquette verticale le long de la zone, nom et prix sur deux colonnes.
+    const thick = labelPx * (price ? 3 : 1.7);
+    const vertical = { top: '50%', writingMode: 'vertical-rl', maxWidth: 'none' } as const;
+    if (left >= thick) {
+      return { vertical: true, style: { ...vertical, right: `calc(100% + ${gap}px)`, transform: 'translateY(-50%) rotate(180deg)' } };
+    }
+    if (right >= thick) {
+      return { vertical: true, style: { ...vertical, left: `calc(100% + ${gap}px)`, transform: 'translateY(-50%)' } };
+    }
+    return { vertical: false, style: { left: 4, top: 4, maxWidth: 'calc(100% - 8px)' } };
+  }
+  if (rect.y < 5) return { vertical: false, style: { left: 4, top: 4, maxWidth: 'calc(100% - 8px)' } };
+  return { vertical: false, style: { left: -2, bottom: 'calc(100% + 3px)', maxWidth: '100%' } };
+}
+
+/**
  * Rangée de cinéma / d’amphithéâtre : chaque fauteuil à sa vraie place (courbure, allée,
  * orientation vers l’écran ou la scène), à l’échelle de la salle, avec la lettre du rang aux deux bouts.
  */
@@ -597,6 +719,7 @@ function PlanRowSeats({
   zoneColor,
   zoneColorById,
   showZonePricing,
+  dimmed = false,
   isSeatSelected,
   getSeatBadge,
   onFocusPoint,
@@ -613,6 +736,7 @@ function PlanRowSeats({
   zoneColor?: string;
   zoneColorById?: Map<string, string>;
   showZonePricing: boolean;
+  dimmed?: boolean;
   isSeatSelected: (tableId: string, seatIndex: number) => boolean;
   getSeatBadge: (tableId: string, seatIndex: number) => number | null;
   onFocusPoint: (xPct: number, yPct: number) => void;
@@ -648,6 +772,7 @@ function PlanRowSeats({
           style={{
             left: `${p.xPct}%`,
             top: `${p.yPct}%`,
+            opacity: dimmed ? 0.3 : undefined,
             minWidth: labelPx * 1.6,
             height: labelPx * 1.6,
             fontSize: labelPx,
@@ -691,7 +816,11 @@ function PlanRowSeats({
               height: seatPx,
               fontSize: fontPx,
               transform: `translate(-50%, -50%)${isSelected ? ' scale(1.12)' : ''}`,
+              opacity: dimmed ? 0.3 : undefined,
               ...(seatZoneColor && !isSelected ? { borderColor: seatZoneColor, boxShadow: `0 0 0 1px ${seatZoneColor}55` } : {}),
+              ...(seatZoneColor && seat.available && !isSelected
+                ? { backgroundColor: `color-mix(in srgb, ${seatZoneColor} 22%, var(--surface))` }
+                : {}),
             }}
             className={cn(
               'absolute z-20 flex items-center justify-center rounded-[28%] border font-bold leading-none tabular-nums transition touch-manipulation',

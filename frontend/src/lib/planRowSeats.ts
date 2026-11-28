@@ -136,3 +136,29 @@ export function planRowSeatCode(name: string | null | undefined, rowMeta: SeatRo
 export function isPlanRow(table: { rowMeta?: SeatRowMeta | null }): boolean {
   return Boolean(table.rowMeta && typeof table.rowMeta === 'object');
 }
+
+/**
+ * Emprise d’une rangée sur le plan (en % du canevas), fauteuils compris : sert à encadrer
+ * une zone tarifaire de cinéma / gradins sur toute la largeur réelle de ses rangs.
+ */
+export function planRowBoundsPct(
+  row: PlanRowInput,
+  fixtures: readonly FixtureLike[] | null | undefined,
+  widthM: number,
+  heightM: number,
+): { minX: number; maxX: number; minY: number; maxY: number } | null {
+  const seats = planRowSeats(row, fixtures, widthM, heightM);
+  if (seats.length === 0) return null;
+  const W = widthM > 0 ? widthM : 20;
+  const H = heightM > 0 ? heightM : 16;
+  const halfX = ((PLAN_ROW_SEAT_WIDTH_M / 2) / W) * 100;
+  const halfY = ((PLAN_ROW_SEAT_WIDTH_M / 2) / H) * 100;
+  const xs = seats.map((s) => s.xPct);
+  const ys = seats.map((s) => s.yPct);
+  return {
+    minX: round(Math.min(...xs) - halfX),
+    maxX: round(Math.max(...xs) + halfX),
+    minY: round(Math.min(...ys) - halfY),
+    maxY: round(Math.max(...ys) + halfY),
+  };
+}
