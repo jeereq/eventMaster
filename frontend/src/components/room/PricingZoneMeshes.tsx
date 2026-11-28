@@ -24,6 +24,8 @@ export function PricingZoneSurface({
   priceFc,
   selected = false,
   showLabel = true,
+  rows = false,
+  elevationM = 0,
 }: {
   w: number;
   h: number;
@@ -32,6 +34,9 @@ export function PricingZoneSurface({
   priceFc: number;
   selected?: boolean;
   showLabel?: boolean;
+  /** Rangées (cinéma, gradins) : les fauteuils portent la couleur ; seul un liseré au sol et l’étiquette sur le côté. */
+  rows?: boolean;
+  elevationM?: number;
 }) {
   const light = isLightHexColor(color);
   const edges: Array<[number, number, number, number]> = [
@@ -40,6 +45,35 @@ export function PricingZoneSurface({
     [-w / 2, 0, EDGE_W, h],
     [w / 2, 0, EDGE_W, h],
   ];
+  const pill = (
+    <span
+      className="flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-extrabold leading-none shadow-md ring-2 ring-white/80"
+      style={{
+        backgroundColor: color,
+        color: light ? '#111827' : '#ffffff',
+        transform: rows ? 'translate(-55%, 0)' : 'translate(50%, -70%)',
+      }}
+    >
+      <span>{name}</span>
+      {priceFc > 0 ? <span className="font-bold opacity-90 tabular-nums">· {formatFc(priceFc)}</span> : null}
+    </span>
+  );
+
+  if (rows) {
+    // Gradins : un voile au sol serait caché sous les marches. L’étiquette flotte dans l’allée latérale.
+    return showLabel ? (
+      <Html
+        zIndexRange={[15, 0]}
+        center
+        distanceFactor={14}
+        position={[-w / 2, elevationM + 0.9, 0]}
+        style={{ pointerEvents: 'none' }}
+      >
+        {pill}
+      </Html>
+    ) : null;
+  }
+
   return (
     <group>
       <mesh position={[0, 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={noRaycast} renderOrder={1}>
@@ -67,13 +101,7 @@ export function PricingZoneSurface({
           position={[-w / 2, 0.02, -h / 2]}
           style={{ pointerEvents: 'none' }}
         >
-          <span
-            className="flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-extrabold leading-none shadow-md ring-2 ring-white/80"
-            style={{ backgroundColor: color, color: light ? '#111827' : '#ffffff', transform: 'translate(50%, -70%)' }}
-          >
-            <span>{name}</span>
-            {priceFc > 0 ? <span className="font-bold opacity-90 tabular-nums">· {formatFc(priceFc)}</span> : null}
-          </span>
+          {pill}
         </Html>
       ) : null}
     </group>

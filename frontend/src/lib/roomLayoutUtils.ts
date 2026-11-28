@@ -942,7 +942,14 @@ export interface RoomLayoutBlueprint {
          * Zone tarifaire de billetterie (VIP, Carré d’Or…) : voile coloré au sol et étiquette
          * « nom · prix » lisible en 3D comme en 2D. Absente pour les zones de décor.
          */
-        pricing?: { name: string; priceFc: number };
+        pricing?: {
+          name: string;
+          priceFc: number;
+          /** Zone faite de rangées (cinéma, gradins) : les fauteuils prennent la couleur, pas de voile au sol. */
+          rows?: boolean;
+          /** Hauteur du gradin le plus haut de la zone, pour poser l’étiquette au-dessus. */
+          elevationM?: number;
+        };
         x: number;
         y: number;
         w: number;

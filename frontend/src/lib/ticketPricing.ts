@@ -539,24 +539,40 @@ export type PricingZoneRect = { x: number; y: number; w: number; h: number };
  */
 export function pricingZoneRect(
   zone: Pick<PricingZone, 'id' | 'x' | 'y' | 'w' | 'h'>,
-  tables: Array<{ x: number; y: number; pricingZoneId?: string | null }>,
+  tables: Array<{
+    x: number;
+    y: number;
+    pricingZoneId?: string | null;
+    /** Emprise réelle (rangée de cinéma, gradins) : remplace la marge autour du centre. */
+    bounds?: { minX: number; maxX: number; minY: number; maxY: number } | null;
+  }>,
 ): PricingZoneRect | null {
   if (zone.x != null && zone.y != null && zone.w != null && zone.h != null) {
     return { x: zone.x, y: zone.y, w: zone.w, h: zone.h };
   }
   const assigned = tables.filter((t) => t.pricingZoneId === zone.id);
   if (assigned.length === 0) return null;
-  const xs = assigned.map((t) => t.x);
-  const ys = assigned.map((t) => t.y);
-  const minX = Math.max(1, Math.min(...xs) - 8);
-  const maxX = Math.min(99, Math.max(...xs) + 8);
-  const minY = Math.max(1, Math.min(...ys) - 7);
-  const maxY = Math.min(99, Math.max(...ys) + 7);
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const t of assigned) {
+    // Rangée : ses fauteuils + une petite marge ; table : marge pour les chaises autour.
+    const b = t.bounds ?? null;
+    minX = Math.min(minX, b ? b.minX - 1.5 : t.x - 8);
+    maxX = Math.max(maxX, b ? b.maxX + 1.5 : t.x + 8);
+    minY = Math.min(minY, b ? b.minY - 1.5 : t.y - 7);
+    maxY = Math.max(maxY, b ? b.maxY + 1.5 : t.y + 7);
+  }
+  minX = Math.max(1, minX);
+  maxX = Math.min(99, maxX);
+  minY = Math.max(1, minY);
+  maxY = Math.min(99, maxY);
   return {
-    x: Math.round(minX),
-    y: Math.round(minY),
-    w: Math.round(maxX - minX),
-    h: Math.round(maxY - minY),
+    x: Math.round(minX * 10) / 10,
+    y: Math.round(minY * 10) / 10,
+    w: Math.round((maxX - minX) * 10) / 10,
+    h: Math.round((maxY - minY) * 10) / 10,
   };
 }
 

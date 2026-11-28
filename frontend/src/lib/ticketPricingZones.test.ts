@@ -32,3 +32,11 @@ test('pricingZoneAvailability compte les places libres par zone', () => {
   ]);
   assert.deepEqual(stats.map((s) => [s.zone.id, s.available, s.total]), [['vip', 1, 2], ['std', 1, 1]]);
 });
+
+test('pricingZoneRect couvre toute la largeur des rangées (cinéma, gradins)', () => {
+  const rect = pricingZoneRect({ id: 'prem' }, [
+    { x: 50, y: 40, pricingZoneId: 'prem', bounds: { minX: 20, maxX: 80, minY: 38, maxY: 42 } },
+    { x: 50, y: 48, pricingZoneId: 'prem', bounds: { minX: 19, maxX: 81, minY: 46, maxY: 50 } },
+  ]);
+  assert.deepEqual(rect, { x: 17.5, y: 36.5, w: 65, h: 15 });
+});

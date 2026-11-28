@@ -11,7 +11,7 @@ import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import { getSeatCoordinates, getTableVisualStyle, planRotationScreenDeg, type TableSeatingSide, type TableShape } from '@/lib/tablePlanUtils';
-import { PLAN_ROW_SEAT_WIDTH_M, planRowLabelPoints, planRowSeats, planRowShortLabel } from '@/lib/planRowSeats';
+import { PLAN_ROW_SEAT_WIDTH_M, planRowBoundsPct, planRowLabelPoints, planRowSeats, planRowShortLabel } from '@/lib/planRowSeats';
 import {
   checkoutPlanShape,
   isStandaloneChairPlan,
@@ -208,12 +208,29 @@ export default function SeatSelectionPlanCanvas({
     return [...map.values()];
   }, [seats]);
 
+  // Rangées de cinéma / gradins : la zone couvre toute la largeur réelle des fauteuils.
+  const zoneTables = useMemo(
+    () =>
+      tables.map((t) => ({
+        x: t.x,
+        y: t.y,
+        pricingZoneId: t.pricingZoneId,
+        bounds:
+          isTheaterRowPlan(t.shape, t.rowMeta) && !isStandaloneChairPlan(t.chairMeta)
+            ? planRowBoundsPct(t, fixtures, canvasWidthM, canvasHeightM)
+            : null,
+      })),
+    [tables, fixtures, canvasWidthM, canvasHeightM],
+  );
   const zoneRects = useMemo(
     () =>
       pricingZones
-        .map((zone) => ({ zone, rect: pricingZoneRect(zone, tables) }))
-        .filter((z): z is { zone: PricingZone; rect: NonNullable<typeof z.rect> } => z.rect != null),
-    [pricingZones, tables],
+        .map((zone) => {
+          const members = zoneTables.filter((t) => t.pricingZoneId === zone.id);
+          return { zone, rect: pricingZoneRect(zone, zoneTables), rows: members.length > 0 && members.every((t) => t.bounds) };
+        })
+        .filter((z): z is { zone: PricingZone; rect: NonNullable<typeof z.rect>; rows: boolean } => z.rect != null),
+    [pricingZones, zoneTables],
   );
   const zoneStats = useMemo(() => pricingZoneAvailability(pricingZones, seats), [pricingZones, seats]);
   const activeFocusZoneId = focusZoneId && pricingZones.some((z) => z.id === focusZoneId) ? focusZoneId : null;
@@ -342,12 +359,15 @@ export default function SeatSelectionPlanCanvas({
             showLabels={false}
           />
 
-          {zoneRects.map(({ zone, rect }) => {
+          {zoneRects.map(({ zone, rect, rows }) => {
             const color = zone.color || '#c4a35a';
             const dimmed = activeFocusZoneId != null && activeFocusZoneId !== zone.id;
             const focused = activeFocusZoneId === zone.id;
             // Étiquette lisible quel que soit le zoom (le plan est réduit pour tenir dans l’écran).
             const labelPx = Math.round(Math.min(22, Math.max(12, 12 / Math.max(0.3, zoom))));
+            const priceText = showZonePricing && zone.priceFc > 0 ? formatFc(zone.priceFc) : '';
+            const labelText = `${zone.name}${priceText ? ` · ${priceText}` : ''}`;
+            const placement = zoneLabelPlacement(rect, rows, zone.name, priceText, labelPx, logical.w);
             return (
               <div
                 key={zone.id}
@@ -364,20 +384,26 @@ export default function SeatSelectionPlanCanvas({
                 title={zone.name}
               >
                 <span
-                  className="absolute left-0 max-w-full truncate rounded-full font-extrabold leading-none shadow-sm"
+                  className={cn(
+                    'absolute rounded-full font-extrabold leading-none shadow-sm',
+                    placement.vertical ? 'flex flex-col items-center gap-[0.3em] whitespace-nowrap' : 'truncate',
+                  )}
                   style={{
-                    // Au-dessus du cadre, pour ne masquer ni table ni siège (dedans si la zone touche le haut).
-                    top: rect.y < 5 ? 4 : undefined,
-                    bottom: rect.y < 5 ? undefined : 'calc(100% + 3px)',
-                    marginLeft: rect.y < 5 ? 4 : -2,
+                    ...placement.style,
                     backgroundColor: color,
                     color: isLightHexColor(color) ? '#111827' : '#ffffff',
                     fontSize: labelPx,
                     padding: `${Math.round(labelPx * 0.3)}px ${Math.round(labelPx * 0.6)}px`,
                   }}
                 >
-                  {zone.name}
-                  {showZonePricing && zone.priceFc > 0 ? ` · ${formatFc(zone.priceFc)}` : ''}
+                  {placement.vertical && priceText ? (
+                    <>
+                      <span>{zone.name}</span>
+                      <span className="opacity-90">{priceText}</span>
+                    </>
+                  ) : (
+                    labelText
+                  )}
                 </span>
               </div>
             );
@@ -637,6 +663,45 @@ export default function SeatSelectionPlanCanvas({
   }
 
   return viewer;
+}
+
+/**
+ * Où poser l’étiquette « nom · prix » d’une zone sans masquer de siège :
+ * - tables : au-dessus du cadre (il y a toujours une allée entre deux zones) ;
+ * - rangées de cinéma / gradins : les zones se touchent d’un rang à l’autre, donc sur le côté,
+ *   dans l’allée latérale (à gauche, sinon à droite), centrée sur la hauteur de la zone.
+ */
+function zoneLabelPlacement(
+  rect: { x: number; y: number; w: number; h: number },
+  rows: boolean,
+  name: string,
+  price: string,
+  labelPx: number,
+  planW: number,
+): { style: React.CSSProperties; vertical: boolean } {
+  if (rows) {
+    // Place disponible de chaque côté (en unités du plan), au-delà des lettres de rang.
+    const gap = 36;
+    const left = (rect.x / 100) * planW - gap - 4;
+    const right = ((100 - rect.x - rect.w) / 100) * planW - gap - 4;
+    const chars = name.length + (price ? price.length + 3 : 0);
+    const width = chars * labelPx * 0.58 + labelPx * 1.4;
+    const middle = { top: '50%', transform: 'translateY(-50%)', maxWidth: 'none' } as const;
+    if (left >= width) return { vertical: false, style: { right: `calc(100% + ${gap}px)`, ...middle } };
+    if (right >= width) return { vertical: false, style: { left: `calc(100% + ${gap}px)`, ...middle } };
+    // Allée trop étroite : étiquette verticale le long de la zone, nom et prix sur deux colonnes.
+    const thick = labelPx * (price ? 3 : 1.7);
+    const vertical = { top: '50%', writingMode: 'vertical-rl', maxWidth: 'none' } as const;
+    if (left >= thick) {
+      return { vertical: true, style: { ...vertical, right: `calc(100% + ${gap}px)`, transform: 'translateY(-50%) rotate(180deg)' } };
+    }
+    if (right >= thick) {
+      return { vertical: true, style: { ...vertical, left: `calc(100% + ${gap}px)`, transform: 'translateY(-50%)' } };
+    }
+    return { vertical: false, style: { left: 4, top: 4, maxWidth: 'calc(100% - 8px)' } };
+  }
+  if (rect.y < 5) return { vertical: false, style: { left: 4, top: 4, maxWidth: 'calc(100% - 8px)' } };
+  return { vertical: false, style: { left: -2, bottom: 'calc(100% + 3px)', maxWidth: '100%' } };
 }
 
 /**

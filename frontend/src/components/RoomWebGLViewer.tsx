@@ -2493,7 +2493,7 @@ function ZoneMesh({
 }: {
   plotBorder?: import('@/lib/roomLayoutUtils').PlotBorderStyle;
   /** Zone tarifaire de billetterie : voile coloré + étiquette « nom · prix ». */
-  pricing?: { name: string; priceFc: number };
+  pricing?: { name: string; priceFc: number; rows?: boolean; elevationM?: number };
   /** Étiquette de prix visible même en aperçu (masquée en visite et vue depuis la place). */
   showPricingLabel?: boolean;
   xPct: number;
@@ -2537,6 +2537,8 @@ function ZoneMesh({
           priceFc={pricing.priceFc}
           selected={selected}
           showLabel={showPricingLabel}
+          rows={pricing.rows}
+          elevationM={pricing.elevationM}
         />
       </group>
     );

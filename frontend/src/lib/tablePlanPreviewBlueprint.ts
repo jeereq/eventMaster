@@ -6,6 +6,7 @@ import {
   type TableShape,
 } from '@/lib/roomLayoutUtils';
 import { pricingZoneRect, type PricingZone } from '@/lib/ticketPricing';
+import { planRowBoundsPct } from '@/lib/planRowSeats';
 import { formatFc } from '@/config/landingPricing';
 
 export type TablePlanPreviewTable = {
@@ -49,23 +50,43 @@ export type TablePlanPreviewInput = {
   pricingZones?: PricingZone[];
 };
 
+function rowElevationM(table: TablePlanPreviewTable): number {
+  return table.rowMeta?.elevationM ?? (table.rowMeta?.tier ? table.rowMeta.tier * 0.28 : 0);
+}
+
 function pricingZonesToFurniture(
   zones: PricingZone[] | undefined,
   tables: TablePlanPreviewTable[],
+  canvas: { widthM: number; heightM: number },
+  fixtures: RoomLayoutBlueprint['fixtures'] | undefined,
 ): Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'zone' }>[] {
   if (!zones || zones.length === 0) return [];
   const result: Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'zone' }>[] = [];
 
+  // Rangées (cinéma, gradins) : emprise réelle des fauteuils, comme sur le plan 2D.
+  const zoneTables = tables.map((t) => ({
+    x: t.x,
+    y: t.y,
+    pricingZoneId: t.pricingZoneId,
+    bounds: t.rowMeta && !t.chairMeta?.standalone ? planRowBoundsPct(t, fixtures, canvas.widthM, canvas.heightM) : null,
+  }));
+
   for (const zone of zones) {
     // Même emprise que le plan 2D : zone enregistrée, sinon rectangle englobant ses tables.
-    const rect = pricingZoneRect(zone, tables);
+    const rect = pricingZoneRect(zone, zoneTables);
     if (!rect) continue;
+    const members = tables.filter((t) => t.pricingZoneId === zone.id);
+    const rows = members.length > 0 && members.every((t) => t.rowMeta && !t.chairMeta?.standalone);
     result.push({
       id: `zone-mesh-${zone.id}`,
       kind: 'zone',
       label: `${zone.name}${zone.priceFc > 0 ? ` · ${formatFc(zone.priceFc)}` : ''}`,
       color: zone.color || '#c4a35a',
-      pricing: { name: zone.name, priceFc: zone.priceFc },
+      pricing: {
+        name: zone.name,
+        priceFc: zone.priceFc,
+        ...(rows ? { rows: true, elevationM: Math.max(0, ...members.map(rowElevationM)) } : {}),
+      },
       ...rect,
     });
   }
@@ -116,6 +137,7 @@ function tablesToFurniture(
         y: table.y,
         rotation: table.rotation ?? table.chairMeta?.rotation ?? existingChair?.rotation,
         chairType: (table.chairType as ChairType) || existingChair?.chairType || 'BANQUET',
+        ...(zoneColor ? { chairSeatColor: zoneColor } : {}),
       };
     }
 
@@ -130,6 +152,7 @@ function tablesToFurniture(
         rotation: table.rotation ?? existingRow.rotation,
         label: table.name || existingRow.label,
         seatCount: table.capacity || existingRow.seatCount,
+        ...(zoneColor ? { chairSeatColor: zoneColor } : {}),
       };
     }
 
@@ -149,7 +172,9 @@ function tablesToFurniture(
         curve: table.rowMeta?.curve ?? 0,
         aisleSplit: table.rowMeta?.aisleSplit === true,
         aisleWidthPct: table.rowMeta?.aisleWidthPct,
-        elevationM: table.rowMeta?.elevationM ?? (table.rowMeta?.tier ? table.rowMeta.tier * 0.28 : 0),
+        elevationM: rowElevationM(table),
+        // Billetterie : fauteuils de la couleur de leur zone tarifaire (comme un plan de salle de cinéma).
+        ...(zoneColor ? { chairSeatColor: zoneColor } : {}),
         focusX: table.rowMeta?.focusX,
         focusY: table.rowMeta?.focusY,
         rotation: table.rotation ?? 0,
@@ -233,7 +258,12 @@ export function buildTablePlanPreviewBlueprint(
     return null;
   }
 
-  const zoneFurniture = pricingZonesToFurniture(resolvedZones, tables);
+  const zoneFurniture = pricingZonesToFurniture(
+    resolvedZones,
+    tables,
+    roomBlueprint?.canvas ?? estimateCanvasM(tables, tablePlan?.roomOutline),
+    planFixtures ?? roomBlueprint?.fixtures,
+  );
   const tableFurniture = tablesToFurniture(tables, resolvedZones, roomBlueprint);
   const meta = metadataFromPlan(tablePlan, tables);
 
