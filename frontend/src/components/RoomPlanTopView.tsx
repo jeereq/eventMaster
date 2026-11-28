@@ -50,16 +50,6 @@ function isNearWhite(color: string): boolean {
   return hex === '#fff' || hex === '#ffffff' || hex === '#fafafa' || hex === '#f8fafc';
 }
 
-function isDark(color: string): boolean {
-  const m = /^#?([0-9a-f]{6})$/i.exec(color.trim());
-  if (!m) return false;
-  const n = parseInt(m[1], 16);
-  const r = (n >> 16) & 255;
-  const g = (n >> 8) & 255;
-  const b = n & 255;
-  return 0.299 * r + 0.587 * g + 0.114 * b < 110;
-}
-
 /** Styles à assise ronde vus du dessus (coque, tonneau, paon…). */
 const ROUND_CHAIR_STYLES = new Set<ChairStyle>(['egg', 'tulip', 'barrel', 'peacock', 'acapulco']);
 
@@ -233,6 +223,8 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
         data-plan-top-view
       >
         <div className="absolute inset-0" style={floorStyle} />
+        {/* Voile léger : le sol garde sa matière sans brouiller tables, chaises et libellés. */}
+        <div className="absolute inset-0 pointer-events-none bg-white/25" aria-hidden />
 
         {outline ? (
           <div
@@ -425,31 +417,31 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
 
           {guests?.map((g) => <GuestGlyph key={g.id} g={g} W={W} H={H} />)}
 
-          {showLabels
-            ? geometry.tables.map(({ item, top }) => {
-                if (!item.name) return null;
-                const color = resolveTableColor(item.tableColor, meta.defaultTableColor) ?? DEFAULT_TABLE_COLOR;
-                const fontSize = Math.max(0.16, Math.min(0.3, Math.min(top.size[0], top.size[1]) * 0.2));
-                const dark = isDark(color);
-                return (
-                  <text
-                    key={`${item.id}-label`}
-                    x={top.cx}
-                    y={top.cy + fontSize * (item.hasCenterpiece ? 1.6 : 0.35)}
-                    textAnchor="middle"
-                    fontSize={fontSize}
-                    fontWeight={700}
-                    fill={dark ? '#f8fafc' : '#1e293b'}
-                    stroke={dark ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.75)'}
-                    strokeWidth={fontSize * 0.12}
-                    paintOrder="stroke"
-                  >
-                    {item.name}
-                  </text>
-                );
-              })
-            : null}
         </svg>
+
+        {/* Noms des tables : étiquettes HTML à taille de texte fixe, lisibles quelle que soit la taille de la salle. */}
+        {showLabels ? (
+          <div className="absolute inset-0 z-[4] pointer-events-none @max-[26rem]:hidden" aria-hidden>
+            {geometry.tables.map(({ item, top }) => {
+              if (!item.name) return null;
+              const seats = top.seats.length;
+              return (
+                <span
+                  key={`${item.id}-label`}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 max-w-[9rem] truncate whitespace-nowrap rounded-full border border-slate-900/10 bg-white/90 px-1.5 py-px font-semibold leading-tight text-slate-900 shadow-[0_1px_3px_rgba(15,23,42,0.35)] tabular-nums"
+                  style={{
+                    left: `${(top.cx / W) * 100}%`,
+                    top: `${(top.cy / H) * 100}%`,
+                    fontSize: 'clamp(9px, 1.05cqw, 12px)',
+                  }}
+                >
+                  {item.name}
+                  {seats > 0 ? <span className="font-normal text-slate-600 @max-[48rem]:hidden"> · {seats}</span> : null}
+                </span>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </div>
   );

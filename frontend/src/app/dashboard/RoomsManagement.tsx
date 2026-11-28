@@ -3062,6 +3062,7 @@ export default function RoomsManagement({ headerAction }: { headerAction?: React
                     showMeta={false}
                     showDepthControls
                     fill
+                    showViewToggle
                     className="h-full w-full"
                   />
                 </div>

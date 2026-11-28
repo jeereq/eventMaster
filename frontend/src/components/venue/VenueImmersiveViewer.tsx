@@ -141,6 +141,7 @@ export default function VenueImmersiveViewer({
             fill
             allowExpand={false}
             hostTopInset
+            showViewToggle
             guestSimulation={crowdOn ? crowd : null}
           />
         ) : (

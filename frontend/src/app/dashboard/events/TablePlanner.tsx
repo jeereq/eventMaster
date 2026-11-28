@@ -146,6 +146,22 @@ export const HEIGHT_PRESET_CONFIG: Record<
   },
 };
 
+/** Pixels par mètre pour lesquels les tables et sièges du plan 2D sont dessinés à 100 %. */
+const PLAN_TABLE_REFERENCE_PX_PER_M = 34;
+/** En dessous, le plan 2D ne rétrécit plus pour tenir en largeur : il défile de côté (téléphone). */
+const PLAN_MIN_PX_PER_M = 24;
+
+/**
+ * Échelle des tables du plan 2D : elles suivent la taille réelle de la salle à l’écran (et le zoom),
+ * au lieu de garder la même taille en pixels qu’une salle de 10 m ou de 40 m.
+ * Bornée pour rester lisible et cliquable sur téléphone comme en plein écran.
+ */
+function planTableScale(canvasWidthPx: number, widthM: number): number {
+  if (!canvasWidthPx || !widthM) return 1;
+  const raw = canvasWidthPx / widthM / PLAN_TABLE_REFERENCE_PX_PER_M;
+  return Math.round(Math.min(1.4, Math.max(0.6, raw)) * 100) / 100;
+}
+
 export const DEFAULT_ZONE_COLOR = '#c4a35a';
 export const DEFAULT_TABLE_COLOR = '#f3e6c8';
 
@@ -376,6 +392,26 @@ export default function TablePlanner({
 
  // Dragging states
  const canvasRef = useRef<HTMLDivElement>(null);
+  // Largeur réelle du plan à l’écran : les tables et leurs chaises suivent l’échelle de la salle (et le zoom).
+  const [canvasWidthPx, setCanvasWidthPx] = useState(0);
+  const canvasScrollRef = useRef<HTMLDivElement>(null);
+  const canvasCenteredRef = useRef(false);
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => {
+      setCanvasWidthPx(entry.contentRect.width);
+      // Plan plus large que l’écran (téléphone) : on ouvre sur le centre de la salle, pas sur le mur gauche.
+      const scroller = canvasScrollRef.current;
+      if (scroller && !canvasCenteredRef.current && scroller.scrollWidth > scroller.clientWidth) {
+        canvasCenteredRef.current = true;
+        scroller.scrollLeft = (scroller.scrollWidth - scroller.clientWidth) / 2;
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+    // Le plan 2D est recréé en passant de la 3D au 2D ou en plein écran : on observe le nouveau.
+  }, [plannerView, isExpanded]);
  const [draggingTableId, setDraggingTableId] = useState<string | null>(null);
  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
@@ -417,6 +453,8 @@ export default function TablePlanner({
 
   const plannerWidthM = roomLayoutBlueprint?.canvas?.widthM ?? 20;
   const plannerHeightM = roomLayoutBlueprint?.canvas?.heightM ?? 16;
+  const plannerRatio = Math.max(0.2, plannerWidthM / Math.max(1, plannerHeightM));
+  const tableScale = planTableScale(canvasWidthPx, plannerWidthM);
 
   const [safe3DMode, setSafe3DMode] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<{
@@ -1381,24 +1419,31 @@ export default function TablePlanner({
  heightClass,
         )}
       >
-        <div className="absolute inset-0 overflow-auto scrollbar-thin">
+        {/* Le plan garde les proportions réelles de la salle (comme en 3D) : plus d’étirement selon l’écran. */}
+        <div ref={canvasScrollRef} className="absolute inset-0 overflow-auto scrollbar-thin bg-surface-muted" style={{ containerType: 'size' }}>
+          <div className="flex min-h-full min-w-full w-max p-2 sm:p-3">
           <div
             ref={canvasRef}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerUp}
             className={cn(
-              'em-floor-canvas em-floor-canvas--photo touch-none select-none relative',
-              'min-w-full min-h-full transition-[width,height] duration-150',
+              'em-floor-canvas em-floor-canvas--photo select-none relative m-auto shrink-0',
+              'rounded-xl shadow-[0_18px_40px_-18px_rgba(0,0,0,0.45)] transition-[width] duration-150',
  draggingTableId && 'em-floor-canvas--dragging',
  )}
             style={{
               ...floorStyle,
-              touchAction: 'none',
-              width: `${canvasZoom * 100}%`,
-              height: `${canvasZoom * 100}%`,
+              // Le sol vide se fait glisser (plan zoomé, téléphone) ; les tables gardent le glisser-déposer.
+              touchAction: draggingTableId ? 'none' : 'pan-x pan-y',
+              // Plan entier à l’écran ; sur un téléphone, il prend toute la hauteur (au moins
+              // 24 px par mètre) et se fait glisser de côté plutôt que d’entasser les tables.
+              width: `calc(${canvasZoom} * max(min(100cqw - 1.5rem, (100cqh - 1.5rem) * ${plannerRatio}), min((100cqh - 1.5rem) * ${plannerRatio}, ${Math.round(plannerWidthM * PLAN_MIN_PX_PER_M)}px)))`,
+              aspectRatio: `${plannerWidthM} / ${plannerHeightM}`,
             }}
           >
+            {/* Voile sur le sol : le parquet ou la moquette restent visibles sans brouiller tables et sièges. */}
+            <div className="absolute inset-0 rounded-[inherit] pointer-events-none bg-white/30 dark:bg-black/35" aria-hidden />
             {tablePlannerWalls.length > 0 && (
               <Room2DPlanWalls
                 walls={tablePlannerWalls}
@@ -1464,7 +1509,7 @@ export default function TablePlanner({
  {(fixtures ?? []).map((fixture) => (
  <div
  key={fixture.id}
- className={`absolute pointer-events-none border text-[9px] font-semibold flex items-center justify-center px-1 text-center opacity-70 ${getFixtureClass(fixture.kind)}`}
+ className={`absolute pointer-events-none border text-[10px] sm:text-xs font-bold uppercase tracking-wide leading-tight flex items-center justify-center px-1 text-center opacity-90 shadow-2xs ${getFixtureClass(fixture.kind)}`}
  style={{
  left: `${fixture.x}%`,
  top: `${fixture.y}%`,
@@ -1536,7 +1581,7 @@ export default function TablePlanner({
  style={{
  left: `${table.x}%`,
  top: `${table.y}%`,
- transform: `translate(-50%, -50%) rotate(${planRotationScreenDeg(table.rotation)}deg)`,
+ transform: `translate(-50%, -50%) rotate(${planRotationScreenDeg(table.rotation)}deg) scale(${tableScale})`,
                       touchAction: 'none',
  }}
  className={cn(
@@ -1552,7 +1597,10 @@ export default function TablePlanner({
  )}
  >
  {isHovered && !draggingTableId && (
- <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-52 z-50 pointer-events-none animate-fade-in">
+ <div
+                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-52 z-50 pointer-events-none animate-fade-in"
+                        style={{ transform: `scale(${1 / tableScale})`, transformOrigin: 'bottom center' }}
+                      >
  <div className="bg-surface text-foreground rounded-[var(--radius-card)] p-3 border border-border space-y-1.5 text-left shadow-[var(--shadow-soft)]">
  <p className="font-semibold text-sm leading-tight">{table.name}</p>
  <p className="text-xs text-primary font-medium">
@@ -1626,6 +1674,7 @@ export default function TablePlanner({
                             'absolute flex items-center gap-1 p-1 bg-surface/95 dark:bg-surface-elevated/95 border border-border rounded-full shadow-lg z-30 transition-all pointer-events-auto',
                             table.y < 16 ? 'top-full left-1/2 -translate-x-1/2 mt-2' : '-top-4 left-1/2 -translate-x-1/2',
                           )}
+                          style={{ transform: `scale(${1 / tableScale})`, transformOrigin: table.y < 16 ? 'top center' : 'center' }}
                         >
  {caps.canLock ? (
  <button
@@ -1790,20 +1839,21 @@ export default function TablePlanner({
               </div>
             )}
 
-            {/* Statut synthétique 2D en bas à gauche */}
-            <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface/90 dark:bg-surface-elevated/90 border border-border shadow-xs text-xs pointer-events-none">
-              <div className="flex items-center gap-1.5 font-semibold text-foreground">
-                <Users className="w-3.5 h-3.5 text-primary" />
-                <span className="tabular-nums">
-                  {assignedGuestIds.size}/{tables.reduce((s, t) => s + t.capacity, 0)} places
-                </span>
-              </div>
-              <span className="text-muted/40">·</span>
-              <span className="text-xs text-muted tabular-nums">
-                {tables.length} table{tables.length > 1 ? 's' : ''}
-              </span>
-            </div>
           </div>
+          </div>
+        </div>
+        {/* Statut synthétique 2D en bas à gauche, hors du plan défilant : toujours visible. */}
+        <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface/90 dark:bg-surface-elevated/90 border border-border shadow-xs text-xs pointer-events-none">
+          <div className="flex items-center gap-1.5 font-semibold text-foreground">
+            <Users className="w-3.5 h-3.5 text-primary" />
+            <span className="tabular-nums">
+              {assignedGuestIds.size}/{tables.reduce((s, t) => s + t.capacity, 0)} places
+            </span>
+          </div>
+          <span className="text-muted/40">·</span>
+          <span className="text-xs text-muted tabular-nums">
+            {tables.length} table{tables.length > 1 ? 's' : ''}
+          </span>
         </div>
    </div>
  </div>
