@@ -224,6 +224,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
               <RoomLayoutPreview
                 blueprint={venue.layoutPreview as RoomLayoutBlueprint}
                 quality="showcase"
+                showViewToggle
               />
             </div>
           ) : null}

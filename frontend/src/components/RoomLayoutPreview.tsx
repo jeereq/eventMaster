@@ -4,7 +4,7 @@ import type { AvatarSeatAction, SeatViewRequest } from '@/components/RoomWebGLVi
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { createPortal } from 'react-dom';
-import { DoorOpen } from '@/components/icons';
+import { Box, DoorOpen, LayoutGrid } from '@/components/icons';
 import {
   RoomLayoutBlueprint,
   roomTypeLabels,
@@ -139,6 +139,37 @@ interface RoomLayoutPreviewProps {
   fullscreenPanel?: (close: () => void) => React.ReactNode;
   /** L’hôte pose ses boutons en haut de l’aperçu : la barre des angles de caméra passe en dessous. */
   hostTopInset?: boolean;
+  /**
+   * Bascule « Vue 3D / Plan 2D » sur l’aperçu lui-même (fiche d’une salle) quand l’hôte ne la gère pas
+   * avec `force2d` / `onForce2dChange`.
+   */
+  showViewToggle?: boolean;
+}
+
+/** Bascule compacte posée sur la scène : 3D ↔ plan 2D. */
+function OverlayViewToggle({ is2d, onChange }: { is2d: boolean; onChange: (is2d: boolean) => void }) {
+  const btn = (active: boolean) =>
+    cn(
+      'inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-full text-xs font-semibold transition touch-manipulation',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+      active ? 'bg-background text-foreground shadow-sm' : 'text-background/85 hover:text-background',
+    );
+  return (
+    <div
+      role="group"
+      aria-label="Mode d’affichage du plan"
+      className="inline-flex items-center rounded-full border border-background/20 bg-foreground/80 p-0.5"
+    >
+      <button type="button" aria-pressed={!is2d} onClick={() => onChange(false)} className={btn(!is2d)} title="Vue 3D">
+        <Box className="w-3.5 h-3.5" aria-hidden />
+        <span className="max-[420px]:sr-only">3D</span>
+      </button>
+      <button type="button" aria-pressed={is2d} onClick={() => onChange(true)} className={btn(is2d)} title="Plan 2D">
+        <LayoutGrid className="w-3.5 h-3.5" aria-hidden />
+        <span className="max-[420px]:sr-only">2D</span>
+      </button>
+    </div>
+  );
 }
 
 type WebGLPreviewProps = {
@@ -313,12 +344,15 @@ export default function RoomLayoutPreview({
   seatActionFor,
   fullscreenPanel,
   hostTopInset = false,
+  showViewToggle = false,
 }: RoomLayoutPreviewProps) {
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
   const [mounted, setMounted] = useState(false);
   const { expanded, setExpanded, panelRef } = usePlanFullscreen();
   const [localForce2d, setLocalForce2d] = useState(false);
+  /** Choix du visiteur via la bascule posée sur l’aperçu (`showViewToggle`). */
+  const [userPrefers2d, setUserPrefers2d] = useState(false);
   // Les réceptions à ciel ouvert (murs masqués dans le plan) s’ouvrent sans murs.
   const blueprintShowsWalls = rawBlueprint ? isBlueprintWallsVisible(rawBlueprint.metadata) : true;
   const openSpace = rawBlueprint ? isOpenSpace(rawBlueprint.metadata) : false;
@@ -419,7 +453,8 @@ export default function RoomLayoutPreview({
 
   const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
   const lightingPreset = lightingPresetOverride ?? blueprint.metadata.lightingPreset ?? 'auto';
-  const useWebGL = !force2d && !localForce2d && !glGaveUp && quality !== 'thumb' && mounted;
+  const useWebGL = !force2d && !localForce2d && !userPrefers2d && !glGaveUp && quality !== 'thumb' && mounted;
+  const viewToggle = showViewToggle && !onForce2dChange && !force2d && !localForce2d && quality !== 'thumb';
   const webglQuality: RoomPreviewQuality = glDegraded && quality === 'showcase' ? 'standard' : quality;
   const showRelaunch3d = glGaveUp && !force2d && !localForce2d && quality !== 'thumb';
   const canExpand = (allowExpand ?? allowMobileExpand ?? quality !== 'thumb') && quality !== 'thumb';
@@ -502,7 +537,7 @@ export default function RoomLayoutPreview({
               guestSimulation={guestSimulation}
             />
           )}
-          {showRelaunch3d && !expanded ? <Relaunch3dButton onClick={relaunch3d} /> : null}
+          {showRelaunch3d && !expanded && !userPrefers2d ? <Relaunch3dButton onClick={relaunch3d} /> : null}
           {!mounted && !force2d ? (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-end justify-center pb-3">
               <span className="rounded-full bg-foreground/80 px-2.5 py-1 text-xs font-semibold text-background">
@@ -510,17 +545,33 @@ export default function RoomLayoutPreview({
               </span>
             </div>
           ) : null}
-          <PlanSceneControls
-            showWalls={showWalls}
-            showRoof={showRoof}
-            onToggleWalls={() => setShowWalls((current) => !current)}
-            onToggleRoof={() => setShowRoof((current) => !current)}
-            showRoofControl={useWebGL && !openSpace}
-            showWallsControl={!openSpace}
-            onToggleFullscreen={canExpand ? () => setExpanded(true) : undefined}
-            variant="overlay"
-            className={cn('absolute bottom-2 left-2 z-20', fill && useWebGL ? 'max-w-[calc(100%-9.5rem)]' : 'max-w-[calc(100%-5.5rem)]')}
-          />
+          <div
+            className={cn(
+              'absolute bottom-2 left-2 z-20 flex flex-wrap items-center gap-1.5',
+              fill && useWebGL ? 'max-w-[calc(100%-9.5rem)]' : 'max-w-[calc(100%-5.5rem)]',
+            )}
+          >
+            {viewToggle ? (
+              <OverlayViewToggle
+                is2d={userPrefers2d}
+                onChange={(is2d) => {
+                  if (is2d) stopWalkthrough();
+                  setUserPrefers2d(is2d);
+                }}
+              />
+            ) : null}
+            <PlanSceneControls
+              showWalls={showWalls}
+              showRoof={showRoof}
+              onToggleWalls={() => setShowWalls((current) => !current)}
+              onToggleRoof={() => setShowRoof((current) => !current)}
+              showRoofControl={useWebGL && !openSpace}
+              showWallsControl={!openSpace}
+              onToggleFullscreen={canExpand ? () => setExpanded(true) : undefined}
+              variant="overlay"
+              compact={viewToggle}
+            />
+          </div>
           {fill && useWebGL ? (
             <div className="absolute bottom-2 right-2 z-20">
               <WalkthroughButton active={walkthroughActive} label={walkthroughLabel} onToggle={toggleWalkthrough} />
@@ -563,6 +614,16 @@ export default function RoomLayoutPreview({
                 <PlanViewModeToggle
                   force2d={force2d}
                   onChange={onForce2dChange}
+                  tone="stage"
+                />
+              ) : null}
+              {viewToggle ? (
+                <PlanViewModeToggle
+                  force2d={userPrefers2d}
+                  onChange={(is2d) => {
+                    if (is2d) stopWalkthrough();
+                    setUserPrefers2d(is2d);
+                  }}
                   tone="stage"
                 />
               ) : null}
