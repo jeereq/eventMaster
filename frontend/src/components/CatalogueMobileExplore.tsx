@@ -343,7 +343,7 @@ export default function CatalogueMobileExplore({
   const selected = items.find((item) => item.id === selectedId) || null;
 
   return (
-    <div className="relative isolate h-full min-h-0 overflow-hidden bg-background overscroll-none">
+    <div className="em-map-explore relative isolate h-full min-h-0 overflow-hidden bg-background overscroll-none">
       <div className="absolute inset-0 z-0">
         <MarketplaceLocationsMap
           ref={mapApi}
@@ -365,10 +365,11 @@ export default function CatalogueMobileExplore({
             <button
               type="button"
               onClick={onExit}
-              className="min-h-11 px-2.5 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              aria-label="Quitter la carte"
+              title="Quitter la carte"
+              className="min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center justify-center text-foreground shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
-              <X className="w-3.5 h-3.5" />
-              Quitter
+              <X className="w-4 h-4" />
             </button>
           ) : null}
           {nav ? <div className="min-w-0 flex-1">{nav}</div> : null}
@@ -378,10 +379,11 @@ export default function CatalogueMobileExplore({
               onClick={() => setFiltersVisible((open) => !open)}
               aria-pressed={filtersVisible}
               aria-controls="catalogue-explore-filters"
-              className="min-h-11 px-2.5 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              aria-label={filtersVisible ? 'Masquer les filtres' : 'Afficher les filtres'}
+              title={filtersVisible ? 'Masquer les filtres' : 'Afficher les filtres'}
+              className="ml-auto min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center justify-center text-foreground shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              {filtersVisible ? 'Masquer' : 'Filtres'}
+              <SlidersHorizontal className="w-4 h-4" />
             </button>
           ) : null}
         </div>

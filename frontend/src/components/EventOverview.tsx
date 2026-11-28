@@ -1,7 +1,19 @@
 'use client';
 
 import React from 'react';
-import { ArrowRight, Check } from '@/components/icons';
+import {
+  ArrowRight,
+  Check,
+  LayoutGrid,
+  MessageSquare,
+  ScanLine,
+  Send,
+  Store,
+  UserCheck,
+  Users,
+  type LucideIcon,
+} from '@/components/icons';
+import { KpiCard, CARD_SHADOW } from '@/components/dashboard/KpiCard';
 import {
   countAssignedGuests,
   type EventWorkflowGuest,
@@ -30,14 +42,14 @@ const TITLES: Partial<Record<EventWorkflowStepId, string>> = {
   protocol: 'Jour J',
 };
 
-function Stat({ value, label }: { value: React.ReactNode; label: string }) {
-  return (
-    <div className="min-w-0">
-      <dd className="text-xl font-bold text-foreground tabular-nums">{value}</dd>
-      <dt className="text-xs text-muted">{label}</dt>
-    </div>
-  );
-}
+const STEP_ICONS: Partial<Record<EventWorkflowStepId, LucideIcon>> = {
+  prep: Store,
+  guests: Users,
+  invitation: Send,
+  rsvp: MessageSquare,
+  tablePlan: LayoutGrid,
+  protocol: ScanLine,
+};
 
 /**
  * Vue d’ensemble d’un événement : chiffres clés et étapes du parcours.
@@ -58,10 +70,11 @@ export default function EventOverview({
 }) {
   const confirmed = guests.filter((g) => g.rsvp === 'ACCEPTED').length;
   const seatable = guests.filter((g) => g.rsvp !== 'DECLINED').length;
-  const assigned = countAssignedGuests(tablePlan ?? undefined);
+  const assigned = countAssignedGuests(tablePlan ?? undefined, guests);
   const checkedIn = guests.filter((g) => g.checkedInAt).length;
   const sent = guests.filter((g) => g.preferences?.invitationSentAt).length;
   const answered = guests.filter((g) => g.rsvp !== 'PENDING').length;
+  const pending = guests.filter((g) => g.rsvp === 'PENDING').length;
   const steps = workflow.steps.filter((step) => step.id !== 'event' && step.tab);
 
   const plural = (n: number, one: string, many: string) => (n > 1 ? many : one);
@@ -84,11 +97,11 @@ export default function EventOverview({
       case 'tablePlan':
         return total === 0
           ? 'Après l’ajout des invités'
-          : `${assigned} ${plural(assigned, 'placé', 'placés')} sur ${seatable}`;
+          : `${assigned} ${plural(assigned, 'place attribuée', 'places attribuées')} sur ${seatable}`;
       case 'protocol':
         return checkedIn > 0
-          ? `${checkedIn} ${plural(checkedIn, 'entrée', 'entrées')}`
-          : 'Accueil et contrôle des entrées';
+          ? `${checkedIn} ${plural(checkedIn, 'arrivé', 'arrivés')}`
+          : 'Accueil des invités';
       default:
         return step.detail?.replace(/^✓\s*/, '');
     }
@@ -101,45 +114,73 @@ export default function EventOverview({
   };
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 rounded-[var(--radius-card)] border border-border bg-surface px-4 sm:px-5 py-4">
-        <Stat value={guests.length} label="invités" />
-        <Stat value={confirmed} label="confirmés" />
-        <Stat value={`${assigned} / ${seatable}`} label="placés" />
-        <Stat value={checkedIn} label={checkedIn > 1 ? 'entrées' : 'entrée'} />
-      </dl>
+    <div className="space-y-5 animate-fade-in">
+      {/* Mêmes tuiles que le tableau de bord, posées sur son fond dégradé. */}
+      <section aria-label="Chiffres de l’événement" className="em-header-wash rounded-[26px] p-4 sm:p-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <KpiCard
+            icon={<Users className="w-[18px] h-[18px]" />}
+            label="Invités"
+            value={String(guests.length)}
+            hint={`${answered} ${plural(answered, 'réponse', 'réponses')}`}
+          />
+          <KpiCard
+            icon={<UserCheck className="w-[18px] h-[18px]" />}
+            label="Confirmés"
+            value={String(confirmed)}
+            hint={pending > 0 ? `${pending} sans réponse` : undefined}
+          />
+          <KpiCard
+            icon={<LayoutGrid className="w-[18px] h-[18px]" />}
+            label="Places attribuées"
+            value={`${assigned} / ${seatable}`}
+            hint="sur le plan de table"
+          />
+          <KpiCard
+            icon={<ScanLine className="w-[18px] h-[18px]" />}
+            label="Arrivés"
+            value={String(checkedIn)}
+            hint={confirmed > 0 ? `sur ${confirmed} ${plural(confirmed, 'confirmé', 'confirmés')}` : undefined}
+          />
+        </div>
+      </section>
 
-      <ul className="rounded-[var(--radius-card)] border border-border bg-surface overflow-hidden divide-y divide-border">
+      <ul className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
         {steps.map((step) => {
           const isCurrent = step.status === 'current';
           const isDone = step.status === 'complete';
           const detail = detailOf(step);
+          const Icon = STEP_ICONS[step.id] ?? Check;
+          const title = TITLES[step.id] ?? step.title;
           return (
             <li
               key={step.id}
-              className={cn('flex items-center gap-3 px-4 sm:px-5 py-3.5', isCurrent && 'bg-primary/[0.06]')}
+              className={cn(
+                'relative flex min-w-0 flex-wrap items-center gap-3 rounded-[20px] bg-surface p-4 sm:p-5',
+                CARD_SHADOW,
+                isCurrent && 'ring-2 ring-primary/40',
+              )}
             >
               <span
-                className={cn(
-                  'w-[22px] h-[22px] shrink-0 rounded-full flex items-center justify-center',
-                  isDone
-                    ? 'bg-primary-solid text-primary-foreground'
-                    : isCurrent
-                      ? 'border-2 border-primary'
-                      : 'border-2 border-border',
-                )}
                 aria-hidden
+                className={cn(
+                  'relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border',
+                  isCurrent ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-primary',
+                )}
               >
-                {isDone ? <Check className="w-3 h-3" /> : null}
+                <Icon className="h-5 w-5" />
+                {isDone ? (
+                  <span className="absolute -bottom-0.5 -right-0.5 inline-flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-surface bg-primary-solid text-primary-foreground">
+                    <Check className="h-2.5 w-2.5" />
+                  </span>
+                ) : null}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground">
-                  {TITLES[step.id] ?? step.title}
-                  <span className="sr-only">
-                    {isDone ? ' — fait' : isCurrent ? ' — à faire' : ''}
-                  </span>
+                <p className="truncate text-[15px] font-semibold text-foreground">
+                  {title}
+                  <span className="sr-only">{isDone ? ' — fait' : isCurrent ? ' — à faire' : ''}</span>
                 </p>
-                {detail ? <p className="text-xs text-muted mt-0.5 truncate">{detail}</p> : null}
+                {detail ? <p className="mt-0.5 truncate text-[13px] text-muted">{detail}</p> : null}
               </div>
               {isCurrent ? (
                 <Button
@@ -147,7 +188,7 @@ export default function EventOverview({
                   size="sm"
                   onClick={() => open(step, true)}
                   rightIcon={<ArrowRight className="w-4 h-4" />}
-                  className="shrink-0"
+                  className="w-full shrink-0 rounded-full px-5 sm:w-auto"
                 >
                   {CURRENT_CTA[step.id] ?? 'Ouvrir'}
                 </Button>
@@ -155,8 +196,9 @@ export default function EventOverview({
                 <button
                   type="button"
                   onClick={() => open(step, false)}
-                  aria-label={`Ouvrir ${TITLES[step.id] ?? step.title}`}
-                  className="shrink-0 min-h-11 px-2 text-sm font-semibold text-primary hover:underline underline-offset-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  aria-label={`Ouvrir ${title}`}
+                  // La zone cliquable couvre toute la carte.
+                  className="shrink-0 min-h-11 rounded-full px-3 text-sm font-semibold text-primary after:absolute after:inset-0 after:rounded-[20px] hover:underline underline-offset-2 focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-primary/50"
                 >
                   Ouvrir
                 </button>

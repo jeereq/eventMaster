@@ -105,7 +105,7 @@ function loadYouTubeApi(): Promise<YTNamespace> {
 /* ------------------------------------------------------------------ */
 
 const TEMPO_CHOICES = [
-  { bpm: 96, label: 'Rumba lente' },
+  { bpm: 96, label: 'Lente' },
   { bpm: 112, label: 'Rumba' },
   { bpm: 126, label: 'Ndombolo' },
   { bpm: 140, label: 'Sebene' },
@@ -481,9 +481,8 @@ export default function RoomMusicPanel({
           <Music className={cn('h-4 w-4', playing && 'motion-safe:animate-pulse')} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-xs leading-4 text-muted">{playing ? 'La piste danse sur' : 'Musique dans la salle'}</p>
           <p className="truncate text-sm font-semibold leading-5" aria-live="polite">
-            {nowPlaying || (artist ? artist.artist : 'Choisissez une playlist')}
+            {nowPlaying || (artist ? artist.artist : 'Musique')}
           </p>
         </div>
         {playing || artist || tracks.length > 0 ? (
@@ -528,38 +527,48 @@ export default function RoomMusicPanel({
 
       {!compact ? (
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {/* Source du son */}
-          <div className="border-b border-border/70 px-3 py-2.5">
-            <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-muted">
-              <Speaker className="h-3.5 w-3.5" /> D’où joue la musique
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {MUSIC_SOURCE_MODES.filter((m) => modes.includes(m.id)).map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  aria-pressed={mode === m.id}
-                  title={m.hint}
-                  onClick={() => onModeChange(m.id)}
-                  className={cn(
-                    'min-h-9 rounded-full px-2.5 text-xs font-semibold transition-colors',
-                    mode === m.id ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-foreground/80 hover:text-foreground',
-                  )}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-            <p className="mt-1.5 text-xs text-muted">{summary}{modes.includes('speakers') ? '' : ' · ajoutez des enceintes ou un baffle depuis « Ajouter » de l’éditeur'}</p>
-            <label className="mt-1.5 flex min-h-9 items-center gap-2 text-xs font-medium">
-              <input type="checkbox" checked={spatial} onChange={(e) => setSpatial(e.target.checked)} className="h-4 w-4 accent-current" />
-              Son 3D : plus fort près des enceintes, selon votre place
-            </label>
+          {/* Source du son : seulement s'il y a un vrai choix ; l'explication passe en infobulle. */}
+          <div
+            role="group"
+            aria-label="D’où joue la musique"
+            title={`${summary}${modes.includes('speakers') ? '' : ' · ajoutez des enceintes ou un baffle depuis « Ajouter » de l’éditeur'}`}
+            className="flex flex-wrap items-center gap-1 px-3 pt-2.5"
+          >
+            <Speaker aria-hidden className="mr-0.5 h-4 w-4 text-muted" />
+            {modes.length > 1
+              ? MUSIC_SOURCE_MODES.filter((m) => modes.includes(m.id)).map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    aria-pressed={mode === m.id}
+                    title={m.hint}
+                    onClick={() => onModeChange(m.id)}
+                    className={cn(
+                      'min-h-8 rounded-full px-2.5 text-xs font-semibold transition-colors',
+                      mode === m.id ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-foreground/80 hover:text-foreground',
+                    )}
+                  >
+                    {m.label}
+                  </button>
+                ))
+              : null}
+            <button
+              type="button"
+              aria-pressed={spatial}
+              title="Son 3D : plus fort près des enceintes, selon votre place"
+              onClick={() => setSpatial(!spatial)}
+              className={cn(
+                'min-h-8 rounded-full px-2.5 text-xs font-semibold transition-colors',
+                spatial ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-foreground/80 hover:text-foreground',
+              )}
+            >
+              Son 3D
+            </button>
           </div>
 
           {/* Onglets */}
-          <div className="flex gap-1 px-3 pt-2.5" role="tablist" aria-label="Choix de la musique">
-            {([['artists', 'Playlists d’artistes'], ['files', 'Mes fichiers']] as const).map(([id, label]) => (
+          <div className="mx-3 mt-2.5 flex gap-1 rounded-full bg-surface-muted p-1" role="tablist" aria-label="Choix de la musique">
+            {([['artists', 'Artistes'], ['files', 'Mes fichiers']] as const).map(([id, label]) => (
               <button
                 key={id}
                 type="button"
@@ -567,8 +576,8 @@ export default function RoomMusicPanel({
                 aria-selected={tab === id}
                 onClick={() => setTab(id)}
                 className={cn(
-                  'min-h-9 flex-1 rounded-full px-2.5 text-xs font-semibold transition-colors',
-                  tab === id ? 'bg-foreground text-background' : 'bg-surface-muted text-foreground/80 hover:text-foreground',
+                  'min-h-8 flex-1 rounded-full px-2.5 text-xs font-semibold transition-colors',
+                  tab === id ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
                 )}
               >
                 {label}
@@ -577,11 +586,11 @@ export default function RoomMusicPanel({
           </div>
 
           {tab === 'artists' ? (
-            <ul className="space-y-1 p-2">
+            <ul className="px-2 py-1.5">
               {ARTIST_PLAYLISTS.map((p) => {
                 const active = artist?.id === p.id;
                 return (
-                  <li key={p.id} className={cn('rounded-xl px-2 py-1.5', active ? 'bg-primary-solid/10 ring-1 ring-primary-solid/40' : 'hover:bg-surface-muted')}>
+                  <li key={p.id} className={cn('rounded-xl px-2 py-1', active ? 'bg-primary-solid/10 ring-1 ring-primary-solid/40' : 'hover:bg-surface-muted')}>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -594,9 +603,8 @@ export default function RoomMusicPanel({
                       >
                         {active && ytPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                       </button>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold">{p.artist}</span>
-                        <span className="block truncate text-xs text-muted">{p.blurb}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold" title={p.blurb}>
+                        {p.artist}
                       </span>
                       {active && ytPlaying ? (
                         <button
@@ -608,26 +616,30 @@ export default function RoomMusicPanel({
                           <StepForward className="h-4 w-4" />
                         </button>
                       ) : null}
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 pl-11 text-xs">
-                      <a href={p.youtubeChannelUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-muted underline-offset-2 hover:text-foreground hover:underline">
-                        <YouTubeIcon className="h-3.5 w-3.5" />
-                        YouTube
-                      </a>
-                      <a href={p.spotifyUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-muted underline-offset-2 hover:text-foreground hover:underline">
-                        <SpotifyIcon className="h-3.5 w-3.5" />
-                        Spotify
-                      </a>
-                      <a href={p.deezerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-muted underline-offset-2 hover:text-foreground hover:underline">
-                        Deezer <ExternalLink className="h-3 w-3" />
-                      </a>
+                      {[
+                        { href: p.youtubeChannelUrl, name: 'YouTube', icon: <YouTubeIcon className="h-4 w-4" /> },
+                        { href: p.spotifyUrl, name: 'Spotify', icon: <SpotifyIcon className="h-4 w-4" /> },
+                        { href: p.deezerUrl, name: 'Deezer', icon: <ExternalLink aria-hidden className="h-4 w-4 text-muted" /> },
+                      ].map((link) => (
+                        <a
+                          key={link.name}
+                          href={link.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`${p.artist} sur ${link.name}`}
+                          title={link.name}
+                          className="inline-flex h-8 w-7 shrink-0 items-center justify-center rounded-lg opacity-80 transition hover:bg-surface-muted hover:opacity-100"
+                        >
+                          {link.icon}
+                        </a>
+                      ))}
                     </div>
                   </li>
                 );
               })}
               <li className="flex gap-1.5 px-2 pt-1 text-xs text-muted">
                 <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>Clips des chaînes YouTube officielles des artistes, lus par le lecteur YouTube. Le son reste chez YouTube et les artistes sont rémunérés.</span>
+                <span>Clips officiels, lus par YouTube.</span>
               </li>
             </ul>
           ) : (
@@ -648,7 +660,7 @@ export default function RoomMusicPanel({
                 onClick={() => fileInputRef.current?.click()}
                 className="flex w-full min-h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-border px-3 text-sm font-semibold hover:bg-surface-muted"
               >
-                <Upload className="h-4 w-4" /> Ajouter mes morceaux (MP3, M4A, WAV…)
+                <Upload className="h-4 w-4" /> Ajouter mes morceaux
               </button>
               {fileNote ? <p className="text-xs text-amber-700 dark:text-amber-300" role="status">{fileNote}</p> : null}
               {tracks.length > 0 ? (
@@ -678,7 +690,7 @@ export default function RoomMusicPanel({
               ) : null}
               <p className="flex gap-1.5 text-xs text-muted">
                 <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>Vos fichiers sont lus dans ce navigateur et ne sont envoyés nulle part. Ils disparaissent quand vous quittez la page.</span>
+                <span>Restent dans ce navigateur, jusqu’à la fermeture de la page.</span>
               </p>
             </div>
           )}
@@ -709,8 +721,7 @@ export default function RoomMusicPanel({
               <span className="w-9 text-right text-xs tabular-nums text-muted">{muted ? 0 : volume}</span>
             </div>
             <div>
-              <p className="mb-1 text-xs font-semibold text-muted">Rythme des danseurs · {bpm} BPM</p>
-              <div className="flex flex-wrap gap-1">
+              <div role="group" aria-label={`Rythme des danseurs : ${bpm} BPM`} title={`Rythme des danseurs : ${bpm} BPM`} className="flex flex-wrap gap-1">
                 {TEMPO_CHOICES.map((c) => (
                   <button
                     key={c.bpm}
@@ -718,7 +729,7 @@ export default function RoomMusicPanel({
                     aria-pressed={Math.abs(bpm - c.bpm) < 6}
                     onClick={() => setBpm(c.bpm)}
                     className={cn(
-                      'min-h-9 rounded-full px-2.5 text-xs font-semibold transition-colors',
+                      'min-h-8 flex-auto whitespace-nowrap rounded-full px-2 text-[11px] font-semibold transition-colors',
                       Math.abs(bpm - c.bpm) < 6 ? 'bg-foreground text-background' : 'bg-surface-muted text-foreground/80 hover:text-foreground',
                     )}
                   >

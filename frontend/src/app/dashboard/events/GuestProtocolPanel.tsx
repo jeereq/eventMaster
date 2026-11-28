@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  QrCode, ScanLine, CheckCircle2, XCircle, MessageSquare, Loader2, UserCheck, Armchair,
-  Search, Users, ClipboardList,
+  QrCode, ScanLine, XCircle, MessageSquare, Loader2, UserCheck, Armchair,
+  Search, ClipboardList, ChevronRight, Maximize2, X,
 } from '@/components/icons';
-import { Button } from '@/components/ui';
+import { Button, StatusPill } from '@/components/ui';
+import UserAvatar from '@/components/UserAvatar';
+import StatFilters from '@/components/events/StatFilters';
+import { CARD_SHADOW } from '@/components/dashboard/KpiCard';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { cn } from '@/lib/cn';
 import QrCameraScanner, { QrCameraToggle } from '@/components/QrCameraScanner';
@@ -29,13 +32,18 @@ interface ProtocolGuest {
   protocolNotes?: Array<{ id: string; content: string; createdAt: string; user?: { name: string | null } }>;
 }
 
-type ListFilter = 'queue' | 'in' | 'all';
+type ListFilter = 'expected' | 'in' | 'pending' | 'all';
 
-function rsvpLabel(rsvp: string) {
-  if (rsvp === 'ACCEPTED') return 'Confirmé';
-  if (rsvp === 'DECLINED') return 'Décliné';
-  if (rsvp === 'PENDING') return 'En attente';
-  return rsvp;
+const PANEL = cn('rounded-[20px] bg-surface', CARD_SHADOW);
+const FIELD =
+  'w-full min-h-11 rounded-xl border border-border bg-surface px-3 text-base sm:text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30';
+
+/** Un seul état par invité : l’arrivée l’emporte sur la réponse. */
+function guestState(guest: ProtocolGuest): { label: string; tone: 'emerald' | 'sky' | 'amber' | 'rose' } {
+  if (guest.checkedInAt) return { label: 'Arrivé', tone: 'emerald' };
+  if (guest.rsvp === 'ACCEPTED') return { label: 'Attendu', tone: 'sky' };
+  if (guest.rsvp === 'DECLINED') return { label: 'Décliné', tone: 'rose' };
+  return { label: 'Sans réponse', tone: 'amber' };
 }
 
 export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
@@ -43,15 +51,18 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
   const [guests, setGuests] = useState<ProtocolGuest[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanInput, setScanInput] = useState('');
-  const [cameraActive, setCameraActive] = useState(true);
+  /** Le scanner (caméra et saisie du code) ne s’ouvre qu’à la demande. */
+  const [scanning, setScanning] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<ProtocolGuest | null>(null);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [query, setQuery] = useState('');
-  const [listFilter, setListFilter] = useState<ListFilter>('queue');
+  const [listFilter, setListFilter] = useState<ListFilter>('expected');
   const [justCheckedIn, setJustCheckedIn] = useState(false);
   const [isKioskMode, setIsKioskMode] = useState(false);
+  const selectedRef = useRef<HTMLDivElement>(null);
 
   const loadGuests = useCallback(async () => {
     setLoading(true);
@@ -69,15 +80,19 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
     loadGuests();
   }, [loadGuests]);
 
-  const checkedInCount = guests.filter((g) => g.checkedInAt).length;
-  const acceptedCount = guests.filter((g) => g.rsvp === 'ACCEPTED').length;
+  const matchesFilter = (g: ProtocolGuest, filter: ListFilter) => {
+    if (filter === 'expected') return !g.checkedInAt && g.rsvp === 'ACCEPTED';
+    if (filter === 'in') return Boolean(g.checkedInAt);
+    if (filter === 'pending') return !g.checkedInAt && g.rsvp === 'PENDING';
+    return true;
+  };
+  const countOf = (filter: ListFilter) => guests.filter((g) => matchesFilter(g, filter)).length;
 
   const filteredGuests = useMemo(() => {
     const q = query.trim().toLowerCase();
     return guests.filter((g) => {
-      if (listFilter === 'queue' && g.checkedInAt) return false;
-      if (listFilter === 'in' && !g.checkedInAt) return false;
-      if (!q) return true;
+      // Une recherche par nom porte sur toute la liste.
+      if (!q) return matchesFilter(g, listFilter);
       const hay = `${g.firstName} ${g.lastName} ${g.email || ''} ${g.phone || ''} ${g.category || ''}`.toLowerCase();
       return hay.includes(q);
     });
@@ -118,8 +133,8 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
     setSelectedGuest(null);
     setJustCheckedIn(false);
     setNote('');
-    setCameraActive(true);
-  }, []);
+    setCameraActive(scanning);
+  }, [scanning]);
 
   const handleCheckIn = async (guestId: string) => {
     setBusy(true);
@@ -200,100 +215,104 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
         </button>
       )}
 
-      <div className={cn("rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5 space-y-1", isKioskMode && "w-full xl:w-80 shrink-0 sticky top-4 xl:top-8")}>
-        <div className="flex items-start justify-end gap-4">
-          <div className="flex items-center gap-2 shrink-0">
-            <Link
-              href={eventDashboardHref(eventId, { tab: 'tasks', protocol: true })}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-surface text-xs font-semibold text-muted hover:text-foreground transition"
-              title="Checklist protocole"
+      <div className={cn('space-y-4', isKioskMode && 'w-full xl:w-96 shrink-0 xl:sticky xl:top-8')}>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            type="button"
+            onClick={() => {
+              const next = !scanning;
+              setScanning(next);
+              setCameraActive(next);
+              setMessage(null);
+            }}
+            aria-expanded={scanning}
+            leftIcon={scanning ? <X className="w-4 h-4" /> : <ScanLine className="w-4 h-4" />}
+            className="rounded-full px-5"
+          >
+            {scanning ? 'Fermer le scanner' : 'Scanner un badge'}
+          </Button>
+          <Link
+            href={eventDashboardHref(eventId, { tab: 'tasks', protocol: true })}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-sm font-semibold transition hover:border-primary/40"
+          >
+            <ClipboardList className="w-4 h-4" />
+            Tâches
+          </Link>
+          {!isKioskMode && (
+            <button
+              type="button"
+              onClick={() => setIsKioskMode(true)}
+              aria-label="Plein écran"
+              title="Plein écran"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border bg-surface transition hover:border-primary/40"
             >
-              <ClipboardList className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Tâches</span>
-            </Link>
-            {!isKioskMode && (
-              <Button variant="secondary" onClick={() => setIsKioskMode(true)} className="shrink-0" size="sm" title="Mode Plein Écran">
-                <ScanLine className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
-        <div className="grid grid-cols-3 gap-2 pt-3">
-          <div className="rounded-[var(--radius-button)] bg-surface-muted border border-border px-3 py-2 text-center">
-            <p className="text-lg font-semibold text-foreground tabular-nums">{checkedInCount}</p>
-            <p className="text-xs text-muted font-medium">Entrés</p>
-          </div>
-          <div className="rounded-[var(--radius-button)] bg-surface-muted border border-border px-3 py-2 text-center">
-            <p className="text-lg font-semibold text-foreground tabular-nums">{Math.max(0, acceptedCount - checkedInCount)}</p>
-            <p className="text-xs text-muted font-medium">À accueillir</p>
-          </div>
-          <div className="rounded-[var(--radius-button)] bg-surface-muted border border-border px-3 py-2 text-center">
-            <p className="text-lg font-semibold text-foreground tabular-nums">{guests.length}</p>
-            <p className="text-xs text-muted font-medium">Invités</p>
-          </div>
-        </div>
+        <StatFilters
+          label="Filtrer les invités"
+          value={listFilter}
+          onChange={(next) => {
+            setListFilter(next);
+            setQuery('');
+          }}
+          options={[
+            { id: 'expected', label: 'Attendus', count: countOf('expected') },
+            { id: 'in', label: 'Arrivés', count: countOf('in') },
+            { id: 'pending', label: 'Sans réponse', count: countOf('pending') },
+            { id: 'all', label: 'Tous', count: guests.length },
+          ]}
+          className={isKioskMode ? 'xl:[&>div]:grid-cols-2' : undefined}
+        />
       </div>
 
-      <div className={cn("flex-1 min-w-0 space-y-5", isKioskMode && "w-full max-w-2xl mx-auto")}>
-        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
-          <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
-            <ScanLine className="w-4 h-4 text-primary" />
-            Scanner un badge
-          </h3>
-
-        <QrCameraToggle
-          cameraActive={cameraActive}
-          onToggle={() => setCameraActive((v) => !v)}
-        />
-
-        {cameraActive && (
-          <QrCameraScanner
-            active={cameraActive}
-            onScan={handleCameraScan}
-            onError={(text) => setMessage({ type: 'error', text })}
-          />
-        )}
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center" aria-hidden>
-            <div className="w-full border-t border-border" />
+      <div className={cn("flex-1 min-w-0 space-y-4", isKioskMode && "w-full max-w-2xl mx-auto")}>
+        {scanning ? (
+          <div className={cn(PANEL, 'space-y-4 p-4 sm:p-5')}>
+            <QrCameraToggle
+              cameraActive={cameraActive}
+              onToggle={() => setCameraActive((v) => !v)}
+            />
+            {cameraActive && (
+              <QrCameraScanner
+                active={cameraActive}
+                onScan={handleCameraScan}
+                onError={(text) => setMessage({ type: 'error', text })}
+              />
+            )}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                value={scanInput}
+                onChange={(e) => setScanInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleScan()}
+                aria-label="Code ou lien du badge"
+                placeholder="Code ou lien du badge"
+                className={cn(FIELD, 'flex-1')}
+              />
+              <Button
+                variant="secondary"
+                onClick={handleScan}
+                disabled={busy || !scanInput.trim()}
+              >
+                <QrCode className="w-4 h-4" />
+                Identifier
+              </Button>
+            </div>
           </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-surface px-2 text-muted font-semibold">
-              ou saisir un nom
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            value={scanInput}
-            onChange={(e) => setScanInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleScan()}
-            placeholder="URL de réponse, ID, ou code du badge"
-            className="flex-1 px-4 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
-          />
-          <Button
-            variant={selectedGuest ? 'secondary' : 'primary'}
-            onClick={handleScan}
-            disabled={busy || !scanInput.trim()}
-          >
-            <QrCode className="w-4 h-4" />
-            Identifier
-          </Button>
-        </div>
+        ) : null}
 
         {message && (
-          <p className={`text-sm font-medium ${message.type === 'success' ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <p role="status" className={cn(PANEL, 'px-4 py-3 text-sm font-medium', message.type === 'success' ? 'text-emerald-600' : 'text-rose-600')}>
             {message.text}
           </p>
         )}
-      </div>
 
       {selectedGuest && (
         <div
+          ref={selectedRef}
           className={cn(
-            'border rounded-[var(--radius-card)] p-5 space-y-4',
+            'border rounded-[20px] p-4 sm:p-5 space-y-4',
             justCheckedIn
               ? 'bg-emerald-50 border-emerald-200'
               : 'bg-primary/10 border-primary/20',
@@ -301,7 +320,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
         >
           {justCheckedIn && (
             <p className="text-xs font-semibold text-emerald-700">
-              Entrée confirmée — prochain invité dans un instant
+              Arrivée confirmée
             </p>
           )}
           <div>
@@ -313,24 +332,17 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
               {selectedGuest.phone ? ` · ${selectedGuest.phone}` : ''}
             </p>
             <div className="flex flex-wrap gap-1.5 mt-2">
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-border bg-surface">
-                réponse à l’invitation {rsvpLabel(selectedGuest.rsvp)}
-              </span>
+              <StatusPill tone={guestState(selectedGuest).tone}>{guestState(selectedGuest).label}</StatusPill>
               {selectedGuest.category && (
                 <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-border bg-surface">
                   {selectedGuest.category}
-                </span>
-              )}
-              {selectedGuest.checkedInAt && (
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary-solid text-primary-foreground shadow-2xs">
-                  Entré
                 </span>
               )}
             </div>
             {selectedGuest.rsvp !== 'ACCEPTED' && !selectedGuest.checkedInAt && (
               <p className="text-xs text-muted mt-3 bg-surface-muted border border-border rounded-[var(--radius-button)] px-3 py-2">
                 {selectedGuest.rsvp === 'PENDING'
-                  ? 'Réponse en attente : l’invité doit confirmer sur son lien avant d’entrer.'
+                  ? 'Sans réponse : l’invité doit confirmer sur son lien avant d’entrer.'
                   : selectedGuest.rsvp === 'DECLINED'
                     ? 'Invitation déclinée : entrée impossible.'
                     : 'Présence non confirmée : entrée impossible.'}
@@ -350,10 +362,10 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             >
               <UserCheck className="w-4 h-4" />
               {selectedGuest.checkedInAt
-                ? 'Déjà entré'
+                ? 'Déjà arrivé'
                 : selectedGuest.rsvp !== 'ACCEPTED'
                   ? 'Entrée bloquée'
-                  : 'Valider l’entrée'}
+                  : 'Valider l’arrivée'}
             </Button>
             <Button variant="secondary" onClick={() => handleVerifySeat(selectedGuest.id)} disabled={busy}>
               <Armchair className="w-4 h-4" />
@@ -393,89 +405,60 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
         </div>
       )}
 
-      <div className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
-        <div className="px-4 py-3 border-b border-border space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
-              <Users className="w-4 h-4 text-muted" />
-              File d’accueil
-            </h3>
-            <span className="text-xs text-muted tabular-nums">
-              {checkedInCount}/{guests.length} entrés
-            </span>
-          </div>
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher par nom, e-mail ou téléphone"
-              className="w-full pl-9 pr-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
-            />
-          </div>
-          <div className="flex gap-1.5">
-            {([
-              { id: 'queue' as const, label: 'À entrer' },
-              { id: 'in' as const, label: 'Entrés' },
-              { id: 'all' as const, label: 'Tous' },
-            ]).map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setListFilter(opt.id)}
-                className={cn(
-                  'px-2.5 py-1 rounded-full text-xs font-semibold border transition',
-                  listFilter === opt.id
-                    ? 'bg-surface-muted text-foreground border-border'
-                    : 'border-transparent text-muted hover:text-foreground',
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+      <div className={cn(PANEL, 'overflow-hidden')}>
+        <div className="relative p-3 sm:p-4">
+          <Search className="w-4 h-4 text-muted absolute left-6 sm:left-7 top-1/2 -translate-y-1/2" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Rechercher un invité"
+            placeholder="Nom, e-mail ou téléphone"
+            className={cn(FIELD, 'pl-10')}
+          />
         </div>
-        <div className="divide-y divide-border max-h-[420px] overflow-y-auto">
+        <ul className="divide-y divide-border border-t border-border">
           {filteredGuests.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-muted">
-              {guests.length === 0 ? 'Votre liste d\'invités est encore vide.' : 'Aucun résultat pour cette recherche.'}
-            </p>
+            <li className="px-5 py-8 text-center text-sm text-muted">
+              {guests.length === 0 ? 'Votre liste d’invités est encore vide.' : 'Aucun invité ici.'}
+            </li>
           ) : (
-            filteredGuests.map((g) => (
-              <button
-                key={g.id}
-                type="button"
-                onClick={() => {
-                  setSelectedGuest(g);
-                  setJustCheckedIn(false);
-                  setCameraActive(false);
-                }}
-                className={cn(
-                  'w-full text-left px-5 py-3 hover:bg-surface-muted transition flex items-center justify-between gap-3',
-                  selectedGuest?.id === g.id && 'bg-primary/5',
-                )}
-              >
-                <div>
-                  <p className="font-semibold text-sm text-foreground">{g.firstName} {g.lastName}</p>
-                  <p className="text-xs text-muted">{g.phone || g.email}</p>
-                  {g.assignedSeat && (
-                    <p className="text-xs text-primary mt-0.5">
-                      {g.assignedSeat.tableName} · siège {g.assignedSeat.seatIndex + 1}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {g.checkedInAt ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" aria-label="Entré" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-foreground/80" aria-label="Pas encore entré" />
-                  )}
-                  {g.seatVerified && <Armchair className="w-4 h-4 text-primary" aria-label="Siège vérifié" />}
-                </div>
-              </button>
-            ))
+            filteredGuests.map((g) => {
+              const state = guestState(g);
+              const name = `${g.firstName} ${g.lastName}`;
+              return (
+                <li key={g.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedGuest(g);
+                      setJustCheckedIn(false);
+                      setCameraActive(false);
+                      setMessage(null);
+                      window.setTimeout(() => selectedRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 60);
+                    }}
+                    className={cn(
+                      'flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-muted',
+                      selectedGuest?.id === g.id && 'bg-primary/5',
+                    )}
+                  >
+                    <UserAvatar name={name} size="lg" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-semibold text-foreground">{name}</span>
+                      <span className="block truncate text-[13px] text-muted">
+                        {g.assignedSeat
+                          ? `${g.assignedSeat.tableName} · siège ${g.assignedSeat.seatIndex + 1}`
+                          : 'Sans place'}
+                      </span>
+                    </span>
+                    {g.seatVerified && <Armchair className="w-4 h-4 shrink-0 text-primary" aria-label="Siège vérifié" />}
+                    <StatusPill tone={state.tone} className="shrink-0">{state.label}</StatusPill>
+                    <ChevronRight className="w-4 h-4 shrink-0 text-muted" aria-hidden />
+                  </button>
+                </li>
+              );
+            })
           )}
-        </div>
+        </ul>
       </div>
       </div>
     </>

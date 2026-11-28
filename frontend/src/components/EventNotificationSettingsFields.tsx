@@ -4,15 +4,11 @@ import { BellRing } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import type { EventNotificationSettings } from '@/lib/eventNotifications';
 
-const ROWS: Array<{ key: keyof EventNotificationSettings; label: string; hint: string; when?: 'tickets' | 'donations' }> = [
-  { key: 'rsvp', label: 'Réponses des invités', hint: 'Une alerte quand un invité confirme ou décline.' },
-  { key: 'tickets', label: 'Billets vendus', hint: 'Ventes et paiements de places qui échouent.', when: 'tickets' },
-  { key: 'donations', label: 'Dons reçus', hint: 'Chaque don encaissé pour cet événement.', when: 'donations' },
-  {
-    key: 'guestUpdates',
-    label: 'Nouvelles aux invités',
-    hint: 'Les invités peuvent activer les notifications et recevoir vos publications par e-mail ou WhatsApp.',
-  },
+const ROWS: Array<{ key: keyof EventNotificationSettings; label: string; when?: 'tickets' | 'donations' }> = [
+  { key: 'rsvp', label: 'Réponses des invités' },
+  { key: 'tickets', label: 'Billets vendus', when: 'tickets' },
+  { key: 'donations', label: 'Dons reçus', when: 'donations' },
+  { key: 'guestUpdates', label: 'Nouvelles aux invités' },
 ];
 
 export function NotificationSwitch({
@@ -71,18 +67,12 @@ export default function EventNotificationSettingsFields({
     <fieldset className="space-y-2">
       <legend className="flex items-center gap-1.5 text-xs font-semibold text-muted">
         <BellRing className="h-3.5 w-3.5" aria-hidden />
-        Notifications de cet événement
+        Notifications
       </legend>
-      <p className="text-xs text-muted">
-        Activez ou coupez les alertes pour cet événement seulement. Les destinataires restent ceux des réglages de l’organisation.
-      </p>
       <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
         {rows.map((row) => (
           <li key={row.key} className="flex items-center justify-between gap-3 px-3 py-2.5">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">{row.label}</p>
-              <p className="text-xs text-muted">{row.hint}</p>
-            </div>
+            <p className="min-w-0 text-sm font-semibold text-foreground">{row.label}</p>
             <NotificationSwitch
               checked={value[row.key]}
               label={row.label}

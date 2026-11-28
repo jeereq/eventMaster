@@ -400,7 +400,7 @@ export default function OrganizerBoard({ events, canCreateEvents = true, org, ch
           />
           <KpiCard
             icon={<Clock className="w-[18px] h-[18px]" />}
-            label="En attente"
+            label="Sans réponse"
             value={stats ? String(stats.guests.pending) : '—'}
             hint={stats && stats.guests.total > 0 ? `${Math.round((stats.guests.pending / stats.guests.total) * 100)} % des invités` : undefined}
             tone={stats && stats.guests.pending > 0 ? 'warning' : 'default'}
@@ -408,9 +408,9 @@ export default function OrganizerBoard({ events, canCreateEvents = true, org, ch
           />
           <KpiCard
             icon={<ScanLine className="w-[18px] h-[18px]" />}
-            label="Entrées"
+            label="Arrivés"
             value={stats ? String(stats.guests.checkedIn) : '—'}
-            hint={stats ? `${stats.guests.checkInRate} % des confirmés` : undefined}
+            hint={stats ? `sur ${stats.guests.accepted} confirmé${stats.guests.accepted > 1 ? 's' : ''}` : undefined}
             href="/dashboard/analytics"
           />
           <KpiCard
@@ -615,7 +615,7 @@ export default function OrganizerBoard({ events, canCreateEvents = true, org, ch
                           </span>
                           <span aria-hidden>·</span>
                           <span>
-                            <strong className="font-semibold text-foreground">{d.guests.checkedIn}</strong> entrées
+                            <strong className="font-semibold text-foreground">{d.guests.checkedIn}</strong> arrivés
                           </span>
                         </>
                       ) : null}
@@ -657,7 +657,7 @@ function HighlightCards({ event, detail, loading }: { event: BoardEvent; detail:
   const items: Array<{ text: string; href: string; cta?: string }> = [];
   if (detail?.guests && detail.guests.pending > 0) {
     items.push({
-      text: `${detail.guests.pending} invité${detail.guests.pending > 1 ? 's' : ''} en attente`,
+      text: `${detail.guests.pending} invité${detail.guests.pending > 1 ? 's' : ''} sans réponse`,
       href: `${eventDashboardHref(event.id, { tab: 'guests' })}&rsvp=PENDING`,
       cta: 'Relancer',
     });

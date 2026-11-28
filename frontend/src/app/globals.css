@@ -2779,3 +2779,27 @@ body[data-em-ai-fab-muted] .em-ai-fab {
   --chart-5: #c98500;
   --chart-6: #d55181;
 }
+
+/* Carte mobile : la feuille de résultats occupe le bas de l'écran, le bouton flottant des studios IA la masquait. */
+body:has(.em-map-explore) .em-ai-fab {
+  display: none;
+}
+
+/* Listes déroulantes : un seul chevron, écarté du bord (la flèche native collait à l'arrondi).
+   Les listes à plusieurs lignes gardent leur rendu natif. Aucune couleur de fond ici :
+   les classes `bg-*` de chaque liste restent en vigueur. */
+select:not([multiple]):not([size]) {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6b64' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  background-size: 1rem 1rem;
+  padding-right: 2.5rem;
+}
+.dark select:not([multiple]):not([size]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a9bab2' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+select:disabled:not([multiple]):not([size]) {
+  cursor: not-allowed;
+}

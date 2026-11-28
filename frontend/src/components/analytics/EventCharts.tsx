@@ -5,13 +5,13 @@ import { cn } from '@/lib/cn';
 
 /**
  * Graphiques de la page Statistiques, en SVG simple (aucune bibliothèque).
- * Couleurs : celles des statuts de l'app (vert confirmé, ambre en attente, gris décliné),
+ * Couleurs : celles des statuts de l'app (vert confirmé, ambre sans réponse, gris décliné),
  * reprises par variables CSS pour suivre le mode sombre.
  */
 
 export const RSVP_SERIES = [
   { key: 'accepted', label: 'Confirmés', color: 'var(--primary)' },
-  { key: 'pending', label: 'En attente', color: 'var(--festive-accent)' },
+  { key: 'pending', label: 'Sans réponse', color: 'var(--festive-accent)' },
   { key: 'declined', label: 'Déclinés', color: 'color-mix(in srgb, var(--muted) 45%, var(--surface))' },
 ] as const;
 
@@ -282,7 +282,7 @@ export function TimeColumns({
 const timeFmt = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
 const dayFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
 
-/** Entrées par quart d'heure (ou par heure si la soirée dure plus de 6 h). */
+/** Arrivées par quart d'heure (ou par heure si la soirée dure plus de 6 h). */
 export function bucketArrivals(times: Date[]): TimeBucket[] {
   if (times.length === 0) return [];
   const sorted = [...times].sort((a, b) => a.getTime() - b.getTime());

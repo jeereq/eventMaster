@@ -73,10 +73,12 @@ export function CatalogueFocusStage({
               onClick={() => setFiltersVisible((open) => !open)}
               aria-pressed={filtersVisible}
               aria-controls="catalogue-focus-filters"
-              className="min-h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              aria-label={filtersVisible ? 'Masquer les filtres' : 'Afficher les filtres'}
+              title={filtersVisible ? 'Masquer les filtres' : 'Afficher les filtres'}
+              className="min-h-11 min-w-11 shrink-0 inline-flex items-center justify-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              {filtersVisible ? 'Masquer' : 'Filtres'}
+              <span className="hidden lg:inline">{filtersVisible ? 'Masquer' : 'Filtres'}</span>
             </button>
           ) : null}
         </div>
@@ -239,7 +241,7 @@ export default function CatalogueSearchLayout({
           onExit={exitMap}
           nav={
             <MarketplacePublicNav
-              dense
+              variant="rail"
               active={activeNav}
               className="bg-surface/90 border-white/25 dark:border-white/10 shadow-lg"
             />
@@ -265,16 +267,19 @@ export default function CatalogueSearchLayout({
           header={
             <div className="flex items-start gap-2">
               <MarketplacePublicNav
+                variant="rail"
                 active={activeNav}
                 className="flex-1 min-w-0 bg-surface/95 border-white/25 dark:border-white/10 shadow-lg"
               />
               <button
                 type="button"
                 onClick={exitMap}
-                className="min-h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                aria-label="Quitter la carte"
+                title="Quitter la carte"
+                className="min-h-11 min-w-11 shrink-0 inline-flex items-center justify-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 <Minimize2 className="w-3.5 h-3.5" />
-                Quitter
+                <span className="hidden lg:inline">Quitter</span>
               </button>
             </div>
           }

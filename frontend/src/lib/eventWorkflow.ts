@@ -71,13 +71,18 @@ export interface TablePlanMeta {
   notifiedAt?: string;
 }
 
-export function countAssignedGuests(tablePlan: TablePlanMeta | null | undefined): number {
+/** Invités ayant une place sur le plan. Avec `guests`, ceux qui ont décliné ne sont pas comptés. */
+export function countAssignedGuests(
+  tablePlan: TablePlanMeta | null | undefined,
+  guests?: ReadonlyArray<{ id: string; rsvp?: string | null }>,
+): number {
   if (!tablePlan?.tables?.length) return 0;
+  const declined = new Set((guests ?? []).filter((g) => g.rsvp === 'DECLINED').map((g) => g.id));
   const assigned = new Set<string>();
   for (const table of tablePlan.tables) {
     if (!table.seats) continue;
     for (const guestId of Object.values(table.seats)) {
-      if (guestId) assigned.add(guestId);
+      if (guestId && !declined.has(guestId)) assigned.add(guestId);
     }
   }
   return assigned.size;
@@ -144,7 +149,7 @@ export function computeEventWorkflowState(input: {
   const { guests, invitations, tablePlan, eventDate, isProtocolOnly, protocolDesk } = input;
 
   const guestCount = guests.length;
-  const assignedCount = countAssignedGuests(tablePlan ?? undefined);
+  const assignedCount = countAssignedGuests(tablePlan ?? undefined, guests);
   const sentCount = countInvitationSent(guests);
   const rsvpCount = countRsvpResponses(guests);
   const checkedInCount = countCheckedIn(guests);

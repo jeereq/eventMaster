@@ -10,17 +10,21 @@ import {
   Check,
   ChevronDown,
   Eye,
-  Filter,
   KeyRound,
   Loader2,
-  MapPin,
+  MoreHorizontal,
+  Plus,
   Search,
   Sparkles,
   Inbox,
+  Store,
   X,
 } from '@/components/icons';
 import { api } from '@/lib/api';
-import { Button, Card, CardHeader, EmptyState, Input, StatusPill } from '@/components/ui';
+import { Button, EmptyState, Input, Modal, StatusPill } from '@/components/ui';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
+import { CARD_SHADOW } from '@/components/dashboard/KpiCard';
+import OverflowMenu from '@/components/ui/OverflowMenu';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
@@ -34,22 +38,23 @@ import {
   prepListingCanBook,
   type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
-  type PrepListingPipeline,
   type PublicService,
   type PublicVenue,
   type RentalDeliveryFilter,
   type ServiceMobility,
 } from '@/lib/marketplace';
 import { ROOM_TYPE_FILTER_OPTIONS } from '@/lib/catalogueEntityFilters';
+import type { ListingEventTypeId } from '@/lib/listingDetails';
 import { communesForCity, normalizeRdcCity } from '@/lib/rdcCities';
 import {
   applyPackToEventPrepBasket,
+  emptyEventPrep,
   emptyEventPrepBasket,
   eventDateKey,
   eventPrepBasket,
-  eventPrepBasketCount,
   eventPrepEstimateFc,
   eventPrepFromAiRecommendation,
+  eventPrepVendorKey,
   groupEventPrepBasketByVendor,
   parseEventPrep,
   splitEventPrepVendors,
@@ -59,7 +64,6 @@ import {
   type EventPrepVendor,
   type EventPrepVendorGroup,
   type EventPrepVenue,
-  type EventPrepViewId,
 } from '@/lib/eventPrep';
 import { seedBriefFromEvent, type SavedEventPack } from '@/lib/eventPlan';
 import EventPrepListingModal, {
@@ -67,7 +71,6 @@ import EventPrepListingModal, {
   type EventPrepPreviewTarget,
 } from '@/components/EventPrepListingModal';
 import EventPrepVendorSheet from '@/components/EventPrepVendorSheet';
-import EventPlanMethodPicker from '@/components/EventPlanMethodPicker';
 import dynamic from 'next/dynamic';
 
 const EventPrepAiSimulator = dynamic(() => import('@/components/EventPrepAiSimulator'), {
@@ -83,22 +86,23 @@ type OrgRoomOption = {
 
 type PrepLaneId = 'venue' | 'trade' | 'rental';
 
-const LANE_TONE: Record<PrepLaneId, { selected: string; icon: string; check: string }> = {
-  venue: {
-    selected: 'border-primary/30 bg-primary/5',
-    icon: 'text-primary',
-    check: 'text-primary',
-  },
-  trade: {
-    selected: 'border-[color:color-mix(in_srgb,var(--festive-accent)_35%,var(--border))] bg-[var(--festive-accent-soft)]',
-    icon: 'text-[color:var(--festive-accent)]',
-    check: 'text-[color:var(--festive-accent)]',
-  },
-  rental: {
-    selected: 'border-cyan-700/25 bg-cyan-700/5',
-    icon: 'text-cyan-700 dark:text-cyan-400',
-    check: 'text-cyan-700 dark:text-cyan-400',
-  },
+/** Carte blanche arrondie, comme sur la vue d’ensemble et le tableau de bord. */
+const PANEL = cn('rounded-[20px] bg-surface', CARD_SHADOW);
+
+const SELECT_CLASS = 'h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm';
+
+const PILL_BUTTON =
+  'inline-flex min-h-11 sm:min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface px-3 sm:px-4 text-sm font-semibold transition hover:border-primary/40';
+
+/** Type de l’événement → type attendu par le simulateur. */
+const LISTING_TYPE_BY_KIND: Record<string, ListingEventTypeId> = {
+  WEDDING: 'wedding',
+  BIRTHDAY: 'birthday',
+  BAPTISM: 'religious',
+  CORPORATE: 'corporate',
+  CONFERENCE: 'corporate',
+  GALA: 'gala',
+  OTHER: 'private',
 };
 
 function inferPrepCity(location?: string): string {
@@ -139,16 +143,22 @@ function vendorFromPublic(service: PublicService): EventPrepVendor {
   };
 }
 
-function Cover({ src, fallback, alt = 'Visuel' }: { src?: string | null; fallback: React.ReactNode; alt?: string }) {
+function Cover({ src, fallback, className }: { src?: string | null; fallback: React.ReactNode; className?: string }) {
+  const [broken, setBroken] = useState<string | null>(null);
   return (
-    <div className="w-12 h-12 rounded-[var(--radius-card)] overflow-hidden bg-surface-muted shrink-0">
-      {src ? (
+    <div className={cn('w-14 h-14 rounded-2xl overflow-hidden bg-surface-muted shrink-0', className)}>
+      {src && broken !== src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
-          alt={alt}
+          alt=""
           loading="lazy"
           decoding="async"
+          onError={() => setBroken(src)}
+          // L’image peut avoir échoué avant que React n’écoute.
+          ref={(img) => {
+            if (img?.complete && img.naturalWidth === 0) setBroken(src);
+          }}
           className="w-full h-full object-cover"
         />
       ) : (
@@ -175,47 +185,11 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm"
+        className={SELECT_CLASS}
       >
         {children}
       </select>
     </label>
-  );
-}
-
-function FilterPills({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: Array<{ id: string; label: string }>;
-}) {
-  return (
-    <div className="space-y-1 min-w-0">
-      <p className="text-xs font-semibold text-muted">{label}</p>
-      <div className="flex flex-wrap gap-1">
-        {options.map((option) => (
-          <button
-            key={option.id || 'all'}
-            type="button"
-            aria-pressed={value === option.id}
-            onClick={() => onChange(option.id)}
-            className={cn(
-              'min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold border transition',
-              value === option.id
-                ? 'bg-primary-solid text-primary-foreground border-primary-solid'
-                : 'border-border text-muted hover:text-foreground hover:border-primary/40',
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -254,7 +228,6 @@ function PrepLane({
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
   const [searching, setSearching] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     setCity(defaultCity);
@@ -322,12 +295,13 @@ function PrepLane({
       : 'Aucun prestataire public pour ces filtres.';
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col sm:flex-row gap-2">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
         <div className="flex-1 min-w-0">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            aria-label="Rechercher"
             placeholder={
               isVenue
                 ? 'Nom, quartier, organisation…'
@@ -338,35 +312,27 @@ function PrepLane({
             leftIcon={<Search className="w-4 h-4" />}
           />
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant={showFilters ? 'secondary' : 'ghost'}
-          leftIcon={<Filter className="w-3.5 h-3.5" />}
-          onClick={() => setShowFilters((value) => !value)}
-          className="shrink-0 self-start sm:self-auto"
-        >
-          Filtres
-          <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', showFilters && 'rotate-180')} />
-        </Button>
+        <div className="flex items-center justify-between gap-2">
+          <div role="group" aria-label="Ville" className={cn('flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] lg:flex-none', SEGMENTED_TRACK)}>
+            {['', 'Kinshasa', 'Lubumbashi'].map((item) => (
+              <button
+                key={item || 'all'}
+                type="button"
+                aria-pressed={city === item}
+                onClick={() => {
+                  setCity(item);
+                  setCommune('');
+                }}
+                className={segmentedItem(city === item, 'flex-1 whitespace-nowrap !px-2 sm:!px-3')}
+              >
+                {item || 'Toutes'}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <FilterPills
-        label="Ville"
-        value={city}
-        onChange={(next) => {
-          setCity(next);
-          setCommune('');
-        }}
-        options={[
-          { id: '', label: 'Toutes' },
-          { id: 'Kinshasa', label: 'Kinshasa' },
-          { id: 'Lubumbashi', label: 'Lubumbashi' },
-        ]}
-      />
-
-      {showFilters ? (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-3">
+      <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-3 [&>*:nth-child(3)]:col-span-2 sm:[&>*:nth-child(3)]:col-span-1">
         <FilterSelect
           label="Commune"
           value={commune}
@@ -387,42 +353,45 @@ function PrepLane({
             </FilterSelect>
             <label className="space-y-1 min-w-0">
               <span className="block text-xs font-semibold text-muted">Capacité min.</span>
-              <Input
+              <input
                 type="number"
                 min={1}
                 value={minCapacity}
                 onChange={(e) => setMinCapacity(e.target.value)}
                 placeholder={guestCount > 0 ? String(guestCount) : 'Invités'}
+                className={SELECT_CLASS}
               />
             </label>
           </>
         ) : (
           <>
             <FilterSelect label={lane === 'rental' ? 'Type de matériel' : 'Prestataire'} value={category} onChange={setCategory}>
-              <option value="">{lane === 'rental' ? 'Tous les types' : 'Tous les prestataires'}</option>
+              <option value="">Tous</option>
               {categories.map((item) => (
                 <option key={item} value={item}>{SERVICE_CATEGORY_LABELS[item]}</option>
               ))}
             </FilterSelect>
             {lane === 'rental' ? (
-              <FilterPills
+              <FilterSelect
                 label="Livraison"
                 value={delivery}
                 onChange={(next) => setDelivery((next as RentalDeliveryFilter) || '')}
-                options={[{ id: '', label: 'Toutes' }, ...RENTAL_DELIVERY_OPTIONS]}
-              />
+              >
+                <option value="">Toutes</option>
+                {RENTAL_DELIVERY_OPTIONS.map((item) => (
+                  <option key={item.id} value={item.id}>{item.label}</option>
+                ))}
+              </FilterSelect>
             ) : (
-              <FilterPills
-                label="Intervention"
-                value={mobility}
-                onChange={(next) => setMobility(next as ServiceMobility)}
-                options={SERVICE_MOBILITY_OPTIONS.map((item) => ({ id: item.id, label: item.label }))}
-              />
+              <FilterSelect label="Intervention" value={mobility} onChange={(next) => setMobility(next as ServiceMobility)}>
+                {SERVICE_MOBILITY_OPTIONS.map((item) => (
+                  <option key={item.id} value={item.id}>{item.label}</option>
+                ))}
+              </FilterSelect>
             )}
           </>
         )}
       </div>
-      ) : null}
 
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted">
@@ -433,19 +402,19 @@ function PrepLane({
         </p>
         {filterActive ? (
           <button type="button" onClick={clearFilters} className="text-xs font-semibold text-primary hover:underline">
-            Réinitialiser les filtres
+            Réinitialiser
           </button>
         ) : null}
       </div>
 
-      <ul className="space-y-1.5 max-h-[28rem] overflow-y-auto">
+      <ul className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {searching ? (
-          <li className="text-xs text-muted px-1 py-3 inline-flex items-center gap-2">
+          <li className="col-span-full inline-flex items-center gap-2 px-1 py-3 text-xs text-muted">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
             Chargement du marketplace…
           </li>
         ) : (isVenue ? venues : services).length === 0 ? (
-          <li>
+          <li className="col-span-full">
             <EmptyState illustration="search"
               className="py-8"
               title={emptySearch}
@@ -456,9 +425,8 @@ function PrepLane({
           venues.map((venue) => {
             const already = selectedSlugs.includes(venue.slug);
             return (
-              <li key={venue.slug}>
+              <li key={venue.slug} className="min-w-0">
                 <ResultRow
-                  tone={lane}
                   cover={venue.coverUrl}
                   icon={<Icon className="w-4 h-4" />}
                   title={venue.name || venue.headline}
@@ -475,9 +443,8 @@ function PrepLane({
           services.map((service) => {
             const already = selectedSlugs.includes(service.slug);
             return (
-              <li key={service.slug}>
+              <li key={service.slug} className="min-w-0">
                 <ResultRow
-                  tone={lane}
                   cover={service.coverUrl}
                   icon={<Icon className="w-4 h-4" />}
                   title={service.title}
@@ -497,7 +464,6 @@ function PrepLane({
 }
 
 function ResultRow({
-  tone,
   cover,
   icon,
   title,
@@ -507,7 +473,6 @@ function ResultRow({
   onDetails,
   onRetain,
 }: {
-  tone: PrepLaneId;
   cover?: string | null;
   icon: React.ReactNode;
   title: string;
@@ -517,32 +482,38 @@ function ResultRow({
   onDetails: () => void;
   onRetain: () => void;
 }) {
+  // Le nom de l’organisation répète souvent celui de la fiche.
+  const details = meta.filter((item) => item && item !== title).join(' · ');
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-[var(--radius-card)] border px-2.5 py-2',
-        already ? LANE_TONE[tone].selected : 'border-border bg-surface',
+        'flex h-full items-center gap-3 rounded-2xl border p-3',
+        already ? 'border-primary/40 bg-primary/5' : 'border-border bg-surface',
       )}
     >
-      <Cover src={cover} fallback={icon} />
+      <Cover src={cover} fallback={icon} className="h-11 w-11 rounded-xl sm:h-14 sm:w-14 sm:rounded-2xl" />
       <button type="button" onClick={onDetails} className="min-w-0 flex-1 text-left">
-        <p className="text-sm font-semibold truncate">{title}</p>
-        <p className="text-xs text-muted truncate">{meta.filter(Boolean).join(' · ')}</p>
+        <p className="line-clamp-2 text-[15px] font-semibold leading-snug">{title}</p>
+        <p className="mt-0.5 truncate text-[13px] text-muted">{details}</p>
+        {price != null ? <p className="mt-0.5 text-[13px] font-semibold tabular-nums">{formatFc(price)}</p> : null}
       </button>
-      {already ? (
-        <Check className={cn('w-4 h-4 shrink-0', LANE_TONE[tone].check)} />
-      ) : price != null ? (
-        <span className="text-xs font-semibold shrink-0 hidden sm:inline">{formatFc(price)}</span>
-      ) : null}
       <button
         type="button"
         onClick={onDetails}
-        className="p-1.5 rounded-[var(--radius-button)] text-muted hover:text-primary hover:bg-primary/5"
+        aria-label={`Voir les détails de ${title}`}
         title="Voir les détails"
+        className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-primary/5 hover:text-primary sm:inline-flex"
       >
         <Eye className="w-4 h-4" />
       </button>
-      <Button size="sm" variant={already ? 'secondary' : 'primary'} disabled={already} onClick={onRetain}>
+      <Button
+        size="sm"
+        variant={already ? 'secondary' : 'primary'}
+        disabled={already}
+        onClick={onRetain}
+        leftIcon={already ? <Check className="w-4 h-4" /> : undefined}
+        className="shrink-0 rounded-full px-3 sm:px-4"
+      >
         {already ? 'Retenu' : 'Retenir'}
       </Button>
     </div>
@@ -558,6 +529,10 @@ export default function EventPrepPanel({
   guestCount = 0,
   orgRooms,
   currentRoomId,
+  eventKind,
+  eventCommune,
+  eventNeighborhood,
+  estimatedGuests,
   onSaved,
 }: {
   eventId: string;
@@ -568,12 +543,20 @@ export default function EventPrepPanel({
   guestCount?: number;
   orgRooms: OrgRoomOption[];
   currentRoomId?: string | null;
+  eventKind?: string | null;
+  eventCommune?: string | null;
+  eventNeighborhood?: string | null;
+  estimatedGuests?: number | null;
   onSaved: (event: { eventPrep?: unknown; roomId?: string | null; location?: string }) => void;
 }) {
   const [prep, setPrep] = useState<EventPrep>(() => parseEventPrep(value));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [lane, setLane] = useState<PrepLaneId>('venue');
+  /** Besoin dont la recherche est ouverte. */
+  const [search, setSearch] = useState<PrepLaneId | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
+  /** Proposition de l’IA à comparer avec la liste ; rien n’est retenu sans un clic. */
+  const [proposal, setProposal] = useState<EventPrepBasket | null>(null);
   const [preview, setPreview] = useState<EventPrepPreviewTarget | null>(null);
   const [previewView, setPreviewView] = useState<EventPrepListingView>('details');
   const [vendorSheet, setVendorSheet] = useState<EventPrepVendorGroup | null>(null);
@@ -584,13 +567,10 @@ export default function EventPrepPanel({
   const notesTimer = useRef<number | null>(null);
   const dateKey = eventDateKey(eventDate);
   const defaultCity = inferPrepCity(eventLocation);
-  const view: EventPrepViewId = prep.activeView === 'ai' || prep.activeView === 'final' ? prep.activeView : 'manual';
-  const working = eventPrepBasket(prep, view);
-  const { trades, rentals } = splitEventPrepVendors(working.vendors);
-  const vendorGroups = useMemo(() => groupEventPrepBasketByVendor(working), [working]);
-  const manualCount = eventPrepBasketCount(eventPrepBasket(prep, 'manual'));
-  const aiCount = eventPrepBasketCount(eventPrepBasket(prep, 'ai'));
-  const finalCount = eventPrepBasketCount(eventPrepBasket(prep, 'final'));
+  /** La liste unique de l’événement (celle que lit la vue d’ensemble). */
+  const selection = eventPrepBasket(prep, 'final');
+  const { trades, rentals } = splitEventPrepVendors(selection.vendors);
+  const vendorGroups = useMemo(() => groupEventPrepBasketByVendor(selection), [selection]);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -606,7 +586,9 @@ export default function EventPrepPanel({
 
   useEffect(() => {
     setPrep(parseEventPrep(value));
-    setLane('venue');
+    setSearch(null);
+    setAiOpen(false);
+    setProposal(null);
     setPreview(null);
     setPreviewView('details');
     setVendorSheet(null);
@@ -692,14 +674,12 @@ export default function EventPrepPanel({
     };
   }, []);
 
-  const persistBasket = (target: EventPrepViewId, basket: EventPrepBasket) => {
-    void persist(withEventPrepBasket(prep, target, basket));
+  const saveSelection = (basket: EventPrepBasket) => {
+    void persist(withEventPrepBasket(prep, 'final', basket));
   };
 
-  const retainTarget = (): Exclude<EventPrepViewId, 'final'> => (view === 'ai' ? 'ai' : 'manual');
-
   const onNotesChange = (notes: string) => {
-    const next = withEventPrepBasket(prep, view, { ...working, notes: notes.slice(0, 2000) });
+    const next = withEventPrepBasket(prep, 'final', { ...selection, notes: notes.slice(0, 2000) });
     setPrep(next);
     if (notesTimer.current) window.clearTimeout(notesTimer.current);
     notesTimer.current = window.setTimeout(() => {
@@ -711,485 +691,415 @@ export default function EventPrepPanel({
     if (notesTimer.current) window.clearTimeout(notesTimer.current);
   }, []);
 
-  const retainVenue = (venue: PublicVenue) => {
-    const target = retainTarget();
-    persistBasket(target, { ...eventPrepBasket(prep, target), venue: venueFromPublic(venue) });
+  const closeAfterChoice = () => {
     setPreview(null);
+    setSearch(null);
+  };
+
+  const retainVenue = (venue: PublicVenue) => {
+    saveSelection({ ...selection, venue: venueFromPublic(venue) });
+    closeAfterChoice();
   };
 
   const retainService = (service: PublicService) => {
-    const target = retainTarget();
-    const basket = eventPrepBasket(prep, target);
-    if (basket.vendors.some((item) => item.slug === service.slug)) {
-      setPreview(null);
-      return;
+    if (!selection.vendors.some((item) => item.slug === service.slug)) {
+      saveSelection({ ...selection, vendors: [...selection.vendors, vendorFromPublic(service)] });
     }
-    persistBasket(target, { ...basket, vendors: [...basket.vendors, vendorFromPublic(service)] });
-    setPreview(null);
+    closeAfterChoice();
   };
 
-  const removeVendor = (slug: string) => {
-    persistBasket(view, { ...working, vendors: working.vendors.filter((item) => item.slug !== slug) });
+  const removeItem = (kind: 'venue' | 'service', slug: string) => {
+    if (kind === 'venue') saveSelection({ ...selection, venue: null });
+    else saveSelection({ ...selection, vendors: selection.vendors.filter((item) => item.slug !== slug) });
     if (preview?.slug === slug) setPreview(null);
   };
 
   const previewSelected = Boolean(
     preview
       && (preview.kind === 'venue'
-        ? working.venue?.slug === preview.slug
-        : working.vendors.some((item) => item.slug === preview.slug)),
+        ? selection.venue?.slug === preview.slug
+        : selection.vendors.some((item) => item.slug === preview.slug)),
   );
 
-  const tabs: Array<{ id: PrepLaneId; label: string; count: number; icon: typeof Building2; hint: string }> = [
-    { id: 'venue', label: 'Salle', count: working.venue ? 1 : 0, icon: Building2, hint: 'Le lieu — 1 choix' },
-    { id: 'trade', label: 'Prestataires', count: trades.length, icon: Sparkles, hint: 'Le savoir-faire' },
-    { id: 'rental', label: 'Matériel & Équipements', count: rentals.length, icon: KeyRound, hint: 'Matériel et équipements' },
+  const venueItem = (venue: EventPrepVenue): PrepItem => ({
+    slug: venue.slug,
+    kind: 'venue',
+    title: venue.name,
+    cover: venue.coverUrl,
+    orgName: venue.orgName,
+    orgSlug: venue.orgSlug,
+    meta: [venue.orgName, venue.city, venue.capacity ? `${venue.capacity} places` : null],
+    price: venue.priceFromFc,
+  });
+  const serviceItem = (vendor: EventPrepVendor): PrepItem => ({
+    slug: vendor.slug,
+    kind: 'service',
+    title: vendor.title,
+    cover: vendor.coverUrl,
+    orgName: vendor.orgName,
+    orgSlug: vendor.orgSlug,
+    meta: [vendor.categoryLabel, vendor.orgName, vendor.city],
+    price: vendor.priceFromFc,
+  });
+
+  const proposalSplit = splitEventPrepVendors(proposal?.vendors ?? []);
+  const needs: Array<{
+    id: PrepLaneId;
+    label: string;
+    icon: typeof Building2;
+    items: PrepItem[];
+    proposed: PrepItem[];
+  }> = [
+    {
+      id: 'venue',
+      label: 'Salle',
+      icon: Building2,
+      items: selection.venue ? [venueItem(selection.venue)] : [],
+      proposed: proposal?.venue && proposal.venue.slug !== selection.venue?.slug ? [venueItem(proposal.venue)] : [],
+    },
+    {
+      id: 'trade',
+      label: 'Prestataires',
+      icon: Sparkles,
+      items: trades.map(serviceItem),
+      proposed: proposalSplit.trades.filter((v) => !trades.some((own) => own.slug === v.slug)).map(serviceItem),
+    },
+    {
+      id: 'rental',
+      label: 'Matériel',
+      icon: KeyRound,
+      items: rentals.map(serviceItem),
+      proposed: proposalSplit.rentals.filter((v) => !rentals.some((own) => own.slug === v.slug)).map(serviceItem),
+    },
   ];
-  const estimate = eventPrepEstimateFc(working);
+  const proposedCount = needs.reduce((total, need) => total + need.proposed.length, 0);
+
+  const takeProposed = (item: PrepItem) => {
+    if (!proposal) return;
+    if (item.kind === 'venue') {
+      saveSelection({ ...selection, venue: proposal.venue });
+      return;
+    }
+    const vendor = proposal.vendors.find((v) => v.slug === item.slug);
+    if (vendor) saveSelection({ ...selection, vendors: [...selection.vendors, vendor] });
+  };
+
+  const takeAllProposed = () => {
+    if (!proposal) return;
+    const own = new Set(selection.vendors.map((v) => v.slug));
+    saveSelection({
+      ...selection,
+      venue: proposal.venue ?? selection.venue,
+      vendors: [...selection.vendors, ...proposal.vendors.filter((v) => !own.has(v.slug))],
+    });
+    setProposal(null);
+  };
+
+  const estimate = eventPrepEstimateFc(selection);
+  const bookingsHref = `/dashboard/bookings?event=${encodeURIComponent(eventId)}`;
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <h2 className="text-lg font-semibold text-foreground tracking-tight">Préparation</h2>
-        <div className="flex items-center gap-2 shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">Préparation</h2>
+        <div className="flex items-center gap-2">
           {saving ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+            <span role="status" className="inline-flex items-center gap-1.5 text-xs text-muted">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Enregistrement…
+              <span className="sr-only sm:not-sr-only">Enregistrement…</span>
             </span>
           ) : null}
-          <Link
-            href={`/dashboard/bookings?event=${encodeURIComponent(eventId)}`}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-[var(--radius-button)] border border-border hover:border-primary/40 hover:bg-primary/5 transition"
+          <Button
+            type="button"
+            leftIcon={<Sparkles className="w-4 h-4" />}
+            aria-haspopup="dialog"
+            onClick={() => setAiOpen(true)}
+            className="rounded-full px-5"
           >
-            <Inbox className="w-3.5 h-3.5" />
-            Devis & résas
-          </Link>
-          <Link
-            href="/dashboard/catalogue?hub=plan"
-            onClick={() =>
-              seedBriefFromEvent({
-                eventDate,
-                location: eventLocation,
-                guestCount,
-              })
-            }
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-[var(--radius-button)] border border-border hover:border-primary/40 hover:bg-primary/5 transition"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            Composer un pack
-          </Link>
+            Proposer avec l’IA
+          </Button>
+          <OverflowMenu
+            align="right"
+            triggerLabel="Autres actions"
+            triggerClassName="inline-flex items-center justify-center min-h-11 min-w-11 rounded-full border border-border bg-surface text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+            items={[
+              { id: 'bookings', label: 'Devis & résas', icon: Inbox, onSelect: () => router.push(bookingsHref) },
+              {
+                id: 'pack',
+                label: 'Composer un pack',
+                icon: Sparkles,
+                onSelect: () => {
+                  seedBriefFromEvent({ eventDate, location: eventLocation, guestCount });
+                  router.push('/dashboard/catalogue?hub=plan');
+                },
+              },
+              ...(selection.venue || selection.vendors.length > 0
+                ? [{
+                    id: 'clear',
+                    label: 'Vider la liste',
+                    icon: X,
+                    danger: true,
+                    separatorBefore: true,
+                    onSelect: () => saveSelection({ ...emptyEventPrepBasket(), notes: selection.notes }),
+                  }]
+                : []),
+            ]}
+          />
         </div>
       </div>
 
       {error ? (
-        <p className="text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-[var(--radius-card)] px-4 py-3">{error}</p>
+        <p role="alert" className="text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-2xl px-4 py-3">{error}</p>
       ) : null}
 
-      <EventPlanMethodPicker
-        value={view}
-        onChange={(next) => void persist({ ...prep, activeView: next })}
-        counts={{ manual: manualCount, ai: aiCount, final: finalCount }}
-      />
-
-      <div className="space-y-5">
-      {view === 'ai' ? (
-        <EventPrepAiSimulator
-          defaultOpen
-          applyLabel="Retenir dans la simulation IA"
-          defaults={{
-            city: defaultCity,
-            guestCount,
-            eventDate: dateKey,
-            eventTitle,
-            keepVenueSlug: eventPrepBasket(prep, 'ai').venue?.slug || eventPrepBasket(prep, 'manual').venue?.slug,
-            keepServiceSlugs: [
-              ...eventPrepBasket(prep, 'ai').vendors,
-              ...eventPrepBasket(prep, 'manual').vendors,
-            ].map((item) => item.slug),
-          }}
-          onApply={(pack) => void persist(eventPrepFromAiRecommendation({
-            summary: pack.summary || pack.label,
-            venue: pack.venue,
-            services: pack.services,
-          }, prep))}
-          onOpenListing={(target) => openPreview(target)}
-        />
-      ) : null}
-
-      {view === 'final' ? (
-        <PrepFinalComposer
-          prep={prep}
-          onApply={(basket) => persistBasket('final', basket)}
-        />
-      ) : null}
-
-      <Card>
-        <CardHeader
-          title={
-            view === 'ai'
-              ? 'Retenus — simulation IA'
-              : view === 'final'
-                ? 'Solution finale'
-                : 'Retenus — sans IA'
-          }
-          description={
-            estimate.totalItems === 0
-              ? view === 'final'
-                ? 'Choisissez ci-dessus les options des deux simulations, puis appliquez.'
-                : view === 'ai'
-                  ? 'Lancez une simulation IA, puis retenez le mix proposé.'
-                  : 'Parcourez le catalogue et retenez une salle, des prestataires et du matériel.'
-              : estimate.priced > 0
-                ? `À partir de ${formatFc(estimate.total)} · ${estimate.totalItems} fiche${estimate.totalItems > 1 ? 's' : ''}`
-                : `${estimate.totalItems} fiche${estimate.totalItems > 1 ? 's' : ''} retenue${estimate.totalItems > 1 ? 's' : ''}`
-          }
-          action={
-            (working.venue || working.vendors.length > 0 || working.notes) ? (
-              <Button type="button" variant="ghost" size="sm" onClick={() => persistBasket(view, emptyEventPrepBasket())}>
-                Vider cette vue
+      <section aria-label="Ma liste" className="em-header-wash space-y-3 rounded-[26px] p-3 sm:space-y-4 sm:p-5">
+        {proposal ? (
+          <div role="status" className={cn(PANEL, 'flex flex-wrap items-center justify-between gap-2 p-4')}>
+            <p className="text-[15px] font-semibold">
+              {proposedCount > 0
+                ? `Proposition de l’IA : ${proposedCount} choix à voir`
+                : 'La proposition de l’IA est déjà dans la liste'}
+            </p>
+            <div className="flex gap-2">
+              {proposedCount > 0 ? (
+                <Button type="button" size="sm" onClick={takeAllProposed} className="rounded-full px-4">
+                  Tout prendre
+                </Button>
+              ) : null}
+              <Button type="button" size="sm" variant="ghost" onClick={() => setProposal(null)} className="rounded-full">
+                Ignorer
               </Button>
-            ) : null
-          }
-        />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <RetainedColumn
-            tone="venue"
-            label="Salle"
-            icon={<Building2 className="w-3.5 h-3.5" />}
-            empty="Aucune salle retenue"
-            onBrowse={() => {
-              if (view === 'final') void persist({ ...prep, activeView: 'manual' });
-              setLane('venue');
-            }}
-          >
-            {working.venue ? (
-              <SelectedCard
-                tone="venue"
-                cover={working.venue.coverUrl}
-                icon={<Building2 className="w-4 h-4" />}
-                title={working.venue.name}
-                meta={[working.venue.orgName, working.venue.city, working.venue.capacity ? `${working.venue.capacity} places` : null]}
-                price={working.venue.priceFromFc}
-                pipeline={pipelineFor(working.venue.slug, 'venue')}
-                onDetails={() => {
-                  setLane('venue');
-                  openPreview({ kind: 'venue', slug: working.venue!.slug });
-                }}
-                onBook={() => {
-                  setLane('venue');
-                  openPreview({ kind: 'venue', slug: working.venue!.slug }, 'book');
-                }}
-                onRemove={() => persistBasket(view, { ...working, venue: null })}
-              />
-            ) : null}
-          </RetainedColumn>
-          <RetainedColumn
-            tone="trade"
-            label="Prestataires"
-            icon={<Sparkles className="w-3.5 h-3.5" />}
-            empty="Aucun prestataire retenu"
-            onBrowse={() => setLane('trade')}
-          >
-            {trades.map((vendor) => (
-              <SelectedCard
-                key={vendor.slug}
-                tone="trade"
-                cover={vendor.coverUrl}
-                icon={<Sparkles className="w-4 h-4" />}
-                title={vendor.title}
-                meta={[vendor.categoryLabel, vendor.orgName, vendor.city]}
-                price={vendor.priceFromFc}
-                pipeline={pipelineFor(vendor.slug, 'service')}
-                onDetails={() => {
-                  setLane('trade');
-                  openPreview({ kind: 'service', slug: vendor.slug });
-                }}
-                onBook={() => {
-                  setLane('trade');
-                  openPreview({ kind: 'service', slug: vendor.slug }, 'book');
-                }}
-                onRemove={() => removeVendor(vendor.slug)}
-              />
-            ))}
-          </RetainedColumn>
-          <RetainedColumn
-            tone="rental"
-            label="Matériel & Équipements"
-            icon={<KeyRound className="w-3.5 h-3.5" />}
-            empty="Aucun équipement retenu"
-            onBrowse={() => setLane('rental')}
-          >
-            {rentals.map((vendor) => (
-              <SelectedCard
-                key={vendor.slug}
-                tone="rental"
-                cover={vendor.coverUrl}
-                icon={<KeyRound className="w-4 h-4" />}
-                title={vendor.title}
-                meta={[vendor.categoryLabel, vendor.orgName, vendor.city]}
-                price={vendor.priceFromFc}
-                pipeline={pipelineFor(vendor.slug, 'service')}
-                onDetails={() => {
-                  setLane('rental');
-                  openPreview({ kind: 'service', slug: vendor.slug });
-                }}
-                onBook={() => {
-                  setLane('rental');
-                  openPreview({ kind: 'service', slug: vendor.slug }, 'book');
-                }}
-                onRemove={() => removeVendor(vendor.slug)}
-              />
-            ))}
-          </RetainedColumn>
-        </div>
-        {vendorGroups.length > 0 ? (
-          <div className="mt-4 space-y-2">
-            <p className="text-xs font-semibold text-muted">Par prestataire</p>
-            <ul className="space-y-2">
-              {vendorGroups.map((group) => {
-                const offers = [
-                  ...(group.venue
-                    ? [{
-                        key: `venue:${group.venue.slug}`,
-                        kind: 'venue' as const,
-                        lane: 'venue' as PrepLaneId,
-                        slug: group.venue.slug,
-                        title: group.venue.name,
-                        price: group.venue.priceFromFc,
-                      }]
-                    : []),
-                  ...group.vendors.map((vendor) => ({
-                    key: vendor.slug,
-                    kind: 'service' as const,
-                    lane: (vendor.category.startsWith('RENTAL_') ? 'rental' : 'trade') as PrepLaneId,
-                    slug: vendor.slug,
-                    title: vendor.title,
-                    price: vendor.priceFromFc,
-                  })),
-                ];
-                const pipelines = offers.map((offer) => pipelineFor(offer.slug, offer.kind));
-                const missing = pipelines.filter((item) => item.stage === 'none').length;
-                const booked = pipelines.filter((item) => item.stage === 'booking').length;
-                return (
-                  <li key={group.key} className="rounded-[var(--radius-card)] border border-border px-3 py-2 space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setVendorSheet(group)}
-                        className="min-w-0 text-left"
-                      >
-                        <p className="text-sm font-semibold truncate">{group.orgName}</p>
-                        <p className="text-xs text-muted">
-                          {offers.length} offre{offers.length > 1 ? 's' : ''}
-                          {booked ? ` · ${booked} résa` : ''}
-                          {missing ? ` · ${missing} sans devis` : ''}
-                        </p>
-                      </button>
-                      <Button size="sm" variant="secondary" onClick={() => setVendorSheet(group)}>
-                        Fiche
-                      </Button>
-                    </div>
-                    {offers.map((offer) => {
-                      const pipeline = pipelineFor(offer.slug, offer.kind);
-                      return (
-                        <button
-                          key={offer.key}
-                          type="button"
-                          onClick={() => {
-                            setLane(offer.lane);
-                            openPreview({ kind: offer.kind, slug: offer.slug });
-                          }}
-                          className="w-full flex items-center justify-between gap-2 text-left text-xs hover:text-primary"
-                        >
-                          <span className="truncate">{offer.title}</span>
-                          {pipeline.stage !== 'none' ? (
-                            <StatusPill tone={pipeline.tone} className="shrink-0">{pipeline.label}</StatusPill>
-                          ) : offer.price != null ? (
-                            <span className="text-muted shrink-0">{formatFc(offer.price)}</span>
-                          ) : (
-                            <span className="text-muted shrink-0">Sur devis</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </li>
-                );
-              })}
-            </ul>
+            </div>
           </div>
         ) : null}
-        {working.venue || working.vendors.length > 0 ? (
-          <p className="text-xs text-muted flex items-start gap-1.5 mt-3">
-            <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            {view === 'final'
-              ? 'Cette solution alimente les devis, réservations et tâches générées.'
-              : 'Ces retenus appartiennent à cette simulation. Composez le pack budget final dans l’onglet dédié.'}
-          </p>
-        ) : null}
-      </Card>
 
-      {view === 'manual' && savedPacks.length > 0 ? (
-        <details className="group bg-surface border border-border rounded-[var(--radius-card)]">
-          <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-5 py-3.5 [&::-webkit-details-marker]:hidden">
-            <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground tracking-tight">
+        <ul className="space-y-3 sm:space-y-4">
+          {needs.map((need) => {
+            const NeedIcon = need.icon;
+            const searching = search === need.id;
+            const addLabel = need.items.length === 0 ? 'Choisir' : need.id === 'venue' ? 'Changer' : 'Ajouter';
+            return (
+              <li key={need.id} className={cn(PANEL, 'min-w-0 p-4 sm:p-5', searching && 'ring-2 ring-primary/40')}>
+                <div className="flex items-center gap-3">
+                  <span aria-hidden className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border text-primary">
+                    <NeedIcon className="w-[18px] h-[18px]" />
+                  </span>
+                  <h3 className="min-w-0 flex-1 truncate text-[15px] font-semibold">{need.label}</h3>
+                  <button
+                    type="button"
+                    aria-expanded={searching}
+                    onClick={() => setSearch(searching ? null : need.id)}
+                    className={cn(PILL_BUTTON, 'text-primary')}
+                  >
+                    {searching ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    {searching ? 'Fermer' : addLabel}
+                    <span className="sr-only"> : {need.label}</span>
+                  </button>
+                </div>
+
+                {need.items.length > 0 ? (
+                  <ul className="mt-3 divide-y divide-border border-t border-border">
+                    {need.items.map((item) => {
+                      const pipeline = pipelineFor(item.slug, item.kind);
+                      const group = vendorGroups.find((entry) => entry.key === eventPrepVendorKey(item));
+                      return (
+                        <PrepItemRow key={item.slug} item={item} icon={<NeedIcon className="w-4 h-4" />} onOpen={() => openPreview(item)}>
+                          {pipeline.stage !== 'none' ? (
+                            <>
+                              <StatusPill tone={pipeline.tone}>{pipeline.label}</StatusPill>
+                              <Link href={bookingsHref} className={PILL_BUTTON}>Suivre</Link>
+                            </>
+                          ) : (
+                            <button type="button" onClick={() => openPreview(item, 'inquire')} className={PILL_BUTTON}>
+                              Demander un devis
+                            </button>
+                          )}
+                          <OverflowMenu
+                            align="right"
+                            triggerLabel={`Actions pour ${item.title}`}
+                            triggerClassName="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                            trigger={<MoreHorizontal className="w-5 h-5" aria-hidden />}
+                            items={[
+                              { id: 'details', label: 'Voir la fiche', icon: Eye, onSelect: () => openPreview(item) },
+                              ...(prepListingCanBook(item.price, pipeline)
+                                ? [{ id: 'book', label: 'Réserver', icon: CalendarCheck, onSelect: () => openPreview(item, 'book') }]
+                                : []),
+                              ...(group
+                                ? [{ id: 'vendor', label: 'Fiche du prestataire', icon: Store, onSelect: () => setVendorSheet(group) }]
+                                : []),
+                              { id: 'remove', label: 'Retirer', icon: X, danger: true, separatorBefore: true, onSelect: () => removeItem(item.kind, item.slug) },
+                            ]}
+                          />
+                        </PrepItemRow>
+                      );
+                    })}
+                  </ul>
+                ) : null}
+
+                {need.proposed.length > 0 ? (
+                  <ul aria-label={`Proposé par l’IA : ${need.label}`} className="mt-3 divide-y divide-border rounded-2xl border border-dashed border-primary/50 bg-primary/5 px-3">
+                    {need.proposed.map((item) => (
+                      <PrepItemRow key={item.slug} item={item} icon={<NeedIcon className="w-4 h-4" />} onOpen={() => openPreview(item)}>
+                        <StatusPill tone="sky">IA</StatusPill>
+                        <Button type="button" size="sm" onClick={() => takeProposed(item)} className="rounded-full px-4">
+                          {item.kind === 'venue' && selection.venue ? 'Remplacer' : 'Prendre'}
+                        </Button>
+                      </PrepItemRow>
+                    ))}
+                  </ul>
+                ) : null}
+
+                {searching ? (
+                  <div className="mt-4 space-y-4 border-t border-border pt-4">
+                    {need.id === 'venue' && orgRooms.length > 0 ? (
+                      <label className="flex flex-col gap-2 rounded-2xl bg-surface-muted/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <span className="text-sm font-semibold">Salle de l’organisation (plan 2D)</span>
+                        <select
+                          value={currentRoomId || ''}
+                          onChange={(e) => {
+                            const roomId = e.target.value || null;
+                            void persist(prep, { roomId });
+                          }}
+                          className={cn(SELECT_CLASS, 'sm:max-w-sm')}
+                        >
+                          <option value="">Aucune salle liée</option>
+                          {orgRooms.map((room) => (
+                            <option key={room.id} value={room.id}>
+                              {room.name}
+                              {room.capacity ? ` · ${room.capacity} places` : ''}
+                              {room.location ? ` · ${room.location}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
+                    <PrepLane
+                      key={need.id}
+                      lane={need.id}
+                      dateKey={dateKey}
+                      guestCount={guestCount}
+                      defaultCity={defaultCity}
+                      selectedSlugs={need.items.map((item) => item.slug)}
+                      onOpen={(target) => openPreview(target)}
+                      onRetainVenue={retainVenue}
+                      onRetainService={retainService}
+                    />
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+
+        {estimate.priced > 0 ? (
+          <p className="px-1 text-sm font-semibold tabular-nums">Total à partir de {formatFc(estimate.total)}</p>
+        ) : null}
+      </section>
+
+      <details className={cn(PANEL, 'group')}>
+        <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden">
+          <span className="min-w-0 truncate text-[15px] font-semibold">
+            Notes
+            {selection.notes ? <span className="ml-2 text-[13px] font-normal text-muted">{selection.notes}</span> : null}
+          </span>
+          <ChevronDown className="w-4 h-4 shrink-0 text-muted transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+          <textarea
+            aria-label="Notes"
+            value={selection.notes}
+            onChange={(e) => onNotesChange(e.target.value)}
+            rows={3}
+            placeholder="Budget visé, horaires, contraintes logistiques…"
+            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[4.5rem]"
+          />
+        </div>
+      </details>
+
+      {savedPacks.length > 0 ? (
+        <details className={cn(PANEL, 'group')}>
+          <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-4 sm:px-5 [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex items-center gap-2 text-[15px] font-semibold text-foreground">
               <Bookmark className="w-4 h-4 text-primary" />
               Packs enregistrés
               <span className="text-xs font-semibold text-muted">{savedPacks.length}</span>
             </span>
             <ChevronDown className="w-4 h-4 text-muted transition-transform group-open:rotate-180" />
           </summary>
-          <div className="px-5 pb-4 space-y-2">
-            <p className="text-xs text-muted">Appliquez un pack déjà simulé : salle, prestataires et matériel & équipements se remplissent ici, sans réserver.</p>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {savedPacks.slice(0, 6).map((pack) => (
-                <li key={pack.id} className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 space-y-2">
-                  <div>
-                    <p className="text-sm font-semibold truncate">{pack.name}</p>
-                    <p className="text-xs text-muted truncate">{formatFc(pack.totalFc)}</p>
-                  </div>
-                  {pack.items.length > 0 ? (
-                    <ul className="space-y-1">
-                      {pack.items.slice(0, 6).map((item) => (
-                        <li key={`${pack.id}:${item.kind}:${item.slug}`}>
-                          <button
-                            type="button"
-                            onClick={() => openPreview({ kind: item.kind, slug: item.slug })}
-                            className="w-full text-left text-xs font-medium truncate hover:text-primary"
-                          >
-                            {item.title}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => persistBasket('manual', applyPackToEventPrepBasket(pack, eventPrepBasket(prep, 'manual')))}
-                  >
-                    Appliquer ce pack
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <ul className="grid grid-cols-1 gap-3 px-4 pb-4 sm:px-5 sm:pb-5 md:grid-cols-2">
+            {savedPacks.slice(0, 6).map((pack) => (
+              <li key={pack.id} className="flex flex-col gap-2 rounded-2xl border border-border p-3">
+                <div>
+                  <p className="text-sm font-semibold truncate">{pack.name}</p>
+                  <p className="text-xs text-muted truncate">{formatFc(pack.totalFc)}</p>
+                </div>
+                {pack.items.length > 0 ? (
+                  <ul className="space-y-1">
+                    {pack.items.slice(0, 6).map((item) => (
+                      <li key={`${pack.id}:${item.kind}:${item.slug}`}>
+                        <button
+                          type="button"
+                          onClick={() => openPreview({ kind: item.kind, slug: item.slug })}
+                          className="w-full text-left text-xs font-medium truncate hover:text-primary"
+                        >
+                          {item.title}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="mt-auto self-start rounded-full px-4"
+                  onClick={() => saveSelection(applyPackToEventPrepBasket(pack, selection))}
+                >
+                  Appliquer ce pack
+                </Button>
+              </li>
+            ))}
+          </ul>
         </details>
       ) : null}
 
-      {view === 'manual' ? (
-      <Card padding="none">
-        <div className="flex flex-wrap gap-1 p-2 border-b border-border bg-surface-muted/50">
-          {tabs.map((tab) => {
-            const TabIcon = tab.icon;
-            const active = lane === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setLane(tab.id)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-sm font-semibold transition',
-                  active ? 'bg-surface text-foreground shadow-sm border border-border' : 'text-muted hover:text-foreground',
-                )}
-              >
-                <TabIcon className={cn('w-4 h-4', active ? LANE_TONE[tab.id].icon : '')} />
-                {tab.label}
-                <span className={cn(
-                  'min-w-5 h-5 px-1 rounded-full text-xs inline-flex items-center justify-center',
-                  tab.count > 0 ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-muted',
-                )}>
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="p-4 space-y-4">
-          <p className="text-xs text-muted">{tabs.find((tab) => tab.id === lane)?.hint}</p>
-
-          <div className={lane === 'venue' ? 'space-y-4' : 'hidden'}>
-            {orgRooms.length > 0 ? (
-              <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-3 space-y-2">
-                <p className="text-xs font-semibold text-muted">Salle de l’organisation</p>
-                <p className="text-xs text-muted">Liez une de vos salles pour importer le plan 2D. Indépendant du choix marketplace.</p>
-                <select
-                  value={currentRoomId || ''}
-                  onChange={(e) => {
-                    const roomId = e.target.value || null;
-                    void persist(prep, { roomId });
-                  }}
-                  className="w-full sm:max-w-md rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm"
-                >
-                  <option value="">Aucune salle liée</option>
-                  {orgRooms.map((room) => (
-                    <option key={room.id} value={room.id}>
-                      {room.name}
-                      {room.capacity ? ` · ${room.capacity} places` : ''}
-                      {room.location ? ` · ${room.location}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-
-            <PrepLane
-              lane="venue"
-              dateKey={dateKey}
-              guestCount={guestCount}
-              defaultCity={defaultCity}
-              selectedSlugs={working.venue ? [working.venue.slug] : []}
-              onOpen={(target) => openPreview(target)}
-              onRetainVenue={retainVenue}
-              onRetainService={retainService}
-            />
-          </div>
-
-          <div className={lane === 'trade' ? 'space-y-4' : 'hidden'}>
-            <PrepLane
-              lane="trade"
-              dateKey={dateKey}
-              guestCount={guestCount}
-              defaultCity={defaultCity}
-              selectedSlugs={working.vendors.map((item) => item.slug)}
-              onOpen={(target) => openPreview(target)}
-              onRetainVenue={retainVenue}
-              onRetainService={retainService}
-            />
-          </div>
-
-          <div className={lane === 'rental' ? 'space-y-4' : 'hidden'}>
-            <PrepLane
-              lane="rental"
-              dateKey={dateKey}
-              guestCount={guestCount}
-              defaultCity={defaultCity}
-              selectedSlugs={working.vendors.map((item) => item.slug)}
-              onOpen={(target) => openPreview(target)}
-              onRetainVenue={retainVenue}
-              onRetainService={retainService}
-            />
-          </div>
-        </div>
-      </Card>
-      ) : null}
-
-      <Card>
-        <label className="text-xs font-semibold text-muted"htmlFor="event-prep-notes">
-          Notes {view === 'final' ? 'de la solution' : view === 'ai' ? 'de la simulation IA' : 'de la simulation'}
-        </label>
-        <textarea
-          id="event-prep-notes"
-          value={working.notes}
-          onChange={(e) => onNotesChange(e.target.value)}
-          rows={3}
-          placeholder="Budget visé, horaires, contraintes logistiques… (optionnel)"
-          className="mt-2 w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[4.5rem]"
-        />
-      </Card>
-      </div>
-
+      <Modal open={aiOpen} onClose={() => setAiOpen(false)} title="Proposer avec l’IA">
+        {aiOpen ? (
+          <EventPrepAiSimulator
+            short
+            preferDefaults
+            applyLabel="Comparer avec ma liste"
+            defaults={{
+              eventType: eventKind ? LISTING_TYPE_BY_KIND[eventKind] : undefined,
+              city: defaultCity,
+              commune: eventCommune || '',
+              neighborhood: eventNeighborhood || '',
+              guestCount: estimatedGuests || guestCount,
+              eventDate: dateKey,
+              keepVenueSlug: selection.venue?.slug,
+              keepServiceSlugs: selection.vendors.map((item) => item.slug),
+              // Les besoins encore vides sont cochés ; si tout est rempli, on les propose tous.
+              ...(selection.venue && trades.length > 0 && rentals.length > 0
+                ? {}
+                : {
+                    includeVenue: !selection.venue,
+                    includeTrades: trades.length === 0,
+                    includeRentals: rentals.length === 0,
+                  }),
+            }}
+            onApply={(pack) => {
+              setProposal(eventPrepFromAiRecommendation({
+                summary: pack.summary || pack.label,
+                venue: pack.venue,
+                services: pack.services,
+              }, emptyEventPrep()).ai ?? null);
+              setAiOpen(false);
+              setSearch(null);
+            }}
+            onOpenListing={(target) => openPreview(target)}
+          />
+        ) : null}
+      </Modal>
       <EventPrepListingModal
         target={preview}
         selected={previewSelected}
@@ -1206,9 +1116,7 @@ export default function EventPrepPanel({
         onRetainVenue={retainVenue}
         onRetainService={retainService}
         onRemove={() => {
-          if (!preview) return;
-          if (preview.kind === 'venue') persistBasket(view, { ...working, venue: null });
-          else removeVendor(preview.slug);
+          if (preview) removeItem(preview.kind, preview.slug);
         }}
         onPipelineChange={() => void reloadPipeline()}
       />
@@ -1222,11 +1130,6 @@ export default function EventPrepPanel({
         bookings={bookings}
         onClose={() => setVendorSheet(null)}
         onOpenListing={(target, view) => {
-          if (target.kind === 'venue') setLane('venue');
-          else {
-            const vendor = working.vendors.find((item) => item.slug === target.slug);
-            setLane(vendor?.category.startsWith('RENTAL_') ? 'rental' : 'trade');
-          }
           setVendorSheet(null);
           openPreview(target, view);
         }}
@@ -1236,270 +1139,42 @@ export default function EventPrepPanel({
   );
 }
 
-function PrepFinalComposer({
-  prep,
-  onApply,
-}: {
-  prep: EventPrep;
-  onApply: (basket: EventPrepBasket) => void;
-}) {
-  const manual = eventPrepBasket(prep, 'manual');
-  const ai = eventPrepBasket(prep, 'ai');
-  const current = eventPrepBasket(prep, 'final');
-  const [venueSource, setVenueSource] = useState<'none' | 'manual' | 'ai' | 'current'>(() => {
-    if (current.venue) {
-      if (manual.venue?.slug === current.venue.slug) return 'manual';
-      if (ai.venue?.slug === current.venue.slug) return 'ai';
-      return 'current';
-    }
-    if (manual.venue) return 'manual';
-    if (ai.venue) return 'ai';
-    return 'none';
-  });
-  const vendorOptions = useMemo(() => {
-    const map = new Map<string, { slug: string; manual?: EventPrepVendor; ai?: EventPrepVendor }>();
-    for (const vendor of manual.vendors) {
-      map.set(vendor.slug, { slug: vendor.slug, manual: vendor });
-    }
-    for (const vendor of ai.vendors) {
-      const existing = map.get(vendor.slug) || { slug: vendor.slug };
-      existing.ai = vendor;
-      map.set(vendor.slug, existing);
-    }
-    return [...map.values()];
-  }, [manual.vendors, ai.vendors]);
-  const [vendorPicks, setVendorPicks] = useState<Record<string, 'none' | 'manual' | 'ai'>>(() => {
-    const next: Record<string, 'none' | 'manual' | 'ai'> = {};
-    const currentSlugs = new Set(current.vendors.map((item) => item.slug));
-    const options: Array<{ slug: string; manual?: EventPrepVendor; ai?: EventPrepVendor }> = [];
-    const map = new Map<string, { slug: string; manual?: EventPrepVendor; ai?: EventPrepVendor }>();
-    for (const vendor of manual.vendors) map.set(vendor.slug, { slug: vendor.slug, manual: vendor });
-    for (const vendor of ai.vendors) {
-      const existing = map.get(vendor.slug) || { slug: vendor.slug };
-      existing.ai = vendor;
-      map.set(vendor.slug, existing);
-    }
-    options.push(...map.values());
-    for (const option of options) {
-      if (currentSlugs.has(option.slug)) {
-        next[option.slug] = option.manual ? 'manual' : 'ai';
-      } else {
-        next[option.slug] = 'none';
-      }
-    }
-    return next;
-  });
-
-  const compose = (source: 'manual' | 'ai') => {
-    onApply(source === 'ai' ? { ...ai } : { ...manual });
-  };
-
-  const applyMix = () => {
-    const venue =
-      venueSource === 'manual' ? manual.venue
-        : venueSource === 'ai' ? ai.venue
-          : venueSource === 'current' ? current.venue
-            : null;
-    const vendors: EventPrepVendor[] = [];
-    const seen = new Set<string>();
-    for (const option of vendorOptions) {
-      const pick = vendorPicks[option.slug] || 'none';
-      const vendor = pick === 'manual' ? option.manual : pick === 'ai' ? option.ai : undefined;
-      if (!vendor || seen.has(vendor.slug)) continue;
-      seen.add(vendor.slug);
-      vendors.push(vendor);
-    }
-    const notes = [manual.notes, ai.notes].filter(Boolean).join('\n').slice(0, 2000) || current.notes;
-    onApply({ venue, vendors, notes });
-  };
-
-  const empty = eventPrepBasketCount(manual) === 0 && eventPrepBasketCount(ai) === 0;
-
-  return (
-    <Card>
-      <CardHeader
-        title="Composer le pack budget final"
-        description="Reprenez toute une simulation, ou mélangez salle et prestataires des deux vues."
-      />
-      {empty ? (
-        <p className="text-sm text-muted">Retenez d’abord des options dans la simulation sans IA ou avec IA.</p>
-      ) : (
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="secondary" disabled={eventPrepBasketCount(manual) === 0} onClick={() => compose('manual')}>
-              Reprendre toute la simulation sans IA
-            </Button>
-            <Button type="button" size="sm" variant="secondary" disabled={eventPrepBasketCount(ai) === 0} onClick={() => compose('ai')}>
-              Reprendre toute la simulation IA
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-muted">Salle</p>
-            <div className="flex flex-wrap gap-2">
-              {([
-                { id: 'none' as const, label: 'Aucune' },
-                ...(manual.venue ? [{ id: 'manual' as const, label: `Sans IA · ${manual.venue.name}` }] : []),
-                ...(ai.venue ? [{ id: 'ai' as const, label: `IA · ${ai.venue.name}` }] : []),
-                ...(current.venue && current.venue.slug !== manual.venue?.slug && current.venue.slug !== ai.venue?.slug
-                  ? [{ id: 'current' as const, label: `Actuelle · ${current.venue.name}` }]
-                  : []),
-              ]).map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setVenueSource(option.id)}
-                  className={cn(
-                    'px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold border transition',
-                    venueSource === option.id
-                      ? 'bg-primary-solid text-primary-foreground border-primary-solid'
-                      : 'border-border text-muted hover:text-foreground',
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {vendorOptions.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted">Prestataires & Matériel</p>
-              <ul className="space-y-1.5">
-                {vendorOptions.map((option) => {
-                  const pick = vendorPicks[option.slug] || 'none';
-                  const label = option.manual?.title || option.ai?.title || option.slug;
-                  return (
-                    <li key={option.slug} className="flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] border border-border px-3 py-2">
-                      <span className="text-sm font-semibold min-w-0 flex-1 truncate">{label}</span>
-                      {(['none', 'manual', 'ai'] as const).map((id) => {
-                        if (id === 'manual' && !option.manual) return null;
-                        if (id === 'ai' && !option.ai) return null;
-                        const caption = id === 'none' ? 'Ignorer' : id === 'manual' ? 'Sans IA' : 'IA';
-                        return (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => setVendorPicks((prev) => ({ ...prev, [option.slug]: id }))}
-                            className={cn(
-                              'px-2 py-1 rounded-[var(--radius-button)] text-xs font-semibold border',
-                              pick === id ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
-                            )}
-                          >
-                            {caption}
-                          </button>
-                        );
-                      })}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ) : null}
-
-          <Button type="button" onClick={applyMix}>
-            Appliquer ce mix au pack budget final
-          </Button>
-        </div>
-      )}
-    </Card>
-  );
-}
-
-function RetainedColumn({
-  tone,
-  label,
-  icon,
-  empty,
-  onBrowse,
-  children,
-}: {
-  tone: PrepLaneId;
-  label: string;
-  icon: React.ReactNode;
-  empty: string;
-  onBrowse: () => void;
-  children: React.ReactNode;
-}) {
-  const items = React.Children.toArray(children).filter(Boolean);
-  return (
-    <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/30 p-3 space-y-2 min-h-[7.5rem]">
-      <p className={cn('text-xs font-semibold inline-flex items-center gap-1.5', LANE_TONE[tone].icon)}>
-        {icon}
-        {label}
-        <span className="text-muted font-semibold">· {items.length}</span>
-      </p>
-      {items.length > 0 ? (
-        <div className="space-y-1.5">{children}</div>
-      ) : (
-        <button
-          type="button"
-          onClick={onBrowse}
-          className="w-full text-left text-xs text-muted hover:text-foreground rounded-[var(--radius-button)] border border-dashed border-border px-3 py-4 transition"
-        >
-          {empty}
-          <span className="block mt-0.5 font-semibold text-primary">Parcourir</span>
-        </button>
-      )}
-    </div>
-  );
-}
-
-function SelectedCard({
-  tone,
-  cover,
-  icon,
-  title,
-  meta,
-  price,
-  pipeline,
-  onDetails,
-  onBook,
-  onRemove,
-}: {
-  tone: PrepLaneId;
-  cover?: string | null;
-  icon: React.ReactNode;
+type PrepItem = {
+  slug: string;
+  kind: 'venue' | 'service';
   title: string;
+  cover?: string | null;
+  orgName?: string | null;
+  orgSlug?: string | null;
   meta: Array<string | null | undefined>;
   price?: number | null;
-  pipeline?: PrepListingPipeline;
-  onDetails: () => void;
-  onBook?: () => void;
-  onRemove: () => void;
+};
+
+/** Une ligne de la liste : la fiche à gauche, son état et ses actions à droite. */
+function PrepItemRow({
+  item,
+  icon,
+  onOpen,
+  children,
+}: {
+  item: PrepItem;
+  icon: React.ReactNode;
+  onOpen: () => void;
+  children: React.ReactNode;
 }) {
-  const canBook = onBook && prepListingCanBook(price, pipeline);
   return (
-    <div className={cn('flex items-center gap-2.5 rounded-[var(--radius-card)] border px-2 py-1.5', LANE_TONE[tone].selected)}>
-      <Cover src={cover} fallback={icon} />
-      <button type="button" onClick={onDetails} className="min-w-0 flex-1 text-left">
-        <p className="text-sm font-semibold truncate">{title}</p>
-        <p className="text-xs text-muted truncate">
-          {meta.filter(Boolean).join(' · ')}
-          {price != null ? ` · ${formatFc(price)}` : ''}
-        </p>
-        {pipeline && pipeline.stage !== 'none' ? (
-          <StatusPill tone={pipeline.tone} className="mt-1">{pipeline.label}</StatusPill>
-        ) : null}
+    <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:gap-3">
+      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+        <Cover src={item.cover} fallback={icon} className="h-12 w-12 rounded-xl" />
+        <span className="min-w-0 flex-1">
+          <span className="line-clamp-2 text-sm font-semibold leading-snug">{item.title}</span>
+          <span className="block truncate text-[13px] text-muted">
+            {item.meta.filter((part) => part && part !== item.title).join(' · ')}
+          </span>
+          {item.price != null ? <span className="block text-[13px] font-semibold tabular-nums">{formatFc(item.price)}</span> : null}
+        </span>
       </button>
-      {canBook ? (
-        <button
-          type="button"
-          onClick={onBook}
-          className="p-1.5 rounded-[var(--radius-button)] text-muted hover:text-primary hover:bg-primary/5"
-          title="Réserver"
-        >
-          <CalendarCheck className="w-4 h-4" />
-        </button>
-      ) : null}
-      <button
-        type="button"
-        onClick={onRemove}
-        className="p-1.5 rounded-[var(--radius-button)] text-muted hover:text-rose-600"
-        title="Retirer"
-      >
-        <X className="w-4 h-4" />
-      </button>
-    </div>
+      <div className="flex shrink-0 items-center justify-end gap-2">{children}</div>
+    </li>
   );
 }

@@ -23,23 +23,36 @@ export const EVENT_KIND_LABELS: Record<EventKindId, string> = {
   OTHER: 'Autre',
 };
 
+/** Photo de chaque type (Unsplash, licence libre ; identifiants vérifiés sur unsplash.com). */
+const KIND_PHOTOS: Record<EventKindId, string> = {
+  WEDDING: '1608009232260-9b527a5bb9bd',
+  BIRTHDAY: '1530103862676-de8c9debad1d',
+  BAPTISM: '1566516171511-1c411a59c8ba',
+  CORPORATE: '1542744173-8e7e53415bb0',
+  CONFERENCE: '1587825140708-dfaf72ae4b04',
+  GALA: '1536392706976-e486e2ba97af',
+  OTHER: '1492684223066-81342ee5ff30',
+};
+export const kindPhotoUrl = (kind: EventKindId) =>
+  `https://images.unsplash.com/photo-${KIND_PHOTOS[kind]}?auto=format&fit=crop&w=640&h=420&q=75`;
+
 export const EVENT_KINDS_SIMPLE: EventKindId[] = ['WEDDING', 'BIRTHDAY', 'BAPTISM', 'OTHER'];
 export const EVENT_KINDS_PRO: EventKindId[] = [...EVENT_KIND_IDS];
 
 export type EventConfigTab = 'essentials' | 'place' | 'access' | 'welcome';
 
 export const EVENT_CONFIG_TAB_DETAILS: Record<EventConfigTab, { label: string; subtitle: string }> = {
-  essentials: { label: 'Essentiel', subtitle: 'Titre & Date' },
-  place: { label: 'Lieu', subtitle: 'Salle & Adresse' },
-  access: { label: 'Accès', subtitle: 'Billetterie & Confidentialité' },
-  welcome: { label: 'Accueil', subtitle: 'Dress code & Thème' },
+  essentials: { label: 'Événement', subtitle: 'Titre, date & visibilité' },
+  place: { label: 'Lieu', subtitle: 'Salle & adresse' },
+  access: { label: 'Billets & places', subtitle: 'Billetterie, sièges & dons' },
+  welcome: { label: 'Jour J', subtitle: 'Programme, contact, rappels & thème' },
 };
 
 export const EVENT_CONFIG_TABS: Array<{ id: EventConfigTab; label: string }> = [
-  { id: 'essentials', label: 'Essentiel' },
+  { id: 'essentials', label: 'Événement' },
   { id: 'place', label: 'Lieu' },
-  { id: 'access', label: 'Accès' },
-  { id: 'welcome', label: 'Accueil' },
+  { id: 'access', label: 'Billets & places' },
+  { id: 'welcome', label: 'Jour J' },
 ];
 
 export type EventConfigMode = 'simple' | 'complete';
