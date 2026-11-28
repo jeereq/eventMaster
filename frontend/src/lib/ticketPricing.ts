@@ -529,3 +529,56 @@ export const TICKETING_ZONE_PRESETS: TicketingZonePreset[] = [
   },
 ];
 
+
+export type PricingZoneRect = { x: number; y: number; w: number; h: number };
+
+/**
+ * Emprise d’une zone tarifaire sur le plan (en % de la salle) : celle enregistrée,
+ * sinon le rectangle qui englobe ses tables avec une marge pour les chaises.
+ * Partagée par le plan 2D et la vue 3D pour que les deux montrent la même zone.
+ */
+export function pricingZoneRect(
+  zone: Pick<PricingZone, 'id' | 'x' | 'y' | 'w' | 'h'>,
+  tables: Array<{ x: number; y: number; pricingZoneId?: string | null }>,
+): PricingZoneRect | null {
+  if (zone.x != null && zone.y != null && zone.w != null && zone.h != null) {
+    return { x: zone.x, y: zone.y, w: zone.w, h: zone.h };
+  }
+  const assigned = tables.filter((t) => t.pricingZoneId === zone.id);
+  if (assigned.length === 0) return null;
+  const xs = assigned.map((t) => t.x);
+  const ys = assigned.map((t) => t.y);
+  const minX = Math.max(1, Math.min(...xs) - 8);
+  const maxX = Math.min(99, Math.max(...xs) + 8);
+  const minY = Math.max(1, Math.min(...ys) - 7);
+  const maxY = Math.min(99, Math.max(...ys) + 7);
+  return {
+    x: Math.round(minX),
+    y: Math.round(minY),
+    w: Math.round(maxX - minX),
+    h: Math.round(maxY - minY),
+  };
+}
+
+export type PricingZoneAvailability = {
+  zone: PricingZone;
+  total: number;
+  available: number;
+};
+
+/** Places libres / total par zone (billetterie), dans l’ordre des zones. */
+export function pricingZoneAvailability(
+  zones: PricingZone[],
+  seats: Array<{ pricingZoneId?: string | null; available: boolean }>,
+): PricingZoneAvailability[] {
+  return zones.map((zone) => {
+    let total = 0;
+    let available = 0;
+    for (const s of seats) {
+      if (s.pricingZoneId !== zone.id) continue;
+      total += 1;
+      if (s.available) available += 1;
+    }
+    return { zone, total, available };
+  });
+}

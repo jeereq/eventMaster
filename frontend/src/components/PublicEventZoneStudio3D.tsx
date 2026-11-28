@@ -8,9 +8,14 @@ import {
   computeTicketingRevenueSummary,
   createEmptyPricingZone,
   TICKETING_ZONE_PRESETS,
+  isLightHexColor,
 } from '@/lib/ticketPricing';
 import { formatFc } from '@/config/landingPricing';
 import RoomLayoutPreview, { type RoomPreviewQuality } from '@/components/RoomLayoutPreview';
+import SeatSelectionPlanCanvas, { type SeatSelectionPlanCanvasProps } from '@/components/SeatSelectionPlanCanvas';
+import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
+import { resolveBlueprintWalls } from '@/lib/roomLayoutUtils';
+import { isOpenSpace } from '@/lib/roomPlots';
 import { buildTablePlanPreviewBlueprint, type TablePlanPreviewTable } from '@/lib/tablePlanPreviewBlueprint';
 import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
@@ -58,6 +63,7 @@ export default function PublicEventZoneStudio3D({
   const [showAutoDistributeMenu, setShowAutoDistributeMenu] = useState(false);
   const [showZoneEditor, setShowZoneEditor] = useState(false);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [view, setView] = useState<PlanViewMode>('3d');
 
   // Synchronise les tables avec leurs zones tarifaires assignées
   const tablesWithZones = useMemo(() => {
@@ -86,6 +92,41 @@ export default function PublicEventZoneStudio3D({
 
     return buildTablePlanPreviewBlueprint(tablePlanInput, tablesWithZones, blueprint, pricingZones);
   }, [blueprint, tablesWithZones, lightingPreset, pricingZones]);
+
+  // Plan 2D : mêmes tables, chaque place colorée selon la zone de sa table.
+  const zoneById = useMemo(() => new Map(pricingZones.map((z) => [z.id, z])), [pricingZones]);
+  const zoneColorById = useMemo(
+    () => new Map(pricingZones.map((z) => [z.id, z.color || '#c4a35a'])),
+    [pricingZones],
+  );
+  const planSeats = useMemo(
+    () =>
+      tablesWithZones.flatMap((t) => {
+        const zone = t.pricingZoneId ? zoneById.get(t.pricingZoneId) : undefined;
+        return Array.from({ length: Math.max(0, t.capacity) }, (_, seatIndex) => ({
+          tableId: t.id,
+          tableName: t.name,
+          seatIndex,
+          available: true,
+          x: t.x,
+          y: t.y,
+          shape: t.shape,
+          capacity: t.capacity,
+          priceFc: zone?.priceFc ?? 0,
+          pricingZoneId: zone?.id ?? null,
+          pricingZoneName: zone?.name ?? null,
+          rowMeta: t.rowMeta ?? null,
+          chairMeta: t.chairMeta ?? null,
+          rotation: t.rotation ?? null,
+        }));
+      }),
+    [tablesWithZones, zoneById],
+  );
+  const planWalls = useMemo(() => {
+    if (!previewBlueprint || isOpenSpace(previewBlueprint.metadata)) return [];
+    return resolveBlueprintWalls(previewBlueprint);
+  }, [previewBlueprint]);
+  const paintZone = paintZoneId ? zoneById.get(paintZoneId) : undefined;
 
   // Statistiques de recettes et de capacité en temps réel
   const ticketingSummary = useMemo(() => {
@@ -308,7 +349,7 @@ export default function PublicEventZoneStudio3D({
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-xs font-semibold text-muted mr-1 flex items-center gap-1">
           <Paintbrush className="w-3 h-3 text-primary" />
-          Pinceau 3D :
+          Zone à appliquer :
         </span>
         {ticketingSummary.byZone.map((stat) => {
           const isPaintActive = paintZoneId === stat.zone.id;
@@ -346,83 +387,118 @@ export default function PublicEventZoneStudio3D({
         })}
       </div>
 
-      {/* Rendu 3D de la salle avec les zones */}
+      {/* Plan de la salle avec les zones : 3D ou 2D vu du dessus */}
       {previewBlueprint ? (
-        <div className="relative rounded-2xl overflow-hidden border border-border bg-foreground shadow-[var(--shadow-soft)]">
-          <div className="absolute top-2 left-2 z-20 flex items-center gap-1 bg-foreground/80 px-2.5 py-1 rounded-full border border-background/20 text-xs font-semibold text-background">
-            <Box className="w-3 h-3 text-primary" />
-            <span>Vue 3D des zones · Cliquez sur une table pour l&apos;assigner</span>
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="min-w-0 flex-1 text-xs text-muted" aria-live="polite">
+              {paintZone ? (
+                <>
+                  Touchez une table pour la passer en{' '}
+                  <span className="font-bold" style={{ color: paintZone.color || '#c4a35a' }}>{paintZone.name}</span>
+                </>
+              ) : (
+                'Choisissez une zone ci-dessus, puis touchez les tables à lui attribuer'
+              )}
+            </p>
+            <div className="flex items-center gap-1.5">
+              {view === '3d' ? (
+                <div className="hidden sm:flex shrink-0 gap-1 rounded-full border border-border bg-surface p-0.5" role="group" aria-label="Qualité de la 3D">
+                  {(
+                    [
+                      { id: 'standard' as const, label: 'Standard' },
+                      { id: 'showcase' as const, label: 'Showcase' },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      aria-pressed={quality === opt.id}
+                      onClick={() => setQuality(opt.id)}
+                      className={cn(
+                        'min-h-9 px-2.5 rounded-full text-xs font-semibold transition',
+                        quality === opt.id ? 'bg-foreground text-background shadow-xs' : 'text-muted hover:text-foreground',
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <PlanViewToggle value={view} onChange={setView} />
+            </div>
           </div>
 
-          <div className="absolute top-2 right-2 z-20 flex shrink-0 gap-1 rounded-full border border-background/20 bg-foreground/80 p-0.5">
-            {(
-              [
-                { id: 'standard' as const, label: '3D Standard' },
-                { id: 'showcase' as const, label: 'Showcase' },
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setQuality(opt.id)}
-                className={cn(
-                  'px-2.5 py-0.5 rounded-full text-xs font-semibold transition',
-                  quality === opt.id
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-background/70 hover:text-background'
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          {view === '3d' ? (
+            <div className="relative rounded-2xl overflow-hidden border border-border bg-foreground shadow-[var(--shadow-soft)]">
+              <RoomLayoutPreview
+                blueprint={previewBlueprint}
+                quality={quality}
+                lightingPreset={lightingPreset}
+                selectedTableId={selectedTableId}
+                onSelectTable={handleTableClick3D}
+                showMeta={false}
+                className="[&_.em-floor-canvas]:min-h-[260px] sm:[&_.em-floor-canvas]:min-h-[340px]"
+              />
+            </div>
+          ) : (
+            <SeatSelectionPlanCanvas
+              seats={planSeats}
+              fixtures={previewBlueprint.fixtures as SeatSelectionPlanCanvasProps['fixtures']}
+              roomOutline={previewBlueprint.roomOutline as SeatSelectionPlanCanvasProps['roomOutline']}
+              walls={planWalls}
+              canvasWidthM={previewBlueprint.canvas.widthM}
+              canvasHeightM={previewBlueprint.canvas.heightM}
+              roomThemeId={previewBlueprint.metadata.roomThemeId}
+              floorType={previewBlueprint.metadata.floorType}
+              floorImageUrl={previewBlueprint.metadata.floorImageUrl}
+              pricingZones={pricingZones}
+              zoneColorById={zoneColorById}
+              showZonePricing
+              showLegend={false}
+              instructions="Vue du dessus : chaque zone est encadrée avec son prix"
+              activeTableId={selectedTableId}
+              onSelectTable={handleTableClick3D}
+              onSelect={(tableId) => handleTableClick3D(tableId)}
+              height={380}
+            />
+          )}
 
-          <RoomLayoutPreview
-            blueprint={previewBlueprint}
-            quality={quality}
-            lightingPreset={lightingPreset}
-            selectedTableId={selectedTableId}
-            onSelectTable={handleTableClick3D}
-            showMeta={false}
-            className="[&_.em-floor-canvas]:min-h-[260px] sm:[&_.em-floor-canvas]:min-h-[340px]"
-          />
-
-          {/* Info table active sélectionnée */}
+          {/* Table touchée : sa zone, et un raccourci pour en changer */}
           {activeSelectedTable && (
-            <div className="absolute bottom-2 left-2 right-2 z-20 rounded-xl bg-background/95 border border-border p-2.5 shadow-lg flex flex-wrap items-center justify-between gap-2">
+            <div className="rounded-xl bg-surface border border-border p-2.5 shadow-sm flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-xs text-foreground">
-                  {activeSelectedTable.name}
-                </span>
-                <span className="text-xs text-muted">
-                  ({activeSelectedTable.capacity} places)
-                </span>
-                {activeSelectedTable.pricingZoneId && (
+                <span className="font-bold text-xs text-foreground">{activeSelectedTable.name}</span>
+                <span className="text-xs text-muted">({activeSelectedTable.capacity} places)</span>
+                {activeSelectedTable.pricingZoneId && zoneById.get(activeSelectedTable.pricingZoneId) && (
                   <span
-                    className="px-2 py-0.5 rounded text-xs font-bold text-white shadow-2xs"
+                    className="px-2 py-0.5 rounded-full text-xs font-bold shadow-2xs"
                     style={{
-                      backgroundColor:
-                        pricingZones.find((z) => z.id === activeSelectedTable.pricingZoneId)?.color ||
-                        '#c4a35a',
+                      backgroundColor: zoneById.get(activeSelectedTable.pricingZoneId)?.color || '#c4a35a',
+                      color: isLightHexColor(zoneById.get(activeSelectedTable.pricingZoneId)?.color) ? '#111827' : '#ffffff',
                     }}
                   >
-                    {pricingZones.find((z) => z.id === activeSelectedTable.pricingZoneId)?.name}
+                    {zoneById.get(activeSelectedTable.pricingZoneId)?.name}
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-muted">Modifier zone :</span>
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-semibold text-muted">Changer de zone :</span>
                 {pricingZones.map((z) => (
                   <button
                     key={z.id}
                     type="button"
                     onClick={() => onAssignTableZone(activeSelectedTable.id, z.id)}
-                    className="min-w-11 min-h-11 sm:min-w-8 sm:min-h-8 inline-flex items-center justify-center rounded-full touch-manipulation transition hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    title={`Assigner à ${z.name}`}
-                    aria-label={`Assigner la table sélectionnée à la zone ${z.name}`}
+                    aria-pressed={activeSelectedTable.pricingZoneId === z.id}
+                    className="min-w-11 min-h-11 inline-flex items-center justify-center rounded-full touch-manipulation transition hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    title={`Passer en ${z.name}`}
+                    aria-label={`Passer la table sélectionnée en zone ${z.name}`}
                   >
                     <span
-                      className="w-5 h-5 rounded-full border border-border"
+                      className={cn(
+                        'w-6 h-6 rounded-full border border-border',
+                        activeSelectedTable.pricingZoneId === z.id && 'ring-2 ring-offset-2 ring-offset-surface ring-foreground',
+                      )}
                       style={{ backgroundColor: z.color || '#c4a35a' }}
                     />
                   </button>

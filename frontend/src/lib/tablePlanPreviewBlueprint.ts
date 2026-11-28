@@ -5,7 +5,7 @@ import {
   type RoomType,
   type TableShape,
 } from '@/lib/roomLayoutUtils';
-import type { PricingZone } from '@/lib/ticketPricing';
+import { pricingZoneRect, type PricingZone } from '@/lib/ticketPricing';
 import { formatFc } from '@/config/landingPricing';
 
 export type TablePlanPreviewTable = {
@@ -57,41 +57,17 @@ function pricingZonesToFurniture(
   const result: Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'zone' }>[] = [];
 
   for (const zone of zones) {
-    let x = zone.x;
-    let y = zone.y;
-    let w = zone.w;
-    let h = zone.h;
-
-    // Si les bornes de la zone sont absentes, on les calcule à partir des tables assignées
-    if (x == null || y == null || w == null || h == null) {
-      const assigned = tables.filter((t) => t.pricingZoneId === zone.id);
-      if (assigned.length > 0) {
-        const xs = assigned.map((t) => t.x);
-        const ys = assigned.map((t) => t.y);
-        const minX = Math.max(2, Math.min(...xs) - 8);
-        const maxX = Math.min(98, Math.max(...xs) + 8);
-        const minY = Math.max(2, Math.min(...ys) - 7);
-        const maxY = Math.min(98, Math.max(...ys) + 7);
-        x = Math.round(minX);
-        y = Math.round(minY);
-        w = Math.round(maxX - minX);
-        h = Math.round(maxY - minY);
-      }
-    }
-
-    if (x != null && y != null && w != null && h != null) {
-      const label = `${zone.name}${zone.priceFc > 0 ? ` · ${formatFc(zone.priceFc)}` : ''}`;
-      result.push({
-        id: `zone-mesh-${zone.id}`,
-        kind: 'zone',
-        label,
-        color: zone.color || '#c4a35a',
-        x,
-        y,
-        w,
-        h,
-      });
-    }
+    // Même emprise que le plan 2D : zone enregistrée, sinon rectangle englobant ses tables.
+    const rect = pricingZoneRect(zone, tables);
+    if (!rect) continue;
+    result.push({
+      id: `zone-mesh-${zone.id}`,
+      kind: 'zone',
+      label: `${zone.name}${zone.priceFc > 0 ? ` · ${formatFc(zone.priceFc)}` : ''}`,
+      color: zone.color || '#c4a35a',
+      pricing: { name: zone.name, priceFc: zone.priceFc },
+      ...rect,
+    });
   }
 
   return result;

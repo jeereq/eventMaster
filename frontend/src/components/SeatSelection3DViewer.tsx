@@ -3,7 +3,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
-import type { PricingZone } from '@/lib/ticketPricing';
+import { pricingZoneAvailability, type PricingZone } from '@/lib/ticketPricing';
 import RoomLayoutPreview, { type RoomPreviewQuality } from '@/components/RoomLayoutPreview';
 import { buildTablePlanPreviewBlueprint, type TablePlanPreviewTable } from '@/lib/tablePlanPreviewBlueprint';
 import type { RoomLayoutBlueprint, TableShape } from '@/lib/roomLayoutUtils';
@@ -187,6 +187,7 @@ export default function SeatSelection3DViewer({
   }, [seats]);
 
   const tablesList = useMemo(() => Array.from(tablesMap.values()), [tablesMap]);
+  const zoneStats = useMemo(() => pricingZoneAvailability(pricingZones, seats), [pricingZones, seats]);
 
   // Si aucune table n'est sélectionnée, initialiser avec la première ayant des places disponibles
   const activeTable = useMemo(() => {
@@ -521,27 +522,47 @@ export default function SeatSelection3DViewer({
 
   return (
     <div className={cn('space-y-3', className)}>
-      {/* Légende des zones */}
-      {pricingZones.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 px-1">
-          <span className="text-xs text-muted font-medium">Tarifs</span>
-          {pricingZones.map((z) => (
-            <span
-              key={z.id}
-              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface border border-border text-xs font-semibold text-foreground shadow-2xs"
-            >
-              <span
-                className="w-2.5 h-2.5 rounded-full border border-black/10"
-                style={{ backgroundColor: z.color || '#c4a35a' }}
-              />
-              <span>{z.name}</span>
-              {z.priceFc > 0 && (
-                <span className="text-emerald-600 dark:text-emerald-400 tabular-nums font-bold">
-                  · {formatFc(z.priceFc)}
+      {/* Zones tarifaires : prix et places libres ; toucher une zone amène à sa première table libre. */}
+      {zoneStats.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Zones tarifaires">
+          {zoneStats.map(({ zone, total, available }) => {
+            const color = zone.color || '#c4a35a';
+            const active = activeTable?.pricingZoneId === zone.id;
+            return (
+              <button
+                key={zone.id}
+                type="button"
+                aria-pressed={active}
+                disabled={available === 0}
+                onClick={() => {
+                  const target = tablesList.find((t) => t.pricingZoneId === zone.id && t.seats.some((st) => st.available));
+                  if (target) setFocusedTableId(target.id);
+                }}
+                className={cn(
+                  'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border bg-surface px-2.5 py-1.5 text-left transition touch-manipulation',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50',
+                  active ? 'shadow-sm' : 'border-border hover:bg-surface-muted',
+                )}
+                style={active ? { borderColor: color, boxShadow: `0 0 0 2px ${color}55` } : undefined}
+                title={available > 0 ? `Aller à une table ${zone.name} avec des places libres` : `${zone.name} : complet`}
+              >
+                <span className="h-3 w-3 shrink-0 rounded-full border border-black/10" style={{ backgroundColor: color }} aria-hidden />
+                <span className="flex flex-col leading-tight">
+                  <span className="text-xs font-bold text-foreground">
+                    {zone.name}
+                    {zone.priceFc > 0 ? (
+                      <span className="ml-1 font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatFc(zone.priceFc)}</span>
+                    ) : null}
+                  </span>
+                  {total > 0 ? (
+                    <span className="text-[11px] text-muted tabular-nums">
+                      {available === 0 ? 'Complet' : `${available} libre${available > 1 ? 's' : ''} sur ${total}`}
+                    </span>
+                  ) : null}
                 </span>
-              )}
-            </span>
-          ))}
+              </button>
+            );
+          })}
         </div>
       )}
 

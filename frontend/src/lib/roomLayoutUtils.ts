@@ -938,6 +938,11 @@ export interface RoomLayoutBlueprint {
         danceMirrorBall?: boolean;
         /** Emplacement : façon de délimiter la surface (marquage, cordon, teinte). */
         plotBorder?: PlotBorderStyle;
+        /**
+         * Zone tarifaire de billetterie (VIP, Carré d’Or…) : voile coloré au sol et étiquette
+         * « nom · prix » lisible en 3D comme en 2D. Absente pour les zones de décor.
+         */
+        pricing?: { name: string; priceFc: number };
         x: number;
         y: number;
         w: number;
