@@ -19,7 +19,11 @@ export interface GuestDonationsConfig {
   targetAmountFc: number | null;
   minAmountFc: number;
   suggestedAmountsFc: number[];
+  minAmountUsd?: number;
+  suggestedAmountsUsd?: number[];
+  usdExchangeRateCdf?: number;
   collectedAmountFc: number;
+  collectedByCurrency?: import('@/lib/donationCurrency').DonationCurrencyTotals;
   donorsCount: number;
   progressPercent: number | null;
 }

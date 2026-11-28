@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatFc } from '@/config/landingPricing';
+import { formatDonationAmount, formatUsdAmount } from '@/lib/donationCurrency';
 import { cn } from '@/lib/cn';
 import {
   Heart,
@@ -191,6 +192,7 @@ export default function EventDonationsReportView({
               {formatFc(summary.collectedAmountFc)}
             </p>
             <p className="text-xs text-muted">
+              {summary.collectedByCurrency?.USD?.count ? 'Équivalent FC · ' : ''}
               {summary.donationsPaidCount} contribution{summary.donationsPaidCount > 1 ? 's' : ''} payée{summary.donationsPaidCount > 1 ? 's' : ''}
             </p>
           </div>
@@ -260,6 +262,42 @@ export default function EventDonationsReportView({
             </p>
             <p className="text-xs text-muted">Invités au guichet</p>
           </div>
+        </div>
+      )}
+
+      {/* Totaux par devise : francs et dollars versés */}
+      {summary?.collectedByCurrency && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" aria-label="Dons reçus par devise">
+          {([
+            { id: 'CDF', title: 'Reçu en francs congolais', symbol: 'FC' },
+            { id: 'USD', title: 'Reçu en dollars', symbol: '$' },
+          ] as const).map((cur) => {
+            const total = summary.collectedByCurrency![cur.id];
+            const pending = summary.pendingByCurrency?.[cur.id];
+            return (
+              <div key={cur.id} className="rounded-2xl border border-border bg-surface p-3.5 flex items-center gap-3 shadow-2xs">
+                <span
+                  aria-hidden
+                  className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20 flex items-center justify-center text-sm font-black shrink-0"
+                >
+                  {cur.symbol}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-muted">{cur.title}</p>
+                  <p className="text-lg font-black text-foreground tabular-nums">
+                    {formatDonationAmount(total.amount, cur.id)}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {total.count} don{total.count > 1 ? 's' : ''}
+                    {cur.id === 'USD' && total.count > 0 ? ` · ≈ ${formatFc(total.amountFc)}` : ''}
+                    {pending && pending.count > 0
+                      ? ` · ${formatDonationAmount(pending.amount, cur.id)} en attente`
+                      : ''}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -502,8 +540,13 @@ export default function EventDonationsReportView({
 
                   <div className="flex flex-col sm:items-end shrink-0">
                     <span className="text-base sm:text-lg font-black text-rose-700 dark:text-rose-300 tabular-nums">
-                      {formatFc(donation.amountFc)}
+                      {donation.currency === 'USD' && donation.amount != null
+                        ? formatUsdAmount(donation.amount)
+                        : formatFc(donation.amountFc)}
                     </span>
+                    {donation.currency === 'USD' && (
+                      <span className="text-xs text-muted tabular-nums">≈ {formatFc(donation.amountFc)}</span>
+                    )}
                     {donation.guest && (
                       <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
                         <CheckCircle2 className="w-3 h-3" />

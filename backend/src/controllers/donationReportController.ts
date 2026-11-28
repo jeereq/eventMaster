@@ -10,6 +10,11 @@ import {
   type DonationMeta,
 } from '../utils/donationReportUtils';
 import { loadPlatformSettings } from '../services/platformSettingsService';
+import {
+  addToDonationCurrencyTotals,
+  emptyDonationCurrencyTotals,
+  readDonationCurrency,
+} from '../services/donationCurrency';
 
 /**
  * Rapport détaillé des dons d'un événement pour les organisateurs / gestionnaires.
@@ -80,6 +85,8 @@ export async function getEventDonationsReport(req: AuthenticatedRequest, res: Re
     let attendeePassesCount = 0;
 
     const uniqueDonors = new Set<string>();
+    const collectedByCurrency = emptyDonationCurrencyTotals();
+    const pendingByCurrency = emptyDonationCurrencyTotals();
     const channelMap = new Map<string, { label: string; count: number; amountFc: number }>();
     const timelineMap = new Map<string, { date: string; amountFc: number; count: number }>();
 
@@ -95,8 +102,10 @@ export async function getEventDonationsReport(req: AuthenticatedRequest, res: Re
       const retentionFc = isPaid ? Math.round(ord.amountFc * retentionRate) : 0;
       const netFc = isPaid ? ord.amountFc - retentionFc : 0;
 
+      const paidIn = readDonationCurrency(ord.selectedSeats, ord.amountFc);
       if (isPaid) {
         collectedAmountFc += ord.amountFc;
+        addToDonationCurrencyTotals(collectedByCurrency, ord);
         donationsPaidCount += 1;
         if (ord.amountFc > highestDonationFc) highestDonationFc = ord.amountFc;
         uniqueDonors.add(ord.buyerEmail.toLowerCase().trim());
@@ -120,6 +129,7 @@ export async function getEventDonationsReport(req: AuthenticatedRequest, res: Re
         }
       } else if (isPending) {
         pendingAmountFc += ord.amountFc;
+        addToDonationCurrencyTotals(pendingByCurrency, ord);
         donationsPendingCount += 1;
       } else {
         donationsCancelledCount += 1;
@@ -134,6 +144,8 @@ export async function getEventDonationsReport(req: AuthenticatedRequest, res: Re
         createdAt: ord.createdAt.toISOString(),
         paidAt: ord.paidAt ? ord.paidAt.toISOString() : null,
         amountFc: ord.amountFc,
+        currency: paidIn.currency,
+        amount: paidIn.amount,
         retentionRatePercent,
         retentionFc,
         netFc,
@@ -197,11 +209,15 @@ export async function getEventDonationsReport(req: AuthenticatedRequest, res: Re
         enabled: Boolean(donationsConfig?.enabled),
         targetAmountFc,
         minAmountFc: donationsConfig?.minAmountFc || 1000,
+        minAmountUsd: donationsConfig?.minAmountUsd ?? 1,
+        usdExchangeRateCdf: settings.usdExchangeRateCdf,
         cause: donationsConfig?.cause || null,
         donorAttendancePass: donationsConfig?.donorAttendancePass !== false,
       },
       summary: {
         collectedAmountFc,
+        collectedByCurrency,
+        pendingByCurrency,
         retentionRatePercent,
         retentionAmountFc,
         netPayoutAmountFc,
@@ -274,6 +290,8 @@ export async function exportEventDonationsReport(req: AuthenticatedRequest, res:
       'Date création',
       'Date paiement',
       'Statut',
+      'Devise versée',
+      'Montant versé',
       'Montant Brut (FC)',
       'Taux retenue (%)',
       'Retenue plateforme (FC)',
@@ -302,6 +320,8 @@ export async function exportEventDonationsReport(req: AuthenticatedRequest, res:
         csvEscape(ord.createdAt.toISOString().slice(0, 19).replace('T', ' ')),
         csvEscape(ord.paidAt ? ord.paidAt.toISOString().slice(0, 19).replace('T', ' ') : ''),
         csvEscape(ord.status === 'PAID' ? 'PAYÉ' : ord.status === 'PENDING' ? 'EN ATTENTE' : ord.status),
+        csvEscape(readDonationCurrency(ord.selectedSeats, ord.amountFc).currency),
+        readDonationCurrency(ord.selectedSeats, ord.amountFc).amount,
         ord.amountFc,
         retentionRatePercent,
         retentionFc,
@@ -423,6 +443,7 @@ export async function getAdminDonationsReport(req: AuthenticatedRequest, res: Re
 
     let highestDonationFc = 0;
     let anonymousCount = 0;
+    const collectedByCurrency = emptyDonationCurrencyTotals();
 
     const eventStatsMap = new Map<
       string,
@@ -460,6 +481,7 @@ export async function getAdminDonationsReport(req: AuthenticatedRequest, res: Re
 
       if (isPaid) {
         if (ord.amountFc > highestDonationFc) highestDonationFc = ord.amountFc;
+        addToDonationCurrencyTotals(collectedByCurrency, ord);
 
         // Channel breakdown
         const chKey = ord.flexPayChannel || ord.paymentProvider || 'other';
@@ -558,6 +580,7 @@ export async function getAdminDonationsReport(req: AuthenticatedRequest, res: Re
         createdAt: ord.createdAt.toISOString(),
         paidAt: ord.paidAt ? ord.paidAt.toISOString() : null,
         amountFc: ord.amountFc,
+        ...readDonationCurrency(ord.selectedSeats, ord.amountFc),
         retentionRatePercent,
         retentionFc,
         netFc,
@@ -589,6 +612,7 @@ export async function getAdminDonationsReport(req: AuthenticatedRequest, res: Re
     return res.json({
       summary: {
         totalCollectedFc,
+        collectedByCurrency,
         retentionRatePercent,
         totalRetentionFc,
         totalNetPayoutFc,
@@ -665,6 +689,8 @@ export async function exportAdminDonationsReport(req: AuthenticatedRequest, res:
       'Date création',
       'Date paiement',
       'Statut',
+      'Devise versée',
+      'Montant versé',
       'Montant Brut (FC)',
       'Taux retenue (%)',
       'Retenue plateforme (FC)',
@@ -692,6 +718,8 @@ export async function exportAdminDonationsReport(req: AuthenticatedRequest, res:
         csvEscape(ord.createdAt.toISOString().slice(0, 19).replace('T', ' ')),
         csvEscape(ord.paidAt ? ord.paidAt.toISOString().slice(0, 19).replace('T', ' ') : ''),
         csvEscape(ord.status === 'PAID' ? 'PAYÉ' : ord.status === 'PENDING' ? 'EN ATTENTE' : ord.status),
+        csvEscape(readDonationCurrency(ord.selectedSeats, ord.amountFc).currency),
+        readDonationCurrency(ord.selectedSeats, ord.amountFc).amount,
         ord.amountFc,
         retentionRatePercent,
         retentionFc,

@@ -1,5 +1,11 @@
+import type { DonationCurrency, DonationCurrencyTotals } from '@/lib/donationCurrency';
+
 export interface EventDonationSummary {
   collectedAmountFc: number;
+  /** Dons payés par devise (FC et $). */
+  collectedByCurrency?: DonationCurrencyTotals;
+  /** Dons en attente par devise. */
+  pendingByCurrency?: DonationCurrencyTotals;
   pendingAmountFc: number;
   targetAmountFc: number | null;
   progressPercent: number | null;
@@ -33,6 +39,10 @@ export interface EventDonationItem {
   createdAt: string;
   paidAt: string | null;
   amountFc: number;
+  /** Devise réellement versée (FC par défaut pour les anciens dons). */
+  currency?: DonationCurrency;
+  /** Montant dans cette devise. */
+  amount?: number;
   status: string;
   buyerName: string;
   actualBuyerName?: string;
@@ -76,6 +86,8 @@ export interface EventDonationsReportResponse {
     enabled: boolean;
     targetAmountFc: number | null;
     minAmountFc: number;
+    minAmountUsd?: number;
+    usdExchangeRateCdf?: number;
     cause: string | null;
     donorAttendancePass: boolean;
   };
@@ -88,6 +100,7 @@ export interface EventDonationsReportResponse {
 export interface AdminDonationsReportResponse {
   summary: {
     totalCollectedFc: number;
+    collectedByCurrency?: DonationCurrencyTotals;
     totalDonationsPaid: number;
     totalDonationsPending: number;
     pendingAmountFc: number;

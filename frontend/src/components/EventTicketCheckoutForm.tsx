@@ -25,6 +25,16 @@ import SeatSelection3DViewer from '@/components/SeatSelection3DViewer';
 import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
 import PaymentAccountPicker from '@/components/PaymentAccountPicker';
 import PaymentPendingView from '@/components/PaymentPendingView';
+import DonationCurrencyToggle from '@/components/donations/DonationCurrencyToggle';
+import {
+  fcToUsd,
+  formatDonationAmount,
+  formatDonationTotals,
+  parseDonationInput,
+  resolveDonationOptions,
+  sanitizeDonationInput,
+  type DonationCurrency,
+} from '@/lib/donationCurrency';
 import {
   clearPendingTicketPayment,
   readPendingTicketPayment,
@@ -321,11 +331,22 @@ export default function EventTicketCheckoutForm({
     hasDonations && !event.ticketingEnabled ? 'donation' : 'ticket',
   );
 
-  const defaultDonationAmt = donationsConfig?.suggestedAmountsFc?.[0] || donationsConfig?.minAmountFc || 5000;
-  const [donationAmountFc, setDonationAmountFc] = useState(String(defaultDonationAmt));
+  const [donationCurrency, setDonationCurrency] = useState<DonationCurrency>('CDF');
+  const donationOptions = resolveDonationOptions(donationsConfig, donationCurrency);
+  const donationRate = donationsConfig?.usdExchangeRateCdf || 0;
+  const fmtDonation = (amount: number) => formatDonationAmount(amount, donationCurrency);
+  const defaultDonationAmt = donationOptions.suggested[0] || donationOptions.min || 5000;
+  const [donationAmountInput, setDonationAmountInput] = useState(String(defaultDonationAmt));
   const [isAnonymousDonation, setIsAnonymousDonation] = useState(false);
   const [donationNote, setDonationNote] = useState('');
-  const effectiveDonationFc = Math.max(0, Number(donationAmountFc) || 0);
+  const effectiveDonationAmount = Math.max(0, parseDonationInput(donationAmountInput, donationCurrency));
+  const changeDonationCurrency = (next: DonationCurrency) => {
+    if (next === donationCurrency) return;
+    const opts = resolveDonationOptions(donationsConfig, next);
+    setDonationCurrency(next);
+    setDonationAmountInput(String(opts.suggested[0] || opts.min));
+    setError('');
+  };
 
   const submitDonation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -335,8 +356,8 @@ export default function EventTicketCheckoutForm({
       const cleanBuyerName = isAnonymousDonation ? 'Donateur anonyme' : buyerName.trim();
       const cleanBuyerPhone = buyerPhone.trim().replace(/\s+/g, '');
       const rawMobilePhone = (mmPhone.trim() || buyerPhone.trim()).replace(/\s+/g, '').replace(/^\+/, '');
-      const parsedAmount = Math.round(Number(donationAmountFc));
-      const minAmount = donationsConfig?.minAmountFc ?? 1000;
+      const parsedAmount = effectiveDonationAmount;
+      const minAmount = donationOptions.min;
 
       if (!isAnonymousDonation && !cleanBuyerName) {
         setError('Veuillez renseigner votre nom pour le reçu de don.');
@@ -349,7 +370,7 @@ export default function EventTicketCheckoutForm({
         return;
       }
       if (!Number.isFinite(parsedAmount) || parsedAmount < minAmount) {
-        setError(`Le montant minimum du don est de ${formatFc(minAmount)}.`);
+        setError(`Le montant minimum du don est de ${fmtDonation(minAmount)}.`);
         setBusy(false);
         return;
       }
@@ -361,15 +382,14 @@ export default function EventTicketCheckoutForm({
 
       const data = await api.post(`/public/events/${slug}/checkout`, {
         isDonation: true,
-        donationAmountFc: parsedAmount,
+        currency: donationCurrency,
+        amount: parsedAmount,
         isAnonymous: isAnonymousDonation,
         donationNote: donationNote.trim() || undefined,
         buyerName: cleanBuyerName,
         buyerPhone: cleanBuyerPhone,
         paymentMethod,
-        ...(paymentMethod === 'mobile'
-          ? { phone: rawMobilePhone, operator, currency }
-          : {}),
+        ...(paymentMethod === 'mobile' ? { phone: rawMobilePhone, operator } : {}),
       });
 
       if (data.checkoutUrl) {
@@ -686,8 +706,9 @@ export default function EventTicketCheckoutForm({
                   {formatFc(donationsConfig.collectedAmountFc || 0)} récoltés
                 </span>
                 {donationsConfig.targetAmountFc ? (
-                  <span className="text-muted font-medium">
-                    Objectif : {formatFc(donationsConfig.targetAmountFc)} (
+                  <span className="text-muted font-medium text-right">
+                    Objectif : {formatFc(donationsConfig.targetAmountFc)}
+                    {donationRate > 0 ? ` ≈ ${formatDonationAmount(fcToUsd(donationsConfig.targetAmountFc, donationRate), 'USD')}` : ''} (
                     {Math.min(
                       100,
                       Math.round(
@@ -751,26 +772,36 @@ export default function EventTicketCheckoutForm({
                   </span>
                 )}
               </div>
+              {donationsConfig.collectedByCurrency?.USD?.count ? (
+                <p className="text-xs text-muted">
+                  Reçu : {formatDonationTotals(donationsConfig.collectedByCurrency)} (dollars comptés au taux du jour)
+                </p>
+              ) : null}
             </div>
           )}
 
           <form onSubmit={submitDonation} className="space-y-3.5">
+            <DonationCurrencyToggle
+              value={donationCurrency}
+              onChange={changeDonationCurrency}
+              rate={donationRate}
+            />
+
             {/* Montants suggérés */}
-            {donationsConfig?.suggestedAmountsFc &&
-              donationsConfig.suggestedAmountsFc.length > 0 && (
+            {donationOptions.suggested.length > 0 && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-foreground block">
                     Suggestions rapides de montant
                   </label>
                   <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2">
-                    {donationsConfig.suggestedAmountsFc.map((amt) => {
-                      const active = Number(donationAmountFc) === amt;
+                    {donationOptions.suggested.map((amt) => {
+                      const active = effectiveDonationAmount === amt;
                       return (
                         <button
                           key={amt}
                           type="button"
                           aria-pressed={active}
-                          onClick={() => setDonationAmountFc(String(amt))}
+                          onClick={() => setDonationAmountInput(String(amt))}
                           className={cn(
                             'min-h-11 px-2.5 py-2 text-xs font-bold rounded-lg border transition flex items-center justify-center text-center touch-manipulation active:scale-95',
                             active
@@ -778,7 +809,7 @@ export default function EventTicketCheckoutForm({
                               : 'bg-surface hover:bg-surface-muted text-foreground border-border',
                           )}
                         >
-                          {formatFc(amt)}
+                          {fmtDonation(amt)}
                         </button>
                       );
                     })}
@@ -789,12 +820,11 @@ export default function EventTicketCheckoutForm({
             {/* Saisie montant libre */}
             <div className="space-y-1">
               <Input
-                label={`Montant libre du don en FC (min ${formatFc(donationsConfig?.minAmountFc ?? 1000)})`}
-                type="number"
-                min={donationsConfig?.minAmountFc ?? 1000}
-                step={1}
-                value={donationAmountFc}
-                onChange={(e) => setDonationAmountFc(e.target.value)}
+                label={`Montant libre du don en ${donationCurrency === 'USD' ? 'dollars' : 'FC'} (min ${fmtDonation(donationOptions.min)})`}
+                type="text"
+                inputMode={donationCurrency === 'USD' ? 'decimal' : 'numeric'}
+                value={donationAmountInput}
+                onChange={(e) => setDonationAmountInput(sanitizeDonationInput(e.target.value, donationCurrency))}
                 required
               />
               <p className="text-xs text-muted">
@@ -861,14 +891,16 @@ export default function EventTicketCheckoutForm({
               onOperatorChange={setOperator}
               phone={mmPhone}
               onPhoneChange={setMmPhone}
-              amountFc={effectiveDonationFc}
               amountHint="Montant du don à débiter"
-              currency={currency}
-              onCurrencyChange={setCurrency}
+              fixedCharge={{
+                currency: donationCurrency,
+                amount: effectiveDonationAmount,
+                label: fmtDonation(effectiveDonationAmount),
+              }}
             />
 
             <Button type="submit" loading={busy} fullWidth className="min-h-11 bg-rose-700 hover:bg-rose-800 text-white font-bold">
-              Confirmer et verser mon don de {formatFc(effectiveDonationFc)}
+              Confirmer et verser mon don de {fmtDonation(effectiveDonationAmount)}
             </Button>
           </form>
         </div>

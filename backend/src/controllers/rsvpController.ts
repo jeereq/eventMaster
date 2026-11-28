@@ -52,10 +52,13 @@ import {
   createFlexPayMobileCheckout,
   getPublicApiBaseUrl,
 } from '../services/flexPayCardService';
+import { resolveUsdExchangeRateCdf } from '../services/flexPayChargeCurrency';
 import {
-  parseFlexPayChargeCurrency,
-  resolveFlexPayCharge,
-} from '../services/flexPayChargeCurrency';
+  donationCurrencyMeta,
+  resolveDonationAmount,
+  summarizeDonationCurrencies,
+  type DonationCurrencyTotals,
+} from '../services/donationCurrency';
 import { toPrismaJson } from '../utils/prismaJson';
 
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
@@ -811,7 +814,11 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       targetAmountFc: number | null;
       minAmountFc: number;
       suggestedAmountsFc: number[];
+      minAmountUsd: number;
+      suggestedAmountsUsd: number[];
+      usdExchangeRateCdf: number;
       collectedAmountFc: number;
+      collectedByCurrency: DonationCurrencyTotals;
       donorsCount: number;
       progressPercent: number | null;
     } | null = null;
@@ -822,17 +829,17 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
     const donationsConfig = extractEventDonationsConfig((guest.event as any).eventPrep);
 
     if (platformCheck.allowed && donationsConfig?.enabled) {
-      const paidDonations = await prisma.ticketOrder.aggregate({
+      const paidDonations = await prisma.ticketOrder.findMany({
         where: {
           eventId: guest.eventId,
           status: 'PAID',
           pricingZoneId: 'donation',
         },
-        _sum: { amountFc: true },
-        _count: { _all: true },
+        select: { amountFc: true, selectedSeats: true },
       });
 
-      const collectedAmountFc = paidDonations._sum.amountFc || 0;
+      const collectedByCurrency = summarizeDonationCurrencies(paidDonations);
+      const collectedAmountFc = collectedByCurrency.CDF.amountFc + collectedByCurrency.USD.amountFc;
       const target = donationsConfig.targetAmountFc;
       const progressPercent = target && target > 0 ? Math.min(100, Math.round((collectedAmountFc / target) * 100)) : null;
 
@@ -842,8 +849,12 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
         targetAmountFc: donationsConfig.targetAmountFc,
         minAmountFc: donationsConfig.minAmountFc || donationsAccess.minAmountFc || 1000,
         suggestedAmountsFc: donationsConfig.suggestedAmountsFc || donationsAccess.defaultSuggestedAmountsFc,
+        minAmountUsd: donationsConfig.minAmountUsd,
+        suggestedAmountsUsd: donationsConfig.suggestedAmountsUsd,
+        usdExchangeRateCdf: resolveUsdExchangeRateCdf(loadPlatformSettings().usdExchangeRateCdf),
         collectedAmountFc,
-        donorsCount: paidDonations._count._all || 0,
+        collectedByCurrency,
+        donorsCount: paidDonations.length,
         progressPercent,
       };
     }
@@ -1299,7 +1310,7 @@ export async function getGuestQrPng(req: Request, res: Response) {
 /**
  * Permet à un invité d'effectuer un don solidaire directement depuis son espace invité.
  * POST /api/rsvp/:guestId/donations
- * body: { amountFc, isAnonymous?, donationNote?, paymentMethod?: 'mobile'|'card', phone?, currency? }
+ * body: { currency?: 'CDF'|'USD', amount (dans la devise) | amountFc, isAnonymous?, donationNote?, paymentMethod?: 'mobile'|'card', phone? }
  */
 export async function submitGuestDonation(req: Request, res: Response) {
   try {
@@ -1335,14 +1346,16 @@ export async function submitGuestDonation(req: Request, res: Response) {
       return res.status(400).json({ error: 'Les donations ne sont pas activées sur cet événement.' });
     }
 
-    const rawAmount = Number(req.body?.amountFc || req.body?.donationAmountFc);
-    const minAmount = donationsConfig.minAmountFc || donationsAccess.minAmountFc || 1000;
-    if (!Number.isFinite(rawAmount) || rawAmount < minAmount) {
-      return res.status(400).json({
-        error: `Le montant minimum pour un don est de ${minAmount.toLocaleString('fr-FR')} FC.`,
-      });
+    const donation = resolveDonationAmount({
+      body: req.body,
+      minAmountFc: donationsConfig.minAmountFc || donationsAccess.minAmountFc || 1000,
+      minAmountUsd: donationsConfig.minAmountUsd,
+      usdExchangeRateCdf: loadPlatformSettings().usdExchangeRateCdf,
+    });
+    if (!donation.ok) {
+      return res.status(400).json({ error: donation.error });
     }
-    const amountFc = Math.round(rawAmount);
+    const amountFc = donation.amountFc;
     const isAnonymous = Boolean(req.body?.isAnonymous);
     const donationNote = typeof req.body?.donationNote === 'string' ? req.body.donationNote.trim().slice(0, 500) : null;
 
@@ -1383,6 +1396,7 @@ export async function submitGuestDonation(req: Request, res: Response) {
           originalBuyerName: buyerName,
           donorGuestId: guest.id,
           donorAttendancePass: false,
+          ...donationCurrencyMeta(donation),
         }),
       },
     });
@@ -1393,11 +1407,7 @@ export async function submitGuestDonation(req: Request, res: Response) {
         return res.status(400).json({ error: 'Numéro Mobile Money requis (ex. 243…).' });
       }
 
-      const charge = resolveFlexPayCharge(
-        amountFc,
-        parseFlexPayChargeCurrency(req.body?.currency, 'mobile'),
-        loadPlatformSettings().usdExchangeRateCdf,
-      );
+      const charge = { currency: donation.currency, amount: donation.amount };
       const apiBase = getPublicApiBaseUrl();
       const reference = buildFlexPayReference('dn', order.id);
 
@@ -1435,8 +1445,8 @@ export async function submitGuestDonation(req: Request, res: Response) {
       }
     }
 
-    // flexpay_card
-    const charge = resolveFlexPayCharge(amountFc, 'USD', loadPlatformSettings().usdExchangeRateCdf);
+    // flexpay_card : débit dans la devise choisie par le donateur (FC ou $).
+    const charge = { currency: donation.currency, amount: donation.amount };
     const apiBase = getPublicApiBaseUrl();
     const reference = buildFlexPayReference('dn', order.id);
     const guestRsvpUrl = buildGuestRsvpUrl(FRONTEND_URL, guest.id);

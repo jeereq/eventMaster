@@ -31,6 +31,7 @@ export default function PaymentAccountPicker({
   amountHint,
   currency = 'CDF',
   onCurrencyChange,
+  fixedCharge,
 }: {
   method: PaymentAccountMethod;
   onMethodChange: (method: PaymentAccountMethod) => void;
@@ -42,6 +43,11 @@ export default function PaymentAccountPicker({
   amountHint?: string;
   currency?: FlexPayChargeCurrency;
   onCurrencyChange?: (currency: FlexPayChargeCurrency) => void;
+  /**
+   * Montant déjà fixé dans sa devise (ex. don en dollars) : affiché tel quel,
+   * sans choix de devise ni conversion, pour le Mobile Money comme pour la carte.
+   */
+  fixedCharge?: { currency: FlexPayChargeCurrency; amount: number; label: string };
 }) {
   const { site } = usePlatformSite();
   const rate = resolveUsdExchangeRateCdf(site.usdExchangeRateCdf);
@@ -56,12 +62,20 @@ export default function PaymentAccountPicker({
   }, [suggested, operator, onOperatorChange]);
 
   useEffect(() => {
+    if (fixedCharge) return;
     if (currency === 'USD' && !usdAvailable) onCurrencyChange?.('CDF');
-  }, [currency, usdAvailable, onCurrencyChange]);
+  }, [currency, usdAvailable, onCurrencyChange, fixedCharge]);
 
   return (
     <div className="space-y-3">
-      {typeof amountFc === 'number' && amountFc > 0 ? (
+      {fixedCharge ? (
+        fixedCharge.amount > 0 ? (
+          <div className="p-3 rounded-xl bg-surface-muted border border-border flex items-center justify-between gap-3">
+            <p className="text-xs text-muted">{amountHint || 'Montant prélevé'}</p>
+            <p className="text-sm font-black text-foreground tabular-nums text-right">{fixedCharge.label}</p>
+          </div>
+        ) : null
+      ) : typeof amountFc === 'number' && amountFc > 0 ? (
         <div className="p-3 rounded-xl bg-surface-muted border border-border flex items-center justify-between gap-3">
           <p className="text-xs text-muted">{amountHint || 'Montant prélevé'}</p>
           <div className="text-right">
@@ -100,7 +114,7 @@ export default function PaymentAccountPicker({
             aria-checked={method === 'card'}
             onClick={() => {
               onMethodChange('card');
-              onCurrencyChange?.('CDF');
+              if (!fixedCharge) onCurrencyChange?.('CDF');
             }}
             className={`min-h-11 p-2.5 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center gap-1 transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
               method === 'card'
@@ -116,6 +130,7 @@ export default function PaymentAccountPicker({
 
       {method === 'mobile' ? (
         <div className="space-y-3">
+          {fixedCharge ? null : (
           <div className="space-y-1.5">
             <p className="text-xs font-bold text-foreground">Devise de prélèvement</p>
             <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Devise Mobile Money">
@@ -153,6 +168,7 @@ export default function PaymentAccountPicker({
                 : `Prélèvement : ${typeof amountFc === 'number' ? formatFc(amountFc) : 'montant catalogue'} · 1 $ = ${rate.toLocaleString('fr-FR')} FC`}
             </p>
           </div>
+          )}
           <div className="space-y-1.5">
             <p className="text-xs font-bold text-foreground">Compte Mobile Money disponible</p>
             <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Opérateur Mobile Money">
@@ -196,7 +212,7 @@ export default function PaymentAccountPicker({
             onChange={(event) => onPhoneChange(event.target.value)}
             placeholder="Ex. 24389XXXXXXX ou 089XXXXXXX"
             hint={
-              currency === 'USD'
+              (fixedCharge?.currency ?? currency) === 'USD'
                 ? 'Le montant est prélevé en dollars sur votre Mobile Money.'
                 : 'Le montant est prélevé en francs congolais sur votre Mobile Money.'
             }
@@ -204,7 +220,8 @@ export default function PaymentAccountPicker({
         </div>
       ) : (
         <p className="text-xs text-muted leading-relaxed">
-          Vous serez redirigé vers FlexPay. Le montant débité est en francs congolais (CDF).
+          Vous serez redirigé vers FlexPay. Le montant débité est en{' '}
+          {fixedCharge?.currency === 'USD' ? 'dollars américains (USD)' : 'francs congolais (CDF)'}.
         </p>
       )}
     </div>

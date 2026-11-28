@@ -112,6 +112,7 @@ import {
   type EventNotificationSettings,
 } from '@/lib/eventNotifications';
 import { hasValidCollectionTermsAcceptance } from '@/lib/collectionTerms';
+import { formatUsdAmount } from '@/lib/donationCurrency';
 import {
   COLLECTION_COMMISSION_MAX_PERCENT,
   COLLECTION_COMMISSION_MIN_PERCENT,
@@ -263,6 +264,18 @@ type EventConfigFormProps = {
   onOpenTablePlan?: (eventId: string) => void;
 };
 
+/** « 5, 10, 20.5 » → [5, 10, 20.5] (dollars, triés, sans doublon). */
+function parseUsdList(raw: string): number[] {
+  return [
+    ...new Set(
+      raw
+        .split(/[,;\s]+/)
+        .map((v) => Math.round(Number(v.trim()) * 100) / 100)
+        .filter((n) => Number.isFinite(n) && n > 0),
+    ),
+  ].sort((a, b) => a - b);
+}
+
 export default function EventConfigForm({
   open,
   onClose,
@@ -356,6 +369,8 @@ export default function EventConfigForm({
   const [donationMinAmountFc, setDonationMinAmountFc] = useState('1000');
   const [donationCause, setDonationCause] = useState('');
   const [donationSuggestedFc, setDonationSuggestedFc] = useState('2500, 5000, 10000, 25000, 50000');
+  const [donationMinAmountUsd, setDonationMinAmountUsd] = useState('1');
+  const [donationSuggestedUsd, setDonationSuggestedUsd] = useState('5, 10, 20, 50, 100');
   const [donorAttendancePass, setDonorAttendancePass] = useState(true);
 
   const tenantId = initialEvent?.tenantId || tenant?.id;
@@ -443,6 +458,8 @@ export default function EventConfigForm({
       setDonationMinAmountFc('1000');
       setDonationCause('');
       setDonationSuggestedFc('2500, 5000, 10000, 25000, 50000');
+      setDonationMinAmountUsd('1');
+      setDonationSuggestedUsd('5, 10, 20, 50, 100');
       setDonorAttendancePass(true);
       return;
     }
@@ -534,6 +551,12 @@ export default function EventConfigForm({
       dConfig?.suggestedAmountsFc && dConfig.suggestedAmountsFc.length > 0
         ? dConfig.suggestedAmountsFc.join(', ')
         : '2500, 5000, 10000, 25000, 50000',
+    );
+    setDonationMinAmountUsd(dConfig?.minAmountUsd ? String(dConfig.minAmountUsd) : '1');
+    setDonationSuggestedUsd(
+      dConfig?.suggestedAmountsUsd && dConfig.suggestedAmountsUsd.length > 0
+        ? dConfig.suggestedAmountsUsd.join(', ')
+        : '5, 10, 20, 50, 100',
     );
     setDonorAttendancePass(dConfig?.donorAttendancePass !== false);
   }, [open, initialEvent?.id]);
@@ -962,6 +985,10 @@ export default function EventConfigForm({
               .split(/[,;\s]+/)
               .map((s) => Math.round(Number(s.trim())))
               .filter((n) => Number.isFinite(n) && n >= (Number(donationMinAmountFc) || 1000)),
+            minAmountUsd: Number(donationMinAmountUsd.replace(',', '.')) || 1,
+            suggestedAmountsUsd: parseUsdList(donationSuggestedUsd).filter(
+              (n) => n >= (Number(donationMinAmountUsd.replace(',', '.')) || 1),
+            ),
             donorAttendancePass,
           }
         : {
@@ -1397,6 +1424,39 @@ export default function EventConfigForm({
                       {amt.toLocaleString('fr-FR')} FC
                     </span>
                   ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-surface p-3 space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-foreground">Dons en dollars (USD)</p>
+                <p className="text-xs text-muted">
+                  Les donateurs choisissent de donner en francs ou en dollars. L&apos;objectif reste en FC :
+                  les dons en dollars y sont comptés au taux du jour.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label="Montant minimum d'un don ($)"
+                  type="text"
+                  inputMode="decimal"
+                  value={donationMinAmountUsd}
+                  onChange={(e) => setDonationMinAmountUsd(e.target.value.replace(/[^\d.,]/g, ''))}
+                  placeholder="1"
+                />
+                <Input
+                  label="Suggestions rapides ($, séparés par virgules)"
+                  value={donationSuggestedUsd}
+                  onChange={(e) => setDonationSuggestedUsd(e.target.value)}
+                  placeholder="5, 10, 20, 50, 100"
+                />
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {parseUsdList(donationSuggestedUsd).map((amt) => (
+                  <span key={amt} className="text-xs font-bold px-2 py-0.5 rounded-md bg-surface-muted text-foreground border border-border">
+                    {formatUsdAmount(amt)}
+                  </span>
+                ))}
               </div>
             </div>
 

@@ -16,6 +16,7 @@ import {
   type FlexPayMetadataUpdate,
 } from '../services/flexPayCardService';
 import { parseFlexPayChargeCurrency, resolveFlexPayCharge } from '../services/flexPayChargeCurrency';
+import { readDonationCurrency } from '../services/donationCurrency';
 import { processFlexPayPayoutNotification } from '../services/flexPayPayoutCallbackService';
 import {
   decideFlexPayCallbackOutcome,
@@ -636,6 +637,9 @@ export async function retryFlexPayTicketOrder(req: Request, res: Response) {
     }
 
     const reference = buildFlexPayReference('tk', order.id);
+    // Un don garde la devise et le montant choisis par le donateur (FC ou $).
+    const donationCharge =
+      order.pricingZoneId === 'donation' ? readDonationCurrency(order.selectedSeats, order.amountFc) : null;
 
     // Libère l’ancien orderNumber unique avant une nouvelle session
     await prisma.ticketOrder.update({
@@ -656,11 +660,13 @@ export async function retryFlexPayTicketOrder(req: Request, res: Response) {
 
     try {
       if (method === 'mobile') {
-        const charge = resolveFlexPayCharge(
-          order.amountFc,
-          parseFlexPayChargeCurrency(req.body?.currency, 'mobile'),
-          loadPlatformSettings().usdExchangeRateCdf,
-        );
+        const charge =
+          donationCharge ??
+          resolveFlexPayCharge(
+            order.amountFc,
+            parseFlexPayChargeCurrency(req.body?.currency, 'mobile'),
+            loadPlatformSettings().usdExchangeRateCdf,
+          );
         const flex = await createFlexPayMobileCheckout({
           reference,
           amount: charge.amount,
@@ -685,9 +691,9 @@ export async function retryFlexPayTicketOrder(req: Request, res: Response) {
 
       const flex = await createFlexPayCardCheckout({
         reference,
-        amount: order.amountFc,
-        currency: 'CDF',
-        description: `Billet — ${order.event.title}`.slice(0, 200),
+        amount: donationCharge?.amount ?? order.amountFc,
+        currency: donationCharge?.currency ?? 'CDF',
+        description: `${donationCharge ? 'Don' : 'Billet'} — ${order.event.title}`.slice(0, 200),
         callbackUrl,
         approveUrl: `${apiBase}/api/public/payments/flexpay/return?kind=ticket&orderId=${order.id}&result=approve`,
         cancelUrl: `${apiBase}/api/public/payments/flexpay/return?kind=ticket&orderId=${order.id}&result=cancel`,

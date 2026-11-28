@@ -15,6 +15,7 @@ import { isOnlinePaymentsEnabled, getDonationsAccess } from '../services/platfor
 import {
   resolveDonationsAccess,
   sanitizeEventDonationsConfig,
+  DEFAULT_EVENT_DONATIONS_CONFIG,
   extractEventDonationsConfig,
   type EventDonationsConfig,
 } from '../services/donationsAccess';
@@ -107,7 +108,7 @@ function serializeEvent<T extends {
     placeLabel: formatEventPlace(rest),
     donations: donationsConfig
       ? { ...donationsConfig, allowedByPlatform }
-      : { enabled: false, targetAmountFc: null, minAmountFc: donationsAccess.minAmountFc, cause: null, suggestedAmountsFc: donationsAccess.defaultSuggestedAmountsFc, donorAttendancePass: true, allowedByPlatform },
+      : { enabled: false, targetAmountFc: null, minAmountFc: donationsAccess.minAmountFc, cause: null, suggestedAmountsFc: donationsAccess.defaultSuggestedAmountsFc, minAmountUsd: DEFAULT_EVENT_DONATIONS_CONFIG.minAmountUsd, suggestedAmountsUsd: DEFAULT_EVENT_DONATIONS_CONFIG.suggestedAmountsUsd, donorAttendancePass: true, allowedByPlatform },
     collectionTerms: extractCollectionTermsAcceptance(event.eventPrep),
     payoutAccount: (() => {
       const account = extractEventPayoutAccount(event.eventPrep);
